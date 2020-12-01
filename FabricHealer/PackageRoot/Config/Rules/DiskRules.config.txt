@@ -1,0 +1,11 @@
+﻿## First, check if we are inside run interval. If so, then cut (!).
+Mitigate() :- CheckInsideRunInterval(RunInterval=00:15:00), !.
+
+## Rule: Check folder size for SF logs, observer logs, E:\temp, for example. If size exceeds supplied threshold, then try and delete the files in the directory.
+
+## Iterate over a list of folders with a system predicate, member (defined and implemented in Guan) and an internal predicate, config (an internal predicate needs no backing impl, it only exists in this logic).
+Mitigate() :- GetRepairHistory(?repairCount, ?lastRunTime, DeleteFiles), 
+	?repairCount < 2,
+	member(config(?X,?Y), [config("C:\SFDevCluster\Log\Traces", 50), config("C:\observer_logs", 1), config("E:\temp", 40)]), 
+	CheckFolderSize(LogPath=?X, MaxFolderSizeGB=?Y),
+	DeleteFiles(LogPath=?X, MaxRepairs=2).

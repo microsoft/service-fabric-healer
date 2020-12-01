@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata minClientVersion="3.3.0">
+    <id>%PACKAGE_ID%</id>
+    <version>1.0.0</version>
+    <authors>ctorre</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>This package contains the Service Fabric FabricHealer Application (Config files and Microsoft-signed binaries).</description>
+    <summary>FabricHealer: User-Configurable Auto-Mitigation in Service Fabric Clusters. FabricHealer supports a novel repair workflow configuration system: Configuration as Logic (CaL). This is made possible by a new Prolog-like logic programming model/system, Microsoft Guan.</summary>
+    <contentFiles>
+      <files include="**" buildAction="None" copyToOutput="true" />
+    </contentFiles>
+    <dependencies>
+      <group targetFramework=".NETStandard2.1" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="**" target="contentFiles\any\any" />
+    <file src="FabricHealerPkg\Code\FabricHealer.dll" target="lib\netstandard2.1"/>
+  </files>
+</package>

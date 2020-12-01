@@ -1,0 +1,9 @@
+﻿## This houses both VM restart and reimage rules.
+
+## First, check if we are inside run interval. If so, then cut (!).
+Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
+
+Mitigate(MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 90,
+	GetRepairHistory(?repairCount, ?lastRunTime, RestartVM), 
+	?repairCount < 5,
+    RestartVM(MaxRepairs=3).

@@ -1,0 +1,7 @@
+﻿[*.cs]
+
+# CA1068: CancellationToken parameters must come last
+dotnet_diagnostic.CA1068.severity = none
+
+# IDE0055: Fix formatting
+dotnet_diagnostic.IDE0055.severity = none
