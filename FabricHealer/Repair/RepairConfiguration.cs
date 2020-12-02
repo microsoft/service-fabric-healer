@@ -25,11 +25,6 @@ namespace FabricHealer.Repair
             get; set;
         }
 
-        public string FolderPath
-        {
-            get; set;
-        }
-
         public string NodeType
         {
             get; set;

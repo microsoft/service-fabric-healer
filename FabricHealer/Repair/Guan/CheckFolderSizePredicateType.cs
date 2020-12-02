@@ -5,6 +5,7 @@
 
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using Guan.Common;
 using Guan.Logic;
 using System.IO;
 using System.Linq;
@@ -30,17 +31,78 @@ namespace FabricHealer.Repair.Guan
 
             protected override bool Check()
             {
-                string folderPath = (string)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
-                long maxFolderSizeGB = (long)Input.Arguments[1].Value.GetEffectiveTerm().GetValue();
-                long size = GetFolderSizeGB(folderPath);
+                string folderPath = null;
+                long maxFolderSizeGB = 0;
+                long maxFolderSizeMB = 0;
+                int count = Input.Arguments.Count;
 
-                if (size >= maxFolderSizeGB)
+                for (int i = 0; i < count; i++)
                 {
-                    return true;
+                    switch (Input.Arguments[i].Name.ToLower())
+                    {
+                        case "folderpath":
+                            folderPath = (string)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
+                            break;
+
+                        case "maxfoldersizemb":
+                            maxFolderSizeMB = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
+                            break;
+
+                        case "maxfoldersizegb":
+                            maxFolderSizeGB = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
+                            break;
+
+                        default:
+                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Name}");
+                    }
+                }
+
+                if (!Directory.Exists(folderPath))
+                {
+                    RepairTaskHelper.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        "CheckFolderSizePredicate::DirectoryNotFound",
+                        $"Directory {folderPath} does not exist.",
+                        RepairTaskHelper.Token).GetAwaiter().GetResult();
+
+                    return false;
+                }
+
+                if (Directory.GetFiles(folderPath, "*", new EnumerationOptions { RecurseSubdirectories = true }).Length == 0)
+                {
+                    RepairTaskHelper.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        "CheckFolderSizePredicate::NoFilesFound",
+                        $"Directory {folderPath} does not contain any files.",
+                        RepairTaskHelper.Token).GetAwaiter().GetResult();
+
+                    return false;
+                }
+
+                long size = 0;
+
+                if (maxFolderSizeGB > 0)
+                {
+                    size = GetFolderSize(folderPath, SizeUnit.GB);
+
+                    if (size >= maxFolderSizeGB)
+                    {
+                        return true;
+                    }
+                }
+                else if (maxFolderSizeMB > 0)
+                {
+                    size = GetFolderSize(folderPath, SizeUnit.MB);
+
+                    if (size >= maxFolderSizeMB)
+                    {
+                        return true;
+                    }
                 }
 
                 string message =
-                $"Repair {FOHealthData.RepairId}: Supplied MaxFolderSizeGB value ({maxFolderSizeGB}) for path {folderPath} is less than computed folder size ({size}). " +
+                $"Repair {FOHealthData.RepairId}: Supplied Maximum folder size value ({(maxFolderSizeGB > 0 ? maxFolderSizeGB.ToString() + "GB" : maxFolderSizeMB.ToString() + "MB")}) " +
+                $"for path {folderPath} is less than computed folder size ({size}{(maxFolderSizeGB > 0 ? "GB" : "MB")}). " +
                 $"Will not attempt repair.";
 
                 RepairTaskHelper.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -52,32 +114,9 @@ namespace FabricHealer.Repair.Guan
                 return false;
             }
             
-            private long GetFolderSizeGB(string path)
+            private long GetFolderSize(string path, SizeUnit unit)
             {
                 var dir = new DirectoryInfo(path);
-               
-                if (!dir.Exists)
-                {
-                    RepairTaskHelper.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "CheckFolderSizePredicate::DirectoryNotFound",
-                        $"Directory {path} does not exist.",
-                        RepairTaskHelper.Token).GetAwaiter().GetResult();
-                            
-                    return 0;
-                }
-
-                if (dir.GetFiles().Length == 0)
-                {
-                        RepairTaskHelper.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            "CheckFolderSizePredicate::NoFilesFound",
-                            $"Directory {path} does not contain any files.",
-                            RepairTaskHelper.Token).GetAwaiter().GetResult();
-
-                        return 0;
-                }
-               
                 var folderSizeInBytes = dir.EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length);
                 
                 RepairTaskHelper.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -86,7 +125,12 @@ namespace FabricHealer.Repair.Guan
                             $"Directory {path} size: {folderSizeInBytes} bytes.",
                             RepairTaskHelper.Token).GetAwaiter().GetResult();
 
-                return folderSizeInBytes / 1024 / 1024 / 1024;
+                if (unit == SizeUnit.GB)
+                {
+                    return folderSizeInBytes / 1024 / 1024 / 1024;
+                }
+
+                return folderSizeInBytes / 1024 / 1024;
             }
         }
 
@@ -111,5 +155,11 @@ namespace FabricHealer.Repair.Guan
         {
             return new Resolver(input, constraint, context);
         }
+    }
+
+    enum SizeUnit
+    {
+        GB,
+        MB
     }
 }
