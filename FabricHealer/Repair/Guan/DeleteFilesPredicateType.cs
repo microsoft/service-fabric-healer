@@ -3,7 +3,6 @@ using Guan.Logic;
 using System;
 using FabricHealer.Utilities;
 using Guan.Common;
-using System.IO;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -33,25 +32,37 @@ namespace FabricHealer.Repair.Guan
                     ReplicaOrInstanceId = !string.IsNullOrEmpty(FOHealthData.ReplicaId) ? long.Parse(FOHealthData.ReplicaId) : default,
                     ServiceName = !string.IsNullOrEmpty(FOHealthData.ServiceName) ? new Uri(FOHealthData.ServiceName) : null,
                     FOHealthMetricValue = FOHealthData.Value,
-                    RepairPolicy = new RepairPolicy(),
+                    RepairPolicy = new DiskRepairPolicy(),
                 };
             }
 
             protected override bool Check()
             {
+                bool recurseSubDirectories = false;
                 string path = null;
                 long maxRepairCycles = 0;
+                
+                // default as 0 means delete all files.
+                long maxFilesToDelete = 0;
+                FileSortOrder direction = FileSortOrder.Ascending;
                 TimeSpan maxTimeWindow = TimeSpan.MinValue;
                 TimeSpan runInterval = TimeSpan.MinValue;
                 int count = Input.Arguments.Count;
 
                 for (int i = 0; i < count; i++)
                 {
-                    // MaxRepairs=5, MaxTimeWindow=01:00:00...
                     switch (Input.Arguments[i].Name.ToLower())
                     {
-                        case "logpath":
+                        case "sortorder":
+                            direction = (FileSortOrder)Enum.Parse(typeof(FileSortOrder), (string)Input.Arguments[i].Value.GetEffectiveTerm().GetValue());
+                            break;
+
+                        case "folderpath":
                             path = (string)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
+                            break;
+
+                        case "maxfilestodelete":
+                            maxFilesToDelete = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
                             break;
 
                         case "maxrepairs":
@@ -60,6 +71,10 @@ namespace FabricHealer.Repair.Guan
 
                         case "maxtimewindow":
                             maxTimeWindow = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
+                            break;
+
+                        case "recursesubdirectories":
+                            recurseSubDirectories = bool.Parse((string)Input.Arguments[i].Value.GetEffectiveTerm().GetValue());
                             break;
 
                         default:
@@ -72,15 +87,17 @@ namespace FabricHealer.Repair.Guan
                     runInterval = TimeSpan.FromSeconds((long)maxTimeWindow.TotalSeconds / maxRepairCycles);
                 }
 
-                this.repairConfiguration.FolderPath = path;
-
                 // RepairPolicy
                 repairConfiguration.RepairPolicy.CurrentAction = RepairAction.DeleteFiles;
                 repairConfiguration.RepairPolicy.CycleTimeDistributionType = CycleTimeDistributionType.Even;
+                ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FolderPath = path;
                 repairConfiguration.RepairPolicy.Id = FOHealthData.RepairId;
+                ((DiskRepairPolicy)repairConfiguration.RepairPolicy).MaxNumberOfFilesToDelete = maxFilesToDelete;
+                ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FileAgeSortOrder = direction;
                 repairConfiguration.RepairPolicy.MaxRepairCycles = maxRepairCycles;
                 repairConfiguration.RepairPolicy.RepairCycleTimeWindow = maxTimeWindow;
                 repairConfiguration.RepairPolicy.TargetType = RepairTargetType.VirtualMachine;
+                ((DiskRepairPolicy)repairConfiguration.RepairPolicy).RecurseSubdirectories = recurseSubDirectories;
                 repairConfiguration.RepairPolicy.RunInterval = runInterval;
 
                 // Try to schedule repair with RM.
@@ -124,7 +141,7 @@ namespace FabricHealer.Repair.Guan
 
         private DeleteFilesPredicateType(
             string name)
-            : base(name, true, 1, 3)
+            : base(name, true, 1, 5)
         {
            
         }

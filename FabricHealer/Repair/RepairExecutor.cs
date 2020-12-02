@@ -20,6 +20,9 @@ using System.IO;
 using System.Security;
 using System.Runtime.InteropServices;
 using System.Linq;
+using System.Collections;
+using System.Management;
+using System.Collections.Generic;
 
 namespace FabricHealer.Repair
 {
@@ -605,14 +608,8 @@ namespace FabricHealer.Repair
             RepairConfiguration repairConfiguration,
             CancellationToken cancellationToken)
         {
-            // Linux not supported yet.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                return false;
-            }
-
-            string actionMessage =
-                $"Attempting to delete files in folder {repairConfiguration.FolderPath} " +
+           string actionMessage =
+                $"Attempting to delete files in folder {((DiskRepairPolicy)repairConfiguration.RepairPolicy).FolderPath} " +
                 $"on node {repairConfiguration.NodeName}.";
 
             FabricHealerManager.RepairLogger.LogInfo(actionMessage);
@@ -624,25 +621,46 @@ namespace FabricHealer.Repair
                     cancellationToken,
                     repairConfiguration).ConfigureAwait(false);
 
-            string targetFolderPath = repairConfiguration.FolderPath;
+            string targetFolderPath = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FolderPath;
 
             if (!Directory.Exists(targetFolderPath))
             {
                 return false;
             }
 
-            var files = Directory.GetFiles(targetFolderPath);
-            int initialCount = files.Length;
-            int deletedFiles = 0;
+            var dirInfo = new DirectoryInfo(targetFolderPath);
+            FileSortOrder direction = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FileAgeSortOrder;
+            List<string> files = null;
 
+            if (direction == FileSortOrder.Ascending)
+            {
+                files = (from file in dirInfo.EnumerateFiles("*", new System.IO.EnumerationOptions { RecurseSubdirectories = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).RecurseSubdirectories })
+                         orderby file.LastWriteTimeUtc ascending
+                         select file.FullName).Distinct().ToList();
+            }
+            else if (direction == FileSortOrder.Descending)
+            {
+                files = (from file in dirInfo.EnumerateFiles("*", new System.IO.EnumerationOptions { RecurseSubdirectories = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).RecurseSubdirectories })
+                         orderby file.LastAccessTimeUtc descending
+                         select file.FullName).Distinct().ToList();
+            }
+   
+            int initialCount = files.Count;
+            int deletedFiles = 0;
+            long maxFiles = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).MaxNumberOfFilesToDelete;
+  
             if (initialCount == 0)
             {
                 return false;
             }
 
-            // TODO: Enable a max count so all files don't get deleted, if that is not desired.
             foreach (var file in files)
             {
+                if (maxFiles > 0 && deletedFiles == maxFiles)
+                {
+                    break;
+                }
+
                 try
                 {
                     File.Delete(file);
@@ -659,10 +677,36 @@ namespace FabricHealer.Repair
                 }
             }
 
-            if (deletedFiles < initialCount)
+            if (maxFiles > 0 && initialCount > maxFiles && deletedFiles < maxFiles)
             {
+                await this.telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                       LogLevel.Info,
+                       "RepairExecutor.DeleteFilesAsync::IncompleteOperation",
+                       $"Unable to delete specified number of files ({maxFiles}).",
+                       cancellationToken,
+                       repairConfiguration).ConfigureAwait(false);
+
                 return false;
             }
+            
+            if (maxFiles == 0 && deletedFiles < initialCount)
+            {
+                await this.telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        "RepairExecutor.DeleteFilesAsync::IncompleteOperation",
+                        $"Unable to delete all files.",
+                        cancellationToken,
+                        repairConfiguration).ConfigureAwait(false); 
+
+                return false;
+            }
+
+            await this.telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        "RepairExecutor.DeleteFilesAsync::Success",
+                        $"Successfully deleted {(maxFiles > 0 ? "up to " + maxFiles.ToString() : "all")} files in {targetFolderPath}",
+                        cancellationToken,
+                        repairConfiguration).ConfigureAwait(false);
 
             return true;
         }
