@@ -652,7 +652,7 @@ namespace FabricHealer
                     }
                     else if (kind.Contains("Application"))
                     {
-                        if (!ConfigSettings.EnableAppRepair || !ConfigSettings.EnableSystemAppRepair)
+                        if (!ConfigSettings.EnableAppRepair && !ConfigSettings.EnableSystemAppRepair)
                         {
                             continue;
                         }
