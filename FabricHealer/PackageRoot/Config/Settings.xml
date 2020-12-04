@@ -18,9 +18,9 @@
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
-    <Parameter Name="LogAnalyticsWorkspaceId" Value="845487a2-4953-4ebf-abf8-665aeab929ec" />
+    <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
-    <Parameter Name="LogAnalyticsSharedKey" Value="zjVxtNEDfBjuao93MO+N6/NMkLDYZ2jYoPob3pTsldxUF9/Rgvuna782JnMQigbgtgU5FqXHRZt2US4jJE7fDg==" />
+    <Parameter Name="LogAnalyticsSharedKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
     <Parameter Name="LogAnalyticsLogType" Value="FabricHealer" />
     <!-- Optional: EventSource Tracing. -->
