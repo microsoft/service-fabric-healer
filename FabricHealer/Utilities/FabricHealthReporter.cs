@@ -80,7 +80,7 @@ namespace FabricHealer.Utilities
                     break;
                 
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentException($"Unsupported health report type specified ({healthReport.ReportType}).");
             }
         }
     }

@@ -48,106 +48,6 @@ namespace FabricHealer
             get; set;
         }
 
-        // This is for RPC impl (FO -> FH, direct comms over secure channel).
-        public async Task ProcessRPCHealthDataAsync(TelemetryData foHealthData)
-        {
-            // Check cluster upgrade status. If the cluster is upgrading to a new version (or rolling back)
-            // then do not attempt node level repairs.
-            if (string.IsNullOrEmpty(foHealthData.ApplicationName))
-            {
-                int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(
-                                            this.fabricClient,
-                                            Token).ConfigureAwait(false);
-
-                if (udInClusterUpgrade > -1 && udInClusterUpgrade < int.MaxValue)
-                {
-                    string telemetryDescription =
-                            $"Cluster is currently upgrading in UD {udInClusterUpgrade}. " +
-                            $"Will not schedule or execute repairs at this time.";
-
-                    await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                           LogLevel.Info,
-                           $"MonitorRepairableHealthEventsAsync::ClusterUpgradeDetected",
-                           telemetryDescription,
-                           Token).ConfigureAwait(false);
-
-                    return;
-                }
-            }
-            else if (foHealthData.ApplicationName != "fabric:/System")
-            {
-                var appName = new Uri(foHealthData.ApplicationName);
-                var appUpgradeStatus =
-                    await this.fabricClient.ApplicationManager.GetApplicationUpgradeProgressAsync(appName);
-
-                if (appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingBackInProgress
-                    || appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingForwardInProgress
-                    || appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingForwardPending)
-                {
-                    var udInAppUpgrade = await UpgradeChecker.GetUdsWhereApplicationUpgradeInProgressAsync(
-                        this.fabricClient,
-                        Token,
-                        appName);
-
-                    string udText = string.Empty;
-
-                    // -1 means no upgrade in progress for application
-                    // int.MaxValue means an exception was thrown during upgrade check and you should
-                    // check the logs for what went wrong, then fix the bug (if it's a bug you can fix).
-                    if (udInAppUpgrade.Any(ud => ud > -1 && ud < int.MaxValue))
-                    {
-                        udText = $"in UD {udInAppUpgrade.First(ud => ud > -1 && ud < int.MaxValue)}";
-                    }
-
-                    string telemetryDescription =
-                        $"{appName} is upgrading {udText}. " +
-                        $"Will not attempt application repair at this time.";
-
-                    await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                           LogLevel.Info,
-                           $"MonitorRepairableHealthEventsAsync::AppUpgradeDetected",
-                           telemetryDescription,
-                           Token).ConfigureAwait(false);
-
-                    return;
-                }
-            }
-
-            // Get configuration settings related to supported repair.
-            List<string> repairRules;
-            if (foHealthData.ApplicationName == "fabric:/System")
-            {
-                repairRules = GetRepairRulesFromFOCode(foHealthData.Code, foHealthData.ApplicationName);
-            }
-            else
-            {
-                repairRules = GetRepairRulesFromFOCode(foHealthData.Code);
-            }
-
-            if (repairRules == null || !repairRules.Any())
-            {
-                return;
-            }
-
-            string target = (!string.IsNullOrEmpty(foHealthData.ApplicationName) || !string.IsNullOrEmpty(foHealthData.ServiceName)) ? foHealthData.ServiceName.Replace(foHealthData.ApplicationName, "").Replace("/", "") : foHealthData.Code;
-            string Id = $"{foHealthData.ObserverName}_{target}_{foHealthData.NodeName}";
-            foHealthData.RepairId = Id;
-
-            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                LogLevel.Info,
-                $"ProcessHealthDataAsync: {Id}",
-                $"Detected {FabricObserverErrorWarningCodes.GetErrorWarningNameFromCode(foHealthData.Code)}" +
-                $"{(!string.IsNullOrEmpty(foHealthData.ServiceName) ? " for " + foHealthData.ServiceName : string.Empty)} " +
-                $"on node {foHealthData.NodeName}. " +
-                $"Repair Logic rules found: {repairRules.Count}.",
-                Token).ConfigureAwait(false);
-
-            await repairTaskHelper.StartRepairWorkflowAsync(
-                foHealthData,
-                repairRules,
-                Token).ConfigureAwait(false);
-        }
-
         private FabricHealerManager(
             StatelessServiceContext context,
             CancellationToken token)
@@ -630,6 +530,23 @@ namespace FabricHealer
                         if (!ConfigSettings.EnableVmRepair)
                         {
                             continue;
+                        }
+
+                        // RepairManager will not approve any repair job when the aggregated cluster health is Error. So, do not attempt repairs under this condition.
+                        if (evaluation.AggregatedHealthState == HealthState.Error)
+                        {
+                            string telemetryDescription =
+                                    $"Warning: Cluster aggregated health state is Error due to Node error state: {evaluation.Description}. " +
+                                    $"RepairManager service will not approve any repair jobs when the cluster is in this state. " +
+                                    $"Therefore, FabricHealer will not schedule or execute node-level repairs at this time as it is not reliably safe to do so. ";
+
+                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                   LogLevel.Info,
+                                   $"MonitorRepairableHealthEventsAsync::ClusterInErrorState",
+                                   telemetryDescription,
+                                   Token).ConfigureAwait(false);
+
+                            return true;
                         }
 
                         try

@@ -983,7 +983,15 @@ namespace FabricHealer.Repair
                         Token).ConfigureAwait(false);
 
                 // Did not solve the problem within specified time. Cancel repair task.
-                await FabricRepairTasks.CancelRepairTaskAsync(repairTask, this.FabricClientInstance).ConfigureAwait(false);
+                //await FabricRepairTasks.CancelRepairTaskAsync(repairTask, this.FabricClientInstance).ConfigureAwait(false);
+                _ = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                () =>
+                                FabricRepairTasks.CompleteCustomActionRepairJobAsync(
+                                            repairTask,
+                                            this.FabricClientInstance,
+                                            this.Context,
+                                            cancellationToken),
+                                        cancellationToken).ConfigureAwait(false);
 
                 return false;
             }
@@ -1028,11 +1036,6 @@ namespace FabricHealer.Repair
             if (repairConfig == null)
             {
                 return false;
-            }
-
-            if (await GetCurrentAggregatedHealthStateAsync(repairConfig, token).ConfigureAwait(false) == HealthState.Ok)
-            {
-                return true;
             }
 
             var stopwatch = Stopwatch.StartNew();

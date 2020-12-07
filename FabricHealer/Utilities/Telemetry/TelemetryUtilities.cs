@@ -141,7 +141,7 @@ namespace FabricHealer.Utilities.Telemetry
                 NodeName = this.serviceContext.NodeContext.NodeName,
                 ReportType = HealthReportType.Node,
                 State = healthState,
-                HealthReportTimeToLive = TimeSpan.FromMinutes(1),
+                HealthReportTimeToLive = TimeSpan.FromMinutes(5),
                 Property = "RepairStateInformation",
                 Source = source,
             };
