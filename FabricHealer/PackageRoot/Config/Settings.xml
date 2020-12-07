@@ -10,9 +10,9 @@
          **NOTE: For Linux targets, do not supply a drive prefix. Just supply a folder name.** -->
     <Parameter Name="LocalLogPath" Value="fabrichealer_logs" />
     <Parameter Name="EnableVerboseLogging" Value="true" />
-    <!-- Optional: Diagnostic Telemetry. ApplicationInsights support is already implemented., 
+    <!-- Optional: Diagnostic Telemetry. Azure ApplicationInsights and LogAnalytics support is already implemented, 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
-    <Parameter Name="EnableTelemetryProvider" Value="true" />
+    <Parameter Name="EnableTelemetryProvider" Value="false" />
     <!-- Required: Values can be either AzureApplicationInsights or AzureLogAnalytics -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
@@ -55,15 +55,4 @@
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="LogicRulesConfigurationFile" Value="VmRules.config.txt" />
   </Section>
-  <!-- <Section Name="TransportSettings">
-    <Parameter Name="MaxMessageSize" Value="10000000" />
-    <Parameter Name="SecurityCredentialsType" Value="X509" />
-    <Parameter Name="CertificateFindType" Value="FindByThumbprint" />
-    <Parameter Name="CertificateFindValue" Value="414a019a52c38256cc493e15b00f140b82bda1a8" />
-    <Parameter Name="CertificateRemoteThumbprints" Value="" />
-    <Parameter Name="CertificateStoreLocation" Value="LocalMachine" />
-    <Parameter Name="CertificateStoreName" Value="My" />
-    <Parameter Name="CertificateProtectionLevel" Value="EncryptAndSign" />
-    <Parameter Name="CertificateRemoteCommonNames" Value="" /> 
-  </Section> -->
 </Settings>
