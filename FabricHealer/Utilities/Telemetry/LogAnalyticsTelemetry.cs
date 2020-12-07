@@ -180,6 +180,11 @@ namespace FabricHealer.Utilities.Telemetry
         /// <returns>A completed task or task containing exception info.</returns>
         private Task SendTelemetryAsync(string payload)
         {
+            if (string.IsNullOrEmpty(this.WorkspaceId))
+            {
+                return Task.CompletedTask;
+            }
+
             var requestUri = new Uri($"https://{this.WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={this.ApiVersion}");
             string date = DateTime.UtcNow.ToString("r");
             string signature = this.GetSignature("POST", payload.Length, "application/json", date, "/api/logs");

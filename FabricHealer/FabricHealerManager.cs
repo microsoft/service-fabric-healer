@@ -587,6 +587,25 @@ namespace FabricHealer
                     return true;
                 }
 
+                /*
+                // RepairManager will not approve any repair job when the aggregated cluster health is Error. So, do not attempt repairs under this condition.
+                if (clusterHealth.AggregatedHealthState == HealthState.Error)
+                {
+                    string telemetryDescription =
+                            $"Warning: Cluster aggregated health state is Error: {clusterHealth.UnhealthyEvaluations?.FirstOrDefault()?.Description}. " +
+                            $"RepairManager service will not approve any repair jobs when the cluster is in this state. " +
+                            $"Therefore, FabricHealer will not schedule or execute repairs at this time as it is not reliably safe to do so. " +
+                            $"Note: FabricHealer is only able to execute supported SF entity health issues described in FabricObserver-emitted Warning state health reports.";
+
+                    await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                           LogLevel.Info,
+                           $"MonitorRepairableHealthEventsAsync::ClusterInErrorState",
+                           telemetryDescription,
+                           Token).ConfigureAwait(false);
+
+                    return true;
+                }*/
+
                 // Check cluster upgrade status. If the cluster is upgrading to a new version (or rolling back)
                 // then do not attempt repairs.
                 int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(
