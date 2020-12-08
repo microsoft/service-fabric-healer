@@ -54,7 +54,7 @@ namespace Guan.Logic
                     binding_.ResetOutput();
                 }
 
-                return Task.FromResult<UnificationResult>(result);
+                return Task.FromResult(result);
             }
         }
 
