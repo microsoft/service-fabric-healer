@@ -71,7 +71,7 @@ namespace FabricHealer.Utilities
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Utilities.Logger"/> class.
+        /// Initializes a new instance of the <see cref="Logger"/> class.
         /// </summary>
         /// <param name="sourceName">Name of observer.</param>
         /// <param name="logFolderBasePath">Base folder path.</param>

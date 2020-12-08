@@ -31,7 +31,7 @@ namespace Guan.Logic
                 result = null;
             }
 
-            return Task.FromResult<UnificationResult>(result);
+            return Task.FromResult(result);
         }
     }
 }

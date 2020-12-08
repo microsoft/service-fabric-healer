@@ -200,7 +200,7 @@ namespace Guan.Common
             if (index < 0)
             {
                 T start;
-                if (Utility.TryParse<T>(value, out start))
+                if (Utility.TryParse(value, out start))
                 {
                     result = new Range<T>(start, start);
                     return true;

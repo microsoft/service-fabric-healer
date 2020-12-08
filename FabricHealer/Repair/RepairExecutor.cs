@@ -18,10 +18,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.IO;
 using System.Security;
-using System.Runtime.InteropServices;
 using System.Linq;
-using System.Collections;
-using System.Management;
 using System.Collections.Generic;
 
 namespace FabricHealer.Repair
@@ -115,45 +112,6 @@ namespace FabricHealer.Repair
                 await this.telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
                         "RepairExecutor.RestartCodePackageAsync",
-                        $"Execution failure: {ex}.",
-                        cancellationToken).ConfigureAwait(false);
-
-                return null;
-            }
-        }
-
-        public async Task<RestartDeployedCodePackageResult> RestartDeployedContainerCodePackageAsync(
-           RepairConfiguration repairConfiguration,
-            CancellationToken cancellationToken)
-        {
-            try
-            {
-                var deployedCodePackages = await fabricClient.QueryManager.GetDeployedCodePackageListAsync(repairConfiguration.NodeName, repairConfiguration.AppName).ConfigureAwait(false);
-                var codepkg = deployedCodePackages.Where(c => c.HostType == HostType.ContainerHost && c.ServiceManifestName == "ContainerService2Pkg").FirstOrDefault();
-                var restartCodePackageResult = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                    () =>
-                        fabricClient.FaultManager.RestartDeployedCodePackageAsync(
-                            repairConfiguration.NodeName,
-                            repairConfiguration.AppName,
-                            codepkg.ServiceManifestName,
-                            codepkg.CodePackageName,
-                            0,
-                            CompletionMode.DoNotVerify,
-                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                            cancellationToken),
-                    cancellationToken).ConfigureAwait(true);
-
-                return restartCodePackageResult;
-            }
-            catch (Exception ex)
-                when (ex is FabricException
-                || ex is InvalidOperationException
-                || ex is OperationCanceledException
-                || ex is TimeoutException)
-            {
-                await this.telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Warning,
-                        "RepairExecutor.RestartDeployedContainerCodePackageAsync",
                         $"Execution failure: {ex}.",
                         cancellationToken).ConfigureAwait(false);
 
@@ -561,7 +519,7 @@ namespace FabricHealer.Repair
                                 repairConfiguration.NodeName,
                                 repairConfiguration.PartitionId,
                                 repairConfiguration.ReplicaOrInstanceId,
-                                CompletionMode.Verify,
+                                CompletionMode.DoNotVerify,
                                 false,
                                 FabricHealerManager.ConfigSettings.AsyncTimeout.TotalSeconds,
                                 cancellationToken),
@@ -634,13 +592,13 @@ namespace FabricHealer.Repair
 
             if (direction == FileSortOrder.Ascending)
             {
-                files = (from file in dirInfo.EnumerateFiles("*", new System.IO.EnumerationOptions { RecurseSubdirectories = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).RecurseSubdirectories })
+                files = (from file in dirInfo.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).RecurseSubdirectories })
                          orderby file.LastWriteTimeUtc ascending
                          select file.FullName).Distinct().ToList();
             }
             else if (direction == FileSortOrder.Descending)
             {
-                files = (from file in dirInfo.EnumerateFiles("*", new System.IO.EnumerationOptions { RecurseSubdirectories = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).RecurseSubdirectories })
+                files = (from file in dirInfo.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).RecurseSubdirectories })
                          orderby file.LastAccessTimeUtc descending
                          select file.FullName).Distinct().ToList();
             }
