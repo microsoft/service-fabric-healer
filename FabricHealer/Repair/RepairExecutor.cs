@@ -450,7 +450,7 @@ namespace FabricHealer.Repair
                         () =>
                             this.fabricClient.FaultManager.RestartReplicaAsync(
                                 replicaSelector,
-                                CompletionMode.Verify,
+                                CompletionMode.DoNotVerify,
                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                 cancellationToken),
                         cancellationToken).ConfigureAwait(false);
