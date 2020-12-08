@@ -108,6 +108,8 @@ namespace FabricHealer.Repair
             this.RepairExec = new RepairExecutor(fabricClient, context, token);
             this.repairTaskEngine = new RepairTaskEngine(fabricClient);
             this.TelemetryUtilities = new TelemetryUtilities(fabricClient, context);
+
+            // TODO: These do not make sense in stateless service singleton (-1) context for FabricHealer... Come up with a different approach for managing repair count limiting for FH Stateless...
             this.CompletedCodePackageRepairs = new Dictionary<string, (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)>();
             this.CompletedDiskRepairs = new Dictionary<string, (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)>();
             this.CompletedFabricNodeRepairs = new Dictionary<string, (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)>();
