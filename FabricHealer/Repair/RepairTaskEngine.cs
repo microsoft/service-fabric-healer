@@ -38,17 +38,15 @@ namespace FabricHealer.Repair
             RepairExecutorData executorData)
         {
             NodeImpactLevel impact = NodeImpactLevel.None;
-            bool performHealthCheck = false;
+            bool performHealthChecks = false;
 
             if (repairConfiguration.RepairPolicy.CurrentAction == RepairAction.RestartFabricNode)
             {
                 impact = NodeImpactLevel.Restart;
-                performHealthCheck = true;
             }
             else if (repairConfiguration.RepairPolicy.CurrentAction == RepairAction.RemoveFabricNodeState)
             {
                 impact = NodeImpactLevel.RemoveData;
-                performHealthCheck = true;
             }
 
             var nodeRepairImpact = new NodeRepairImpactDescription();
@@ -68,8 +66,8 @@ namespace FabricHealer.Repair
                 State = RepairTaskState.Preparing,
                 Executor = FabricHealerExecutorName,
                 ExecutorData = SerializationUtility.TrySerialize(executorData, out string exData) ? exData : null,
-                PerformPreparingHealthCheck = performHealthCheck,
-                PerformRestoringHealthCheck = performHealthCheck,
+                PerformPreparingHealthCheck = performHealthChecks,
+                PerformRestoringHealthCheck = performHealthChecks,
             };
 
             return repairTask;

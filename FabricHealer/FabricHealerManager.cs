@@ -532,23 +532,6 @@ namespace FabricHealer
                             continue;
                         }
 
-                        // RepairManager will not approve any repair job when the aggregated cluster health is Error. So, do not attempt repairs under this condition.
-                        if (evaluation.AggregatedHealthState == HealthState.Error)
-                        {
-                            string telemetryDescription =
-                                    $"Warning: Cluster aggregated health state is Error due to Node error state: {evaluation.Description}. " +
-                                    $"RepairManager service will not approve any repair jobs when the cluster is in this state. " +
-                                    $"Therefore, FabricHealer will not schedule or execute node-level repairs at this time as it is not reliably safe to do so. ";
-
-                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                   LogLevel.Info,
-                                   $"MonitorRepairableHealthEventsAsync::ClusterInErrorState",
-                                   telemetryDescription,
-                                   Token).ConfigureAwait(false);
-
-                            return true;
-                        }
-
                         try
                         {
                             await ProcessNodeHealthAsync(clusterHealth.NodeHealthStates).ConfigureAwait(false);
