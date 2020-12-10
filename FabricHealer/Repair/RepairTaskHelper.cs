@@ -271,6 +271,7 @@ namespace FabricHealer.Repair
             return await queryDispatcher.RunQueryAsync(terms).ConfigureAwait(false);
         }
 
+        // TODO: This only makes sense for a stateful singleton FH. Since FH is stateless -1, in-memory state machines like these are not useful..
         private Task UpdateRepairRunStateDictionaryAsync(
             IDictionary<string, 
                 (long RepairCount, 

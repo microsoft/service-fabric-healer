@@ -38,7 +38,6 @@ namespace FabricHealer.Repair
             RepairExecutorData executorData)
         {
             NodeImpactLevel impact = NodeImpactLevel.None;
-            bool performHealthChecks = false;
 
             if (repairConfiguration.RepairPolicy.CurrentAction == RepairAction.RestartFabricNode)
             {
@@ -66,8 +65,8 @@ namespace FabricHealer.Repair
                 State = RepairTaskState.Preparing,
                 Executor = FabricHealerExecutorName,
                 ExecutorData = SerializationUtility.TrySerialize(executorData, out string exData) ? exData : null,
-                PerformPreparingHealthCheck = performHealthChecks,
-                PerformRestoringHealthCheck = performHealthChecks,
+                PerformPreparingHealthCheck = false,
+                PerformRestoringHealthCheck = false,
             };
 
             return repairTask;
@@ -105,8 +104,8 @@ namespace FabricHealer.Repair
                 Target = new NodeRepairTargetDescription(repairConfiguration.NodeName),
                 Description = $"{repairConfiguration.RepairPolicy.Id}",
                 Executor = executorName,
-                PerformPreparingHealthCheck = true,
-                PerformRestoringHealthCheck = true,
+                PerformPreparingHealthCheck = false,
+                PerformRestoringHealthCheck = false,
                 State = RepairTaskState.Claimed,
             };
 
@@ -125,8 +124,8 @@ namespace FabricHealer.Repair
                 Target = new NodeRepairTargetDescription(repairConfiguration.NodeName),
                 Description = $"{repairConfiguration.RepairPolicy.Id}",
                 Executor = executorName,
-                PerformPreparingHealthCheck = true,
-                PerformRestoringHealthCheck = true,
+                PerformPreparingHealthCheck = false,
+                PerformRestoringHealthCheck = false,
                 State = RepairTaskState.Claimed,
             };
 
@@ -145,8 +144,8 @@ namespace FabricHealer.Repair
                 Target = new NodeRepairTargetDescription(repairConfiguration.NodeName),
                 Description = $"{repairConfiguration.RepairPolicy.Id}",
                 Executor = executorName,
-                PerformPreparingHealthCheck = true,
-                PerformRestoringHealthCheck = true,
+                PerformPreparingHealthCheck = false,
+                PerformRestoringHealthCheck = false,
                 State = RepairTaskState.Claimed,
             };
 
