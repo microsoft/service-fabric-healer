@@ -19,6 +19,7 @@ using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
 using Guan.Common;
+using System.Data;
 
 namespace FabricHealer.Repair
 {
@@ -193,10 +194,46 @@ namespace FabricHealer.Repair
             {
                 await this.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
-                        $"RepairTaskHelper.ScheduleRepairTaskAsync",
-                        $"Unable to attempt repair. Target node exists in cluster? {node == null}.", // Is node Safe for repair actions? {isSafe}",
+                        $"RepairTaskHelper.StartRepairWorkflowAsync",
+                        $"Unable to attempt repair. Target node exists in cluster? {node == null}.",
                         cancellationToken).ConfigureAwait(false);
               
+                return;
+            }
+
+            try
+            {
+                if (repairRules.Any(r => r.Contains(RepairConstants.RestartVM)
+                    || r.Contains(RepairConstants.ReimageVM)))
+                {
+                    // Do not allow VM reboot or reimage to take place in one-node cluster.
+                    var nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(
+                                        null,
+                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                        cancellationToken).ConfigureAwait(false);
+
+                    int nodeCount = nodes.Count;
+
+                    if (nodeCount == 1)
+                    {
+                        await this.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                              LogLevel.Warning,
+                              $"RepairTaskHelper.StartRepairWorkflowAsync::OneNodeCluster",
+                              $"Will not attempt VM-level repair in a one node cluster.",
+                              cancellationToken).ConfigureAwait(false);
+
+                        return;
+                    }
+                }
+            }
+            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TimeoutException)
+            {
+                await this.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                      LogLevel.Warning,
+                      $"RepairTaskHelper.StartRepairWorkflowAsync::NodeCount",
+                      $"Unable to determine node count. Will not attempt VM level repairs:{Environment.NewLine}{e}",
+                      cancellationToken).ConfigureAwait(false);
+
                 return;
             }
 
@@ -210,7 +247,7 @@ namespace FabricHealer.Repair
             {
                 await this.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                        LogLevel.Warning,
-                       "ScheduleRepairTask:GuanException",
+                       "StartRepairWorkflowAsync:GuanException",
                        $"Failed in Guan: {ge}",
                        cancellationToken).ConfigureAwait(false);
 

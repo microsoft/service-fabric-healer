@@ -96,6 +96,15 @@ namespace FabricHealer.Repair
             RepairConfiguration repairConfiguration,
             string executorName)
         {
+            // Do not allow this to take place in one-node cluster.
+            var nodes = this.fabricClient.QueryManager.GetNodeListAsync().GetAwaiter().GetResult();
+            int nodeCount = nodes.Count;
+
+            if (nodeCount == 1)
+            {
+                return null;
+            }
+
             string taskId = $"{FHTaskIdPrefix}/{HostVMReimage}/{Guid.NewGuid()}/{repairConfiguration.NodeName}/{repairConfiguration.NodeType}";
 
             var repairTask = new ClusterRepairTask(taskId, HostVMReimage)
@@ -116,6 +125,15 @@ namespace FabricHealer.Repair
             RepairConfiguration repairConfiguration,
             string executorName)
         {
+            // Do not allow this to take place in one-node cluster.
+            var nodes = this.fabricClient.QueryManager.GetNodeListAsync().GetAwaiter().GetResult();
+            int nodeCount = nodes.Count;
+
+            if (nodeCount == 1)
+            {
+                return null;
+            }
+
             string taskId = $"{FHTaskIdPrefix}/{HostVMReboot}/{Guid.NewGuid()}/{repairConfiguration.NodeName}/{repairConfiguration.NodeType}";
 
             var repairTask = new ClusterRepairTask(taskId, HostVMReboot)
