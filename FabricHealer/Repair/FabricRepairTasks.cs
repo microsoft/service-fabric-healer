@@ -189,6 +189,11 @@ namespace FabricHealer.Repair
             RepairConfiguration repairConfiguration,
             CancellationToken token)
         {
+            if (repairTask == null)
+            {
+                return false;
+            }
+
             try
             {
                 var repairTaskEngine = new RepairTaskEngine(fabricClient);
