@@ -15,9 +15,8 @@ namespace FabricHealer.Repair
     public sealed class RepairTaskEngine
     {
         private readonly FabricClient fabricClient;
-        public const string HostReboot = "System.Reboot";
-        public const string HostRepaveData = "System.Azure.HostRepaveData";
-        public const string Heal = "System.Azure.Heal";
+        public const string HostVMReboot = "System.Reboot";
+        public const string HostVMReimage = "System.ReimageOS";
         public const string FHTaskIdPrefix = "FH";
         public const string AzureTaskIdPrefix = "Azure";
         public const string FabricHealerExecutorName = "FabricHealer";
@@ -97,29 +96,9 @@ namespace FabricHealer.Repair
             RepairConfiguration repairConfiguration,
             string executorName)
         {
-            string taskId = $"{FHTaskIdPrefix}/{HostRepaveData}/{Guid.NewGuid()}/{repairConfiguration.NodeName}/{repairConfiguration.NodeType}";
+            string taskId = $"{FHTaskIdPrefix}/{HostVMReimage}/{Guid.NewGuid()}/{repairConfiguration.NodeName}/{repairConfiguration.NodeType}";
 
-            var repairTask = new ClusterRepairTask(taskId, HostRepaveData)
-            {
-                Target = new NodeRepairTargetDescription(repairConfiguration.NodeName),
-                Description = $"{repairConfiguration.RepairPolicy.Id}",
-                Executor = executorName,
-                PerformPreparingHealthCheck = false,
-                PerformRestoringHealthCheck = false,
-                State = RepairTaskState.Claimed,
-            };
-
-            return repairTask;
-        }
-
-        // This allows InfrastructureService to schedule healing for app clusters only
-        public RepairTask CreateHealTask(
-            RepairConfiguration repairConfiguration,
-            string executorName)
-        {
-            string taskId = $"{FHTaskIdPrefix}/{Heal}/{Guid.NewGuid()}/{repairConfiguration.NodeName}/{repairConfiguration.NodeType}";
-
-            var repairTask = new ClusterRepairTask(taskId, Heal)
+            var repairTask = new ClusterRepairTask(taskId, HostVMReimage)
             {
                 Target = new NodeRepairTargetDescription(repairConfiguration.NodeName),
                 Description = $"{repairConfiguration.RepairPolicy.Id}",
@@ -137,9 +116,9 @@ namespace FabricHealer.Repair
             RepairConfiguration repairConfiguration,
             string executorName)
         {
-            string taskId = $"{FHTaskIdPrefix}/{HostReboot}/{Guid.NewGuid()}/{repairConfiguration.NodeName}/{repairConfiguration.NodeType}";
+            string taskId = $"{FHTaskIdPrefix}/{HostVMReboot}/{Guid.NewGuid()}/{repairConfiguration.NodeName}/{repairConfiguration.NodeType}";
 
-            var repairTask = new ClusterRepairTask(taskId, HostReboot)
+            var repairTask = new ClusterRepairTask(taskId, HostVMReboot)
             {
                 Target = new NodeRepairTargetDescription(repairConfiguration.NodeName),
                 Description = $"{repairConfiguration.RepairPolicy.Id}",

@@ -152,14 +152,6 @@ namespace FabricHealer.Repair
 
                     break;
 
-                case RepairAction.Heal:
-                    
-                    repairTask = repairTaskEngine.CreateHealTask(
-                        repairConfiguration,
-                        executorName);
-
-                    break;
-
                 case RepairAction.DeleteFiles:
                 case RepairAction.RestartCodePackage:
                 case RepairAction.RestartFabricNode:

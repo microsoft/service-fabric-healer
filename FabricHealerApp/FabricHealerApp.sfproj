@@ -31,6 +31,7 @@
     <ProjectReference Include="..\FabricHealer\FabricHealer.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="packages.config" />
     <Content Include="PublishProfiles\Cloud.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />

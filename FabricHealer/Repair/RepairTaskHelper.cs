@@ -340,7 +340,7 @@ namespace FabricHealer.Repair
                 await this.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                            LogLevel.Info,
                            "RepairTaskHelper.ExecuteRMInfrastructureRepairTask",
-                           $"IS RepairTask {RepairTaskEngine.HostReboot} " +
+                           $"IS RepairTask {RepairTaskEngine.HostVMReboot} " +
                            $"Executor set to {executorName}.",
                            cancellationToken,
                            repairConfiguration).ConfigureAwait(false);
