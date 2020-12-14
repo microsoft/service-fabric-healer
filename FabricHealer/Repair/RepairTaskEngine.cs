@@ -91,7 +91,7 @@ namespace FabricHealer.Repair
             return repairTasks;
         }
 
-        // This allows InfrastructureService to schedule and run repave
+        // This allows InfrastructureService to schedule and run repave. Note, this may not work for general clusters as VMSS does not manage disks. FYI.
         public RepairTask CreateVmReImageTask(
             RepairConfiguration repairConfiguration,
             string executorName)
