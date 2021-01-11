@@ -40,8 +40,7 @@ namespace FabricHealer.Utilities.Telemetry
                         this.telemetryClient = new LogAnalyticsTelemetry(
                             FabricHealerManager.ConfigSettings.LogAnalyticsWorkspaceId,
                             FabricHealerManager.ConfigSettings.LogAnalyticsSharedKey,
-                            FabricHealerManager.ConfigSettings.LogAnalyticsLogType,
-                            this.fabricClient);
+                            FabricHealerManager.ConfigSettings.LogAnalyticsLogType);
 
                         break;
                     }

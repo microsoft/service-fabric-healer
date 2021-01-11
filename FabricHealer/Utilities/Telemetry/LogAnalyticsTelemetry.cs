@@ -5,9 +5,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Fabric;
 using System.Fabric.Health;
-using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -22,9 +20,9 @@ namespace FabricHealer.Utilities.Telemetry
     // LogAnalyticsTelemetry class is partially based on public (non-license-protected) sample https://dejanstojanovic.net/aspnet/2018/february/send-data-to-azure-log-analytics-from-c-code/
     public class LogAnalyticsTelemetry : ITelemetryProvider
     {
-        private readonly FabricClient fabricClient;
-        //private readonly CancellationToken token;
+        private const int MaxRetries = 5;
         private readonly Logger logger;
+        private int retries;
 
         public string WorkspaceId { get; set; }
 
@@ -38,13 +36,11 @@ namespace FabricHealer.Utilities.Telemetry
             string workspaceId,
             string sharedKey,
             string logType,
-            FabricClient fabricClient,
             string apiVersion = "2016-04-01")
         {
             this.WorkspaceId = workspaceId;
             this.Key = sharedKey;
             this.LogType = logType;
-            this.fabricClient = fabricClient;
             this.ApiVersion = apiVersion;
             this.logger = new Logger("TelemetryLogger");
         }
@@ -74,7 +70,7 @@ namespace FabricHealer.Utilities.Telemetry
                     instanceName = instanceName ?? string.Empty,
                 });
 
-            await this.SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+            await this.SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task ReportMetricAsync(
@@ -86,9 +82,12 @@ namespace FabricHealer.Utilities.Telemetry
                 return;
             }
 
-            string jsonPayload = JsonConvert.SerializeObject(telemetryData);
+            if (!SerializationUtility.TrySerialize<TelemetryData>(telemetryData, out string jsonPayload))
+            {
+                return;
+            }
 
-            await this.SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<bool> ReportMetricAsync<T>(
@@ -108,7 +107,7 @@ namespace FabricHealer.Utilities.Telemetry
                     value,
                 });
 
-            await this.SendTelemetryAsync(jsonPayload).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
 
             return await Task.FromResult(true).ConfigureAwait(false);
         }
@@ -178,11 +177,11 @@ namespace FabricHealer.Utilities.Telemetry
         /// </summary>
         /// <param name="payload">Json string containing telemetry data.</param>
         /// <returns>A completed task or task containing exception info.</returns>
-        private Task SendTelemetryAsync(string payload)
+        private async Task SendTelemetryAsync(string payload, CancellationToken token)
         {
             if (string.IsNullOrEmpty(this.WorkspaceId))
             {
-                return Task.CompletedTask;
+                return;
             }
 
             var requestUri = new Uri($"https://{this.WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={this.ApiVersion}");
@@ -197,31 +196,62 @@ namespace FabricHealer.Utilities.Telemetry
             request.Headers["Authorization"] = signature;
             byte[] content = Encoding.UTF8.GetBytes(payload);
 
-            using (var requestStreamAsync = request.GetRequestStream())
+            if (token.IsCancellationRequested)
             {
-                requestStreamAsync.Write(content, 0, content.Length);
+                return;
             }
 
-            using var responseAsync = (HttpWebResponse)request.GetResponse();
-            
-            if (responseAsync.StatusCode == HttpStatusCode.OK ||
-                responseAsync.StatusCode == HttpStatusCode.Accepted)
+            try
             {
-                return Task.CompletedTask;
+                using (var requestStreamAsync = await request.GetRequestStreamAsync())
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    await requestStreamAsync.WriteAsync(content, 0, content.Length);
+                }
+
+                using var responseAsync = await request.GetResponseAsync() as HttpWebResponse;
+
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                if (responseAsync.StatusCode == HttpStatusCode.OK ||
+                    responseAsync.StatusCode == HttpStatusCode.Accepted)
+                {
+                    this.retries = 0;
+                    return;
+                }
+
+                this.logger.LogWarning($"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
+            }
+            catch (Exception e)
+            {
+                // An Exception during telemetry data submission should never take down FH process. Log it.
+                this.logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{e}");
             }
 
-            var responseStream = responseAsync.GetResponseStream();
-
-            if (responseStream == null)
+            if (this.retries < MaxRetries)
             {
-                return Task.CompletedTask;
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                this.retries++;
+                await Task.Delay(1000).ConfigureAwait(false);
+                await SendTelemetryAsync(payload, token).ConfigureAwait(false);
             }
-
-            using var streamReader = new StreamReader(responseStream);
-            string err = $"Exception sending LogAnalytics Telemetry:{Environment.NewLine}{streamReader.ReadToEnd()}";
-            this.logger.LogWarning(err);
-
-            return Task.FromException(new Exception(err));
+            else
+            {
+                // Exhausted retries. Reset counter.
+                this.logger.LogWarning($"Exhausted request retries in LogAnalyticsTelemetry.SendTelemetryAsync: {MaxRetries}. See logs for error details.");
+                this.retries = 0;
+            }
         }
 
         private string GetSignature(
