@@ -3,19 +3,26 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>1.0.0</version>
-    <authors>ctorre</authors>
+    <authors>Microsoft</authors>
+    <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>This package contains the Service Fabric FabricHealer Application (Config files and Microsoft-signed binaries).</description>
-    <summary>FabricHealer: User-Configurable Auto-Mitigation in Service Fabric Clusters. FabricHealer supports a novel repair workflow configuration system: Configuration as Logic (CaL). This is made possible by a new Prolog-like logic programming model/system, Microsoft Guan.</summary>
+    <title>Service Fabric FabricHealer Application</title>
+    <icon>icon.png</icon>
+    <language>en-US</language>
+    <description>FabricHealer: User-Configurable Auto-Mitigation in Service Fabric Clusters. FabricHealer supports a novel repair workflow configuration system: Configuration as Logic (CaL). This is made possible by a new Prolog-like logic programming model/system, Microsoft Guan.</description>
     <contentFiles>
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>
     <dependencies>
       <group targetFramework=".NETStandard2.1" />
     </dependencies>
+    <projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
+    <tags>azure servicefabric fabrichealer utility auto-mitigation</tags>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
   </metadata>
   <files>
     <file src="**" target="contentFiles\any\any" />
-    <file src="FabricHealerPkg\Code\FabricHealer.dll" target="lib\netstandard2.1"/>
+    <file src="FabricHealerPkg\Code\FabricHealer.dll" target="lib\netstandard2.1" />
+    <file src="%ROOT_PATH%\icon.png" target="" />
   </files>
 </package>

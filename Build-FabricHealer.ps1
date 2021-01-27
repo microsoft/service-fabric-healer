@@ -19,10 +19,10 @@ try {
     Copy-Item FabricHealer\PackageRoot\* bin\release\FabricHealer\win-x64\self-contained\FabricHealerType\FabricHealerPkg\ -Recurse
     Copy-Item FabricHealer\PackageRoot\* bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType\FabricHealerPkg\ -Recurse
 
-    Copy-Item FabricHealerCore\ApplicationPackageRoot\ApplicationManifest.xml bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType\ApplicationManifest.xml
-    Copy-Item FabricHealerCore\ApplicationPackageRoot\ApplicationManifest.xml bin\release\FabricHealer\linux-x64\framework-dependent\FabricHealerType\ApplicationManifest.xml
-    Copy-Item FabricHealerCore\ApplicationPackageRoot\ApplicationManifest.xml bin\release\FabricHealer\win-x64\self-contained\FabricHealerType\ApplicationManifest.xml
-    Copy-Item FabricHealerCore\ApplicationPackageRoot\ApplicationManifest.xml bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType\ApplicationManifest.xml
+    Copy-Item FabricHealerApp\ApplicationPackageRoot\ApplicationManifest.xml bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType\ApplicationManifest.xml
+    Copy-Item FabricHealerApp\ApplicationPackageRoot\ApplicationManifest.xml bin\release\FabricHealer\linux-x64\framework-dependent\FabricHealerType\ApplicationManifest.xml
+    Copy-Item FabricHealerApp\ApplicationPackageRoot\ApplicationManifest.xml bin\release\FabricHealer\win-x64\self-contained\FabricHealerType\ApplicationManifest.xml
+    Copy-Item FabricHealerApp\ApplicationPackageRoot\ApplicationManifest.xml bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType\ApplicationManifest.xml
 }
 finally {
     Pop-Location

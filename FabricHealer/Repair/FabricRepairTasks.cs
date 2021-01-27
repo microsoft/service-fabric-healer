@@ -130,7 +130,7 @@ namespace FabricHealer.Repair
         {
             var repairTaskEngine = new RepairTaskEngine(fabricClient);
 
-            RepairTask repairTask;
+            RepairTask repairTask = null;
 
             var repairAction = repairConfiguration.RepairPolicy.CurrentAction;
 
@@ -145,10 +145,10 @@ namespace FabricHealer.Repair
                     break;
 
                 case RepairAction.ReimageVM:
-                    
-                    repairTask = repairTaskEngine.CreateVmReImageTask(
+                    // This does not work for general use case. This has to be redesigned and reimplemented. -CT
+                    /*repairTask = repairTaskEngine.CreateVmReImageTask(
                         repairConfiguration,
-                        executorName);
+                        executorName);*/
 
                     break;
 

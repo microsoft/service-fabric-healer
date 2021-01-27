@@ -11,6 +11,9 @@ using Guan.Common;
 
 namespace FabricHealer.Repair.Guan
 {
+    /// <summary>
+    /// NOTE: This impl does not work due to how VMSS manages Disk repair via CRP. This impl has to be reimagined.
+    /// </summary>
     public class ReimageVMPredicateType : PredicateType
     {
         private static RepairTaskHelper RepairTaskHelper;
