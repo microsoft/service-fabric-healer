@@ -130,7 +130,7 @@ namespace FabricHealer.Repair
         {
             var repairTaskEngine = new RepairTaskEngine(fabricClient);
 
-            RepairTask repairTask;
+            RepairTask repairTask = null;
 
             var repairAction = repairConfiguration.RepairPolicy.CurrentAction;
 
