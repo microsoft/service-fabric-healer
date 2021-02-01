@@ -14,7 +14,6 @@ using System.Threading;
 using FabricHealer.Repair.Guan;
 using System.Diagnostics;
 using System.IO;
-using FabricHealer;
 using Guan.Common;
 using System.Linq;
 using FabricHealer.Utilities.Telemetry;
@@ -22,8 +21,6 @@ using FabricHealer.Utilities;
 
 namespace FHTest
 {
-    // NOTE: These tests won't work without the presence of a local SF cluster. 
-    // Make sure to start your dev cluster before running these tests.
     [TestClass]
     public class FHUnitTests
     {
@@ -51,28 +48,19 @@ namespace FHTest
                     Guid.NewGuid(),
                     long.MaxValue);
 
-        private FabricHealerManager fabricHealerManager;
-        private readonly bool isSFRuntimePresentOnTestMachine;
         private readonly CancellationToken token = new CancellationToken { };
 
         // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
-        // e.g., @"C:\Users\[me]\source\repos\FabricHealerCore\FabricHealer\PackageRoot\Config\Rules\";
-        private const string FHRulesDirectory = @"C:\Users\ctorre\source\repos\FabricHealerCore\FabricHealer\PackageRoot\Config\Rules\";
+        // e.g., if on Windows, then replace [Add] with @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
+        private const string FHRulesDirectory = "[Add]";
 
         public FHUnitTests()
         {
-            this.isSFRuntimePresentOnTestMachine = this.IsLocalSFRuntimePresent();
-            
-            if (!isSFRuntimePresentOnTestMachine)
-            {
-                throw new Exception("You must have a local SF dev cluster running to run these tests.");
-            }
-            
-            this.fabricHealerManager = FabricHealerManager.Singleton(this.context, this.token);
+
         }
 
         /* GuanLogic Tests */
-        // TODO: More of them and impls...
+        // TODO: More of them.
 
         // This test ensures your actual rule files contain legitimate rules. This will catch bugs in your
         // logic. Of course, you should have caught these flaws in your end-to-end tests. This is just an extra precaution.
@@ -180,10 +168,10 @@ namespace FHTest
         }
 
         /* FH Repair Scheduler Tests */
-        // TODO...
+        // TODO.
 
         /* FH Repair Excecutor Tests */
-        // TODO...
+        // TODO.
 
         [ClassCleanup]
         public static void TestClassCleanup()
@@ -229,7 +217,6 @@ namespace FHTest
             functorTable.Add(RestartCodePackagePredicateType.Singleton(RepairConstants.RestartCodePackage, repairTaskHelper, foHealthData));
             functorTable.Add(RestartFabricNodePredicateType.Singleton(RepairConstants.RestartFabricNode, repairTaskHelper, executorData, repairTaskEngine, foHealthData));
             functorTable.Add(RestartReplicaPredicateType.Singleton(RepairConstants.RestartReplica, repairTaskHelper, foHealthData));
-            functorTable.Add(ReimageVMPredicateType.Singleton(RepairConstants.ReimageVM, repairTaskHelper, foHealthData));
             functorTable.Add(RestartVMPredicateType.Singleton(RepairConstants.RestartVM, repairTaskHelper, foHealthData));
 
             // Parse rules

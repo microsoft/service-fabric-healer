@@ -5,12 +5,13 @@
 
 namespace FabricHealer.Repair
 {
+    /// <summary>
+    /// Not all of these actions have corresponding implementations yet.
+    /// </summary>
     public enum RepairAction
     {
         DeleteFiles,
-        Heal,
         PauseFabricNode,
-        ReimageVM,
         RemoveFabricNodeState,
         RemoveReplica,
         RestartCodePackage,

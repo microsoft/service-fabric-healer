@@ -275,7 +275,6 @@ namespace FabricHealer.Repair
             functorTable.Add(RestartCodePackagePredicateType.Singleton(RepairConstants.RestartCodePackage, this, foHealthData));
             functorTable.Add(RestartFabricNodePredicateType.Singleton(RepairConstants.RestartFabricNode, this, repairExecutorData, this.repairTaskEngine, foHealthData));
             functorTable.Add(RestartReplicaPredicateType.Singleton(RepairConstants.RestartReplica, this, foHealthData));
-            functorTable.Add(ReimageVMPredicateType.Singleton(RepairConstants.ReimageVM, this, foHealthData));
             functorTable.Add(RestartVMPredicateType.Singleton(RepairConstants.RestartVM, this, foHealthData));
 
             // Parse rules

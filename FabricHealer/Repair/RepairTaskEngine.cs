@@ -91,35 +91,6 @@ namespace FabricHealer.Repair
             return repairTasks;
         }
 
-        // This allows InfrastructureService to schedule and run repave. Note, this may not work for general clusters as VMSS does not manage disks. FYI.
-        public RepairTask CreateVmReImageTask(
-            RepairConfiguration repairConfiguration,
-            string executorName)
-        {
-            // Do not allow this to take place in one-node cluster.
-            var nodes = this.fabricClient.QueryManager.GetNodeListAsync().GetAwaiter().GetResult();
-            int nodeCount = nodes.Count;
-
-            if (nodeCount == 1)
-            {
-                return null;
-            }
-
-            string taskId = $"{FHTaskIdPrefix}/{HostVMReimage}/{Guid.NewGuid()}/{repairConfiguration.NodeName}/{repairConfiguration.NodeType}";
-
-            var repairTask = new ClusterRepairTask(taskId, HostVMReimage)
-            {
-                Target = new NodeRepairTargetDescription(repairConfiguration.NodeName),
-                Description = $"{repairConfiguration.RepairPolicy.Id}",
-                Executor = executorName,
-                PerformPreparingHealthCheck = false,
-                PerformRestoringHealthCheck = false,
-                State = RepairTaskState.Claimed,
-            };
-
-            return repairTask;
-        }
-
         // This allows InfrastructureService to schedule and run reboot
         public RepairTask CreateVmRebootTask(
             RepairConfiguration repairConfiguration,

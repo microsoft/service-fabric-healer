@@ -78,7 +78,6 @@ namespace FabricHealer.Repair.Guan
                         }
                         break;
 
-                    case RepairAction.ReimageVM:
                     case RepairAction.RestartVM:
                         
                         if (RepairTaskHelper.CompletedVmRepairs.ContainsKey(FOHealthData.RepairId))

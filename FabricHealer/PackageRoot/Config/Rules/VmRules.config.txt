@@ -1,5 +1,4 @@
-﻿## This houses both VM restart and reimage rules. NOTE: Reimage does not work with the current design due to how VMSS processes Disk repair jobs
-## and that SF IS/RM do not support Reimage operations in the way they do Reboot. So, Reimage repair has to be reimagined.
+﻿## VM restart/reboot logic rules.
 
 ## First, check if we are inside run interval. If so, then cut (!).
 Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.

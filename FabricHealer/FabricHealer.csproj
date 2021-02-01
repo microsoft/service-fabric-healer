@@ -25,6 +25,9 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Repair\Guan\ReimageVMPredicateType.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <None Remove="NLog.config" />
   </ItemGroup>
   <ItemGroup>
