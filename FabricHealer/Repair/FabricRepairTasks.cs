@@ -130,7 +130,7 @@ namespace FabricHealer.Repair
         {
             var repairTaskEngine = new RepairTaskEngine(fabricClient);
 
-            RepairTask repairTask = null;
+            RepairTask repairTask;
 
             var repairAction = repairConfiguration.RepairPolicy.CurrentAction;
 
@@ -141,14 +141,6 @@ namespace FabricHealer.Repair
                     repairTask = repairTaskEngine.CreateVmRebootTask(
                         repairConfiguration,
                         executorName);
-
-                    break;
-
-                case RepairAction.ReimageVM:
-                    // This does not work for general use case. This has to be redesigned and reimplemented. -CT
-                    /*repairTask = repairTaskEngine.CreateVmReImageTask(
-                        repairConfiguration,
-                        executorName);*/
 
                     break;
 
@@ -165,7 +157,7 @@ namespace FabricHealer.Repair
 
                 default:
 
-                    FabricHealerManager.RepairLogger.LogWarning("Unknown FabricRepairAction specified.");
+                    FabricHealerManager.RepairLogger.LogWarning("Unknown or Unsupported FabricRepairAction specified.");
                     return null;
             }
 

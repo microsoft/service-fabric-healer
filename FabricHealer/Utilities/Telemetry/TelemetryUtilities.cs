@@ -25,7 +25,7 @@ namespace FabricHealer.Utilities.Telemetry
             this.fabricClient = fabricClient;
             this.serviceContext = serviceContext;
 
-            if (FabricHealerManager.ConfigSettings.TelemetryEnabled)
+            if (FabricHealerManager.ConfigSettings != null && FabricHealerManager.ConfigSettings.TelemetryEnabled)
             {
                 switch (FabricHealerManager.ConfigSettings.TelemetryProvider)
                 {

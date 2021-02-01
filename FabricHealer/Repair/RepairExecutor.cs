@@ -48,6 +48,11 @@ namespace FabricHealer.Repair
 
             try
             {
+                if (FabricHealerManager.ConfigSettings == null)
+                {
+                    return;
+                }
+
                 IsOneNodeCluster = 
                         this.fabricClient.QueryManager.GetNodeListAsync(
                             null,
