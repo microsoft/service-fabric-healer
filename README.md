@@ -1,4 +1,4 @@
-# FabricHealer  
+# FabricHealer - BETA Version
 ## Auto-mitigation in Service Fabric clusters
 
 FabricHealer (FH) is a singleton stateless Service Fabric service that runs on all nodes in a Linux or Windows cluster. It is implemented as a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (18.04).
