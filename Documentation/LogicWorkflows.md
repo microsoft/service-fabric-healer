@@ -196,7 +196,7 @@ Mitigate() :- (condition check_1 T/F), (condition check_2 T/F), …, (condition 
 Mitigate() :- (false branch)
 ```
 
-**Using interval predicates**
+**Using internal predicates**
 
 So far we've only looked at creating rules that are invoked from the root ```Mitigate()``` query, but users can also create their own rules like so:
 
