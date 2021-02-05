@@ -1,4 +1,4 @@
-﻿## VM restart/reboot logic rules.
+﻿## Logic rules for Virtual Machine level repairs in the cluster. Only OS reboot is supported today.
 
 ## First, check if we are inside run interval. If so, then cut (!).
 Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
