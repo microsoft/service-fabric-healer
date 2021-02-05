@@ -18,7 +18,7 @@ No, using logic to express repair workflows is easy! One doesn't need a deep kno
 ***Solution***: We can leverage Guan and its built-in equals operator for checking the name of the application that triggered the warning against the name of the application for which we decided we want to perform a code package restart for. For application level health events, the repair workflow is defined inside the PackageRoot/Config/Rules/AppRules.config.txt file. Here is that we would enter:
 
 ```
-Mitigate(AppName=?AppName) :- ?AppName == "fabric:/App1", RestartCodePackage(MaxRepairs=5, MaxTimeWindow=1:00:00).
+Mitigate(AppName=?AppName) :- ?AppName == "fabric:/App1", RestartCodePackage(MaxRepairs=5).
 ```
 
 Don't be alarmed if you don't understand how to read that repair action! We will go more in-depth later about the syntax and semantics of Guan. The takeaway is that expressing a Guan repair workflow doesn't require a deep knowledge of Prolog programming to get started. Hopefully this also gives you a general idea about the kinds of repair workflows we can express with GuanLogic.
@@ -106,7 +106,7 @@ now the variable ?x is bound to the application name and ?y is bound to the serv
 Here's a simple example that we've seen before:
 
 ```
-Mitigate() :- RestartCodePackage(MaxRepairs=5, MaxTimeWindow=1:00:00).
+Mitigate() :- RestartCodePackage(MaxRepairs=5).
 ```
 
 Essentially, what this logic repair workflow (mitigation scenario) is describing is that if FO emits a health event that falls under the AppServiceCpuMemoryPortAbuseRepairPolicy and if the repair policy is enabled, then we will execute the repair action. FH will automatically detect that it is a logic workflow, so it will invoke the root rule ```Mitigate()```. Guan determines that the ```Mitigate()``` rule is defined inside the repair action, where it then will try to execute the body of the ```Mitigate()``` rule.
@@ -114,8 +114,8 @@ Essentially, what this logic repair workflow (mitigation scenario) is describing
 Users can define multiple rules (separated by a newline) as part of a repair workflow, here is an example:
 
 ```
-Mitigate() :- RestartCodePackage(MaxRepairs=5, MaxTimeWindow=1:00:00).
-Mitigate() :- RestartFabricNode(MaxRepairs=5, MaxTimeWindow=1:00:00).
+Mitigate() :- RestartCodePackage(MaxRepairs=5).
+Mitigate() :- RestartFabricNode(MaxRepairs=5).
 ```
 
 This seems confusing as we've defined ```Mitigate()``` twice. Here is the execution flow explained in words: "Look for the *first* ```Mitigate()``` rule (read from top to bottom). The *first* ```Mitigate()``` rule is the one that calls ```RestartCodePackage()``` in its body. So we try to run the first rule. If the first rule fails (i.e. ```RestartCodePackage()``` returns false) then we check to see if there is another rule named  ```Mitigate()```, which there is. The next ```Mitigate()``` rule we find is the one that calls ```RestartFabricNode()``` so we try to run the second rule. 
@@ -196,13 +196,13 @@ Mitigate() :- (condition check_1 T/F), (condition check_2 T/F), …, (condition 
 Mitigate() :- (false branch)
 ```
 
-**Using interval predicates**
+**Using internal predicates**
 
 So far we've only looked at creating rules that are invoked from the root ```Mitigate()``` query, but users can also create their own rules like so:
 
 ```
 Mitigate() :- MyInternalPredicate().
-MyInternalPredicate() :- RestartCodePackage(MaxRepairs=5, MaxTimeWindow=1:00:00).
+MyInternalPredicate() :- RestartCodePackage(MaxRepairs=5).
 ```
 
 Here we've defined an internal predicate named ```MyInternalPredicate()``` and we can see that it is invoked in the body of the ```Mitigate()``` rule. In order to fulfill the ```Mitigate()``` rule, we will need to fulfill the ```MyInternalPredicate()``` predicate since it is part of the body of the ```Mitigate()``` rule. This repair workflow is identical in behaviour to one that directly calls ```RestartCodePackage()``` inside the body of ```Mitigate()```.
