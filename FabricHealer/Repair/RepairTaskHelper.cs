@@ -32,70 +32,10 @@ namespace FabricHealer.Repair
         internal readonly TelemetryUtilities TelemetryUtilities;
         public readonly FabricClient FabricClientInstance;
 
-        // TODO: These do not make sense for stateless singleton -1 FH...
-        /// <summary>
-        /// Dictionary with Tuple containing time window cycle state for each supported repair type.
-        /// Structure:
-        /// RepairCount: int value representing number of times the repair operation has taken place in this cycle
-        /// FirstRunTime: DateTime value representing the beginning time for this cycle
-        /// LastRunTime: DateTime value representing the last time the operation was run in this cycle
-        /// </summary>
-        public Dictionary<string,
-            (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)> CompletedCodePackageRepairs;
-        
-        /// <summary>
-        /// Dictionary with Tuple containing time window cycle state for each supported repair type.
-        /// Structure:
-        /// RepairCount: int value representing number of times the repair operation has taken place in this cycle
-        /// FirstRunTime: DateTime value representing the beginning time for this cycle
-        /// LastRunTime: DateTime value representing the last time the operation was run in this cycle
-        /// </summary>
-        public Dictionary<string,
-            (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)> CompletedDiskRepairs;
-
-        /// <summary>
-        /// Dictionary with Tuple containing time window cycle state for each supported repair type.
-        /// Structure:
-        /// RepairCount: int value representing number of times the repair operation has taken place in this cycle
-        /// FirstRunTime: DateTime value representing the beginning time for this cycle
-        /// LastRunTime: DateTime value representing the last time the operation was run in this cycle
-        /// </summary>
-        public Dictionary<string,
-            (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)> CompletedFabricNodeRepairs;
-
-        /// <summary>
-        /// Dictionary with Tuple containing time window cycle state for each supported repair type.
-        /// Structure:
-        /// RepairCount: int value representing number of times the repair operation has taken place in this cycle
-        /// FirstRunTime: DateTime value representing the beginning time for this cycle
-        /// LastRunTime: DateTime value representing the last time the operation was run in this cycle
-        /// </summary>
-        public Dictionary<string,
-            (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)> CompletedReplicaRepairs;
-
-        /// <summary>
-        /// Dictionary with Tuple containing time window cycle state for each supported repair type.
-        /// Structure:
-        /// RepairCount: int value representing number of times the repair operation has taken place in this cycle
-        /// FirstRunTime: DateTime value representing the beginning time for this cycle
-        /// LastRunTime: DateTime value representing the last time the operation was run in this cycle.
-        /// This repair is rather dramatic (Rebooting VM), so once per cycle is fine.
-        /// </summary>
-        public Dictionary<string,
-            (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)> CompletedSystemAppRepairs;
-
-        /// <summary>
-        /// Dictionary with Tuple containing time window cycle state for each supported repair type.
-        /// Structure:
-        /// RepairCount: int value representing number of times the repair operation has taken place in this cycle
-        /// FirstRunTime: DateTime value representing the beginning time for this cycle
-        /// LastRunTime: DateTime value representing the last time the operation was run in this cycle.
-        /// This repair is rather dramatic (Rebooting VM), so once per cycle is fine.
-        /// </summary>
-        public Dictionary<string,
-            (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)> CompletedVmRepairs;
-
-        private TimeSpan AsyncTimeout { get; } = TimeSpan.FromSeconds(60);
+        private TimeSpan AsyncTimeout 
+        { 
+            get; 
+        } = TimeSpan.FromSeconds(60);
 
         public static readonly TimeSpan MaxWaitTimeForInfraRepairTaskCompleted = TimeSpan.FromHours(2);
 
@@ -110,14 +50,6 @@ namespace FabricHealer.Repair
             this.RepairExec = new RepairExecutor(fabricClient, context, token);
             this.repairTaskEngine = new RepairTaskEngine(fabricClient);
             this.TelemetryUtilities = new TelemetryUtilities(fabricClient, context);
-
-            // TODO: These do not make sense in stateless service singleton (-1) context for FabricHealer... Come up with a different approach for managing repair count limiting for FH Stateless...
-            this.CompletedCodePackageRepairs = new Dictionary<string, (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)>();
-            this.CompletedDiskRepairs = new Dictionary<string, (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)>();
-            this.CompletedFabricNodeRepairs = new Dictionary<string, (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)>();
-            this.CompletedReplicaRepairs = new Dictionary<string, (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)>();
-            this.CompletedSystemAppRepairs = new Dictionary<string, (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)>();
-            this.CompletedVmRepairs = new Dictionary<string, (long RepairCount, DateTime FirstRunTime, DateTime LastRunTime)>();
         }
 
         public async Task EnableServiceFabricNodeAsync(
@@ -308,34 +240,11 @@ namespace FabricHealer.Repair
             return await queryDispatcher.RunQueryAsync(terms).ConfigureAwait(false);
         }
 
-        // TODO: This only makes sense for a stateful singleton FH. Since FH is stateless -1, in-memory state machines like these are not useful..
-        private Task UpdateRepairRunStateDictionaryAsync(
-            IDictionary<string, 
-                (long RepairCount, 
-                DateTime FirstRunTime, 
-                DateTime LastRunTime)> stateDictionary,
-            string id)
-        {
-            if (!stateDictionary.ContainsKey(id))
-            {
-                stateDictionary.Add(id, (1, DateTime.Now, DateTime.Now));
-            }
-            else
-            {
-                stateDictionary[id] =
-                    (stateDictionary[id].RepairCount + 1,
-                        stateDictionary[id].FirstRunTime, DateTime.Now);
-            }
-
-            return Task.CompletedTask;
-        }
-
         // The repair will be executed by SF Infrastructure service, not FH. This is the case for all
         // VM-level repairs. IS will communicate with VMSS (for example) to guarantee safe repairs in MR-enabled
         // clusters.RM, as usual, will orchestrate the repair cycle.
         public async Task<bool> ExecuteRMInfrastructureRepairTask(
             RepairConfiguration repairConfiguration,
-            IDictionary<string, (long RepairCount, DateTime FirstRunTime,DateTime LastRunTime)> stateDictionary,
             CancellationToken cancellationToken)
         {
             var infraServices = await FabricRepairTasks.GetInfrastructureServiceInstancesAsync(
@@ -351,14 +260,6 @@ namespace FabricHealer.Repair
                    cancellationToken,
                    repairConfiguration).ConfigureAwait(false);
 
-                return false;
-            }
-
-            if (!await CheckRepairCycleRunStateAsync(
-                       stateDictionary,
-                       repairConfiguration,
-                       cancellationToken).ConfigureAwait(false))
-            {
                 return false;
             }
 
@@ -471,98 +372,6 @@ namespace FabricHealer.Repair
             return true;
         }
 
-        private async Task<bool> CheckRepairCycleRunStateAsync(
-            IDictionary<string,
-                (long RepairCount,
-                DateTime FirstRunTime,
-                DateTime LastRunTime)> stateDictionary,
-            RepairConfiguration repairConfiguration,
-            CancellationToken cancellationToken)
-        {
-            string id = repairConfiguration.RepairPolicy.Id;
-
-            // Fresh (new instance or previously cleared) state dictionary. 
-            if (!stateDictionary.ContainsKey(id))
-            {
-                return true;
-            }
-
-            // New repair cycle? If so, then clear dictionary.
-            if (repairConfiguration.RepairPolicy.RepairCycleTimeWindow > TimeSpan.MinValue
-                && DateTime.Now.Subtract(
-                    stateDictionary[id].FirstRunTime) > repairConfiguration.RepairPolicy.RepairCycleTimeWindow)
-            {
-                string message =
-                    $"Starting new repair cycle for {id}, " +
-                    $"time window = {repairConfiguration.RepairPolicy.RepairCycleTimeWindow}";
-
-                await this.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairTaskHelper.CheckRepairCycleRunStateAsync",
-                    message,
-                    cancellationToken,
-                    repairConfiguration).ConfigureAwait(false);
-
-                FabricHealerManager.RepairLogger.LogInfo(message);
-
-                stateDictionary.Remove(id);
-
-                return true;
-            }
-
-            if (repairConfiguration.RepairPolicy.MaxRepairCycles <= 0 
-                || repairConfiguration.RepairPolicy.RunInterval == TimeSpan.MinValue)
-            {
-                return true;
-            }
-
-            // Check repair count state.
-            if (stateDictionary[id].RepairCount == repairConfiguration.RepairPolicy.MaxRepairCycles)
-            {
-                string  message =
-                    "Reached maximum number of successful repair cycles within time window of " +
-                    $"{repairConfiguration.RepairPolicy.RepairCycleTimeWindow}. " +
-                    $"{repairConfiguration.RepairPolicy.MaxRepairCycles} " +
-                    $"repair operations have taken place for taskid {id} " +
-                    $"on node {repairConfiguration.NodeName}.";
-
-                FabricHealerManager.RepairLogger.LogInfo(message);
-
-                await this.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairTaskHelper.ScheduleRepairTaskAsync",
-                    message,
-                    cancellationToken,
-                    repairConfiguration).ConfigureAwait(false);
-
-                return false;
-            }
-
-            // Are we outside the run interval for this repair cycle time window?
-            if (DateTime.Now.Subtract(stateDictionary[id].LastRunTime) <
-                repairConfiguration.RepairPolicy.RunInterval)
-            {
-                string message =
-                    $"Outside of run interval for repair {id}.{Environment.NewLine}" +
-                    $"Computed run interval ({Enum.GetName(typeof(CycleTimeDistributionType), repairConfiguration.RepairPolicy.CycleTimeDistributionType)} " +
-                    $"distribution of {repairConfiguration.RepairPolicy.MaxRepairCycles} repair cycles over {repairConfiguration.RepairPolicy.RepairCycleTimeWindow} time window) " +
-                    $"is once every {repairConfiguration.RepairPolicy.RunInterval}.";
-
-                FabricHealerManager.RepairLogger.LogInfo(message);
-
-                await this.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairTaskHelper.ScheduleRepairTaskAsync",
-                    message,
-                    cancellationToken,
-                    repairConfiguration).ConfigureAwait(false);
-
-                return false;
-            }
-
-            return true;
-        }
-
         public async Task<bool> DeleteFilesAsyncAsync(
             RepairConfiguration repairConfiguration,
             CancellationToken cancellationToken)
@@ -657,21 +466,8 @@ namespace FabricHealer.Repair
 
         public async Task<RepairTask> ScheduleFabricHealerRmRepairTaskAsync(
             RepairConfiguration repairConfiguration,
-            Dictionary<string, 
-                (long RepairCount,
-                DateTime FirstRunTime,
-                DateTime LastRunTime)> runStateDictionary,
             CancellationToken cancellationToken)
         {
-            // This check is also handled by CheckRunInterval Guan predicate if supplied in logic queries.
-            if (!await CheckRepairCycleRunStateAsync(
-                       runStateDictionary,
-                       repairConfiguration,
-                       cancellationToken).ConfigureAwait(false))
-            {
-                return null;
-            }
-
             var isThisRepairTaskAlreadyInProgress =
                 await repairTaskEngine.IsFHRepairTaskRunningAsync(
                     RepairTaskEngine.FabricHealerExecutorName,
@@ -761,10 +557,6 @@ namespace FabricHealer.Repair
         public async Task<bool> ExecuteFabricHealerRmRepairTaskAsync(
             RepairTask repairTask,
             RepairConfiguration repairConfiguration,
-            Dictionary<string,
-                (long RepairCount,
-                DateTime FirstRunTime,
-                DateTime LastRunTime)> runStateDictionary,
             CancellationToken cancellationToken)
         {
             // Execute the repair.
@@ -1008,11 +800,6 @@ namespace FabricHealer.Repair
                                             this.Context,
                                             cancellationToken),
                                         cancellationToken).ConfigureAwait(false);
-
-                    await UpdateRepairRunStateDictionaryAsync(
-                        runStateDictionary,
-                        repairConfiguration.RepairPolicy.Id).ConfigureAwait(false);
-
                     return true;
                 }
 

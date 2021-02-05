@@ -43,49 +43,14 @@ namespace FabricHealer.Repair.Guan
 
             protected override bool Check()
             {
-                long maxRepairCycles = 0;
-                TimeSpan maxTimeWindow = TimeSpan.MinValue;
-                TimeSpan runInterval = TimeSpan.MinValue;
-                int count = Input.Arguments.Count;
-
-                for (int i = 0; i < count; i++)
-                {
-                    // MaxRepairs=5, MaxTimeWindow=01:00:00...
-                    switch (Input.Arguments[i].Name.ToLower())
-                    {
-                        case "maxrepairs":
-                            maxRepairCycles = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
-                            break;
-
-                        case "maxtimewindow":
-                            maxTimeWindow = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
-                            break;
-
-                        default:
-                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Name}");
-                    }
-                }
-
-                if (count == 2 && maxRepairCycles > 0 && maxTimeWindow > TimeSpan.MinValue)
-                {
-                    runInterval = TimeSpan.FromSeconds((long)maxTimeWindow.TotalSeconds / maxRepairCycles);
-                }
-
-                // Repair Policy
-                repairConfiguration.RepairPolicy.CurrentAction = RepairAction.RestartReplica;
-                repairConfiguration.RepairPolicy.CycleTimeDistributionType = CycleTimeDistributionType.Even;
                 repairConfiguration.RepairPolicy.Id = FOHealthData.RepairId;
-                repairConfiguration.RepairPolicy.MaxRepairCycles = maxRepairCycles;
-                repairConfiguration.RepairPolicy.RepairCycleTimeWindow = maxTimeWindow;
                 repairConfiguration.RepairPolicy.TargetType = RepairTargetType.Application;
-                repairConfiguration.RepairPolicy.RunInterval = runInterval;
                 
                 // Try to schedule repair with RM.
                 var repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                     () =>
                         RepairTaskHelper.ScheduleFabricHealerRmRepairTaskAsync(
                             repairConfiguration,
-                            RepairTaskHelper.CompletedReplicaRepairs,
                             RepairTaskHelper.Token),
                     RepairTaskHelper.Token).ConfigureAwait(true).GetAwaiter().GetResult();
 
@@ -100,7 +65,6 @@ namespace FabricHealer.Repair.Guan
                     RepairTaskHelper.ExecuteFabricHealerRmRepairTaskAsync(
                         repairTask,
                         repairConfiguration,
-                        RepairTaskHelper.CompletedReplicaRepairs,
                         RepairTaskHelper.Token),
                     RepairTaskHelper.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 

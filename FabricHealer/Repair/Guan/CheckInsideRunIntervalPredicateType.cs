@@ -30,68 +30,27 @@ namespace FabricHealer.Repair.Guan
 
             protected override bool Check()
             {
-                long maxRepairCycles = 0;
-                TimeSpan repairCycleWindow = TimeSpan.MinValue;
-                DateTime lastRunTime = DateTime.MinValue;
-                TimeSpan interval = TimeSpan.MinValue;
                 TimeSpan runInterval = TimeSpan.MinValue;
                 int count = Input.Arguments.Count;
                 bool insideRunInterval = false;
 
-                if (count == 0)
+                if (count == 0 || Input.Arguments[0].Name.ToLower() != "runinterval")
                 {
-                    throw new GuanException("You must provide at least one argument to the CheckInsideRunInterval predicate..");
+                    throw new GuanException("RunInterval argument is required.");
                 }
 
-                for (int i = 0; i < count; i++)
-                {
-                    // MaxRepairs=5, MaxTimeWindow=01:00:00, LastRunTime=?lastRunTime, RunInterval=00:12:00
-                    switch (Input.Arguments[i].Name.ToLower())
-                    {
-                        case "maxrepairs":
-                            maxRepairCycles = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
-                            break;
-
-                        case "maxtimewindow":
-                            repairCycleWindow = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
-                            break;
-
-                        case "lastruntime":
-                            lastRunTime = (DateTime)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
-                            break;
-
-                        case "runinterval":
-                            interval = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
-                            break;
-
-                        default:
-                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Name}");
-                    }
-                }
+                TimeSpan interval = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
 
                 // This means this repair hasn't been run at least once, so there is no data related to it in the repair 
-                // state dictionary. lastRunTime is retrieved in GetRepairHistory predicate, provided to this predicate in related rules.
-                if (lastRunTime == DateTime.MinValue || repairCycleWindow == TimeSpan.MinValue || maxRepairCycles == 0)
+                // manager state machine. lastRunTime is retrieved in GetRepairHistory predicate, provided to this predicate in related rules.
+                if (interval > TimeSpan.MinValue)
                 {
-                    if (interval > TimeSpan.MinValue)
-                    {
-                        // Since FH is stateless -1, check for interval state outside of what is maintained in an FH instance state container.
-                        insideRunInterval = FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRange(
-                                                interval,
-                                                RepairTaskHelper.FabricClientInstance,
-                                                FOHealthData,
-                                                RepairTaskHelper.Token).GetAwaiter().GetResult();
-                    }
-                }
-                else
-                {
-                    if (repairCycleWindow == TimeSpan.MinValue || maxRepairCycles == 0)
-                    {
-                        return false;
-                    }
-
-                    runInterval = TimeSpan.FromSeconds((long)repairCycleWindow.TotalSeconds / maxRepairCycles);
-                    insideRunInterval = DateTime.Now.Subtract(lastRunTime) < runInterval;
+                    // Since FH is stateless -1, check for interval state outside of what is maintained in an FH instance state container.
+                    insideRunInterval = FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
+                                            interval,
+                                            RepairTaskHelper.FabricClientInstance,
+                                            FOHealthData,
+                                            RepairTaskHelper.Token).GetAwaiter().GetResult();
                 }
 
                 if (!insideRunInterval)
@@ -126,7 +85,7 @@ namespace FabricHealer.Repair.Guan
 
         private CheckInsideRunIntervalPredicateType(
             string name)
-            : base(name, true, 1, 4)
+            : base(name, true, 1, 3)
         {
 
         }

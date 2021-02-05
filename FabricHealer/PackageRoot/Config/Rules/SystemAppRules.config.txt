@@ -4,24 +4,24 @@ Mitigate(AppName="fabric:/System") :- CheckInsideRunInterval(RunInterval=01:00:0
 
 ## CPU Time - Percent
 Mitigate(AppName="fabric:/System", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80,
-	GetRepairHistory(?repairCount, ?lastRunTime, RestartFabricNode), 
+	GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
 	?repairCount < 5, 
-	RestartFabricNode(MaxRepairs=5).
+	RestartFabricNode().
 
 ## Memory Use - Megabytes in use
 Mitigate(AppName="fabric:/System", MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 2048,
-	GetRepairHistory(?repairCount, ?lastRunTime, RestartFabricNode), 
+	GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
 	?repairCount < 5, 
-	RestartFabricNode(MaxRepairs=5).
+	RestartFabricNode().
 
 ## Memory Use - Percent in use
 Mitigate(AppName="fabric:/System", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 40,
-	GetRepairHistory(?repairCount, ?lastRunTime, RestartFabricNode), 
+	GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
 	?repairCount < 5, 
-	RestartFabricNode(MaxRepairs=5).
+	RestartFabricNode().
 
 ## Ephemeral Ports in Use
 Mitigate(AppName="fabric:/System", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue >= 800,
-	GetRepairHistory(?repairCount, ?lastRunTime, RestartFabricNode), 
+	GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
 	?repairCount < 5, 
-	RestartFabricNode(MaxRepairs=5).
+	RestartFabricNode().

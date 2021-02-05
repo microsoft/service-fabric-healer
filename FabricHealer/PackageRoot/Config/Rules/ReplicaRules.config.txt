@@ -3,16 +3,16 @@
 ## First, check if we are inside run interval. If so, then cut (!), which means stop processing rules.
 Mitigate() :- CheckInsideRunInterval(RunInterval=00:15:00), !.
 
-Mitigate() :- GetRepairHistory(?repairCount, ?lastRunTime, RestartReplica), 
+Mitigate() :- GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
 	?repairCount < 3,
-	RestartReplica(MaxRepairs=3).
+	RestartReplica().
 
 ## Else, try this.
-Mitigate() :- GetRepairHistory(?repairCount, ?lastRunTime, RestartCodePackage), 
+Mitigate() :- GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
 	?repairCount < 3,
-	RestartCodePackage(MaxRepairs=3).
+	RestartCodePackage().
 
 ## Else, try this.
-Mitigate() :- GetRepairHistory(?repairCount, ?lastRunTime, RestartFabricNode), 
+Mitigate() :- GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
 	?repairCount < 3,
-	RestartFabricNode(MaxRepairs=3).
+	RestartFabricNode().
