@@ -1,21 +1,17 @@
-﻿Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
-	GetRepairHistory(?repairCount, ?lastRunTime, RestartCodePackage), 
+﻿Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
+interval(AppName="fabric:/CpuStress", RunInterval=00:15:00).
+interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
+interval(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
+
+## CPU - Percent In Use.
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
+	GetRepairHistory(?repairCount, TimeWindow="04:00:00"), 
 	?repairCount < 5,
-	CheckInsideRunInterval(MaxRepairs=5, MaxTimeWindow=01:00:00, LastRunTime=?lastRunTime),
-	!.
-
-## Try this repair, since the above rule did not cut.
-Mitigate(AppName="fabric:/CpuStress") :- RestartCodePackage(MaxRepairs=5, MaxTimeWindow=01:00:00).
-
-## Else, try this one - this is contrived. You would seldom want to restart a node due to a faulty app service instance/replica.
-## Mitigate() :- RestartFabricNode(MaxRepairs=2, MaxTimeWindow=01:00:00).
+    RestartCodePackage().
 
 
-## Memory Use - Percentage in use
+## Memory - Percent In Use.
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
-	GetRepairHistory(?repairCount, ?lastRunTime, RestartCodePackage), 
+	GetRepairHistory(?repairCount, TimeWindow="04:00:00"), 
 	?repairCount < 5,
-	CheckInsideRunInterval(MaxRepairs=5, MaxTimeWindow=01:00:00, LastRunTime=?lastRunTime),
-	!.
-
-Mitigate(AppName="fabric:/CpuStress") :- RestartCodePackage(MaxRepairs=5, MaxTimeWindow=01:00:00).
+	RestartCodePackage().

@@ -8,9 +8,11 @@ using Guan.Common;
 using Guan.Logic;
 using System;
 using FabricHealer.Utilities.Telemetry;
+using FabricHealer.Utilities;
 
 namespace FabricHealer.Repair.Guan
 {
+    // TODO: This has to be reimplemented now that FH is a -1 service (runs on all nodes). The state containers are not useful anymore as designed... -CT
     public class GetRepairHistoryPredicateType : PredicateType
     {
         private static RepairTaskHelper RepairTaskHelper;
@@ -30,76 +32,30 @@ namespace FabricHealer.Repair.Guan
 
             protected override Task<Term> GetNextTermAsync()
             {
-                string repairAction = (string)Input.Arguments[2].Value.GetEffectiveTerm().GetValue();
                 long repairCount = 0;
-                DateTime lastRunTime = DateTime.MinValue;
+                TimeSpan timeWindow = (TimeSpan)Input.Arguments[1].Value.GetEffectiveTerm().GetValue();
 
-                if (!Enum.TryParse(repairAction, true, out RepairAction repairActionType))
+                if (timeWindow > TimeSpan.MinValue)
                 {
-                    throw new GuanException("You must specify a repair action predicate name that exists.");
+                    repairCount = FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(
+                                        timeWindow,
+                                        RepairTaskHelper.FabricClientInstance,
+                                        FOHealthData,
+                                        RepairTaskHelper.Token).GetAwaiter().GetResult();
                 }
-
-                switch (repairActionType)
+                else
                 {
-                    case RepairAction.DeleteFiles:
+                    string message = $"You must supply a valid TimeSpan string for TimeWindow argument of GetRepairHistoryPredicate. Default result has been supplied (0).";
 
-                        if (RepairTaskHelper.CompletedDiskRepairs.ContainsKey(FOHealthData.RepairId))
-                        {
-                            lastRunTime = RepairTaskHelper.CompletedDiskRepairs[FOHealthData.RepairId].LastRunTime;
-                            repairCount = RepairTaskHelper.CompletedDiskRepairs[FOHealthData.RepairId].RepairCount;
-                        }
-                        break;
-
-                    case RepairAction.RestartCodePackage:
-                        
-                        if (RepairTaskHelper.CompletedCodePackageRepairs.ContainsKey(FOHealthData.RepairId))
-                        {
-                            lastRunTime = RepairTaskHelper.CompletedCodePackageRepairs[FOHealthData.RepairId].LastRunTime;
-                            repairCount = RepairTaskHelper.CompletedCodePackageRepairs[FOHealthData.RepairId].RepairCount;
-                        }
-                        break;
-
-                    case RepairAction.RestartFabricNode:
-
-                        if (RepairTaskHelper.CompletedFabricNodeRepairs.ContainsKey(FOHealthData.RepairId))
-                        {
-                            lastRunTime = RepairTaskHelper.CompletedFabricNodeRepairs[FOHealthData.RepairId].LastRunTime;
-                            repairCount = RepairTaskHelper.CompletedFabricNodeRepairs[FOHealthData.RepairId].RepairCount;
-                        }
-                        break;
-
-                    case RepairAction.RestartReplica:
-                    case RepairAction.RemoveReplica:
-                        
-                        if (RepairTaskHelper.CompletedReplicaRepairs.ContainsKey(FOHealthData.RepairId))
-                        {
-                            lastRunTime = RepairTaskHelper.CompletedReplicaRepairs[FOHealthData.RepairId].LastRunTime;
-                            repairCount = RepairTaskHelper.CompletedReplicaRepairs[FOHealthData.RepairId].RepairCount;
-                        }
-                        break;
-
-                    case RepairAction.RestartVM:
-                        
-                        if (RepairTaskHelper.CompletedVmRepairs.ContainsKey(FOHealthData.RepairId))
-                        {
-                            lastRunTime = RepairTaskHelper.CompletedVmRepairs[FOHealthData.RepairId].LastRunTime;
-                            repairCount = RepairTaskHelper.CompletedVmRepairs[FOHealthData.RepairId].RepairCount;
-                        }
-                        break;
-                    /* TODO...
-                    case RepairAction.PauseFabricNode:
-                        break;
-                    case RepairAction.RemoveFabricNodeState:
-                        break;
-                    */
-                    default:
-                        throw new GuanException("Unsupported Repair Action: Can't unify.");
+                    RepairTaskHelper.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            $"GetRepairHistoryPredicate::{FOHealthData.RepairId}",
+                            message,
+                            RepairTaskHelper.Token).GetAwaiter().GetResult();
                 }
 
                 var result = new CompoundTerm(Instance, null);
-
                 result.AddArgument(new Constant(repairCount), "0");
-                result.AddArgument(new Constant(lastRunTime), "1");
 
                 return Task.FromResult<Term>(result);
             }
@@ -118,7 +74,7 @@ namespace FabricHealer.Repair.Guan
 
         private GetRepairHistoryPredicateType(
             string name)
-            : base(name, true, 3, 3)
+            : base(name, true, 2, 2)
         {
 
         }
@@ -132,17 +88,7 @@ namespace FabricHealer.Repair.Guan
         {
             if (!(term.Arguments[0].Value is IndexedVariable))
             {
-                throw new GuanException("The first argument of GetRepairHistoryPredicateType must be a variable: {0}", term);
-            }
-
-            if (!(term.Arguments[1].Value is IndexedVariable))
-            {
-                throw new GuanException("The second argument of GetRepairHistoryPredicateType must be a variable: {1}", term);
-            }
-
-            if (!(term.Arguments[2].Value is Constant))
-            {
-                throw new GuanException("The third argument of GetRepairHistoryPredicateType must be a constant: {2}", term);
+                throw new GuanException("The first argument, ?repairCount, of GetRepairHistoryPredicateType must be a variable: {0}", term);
             }
         }
     }

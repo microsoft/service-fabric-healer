@@ -4,6 +4,6 @@
 Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
 
 Mitigate(MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 90,
-	GetRepairHistory(?repairCount, ?lastRunTime, RestartVM), 
+	GetRepairHistory(?repairCount, TimeWindow=08:00:00), 
 	?repairCount < 5,
-    RestartVM(MaxRepairs=3).
+    RestartVM().

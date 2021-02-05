@@ -3,8 +3,8 @@
 ## First check if we are inside the run interval. If so, cut (!).
 Mitigate() :- CheckInsideRunInterval(RunInterval=00:15:00), !.
 
-Mitigate() :- GetRepairHistory(?repairCount, ?lastRunTime, RestartFabricNode), 
+Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
-	RestartFabricNode(MaxRepairs=5).
+	RestartFabricNode().
 
 ## TODO: Fabric node removal rules.

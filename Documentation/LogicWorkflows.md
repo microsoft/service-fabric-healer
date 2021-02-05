@@ -18,7 +18,7 @@ No, using logic to express repair workflows is easy! One doesn't need a deep kno
 ***Solution***: We can leverage Guan and its built-in equals operator for checking the name of the application that triggered the warning against the name of the application for which we decided we want to perform a code package restart for. For application level health events, the repair workflow is defined inside the PackageRoot/Config/Rules/AppRules.config.txt file. Here is that we would enter:
 
 ```
-Mitigate(AppName=?AppName) :- ?AppName == "fabric:/App1", RestartCodePackage(MaxRepairs=5, MaxTimeWindow=1:00:00).
+Mitigate(AppName="fabric:/App1", MetricName=MemoryPercent) :- RestartCodePackage().
 ```
 
 Don't be alarmed if you don't understand how to read that repair action! We will go more in-depth later about the syntax and semantics of Guan. The takeaway is that expressing a Guan repair workflow doesn't require a deep knowledge of Prolog programming to get started. Hopefully this also gives you a general idea about the kinds of repair workflows we can express with GuanLogic.
@@ -49,11 +49,11 @@ Here is a list of currently implemented External Predicates:
 
 **External Predicates**
 
-```RestartCodePackage(long MaxRepairs, TimeSpan MaxTimeWindow)``` 
+```RestartCodePackage()``` 
 
 Attempts to restart the code package for the service that emitted the health event, returns true if successful, else false.  
 
-```RestartFabricNode(long MaxRepairs, TimeSpan MaxTimeWindow, optional string SafeRestart)```
+```RestartFabricNode()```
 
 Attempts to restart the node of the service that emitted the health event, returns true if successful, else false. Takes an optional Safe parameter: "safe" or "unsafe" which defines whether or not to perform a safe or unsafe node restart. A safe node restart will try to first deactivate the node before restarting, whereas an unsafe node restart will try restarting the node without first trying to deactivate it. 
 
@@ -106,7 +106,7 @@ now the variable ?x is bound to the application name and ?y is bound to the serv
 Here's a simple example that we've seen before:
 
 ```
-Mitigate() :- RestartCodePackage(MaxRepairs=5, MaxTimeWindow=1:00:00).
+Mitigate() :- RestartCodePackage().
 ```
 
 Essentially, what this logic repair workflow (mitigation scenario) is describing is that if FO emits a health event that falls under the AppServiceCpuMemoryPortAbuseRepairPolicy and if the repair policy is enabled, then we will execute the repair action. FH will automatically detect that it is a logic workflow, so it will invoke the root rule ```Mitigate()```. Guan determines that the ```Mitigate()``` rule is defined inside the repair action, where it then will try to execute the body of the ```Mitigate()``` rule.
@@ -114,8 +114,8 @@ Essentially, what this logic repair workflow (mitigation scenario) is describing
 Users can define multiple rules (separated by a newline) as part of a repair workflow, here is an example:
 
 ```
-Mitigate() :- RestartCodePackage(MaxRepairs=5, MaxTimeWindow=1:00:00).
-Mitigate() :- RestartFabricNode(MaxRepairs=5, MaxTimeWindow=1:00:00).
+Mitigate() :- RestartCodePackage().
+Mitigate() :- RestartFabricNode().
 ```
 
 This seems confusing as we've defined ```Mitigate()``` twice. Here is the execution flow explained in words: "Look for the *first* ```Mitigate()``` rule (read from top to bottom). The *first* ```Mitigate()``` rule is the one that calls ```RestartCodePackage()``` in its body. So we try to run the first rule. If the first rule fails (i.e. ```RestartCodePackage()``` returns false) then we check to see if there is another rule named  ```Mitigate()```, which there is. The next ```Mitigate()``` rule we find is the one that calls ```RestartFabricNode()``` so we try to run the second rule. 
@@ -188,21 +188,19 @@ Mitigate() :- …
 Mitigate() :- (false branch). 
 ```
 
-The above repair workflow can be read as follows: Run ```CheckRepairHistory()``` against ```RestartCodePackage```, if the number of runs does not exceed 3, then run ```RestartCodePackage()```. If it does exceed 3, then try the next rule. The second rule can read similarly as the first, same with the third. We can control the flow of execution by controlling the ordering of rules like this. Again, notice the usage of the ```!``` cut operators; the cut in the first rule is used to prevent the execution flow from dropping down to the remaining rules in the case where ```RestartCodePackage()``` fails. Since our intended behaviour here is to attempt 3 code package restarts before trying a replica and node restart.
-
 You can check for multiple conditions aswell:
 ```
 Mitigate() :- (condition check_1 T/F), (condition check_2 T/F), …, (condition check_N T/F), (true branch).
 Mitigate() :- (false branch)
 ```
 
-**Using interval predicates**
+**Using internal predicates**
 
 So far we've only looked at creating rules that are invoked from the root ```Mitigate()``` query, but users can also create their own rules like so:
 
 ```
 Mitigate() :- MyInternalPredicate().
-MyInternalPredicate() :- RestartCodePackage(MaxRepairs=5, MaxTimeWindow=1:00:00).
+MyInternalPredicate() :- RestartCodePackage().
 ```
 
 Here we've defined an internal predicate named ```MyInternalPredicate()``` and we can see that it is invoked in the body of the ```Mitigate()``` rule. In order to fulfill the ```Mitigate()``` rule, we will need to fulfill the ```MyInternalPredicate()``` predicate since it is part of the body of the ```Mitigate()``` rule. This repair workflow is identical in behaviour to one that directly calls ```RestartCodePackage()``` inside the body of ```Mitigate()```.

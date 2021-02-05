@@ -40,8 +40,7 @@ namespace FabricHealer.Repair.Guan
             {
                 bool recurseSubDirectories = false;
                 string path = null;
-                long maxRepairCycles = 0;
-                
+
                 // default as 0 means delete all files.
                 long maxFilesToDelete = 0;
                 FileSortOrder direction = FileSortOrder.Ascending;
@@ -65,14 +64,6 @@ namespace FabricHealer.Repair.Guan
                             maxFilesToDelete = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
                             break;
 
-                        case "maxrepairs":
-                            maxRepairCycles = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
-                            break;
-
-                        case "maxtimewindow":
-                            maxTimeWindow = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
-                            break;
-
                         case "recursesubdirectories":
                             recurseSubDirectories = bool.Parse((string)Input.Arguments[i].Value.GetEffectiveTerm().GetValue());
                             break;
@@ -82,30 +73,20 @@ namespace FabricHealer.Repair.Guan
                     }
                 }
 
-                if (count == 3 && maxRepairCycles > 0 && maxTimeWindow > TimeSpan.MinValue)
-                {
-                    runInterval = TimeSpan.FromSeconds((long)maxTimeWindow.TotalSeconds / maxRepairCycles);
-                }
-
                 // RepairPolicy
                 repairConfiguration.RepairPolicy.CurrentAction = RepairAction.DeleteFiles;
-                repairConfiguration.RepairPolicy.CycleTimeDistributionType = CycleTimeDistributionType.Even;
                 ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FolderPath = path;
                 repairConfiguration.RepairPolicy.Id = FOHealthData.RepairId;
                 ((DiskRepairPolicy)repairConfiguration.RepairPolicy).MaxNumberOfFilesToDelete = maxFilesToDelete;
                 ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FileAgeSortOrder = direction;
-                repairConfiguration.RepairPolicy.MaxRepairCycles = maxRepairCycles;
-                repairConfiguration.RepairPolicy.RepairCycleTimeWindow = maxTimeWindow;
                 repairConfiguration.RepairPolicy.TargetType = RepairTargetType.VirtualMachine;
                 ((DiskRepairPolicy)repairConfiguration.RepairPolicy).RecurseSubdirectories = recurseSubDirectories;
-                repairConfiguration.RepairPolicy.RunInterval = runInterval;
 
                 // Try to schedule repair with RM.
                 var repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                     () =>
                         RepairTaskHelper.ScheduleFabricHealerRmRepairTaskAsync(
                             repairConfiguration,
-                            RepairTaskHelper.CompletedDiskRepairs,
                             RepairTaskHelper.Token),
                     RepairTaskHelper.Token).ConfigureAwait(true).GetAwaiter().GetResult();
 
@@ -120,7 +101,6 @@ namespace FabricHealer.Repair.Guan
                     RepairTaskHelper.ExecuteFabricHealerRmRepairTaskAsync(
                         repairTask,
                         repairConfiguration,
-                        RepairTaskHelper.CompletedDiskRepairs,
                         RepairTaskHelper.Token),
                     RepairTaskHelper.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 

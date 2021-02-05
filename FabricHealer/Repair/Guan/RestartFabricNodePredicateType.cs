@@ -47,42 +47,11 @@ namespace FabricHealer.Repair.Guan
             protected override bool Check()
             {
                 RepairTask repairTask;
-                long maxRepairCycles = 0;
-                TimeSpan maxTimeWindow = TimeSpan.MinValue;
-                TimeSpan runInterval = TimeSpan.MinValue;
-                int count = Input.Arguments.Count;
-
-                for (int i = 0; i < count; i++)
-                {
-                    // MaxRepairs=5, MaxTimeWindow=01:00:00...
-                    switch (Input.Arguments[i].Name.ToLower())
-                    {
-                        case "maxrepairs":
-                            maxRepairCycles = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
-                            break;
-
-                        case "maxtimewindow":
-                            maxTimeWindow = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
-                            break;
-
-                        default:
-                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Name}");
-                    }
-                }
-
-                if (count == 2 && maxRepairCycles > 0 && maxTimeWindow > TimeSpan.MinValue)
-                {
-                    runInterval = TimeSpan.FromSeconds((long)maxTimeWindow.TotalSeconds / maxRepairCycles);
-                }
 
                 // Repair Policy
                 repairConfiguration.RepairPolicy.CurrentAction = RepairAction.RestartFabricNode;
-                repairConfiguration.RepairPolicy.CycleTimeDistributionType = CycleTimeDistributionType.Even;
                 repairConfiguration.RepairPolicy.Id = FOHealthData.RepairId;
-                repairConfiguration.RepairPolicy.MaxRepairCycles = maxRepairCycles;
-                repairConfiguration.RepairPolicy.RepairCycleTimeWindow = maxTimeWindow;
                 repairConfiguration.RepairPolicy.TargetType = FOHealthData.ApplicationName == "fabric:/System" ? RepairTargetType.Application : RepairTargetType.Node;
-                repairConfiguration.RepairPolicy.RunInterval = runInterval;
 
                 bool success;
 
@@ -96,7 +65,6 @@ namespace FabricHealer.Repair.Guan
                     success = RepairTaskHelper.ExecuteFabricHealerRmRepairTaskAsync(
                             repairTask,
                             this.repairConfiguration,
-                            FOHealthData.ApplicationName == "fabric:/System" ? RepairTaskHelper.CompletedSystemAppRepairs : RepairTaskHelper.CompletedFabricNodeRepairs,
                             RepairTaskHelper.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 
                     return success;
@@ -129,7 +97,6 @@ namespace FabricHealer.Repair.Guan
                     () =>
                     RepairTaskHelper.ScheduleFabricHealerRmRepairTaskAsync(
                             this.repairConfiguration,
-                            RepairTaskHelper.CompletedFabricNodeRepairs,
                             RepairTaskHelper.Token),
                         RepairTaskHelper.Token).ConfigureAwait(true).GetAwaiter().GetResult();
 
@@ -144,7 +111,6 @@ namespace FabricHealer.Repair.Guan
                     RepairTaskHelper.ExecuteFabricHealerRmRepairTaskAsync(
                             repairTask,
                             this.repairConfiguration,
-                            RepairTaskHelper.CompletedFabricNodeRepairs,
                             RepairTaskHelper.Token),
                         RepairTaskHelper.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 
@@ -169,7 +135,7 @@ namespace FabricHealer.Repair.Guan
 
         private RestartFabricNodePredicateType(
             string name)
-            : base(name, true, 0, 2)
+            : base(name, true, 0, 0)
         {
 
         }
