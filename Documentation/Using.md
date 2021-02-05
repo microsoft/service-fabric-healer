@@ -14,13 +14,19 @@ Navigate to the PackageRoot/Config/Rules/AppRules.config.txt file and copypaste 
 ## First, check to see whether or not we are inside the specified run interval before proceeding on. If we are, then cut (!).
 Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
 interval(AppName="fabric:/CpuStress", RunInterval=00:15:00).
-interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
+interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00). 
+
 ## This one means it doesn't matter what the app name is, only if the related metric name is "ActiveTcpPorts".
 interval(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
 ```
 **Note: interval is an internal predicate (no backing impl, only exists in this logic) to add convenience to the rule. Note interval's definition in Mitigate. 
 Think of this as a definition of both Mitigate and interval. Calling interval will run the Mitigate rule with supplied arguments.**
 
+**Also please note that ## is how comment lines are specified in FabricHealer's logic rules. They are not block comments and apply to single lines only.** 
+```
+ ## this is a comment on one line. I do not span
+ ## lines. See? :)
+```
 
 **System Application CPU Usage Warning -> Trigger Fabric Node Restart**
 
@@ -35,9 +41,9 @@ Mitigate(AppName="fabric:/System") :- CheckInsideRunInterval(RunInterval=01:00:0
 
 ## CPU Time - Percent
 Mitigate(AppName="fabric:/System", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 90,
-	GetRepairHistory(?repairCount, ?lastRunTime, RestartFabricNode), 
+	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5, 
-	RestartFabricNode(MaxRepairs=5).
+	RestartFabricNode().
 ```
 
 
@@ -66,9 +72,9 @@ Mitigate(MetricName="CpuPercent") :- CheckInsideRunInterval(RunInterval=01:00:00
 
 ## CPU Time - Percent
 Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
-	GetRepairHistory(?repairCount, ?lastRunTime, RestartCodePackage), 
+	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
-	RestartCodePackage(MaxRepairs=5, MaxTimeWindow=01:00:00).
+	RestartCodePackage().
 
 ```
 
@@ -80,11 +86,9 @@ Mitigate(AppName="fabric:/MyApp42") :- CheckInsideRunInterval(RunInterval=01:00:
 
 ## CPU Time - Percent
 Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
-	GetRepairHistory(?repairCount, ?lastRunTime, RestartCodePackage), 
+	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
-	CheckInsideRunInterval(MaxRepairs=5, MaxTimeWindow=01:00:00, LastRunTime=?lastRunTime),
-	!,
-	RestartCodePackage(MaxRepairs=5, MaxTimeWindow=01:00:00).
+	RestartCodePackage().
 ```
 
 

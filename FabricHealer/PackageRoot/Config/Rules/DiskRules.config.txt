@@ -6,7 +6,7 @@ Mitigate() :- CheckInsideRunInterval(RunInterval=00:15:00), !.
 
 ## Iterate over a list of folders with a system predicate, member (defined and implemented in Guan) and an internal predicate, config (an internal predicate needs no backing impl, it only exists in this logic).
 ## You can just write a rule for each folder should you need to have MB max size values for some folders and GB max size values for others. In the case below, all values are GB so it makes sense to use enumeration for convenience.
-Mitigate() :- GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
+Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 2,
 	member(config(?X,?Y), [config("C:\SFDevCluster\Log\Traces", 50), config("C:\observer_logs", 1), config("E:\temp", 40)]), 
 	CheckFolderSize(FolderPath=?X, MaxFolderSizeGB=?Y),

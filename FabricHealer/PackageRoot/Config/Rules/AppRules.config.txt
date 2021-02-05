@@ -10,36 +10,36 @@ interval(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
 
 ## CPU - Percent In Use.
 Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
-	GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
+	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
     RestartCodePackage().
 
 
 ## Memory - Percent In Use.
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
-	GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
+	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
 	RestartCodePackage().
 
 
 ## Memory - Megabytes In Use.
-Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
+Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
     RestartCodePackage().
 
-Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
+Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5, 
 	RestartCodePackage().
 
 
 ## Active TCP Ports - Any app service.
-Mitigate(MetricName="ActiveTcpPorts") :- GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
+Mitigate(MetricName="ActiveTcpPorts") :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
 	RestartCodePackage().
 
 
 ## Ephemeral Ports - Specific Application and its services.
 Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue >= 250, 
-	GetRepairHistory(?repairCount, TimeWindow="01:00:00"), 
+	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5, 
 	RestartCodePackage().
