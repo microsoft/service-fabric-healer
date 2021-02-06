@@ -19,7 +19,8 @@ This is a pre-release and is not meant for use in production.
 ```
 
 ## Configuration as Logic
-FabricHealer leverages the power of logic programming with Prolog-like semantics/syntax to express repair workflows in configuration. To learn more [click here.](Documentation/LogicWorkflows.md)
+
+To learn more about FabricHealer's logic as configuration, [click here.](Documentation/LogicWorkflows.md)
 
 ## Quickstart
 
