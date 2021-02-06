@@ -1,13 +1,12 @@
 ﻿## Logic rules for Application level repairs in the cluster.
 
-## The below interval rules check if we are inside the run interval for the specific repair. If so, then cut (!). This means stop processing rules in this file.
-## Note: interval is an internal predicate (no backing impl, only exists in this logic) to add convenience to the rule. Note interval's definition in Mitigate. 
-## Think of this is a definition of both Mitigate and interval. Calling interval will run the Mitigate rule with supplied arguments.
+## The below rules check if we are inside the run interval for the specific repair. If so, then cut (!). This effectively means stop processing rules.
+## Note: interval is an internal predicate (with no backing impl - it only exists in this logic) used for for convenience.
 Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
 interval(AppName="fabric:/CpuStress", RunInterval=00:15:00).
 interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
 
-## This one means it doesn't matter what the app name is, only if the related metric name is "ActiveTcpPorts"
+## This one means it doesn't matter what the app name is, only that the related metric name is "ActiveTcpPorts".
 interval(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
 
 ## CPU - Percent In Use.
