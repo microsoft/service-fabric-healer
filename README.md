@@ -4,7 +4,7 @@
 FabricHealer is a Serive Fabric application that solves - repairs - a set of problems that can take place in an application service or virtual machine, including disk, but scoped to space only. These repairs mostly employ a set of Service Fabric API calls, but can also be fully custom. All repairs are orchestrated through Service Fabric’s RepairManager service. Repair configuration is written as Prolog-like logic. Backing repair implementations are written in C#.
 
 ```
-FabricHealer requires that RepairManager service deployed in the same cluster. 
+FabricHealer requires that RepairManager service is deployed in the same cluster. 
 ```
 
 FabricHealer is a stateless singleton (one partition) Service Fabric service that runs on all nodes in a Linux or Windows cluster. It is implemented as a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (18.04).  
