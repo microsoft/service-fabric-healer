@@ -1,7 +1,7 @@
 # FabricHealer Beta
 ### Configuration as logic and auto-mitigation in Service Fabric clusters
 
-FabricHealer is a Service Fabric application that attempts to fix a set of reliably solvable problems that can take place in a Service Fabric application service or host virtual machine, including logical disks, but scoped to space usage problems only. These repairs mostly employ a set of Service Fabric API calls, but can also be fully custom. All repairs are orchestrated through Service Fabric’s RepairManager service. Repair configuration is written as [Prolog](http://www.learnprolognow.org/)-like logic programming system, [Guan](https://github.com/microsoft/guan). Backing repair implementations - internal predicates - are written in C#.
+FabricHealer is a Service Fabric application that attempts to fix a set of reliably solvable problems that can take place in a Service Fabric application service or host virtual machine, including logical disks, but scoped to space usage problems only. These repairs mostly employ a set of Service Fabric API calls, but can also be fully custom. All repairs are orchestrated through Service Fabric’s RepairManager service. Repair configuration is written as [Prolog](http://www.learnprolognow.org/)-like logic, made possible by a logic programming system, [Guan](https://github.com/microsoft/guan). Backing repair implementations (internal predicates), like Guan itself, are written in C#.
 
 ```
 FabricHealer requires that RepairManager service is deployed in the same cluster. 
