@@ -12,9 +12,7 @@ FabricHealer is implemented as a stateless singleton service that runs on all no
 in a Linux or Windows Service Fabric cluster. It is a .NET Core 3.1 application and has been tested on 
 Windows (2016/2019) and Ubuntu (16/18.04).  
 
-All warnings and error reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) instances are user-configured. 
-Developer control extends from unhealthy event source (FO) to related healing operations (FH). 
-This is a key part of the design.  
+All warning and error reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) and subsequently repaired by FabricHealer are user-configured - developer control extends from unhealthy event source (FO) to related healing operations (FH).
 
 ```
 This is a pre-release and is not meant for use in production. 
