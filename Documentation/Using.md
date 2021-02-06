@@ -4,28 +4,14 @@ To learn how create your own GuanLogic repair workflows, click [here](LogicWorkf
 
 **Application Memory Usage Warning -> Trigger Code Package Restart**
 
-***Problem***: I want to perform a code package restart if FabricObserver emits a memory usage warning for any application in my cluster.
+***Problem***: I want to perform a code package restart if FabricObserver emits a memory usage warning (as a percentage of total memory) for any application in my cluster.
 
 ***Solution***: We can use the predefined "RestartCodePackage" repair action.
 
 Navigate to the PackageRoot/Config/Rules/AppRules.config.txt file and copypaste this repair workflow:
 
-``` 
-## First, check to see whether or not we are inside the specified run interval before proceeding on. If we are, then cut (!).
-Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
-interval(AppName="fabric:/CpuStress", RunInterval=00:15:00).
-interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00). 
-
-## This one means it doesn't matter what the app name is, only if the related metric name is "ActiveTcpPorts".
-interval(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
 ```
-**Note: interval is an internal predicate (no backing impl, only exists in this logic) to add convenience to the rule. Note interval's definition in Mitigate. 
-Think of this as a definition of both Mitigate and interval. Calling interval will run the Mitigate rule with supplied arguments.**
-
-**Also please note that ## is how comment lines are specified in FabricHealer's logic rules. They are not block comments and apply to single lines only.** 
-```
- ## this is a comment on one line. I do not span
- ## lines. See? :)
+Mitigate(MetricName=MemoryPercent) :- RestartCodePackage().
 ```
 
 **System Application CPU Usage Warning -> Trigger Fabric Node Restart**
@@ -37,8 +23,6 @@ Think of this as a definition of both Mitigate and interval. Calling interval wi
 Navigate to the PackageRoot/Config/Rules/SystemAppRules.config.txt file and copypaste this repair workflow:
 
 ```
-Mitigate(AppName="fabric:/System") :- CheckInsideRunInterval(RunInterval=01:00:00), !.
-
 ## CPU Time - Percent
 Mitigate(AppName="fabric:/System", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 90,
 	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
@@ -46,15 +30,16 @@ Mitigate(AppName="fabric:/System", MetricName="CpuPercent", MetricValue=?MetricV
 	RestartFabricNode().
 ```
 
+**Please note that ## is how comment lines are specified in FabricHealer's logic rules. They are not block comments and apply to single lines only.** 
+```
+ ## this is a comment on one line. I do not span
+ ## lines. See? :)
+```
 
 ***Problem***: I want to specify different repair actions for different applications.
 
 ***Solution***:
 ```
-Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
-interval(AppName="fabric:/SampleApp1", RunInterval=00:15:00).
-interval(AppName="fabric:/SampleApp2", RunInterval=00:15:00).
-
 Mitigate(AppName="fabric:/SampleApp1") :- RepairApp1().  
 Mitigate(AppName="fabric:/SampleApp2") :- RepairApp2().  
 RepairApp1() :- ...
@@ -68,8 +53,6 @@ Here, ```RepairApp1()``` and ```RepairApp2()``` are custom rules, the above work
 
 ***Solution***:
 ```
-Mitigate(MetricName="CpuPercent") :- CheckInsideRunInterval(RunInterval=01:00:00), !.
-
 ## CPU Time - Percent
 Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
 	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
@@ -82,8 +65,6 @@ Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 2
 
 ***Solution***:
 ```
-Mitigate(AppName="fabric:/MyApp42") :- CheckInsideRunInterval(RunInterval=01:00:00), !.
-
 ## CPU Time - Percent
 Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
 	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 

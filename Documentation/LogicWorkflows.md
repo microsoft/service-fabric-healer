@@ -23,6 +23,21 @@ Mitigate(AppName="fabric:/App1", MetricName=MemoryPercent) :- RestartCodePackage
 
 Don't be alarmed if you don't understand how to read that repair action! We will go more in-depth later about the syntax and semantics of Guan. The takeaway is that expressing a Guan repair workflow doesn't require a deep knowledge of Prolog programming to get started. Hopefully this also gives you a general idea about the kinds of repair workflows we can express with GuanLogic.
 
+### Advanced
+
+At the top of your rules (and in the existing rule files you will see these rules), you can configure run interval time for a repair:
+``` 
+## First, check to see whether or not we are inside the specified run interval before proceeding on. If we are, then cut (!).
+Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
+interval(AppName="fabric:/CpuStress", RunInterval=00:15:00).
+interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00). 
+
+## This one means it doesn't matter what the app name is, only if the related metric name is "ActiveTcpPorts".
+interval(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
+```
+**Note: interval is an internal predicate (no backing impl, only exists in this logic) to add convenience to the rule. Note interval's definition in Mitigate. 
+Think of this as a definition of both Mitigate and interval. Calling interval will run the Mitigate rule with supplied arguments.**
+
 
 Each repair policy has its own corresponding configuration file: 
 
