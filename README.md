@@ -13,7 +13,7 @@ FabricHealer will run a set of mitigation operations that are part of the Servic
 All warnings and error reports created by FabricObserver instances are user-configured. Developer control extends from unhealthy event source (FO) to related healing operations (FH). This is a key part of the design.  
 
 ```
-This is a beta quality version (in both design and implementation) 
+This is a beta quality release (in both design and implementation) 
 and is not meant nor supported for use production - that will come with learnings from the beta. 
 ```
 
