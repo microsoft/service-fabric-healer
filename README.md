@@ -20,7 +20,8 @@ This is a pre-release and is not meant for use in production.
 
 ## Configuration as Logic
 
-To learn more about FabricHealer's logic as configuration, [click here.](Documentation/LogicWorkflows.md)
+To learn more about FabricHealer's logic as configuration model, [click here.](Documentation/LogicWorkflows.md)
+
 
 ## Quickstart
 
