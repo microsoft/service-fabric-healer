@@ -53,15 +53,16 @@ Here, ```RepairApp1()``` and ```RepairApp2()``` are custom rules, the above work
 
 ***Solution***:
 ```
+## First, check if we are inside run interval. If so, then cut (!).
+Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
+
 ## CPU Time - Percent
 Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
 	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
 	RestartCodePackage().
-
 ```
-
-***Problem***: I want to check the observed value for the supplied resource metric (Cpu, Disk, Memory, etc.) and ensure the we are within the specified run interval before running the RestartCodePackage repair on any app service belonging to the specified Application that FabricObserver is monitoring.
+***Problem***: I want to check the observed value for the supplied resource metric (Cpu, Disk, Memory, etc.) and ensure the we are within the specified run interval before running the RestartCodePackage repair on any service belonging to the specified Application that FabricObserver is monitoring.
 
 ***Solution***:
 ```

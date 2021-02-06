@@ -1,16 +1,22 @@
-# FabricHealer - BETA Version
-## Auto-mitigation in Service Fabric clusters
+# FabricHealer Beta
+### Configuration as logic and auto-mitigation in Service Fabric clusters
 
-FabricHealer (FH) is a singleton stateless Service Fabric service that runs on all nodes in a Linux or Windows cluster. It is implemented as a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (18.04).
-Its primary purpose is to schedule and execute automatic repairs in Service Fabric clusters after inspecting unhealthy events created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) (FO) instances running in the same cluster. Like FO, FH only does what it is configured to do by an end user and does not attempt to conduct its own determination for running a supported auto-mitigation operation, of which all are orchestrated through Service Fabric’s RepairManager service. All warnings and errors signaled by FabricObserver instances are user-configured, so user control extends from unhealthy event source (FO) to related healing operation/workflow (FH). This is a key part of the design.  
+FabricHealer is a Service Fabric application that attempts to fix a set of reliably solvable problems that can take place in a Service Fabric application service or host virtual machine, including logical disks, but scoped to space usage problems only. These repairs mostly employ a set of Service Fabric API calls, but can also be fully custom. All repairs are orchestrated through Service Fabric’s RepairManager service. Repair configuration is written as [Prolog](http://www.learnprolognow.org/)-like [logic](https://github.com/microsoft/service-fabric-healer/tree/main/FabricHealer/PackageRoot/Config/Rules) with [supporting external predicates](https://github.com/microsoft/service-fabric-healer/tree/main/FabricHealer/Repair/Guan) written in C#. This is made possible by a new logic programming system, [Guan](https://github.com/microsoft/guan). The fun starts when FabricHealer detects supported error or warning states reported by [FabricObserver](https://github.com/microsoft/service-fabric-observer) running in the same cluster.  
 
-## Configuration as Logic
-FabricHealer leverages the power of logic programming with Prolog-like semantics/syntax to express repair workflows in configuration. To learn more [click here.](Documentation/LogicWorkflows.md)
+To learn more about FabricHealer's configuration-as-logic model, [click here.](Documentation/LogicWorkflows.md)
 
+```
+FabricHealer requires that FabricObserver is deployed in the same cluster. 
+```
+FabricHealer is implemented as a stateless singleton service that runs on all nodes 
+in a Linux or Windows Service Fabric cluster. It is a .NET Core 3.1 application and has been tested on 
+Windows (2016/2019) and Ubuntu (16/18.04).  
+
+All warning and error reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) and subsequently repaired by FabricHealer are user-configured - developer control extends from unhealthy event source to related healing operations.
+
+```
+This is a pre-release and is not meant for use in production. 
+```
 ## Quickstart
 
-For some examples and to quickly learn how to use FH, please see the [simple scenario-based examples.](Documentation/Using.md)
-
-## High Level FabricHealer Workflow  
-
-![alt text](FHDT.png "") 
+To quickly learn how to use FabricHealer, please see the [simple scenario-based examples.](Documentation/Using.md)
