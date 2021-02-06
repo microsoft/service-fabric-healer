@@ -16,7 +16,7 @@ This is a key part of the design.
 
 ```
 This is a beta quality release (in both design and implementation) 
-and is not meant nor supported for use production - that will come with learnings from the beta. 
+and is not meant nor supported for use in production - that will come with learnings from the beta. 
 ```
 
 ## Configuration as Logic
