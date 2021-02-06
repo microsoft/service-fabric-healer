@@ -21,11 +21,11 @@ function Build-Nuget {
 try {
     Push-Location $scriptPath
 
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.SelfContained" "$scriptPath\bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType"
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.FrameworkDependent" "$scriptPath\bin\release\FabricHealer\linux-x64\framework-dependent\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.SelfContained.Beta" "$scriptPath\bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.FrameworkDependent.Beta" "$scriptPath\bin\release\FabricHealer\linux-x64\framework-dependent\FabricHealerType"
 
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" "$scriptPath\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent" "$scriptPath\bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.Beta" "$scriptPath\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent.Beta" "$scriptPath\bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType"
 }
 finally {
     Pop-Location
