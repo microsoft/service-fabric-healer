@@ -1,7 +1,7 @@
 # FabricHealer Beta
 ### Configuration as logic and auto-mitigation in Service Fabric clusters
 
-FabricHealer is a Serive Fabric application that solves - repairs - a set of problems that can take place in an application service or virtual machine (including disk, but scoped to space, not IO). These repairs mostly employ a set of Service Fabric API calls, but can also be fully custom. All repairs are orchestrated through Service Fabric’s RepairManager service. Repair configuration is written as Prolog-like logic. Backing repair implementations are written in C#.
+FabricHealer is a Serive Fabric application that solves - repairs - a set of problems that can take place in an application service or virtual machine (including disk, but scoped to space only). These repairs mostly employ a set of Service Fabric API calls, but can also be fully custom. All repairs are orchestrated through Service Fabric’s RepairManager service. Repair configuration is written as Prolog-like logic. Backing repair implementations are written in C#.
 
 ```
 FabricHealer requires that RepairManager service deployed in the same cluster. 
