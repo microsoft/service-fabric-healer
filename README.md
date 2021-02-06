@@ -15,7 +15,7 @@ Developer control extends from unhealthy event source (FO) to related healing op
 This is a key part of the design.  
 
 ```
-This is a beta quality release and is not meant for use in production. 
+This is a pre-release and is not meant for use in production. 
 ```
 
 ## Configuration as Logic
