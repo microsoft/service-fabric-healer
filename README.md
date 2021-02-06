@@ -10,7 +10,8 @@ Windows (2016/2019) and Ubuntu (16/18.04).
 ```
 FabricHealer requires that FabricObserver is deployed in the same cluster. 
 ```
-All warnings and error reports created by FabricObserver instances are user-configured. Developer control extends from unhealthy event source (FO) to related healing operations (FH). This is a key part of the design.  
+All warnings and error reports created by FabricObserver instances are user-configured. 
+Developer control extends from unhealthy event source (FO) to related healing operations (FH). This is a key part of the design.  
 
 ```
 This is a beta quality release (in both design and implementation) 
