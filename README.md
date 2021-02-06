@@ -23,8 +23,4 @@ FabricHealer leverages the power of logic programming with Prolog-like semantics
 
 ## Quickstart
 
-For some examples and to quickly learn how to use FH, please see the [simple scenario-based examples.](Documentation/Using.md)
-
-## High Level FabricHealer Workflow  
-
-![alt text](FHDT.png "") 
+To quickly learn how to use FH, please see the [simple scenario-based examples.](Documentation/Using.md)
