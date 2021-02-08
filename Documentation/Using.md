@@ -23,7 +23,7 @@ Mitigate(MetricName=MemoryPercent) :- RestartCodePackage().
 Navigate to the PackageRoot/Config/Rules/SystemAppRules.config.txt file and copypaste this repair workflow:
 
 ```
-## CPU Time - Percent
+## CPU Time - Percent 
 Mitigate(AppName="fabric:/System", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 90,
 	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5, 
@@ -36,6 +36,22 @@ Mitigate(AppName="fabric:/System", MetricName="CpuPercent", MetricValue=?MetricV
  ## lines. See? :)
 ```
 
+**GetRepairHistory** is an *external* predicate. That is, it is not a Guan system predicate (implemented in the Guan runtime) or internal predicate (which only exists within and as part of the rule - it has no backing implementation): it is user-implemented; 
+look in the [FabricHealer/Repair/Guan](/FabricHealer/Repair/Guan) folder to see all external predicate impls.  
+
+GetRepairHistory takes a time span formatted value as the only input, TimeWindow, and has one output variable, ?repairCount, which will hold the value computed by the predicate call. TimeWindow means the span of time in which
+Completed repairs have occurred for the repair type (in this case App level repairs for an application named "fabric:/System"). ?repairCount can then be used in subsequent logic within the same rule (not all rules in the file,
+just the rule that it is a part of). 
+
+Repair type is implicitly or explicitly specified in the query. Implicitly, FH already knows the context internally when this rule is run since it gets the related information from FabricObserver's
+health report, passing each metric as a default argument available to the query (Mitigate, in this case). To be clear, in the above example, AppName is one of the default named arguments available to Mitigate and it's corresponding
+value is passed from FabricObserver in  health report data (held within a serialized instance of TelemetryData type). Learn more [here](LogicWorkflows.md). 
+Here, we use the named argument expression, AppName to say "when the app name is \"fabric:/System\"".
+
+***IMPORTANT: Whenever you use arithmetic operators inside a string that is not mathematical in nature (so, a forward slash, for example), you must "quote" the value.
+If you do not do this, then Guan will assume you want it do some arithmetic operation with the value, which in the case of something like "fabric:/System"
+or "fabric:/MyApp42" you certainly do not want.***
+
 ***Problem***: I want to specify different repair actions for different applications.
 
 ***Solution***:
@@ -46,7 +62,7 @@ RepairApp1() :- ...
 RepairApp2() :- ...
 ```
 
-Here, ```RepairApp1()``` and ```RepairApp2()``` are custom rules, the above workflow can be read as follows: If ```?AppName``` is equal to ```SampleApp1``` then we want to invoke the rule named ```RepairApp1```. From there we would execute the ```RepairApp1``` rule just like we would for any other rule like ```Mitigate```. The ```!``` is a cut operator and it prevents unnecessary backtracking.
+Here, ```RepairApp1()``` and ```RepairApp2()``` are custom rules, the above workflow can be read as follows: If ```?AppName``` is equal to ```SampleApp1``` then we want to invoke the rule named ```RepairApp1```. From there we would execute the ```RepairApp1``` rule just like we would for any other rule like ```Mitigate```.  
 
 
 ***Problem***: I want to check the observed value for the supplied resource metric (Cpu, Disk, Memory, etc.) and ensure the we are within the specified run interval before running the RestartCodePackage repair on any app service that FabricObserver is monitoring.

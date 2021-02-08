@@ -12,7 +12,6 @@ using FabricHealer.Utilities;
 
 namespace FabricHealer.Repair.Guan
 {
-    // TODO: This has to be reimplemented now that FH is a -1 service (runs on all nodes). The state containers are not useful anymore as designed... -CT
     public class GetRepairHistoryPredicateType : PredicateType
     {
         private static RepairTaskHelper RepairTaskHelper;
