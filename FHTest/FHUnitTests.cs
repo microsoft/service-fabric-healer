@@ -51,8 +51,8 @@ namespace FHTest
         private readonly CancellationToken token = new CancellationToken { };
 
         // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
-        // e.g., if on Windows, then replace [Add] with @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
-        private const string FHRulesDirectory = "[Add]";
+        // e.g., if on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
+        private const string FHRulesDirectory = "";
 
         public FHUnitTests()
         {

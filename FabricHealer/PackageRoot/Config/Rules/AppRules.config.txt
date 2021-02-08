@@ -2,45 +2,38 @@
 
 ## The below rules check if we are inside the run interval for the specific repair. If so, then cut (!). This effectively means stop processing rules.
 ## Note: interval is an internal predicate (with no backing impl - it only exists in this logic) used for for convenience.
-Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
 interval(AppName="fabric:/CpuStress", RunInterval=00:15:00).
 interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
 
 ## This one means it doesn't matter what the app name is, only that the related metric name is "ActiveTcpPorts".
 interval(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
 
+Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
+
+## Convenience internal predicate to check for the number of times a repair has run to completion within a supplied time window. 
+## If Completed Repair count is less then supplied value, then run RestartCodePackage mitigation.
+TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount < ?count, 
+	RestartCodePackage().
+
 ## CPU - Percent In Use.
 Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
-	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 5,
-    RestartCodePackage().
+    TimeScopedRestartCodePackage(5, 01:00:00).
 
 
 ## Memory - Percent In Use.
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
-	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 5,
-	RestartCodePackage().
+	TimeScopedRestartCodePackage(5, 01:00:00).
 
 
 ## Memory - Megabytes In Use.
-Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 5,
-    RestartCodePackage().
-
-Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 5, 
-	RestartCodePackage().
+Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 01:00:00).
+Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 01:00:00).
 
 
 ## Active TCP Ports - Any app service.
-Mitigate(MetricName="ActiveTcpPorts") :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 5,
-	RestartCodePackage().
+Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 01:00:00).
 
 
 ## Ephemeral Ports - Specific Application and its services.
 Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue >= 250, 
-	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 5, 
-	RestartCodePackage().
+	TimeScopedRestartCodePackage(5, 01:00:00).
