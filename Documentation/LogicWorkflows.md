@@ -23,22 +23,6 @@ Mitigate(AppName="fabric:/App1", MetricName=MemoryPercent) :- RestartCodePackage
 
 Don't be alarmed if you don't understand how to read that repair action! We will go more in-depth later about the syntax and semantics of Guan. The takeaway is that expressing a Guan repair workflow doesn't require a deep knowledge of Prolog programming to get started. Hopefully this also gives you a general idea about the kinds of repair workflows we can express with GuanLogic.
 
-### Advanced
-
-At the top of your rules (and in the existing rule files you will see these rules), you can configure run interval time for a repair:
-``` 
-## First, check to see whether or not we are inside the specified run interval before proceeding on. If we are, then cut (!).
-Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
-interval(AppName="fabric:/CpuStress", RunInterval=00:15:00).
-interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00). 
-
-## This one means it doesn't matter what the app name is, only if the related metric name is "ActiveTcpPorts".
-interval(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
-```
-**Note: interval is an internal predicate (no backing impl, only exists in this logic) to add convenience to the rule. Note interval's definition in Mitigate. 
-Think of this as a definition of both Mitigate and interval. Calling interval will run the Mitigate rule with supplied arguments.**
-
-
 Each repair policy has its own corresponding configuration file: 
 
 | Repair Policy             | Configuration File Name      | 
@@ -109,8 +93,8 @@ By default, for logic-based repair workflows, FH will execute a query which call
 | PartitionId               | Id of the partition                                                                          |
 | ReplicaOrInstanceId       | Id of the replica or instance                                                                |
 | FOErrorCode               | Error Code emitted by FO (e.g. "FO002")                                                      | 
-| MetricName                | Name of the metric emitted by FO (e.g., CpuPercent or MemoryMB, etc.)                        |   
-| MetricValue               | Metric Value emitted by FO (e.g. "85" indicating 85% CPU usage)                              | 
+| MetricName                | Name of the resource supplied by FO (e.g., CpuPercent or MemoryMB, etc.)                        |   
+| MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)                              | 
 
 For example if you wanted to use AppName and ServiceName in your repair workflow you would specify them like so:
 ```
@@ -221,6 +205,47 @@ Mitigate() :- MyInternalPredicate().
 Here we've defined an internal predicate named ```MyInternalPredicate()``` and we can see that it is invoked in the body of the ```Mitigate()``` rule. In order to fulfill the ```Mitigate()``` rule, we will need to fulfill the ```MyInternalPredicate()``` predicate since it is part of the body of the ```Mitigate()``` rule. This repair workflow is identical in behaviour to one that directly calls ```RestartCodePackage()``` inside the body of ```Mitigate()```.
 
 Using internal predicates like this is useful for improving readability and organizing complex repair workflows.
+
+With internal predicates, you can easily configure run interval time for a repair (how often to run the repair) in a convenient way.
+The internal predicate below simply checks if we are inside the run interval (meaning the repair has run in the last n minutes, the value for RunInterval argument) for the specific repair. Like all repair configurations in FH, the settings for run interval here is defined as part of the rule itself. This is the essence of configuration as logic.
+
+If inside the supplied RunInterval, then cut (!). Here, this effectively means stop processing rules.
+```
+interval(AppName="fabric:/CpuStress", RunInterval=00:15:00).
+interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
+
+## This rule means it doesn't matter what the app name is, only that the related metric name is "ActiveTcpPorts".
+interval(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
+
+Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
+
+```
+IMPORTANT: the state machine holding the data that the CheckInsideRunInterval predicate compares your specified RunInterval TimeSpan value against is our friendly neighborhood RepairManagerService(RM), a stateful Service Fabric System Service that orchestrates repairs
+and manages repair state. ***FH requires the presence of RM in order to function***.  
+
+Let's look at another example of an internal predicate that is used in FH's SystemAppRules rules file, TimeScopedRestartFabricNode, whixh is a simple convenience internal predicate used to check for the number of times a repair has run to completion within a supplied time window.
+If completed repair count is less then supplied value, then run RestartFabricNode mitigation. Here, you can see it removes the need to have to write the same logic in multiple places. 
+
+```
+TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount < ?count, 
+	RestartFabricNode().
+
+## CPU Time - Percent
+Mitigate(AppName="fabric:/System", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80,
+	TimeScopedRestartFabricNode(5, 01:00:00).
+
+## Memory Use - Megabytes in use
+Mitigate(AppName="fabric:/System", MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 2048,
+	TimeScopedRestartFabricNode(5, 01:00:00).
+
+## Memory Use - Percent in use
+Mitigate(AppName="fabric:/System", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 40,
+	TimeScopedRestartFabricNode(5, 01:00:00).
+
+## Ephemeral Ports in Use
+Mitigate(AppName="fabric:/System", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue >= 800,
+	TimeScopedRestartFabricNode(5, 01:00:00).
+```
 
 **Filtering parameters from Mitigate()**
 
