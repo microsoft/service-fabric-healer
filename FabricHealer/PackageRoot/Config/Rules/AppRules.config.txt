@@ -22,22 +22,22 @@ TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, Ti
 
 ## CPU - Percent In Use.
 Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
-    TimeScopedRestartCodePackage(5, 01:00:00).
+    TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Memory - Percent In Use.
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
-	TimeScopedRestartCodePackage(5, 01:00:00).
+	TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Memory - Megabytes In Use.
-Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 01:00:00).
-Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 01:00:00).
+Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
+Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Active TCP Ports - Any app service.
-Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 01:00:00).
+Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Ephemeral TCP Ports - Any app service.
-Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(5, 01:00:00).
+Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Ephemeral Ports - Specific Application - any of its services.
 Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue >= 250, 
-	TimeScopedRestartCodePackage(5, 01:00:00).
+	TimeScopedRestartCodePackage(5, 05:00:00).

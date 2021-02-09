@@ -1,18 +1,18 @@
 ﻿## This demonstrates a workflow that employs multiple external predicates to get to a solution for a single unhealthy replica scenario.
 
 ## First, check if we are inside run interval. If so, then cut (!), which means stop processing rules.
-Mitigate() :- CheckInsideRunInterval(RunInterval=00:15:00), !.
+Mitigate() :- CheckInsideRunInterval(RunInterval=00:30:00), !.
 
 Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 3,
+	?repairCount < 2,
 	RestartReplica().
 
 ## Else, try this.
 Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 3,
+	?repairCount < 2,
 	RestartCodePackage().
 
 ## Else, try this.
 Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 3,
+	?repairCount < 2,
 	RestartFabricNode().
