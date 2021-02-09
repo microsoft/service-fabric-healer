@@ -13,16 +13,16 @@ TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, Tim
 
 ## CPU Time - Percent
 Mitigate(AppName="fabric:/System", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80,
-	TimeScopedRestartFabricNode(5, 01:00:00).
+	TimeScopedRestartFabricNode(4, 08:00:00).
 
 ## Memory Use - Megabytes in use
 Mitigate(AppName="fabric:/System", MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 2048,
-	TimeScopedRestartFabricNode(5, 01:00:00).
+	TimeScopedRestartFabricNode(4, 08:00:00).
 
 ## Memory Use - Percent in use
 Mitigate(AppName="fabric:/System", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 40,
-	TimeScopedRestartFabricNode(5, 01:00:00).
+	TimeScopedRestartFabricNode(4, 08:00:00).
 
 ## Ephemeral Ports in Use
 Mitigate(AppName="fabric:/System", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue >= 800,
-	TimeScopedRestartFabricNode(5, 01:00:00).
+	TimeScopedRestartFabricNode(4, 08:00:00).
