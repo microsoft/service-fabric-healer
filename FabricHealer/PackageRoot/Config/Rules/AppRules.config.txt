@@ -1,6 +1,6 @@
 ﻿## Logic rules for Application level repairs in the cluster.
 
-## The below internal predicate calls are the configuration for checking if we are inside a specified run interval for a specified repair target.
+## These internal predicate "calls" form the basis of the configuration for checking if we are inside a specified run interval for a specified repair target. Please see the documentation for supported target types.
 IntervalForRepairTarget(AppName="fabric:/ClusterObserver", RunInterval=01:00:00).
 IntervalForRepairTarget(AppName="fabric:/CpuStress", RunInterval=01:00:00).
 IntervalForRepairTarget(AppName="fabric:/ContainerFoo2", RunInterval=00:30:00).
