@@ -1,42 +1,42 @@
 ﻿## Logic rules for Application level repairs in the cluster.
 
-## The below rules check if we are inside the run interval (meaning has the repair run in the last n minutes, for example) for the specific repair. The configuration for this interval is defined as part of the rule itself. 
-## The state machine holding the data that CheckInsideRunInterval predicate compares your specified RunInterval TimeSpan value against is RepairManagerService(RM), a stateful Service Fabric System Service that orchestrates repairs
-## and manages repair state. FH requires the presence of RM in order to function.
+## The below internal predicate calls are the configuration for checking if we are inside a specified run interval for a specified repair target.
+IntervalForRepairTarget(AppName="fabric:/ClusterObserver", RunInterval=01:00:00).
+IntervalForRepairTarget(AppName="fabric:/CpuStress", RunInterval=01:00:00).
+IntervalForRepairTarget(AppName="fabric:/ContainerFoo2", RunInterval=00:30:00).
+IntervalForRepairTarget(AppName="fabric:/MyApp42", RunInterval=00:30:00).
+IntervalForRepairTarget(MetricName="ActiveTcpPorts", RunInterval=00:45:00).
+IntervalForRepairTarget(MetricName="EphemeralPorts", RunInterval=00:30:00).
 
-## If inside the supplied RunInterval, then cut (!). This effectively means stop processing rules.To be precise, it means that the rule engine will not backtrack.
-## interval is an internal predicate (with no backing impl - it only exists in this logic) used for for convenience.
-interval(AppName="fabric:/CpuStress", RunInterval=00:15:00).
-interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
+## This is the rule that will run for each IntervalForRepairTarget predicate specified above.
+## The CheckInsideRunInterval external predicate compares the specified RunInterval TimeSpan value against repair job data managed by the RepairManagerService(RM),
+## a stateful Service Fabric System Service that orchestrates repairs and manages repair state for a Service Fabric cluster. FH requires the presence of RM in order to function.
+Mitigate() :- IntervalForRepairTarget(Target=?target, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
 
-## This one means it doesn't matter what the app name is, only that the related metric name is "ActiveTcpPorts".
-interval(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
-
-Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
-
-## Convenience internal predicate to check for the number of times a repair has run to completion within a supplied time window. 
+## TimeScopedRestartCodePackage is an internal predicate to check for the number of times a repair has run to completion within a supplied time window. 
 ## If Completed Repair count is less then supplied value, then run RestartCodePackage mitigation.
 TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount < ?count, 
 	RestartCodePackage().
+
+## Mitigation queries for multiple metrics and targets.
 
 ## CPU - Percent In Use.
 Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
     TimeScopedRestartCodePackage(5, 01:00:00).
 
-
 ## Memory - Percent In Use.
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
 	TimeScopedRestartCodePackage(5, 01:00:00).
-
 
 ## Memory - Megabytes In Use.
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 01:00:00).
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 01:00:00).
 
-
 ## Active TCP Ports - Any app service.
 Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 01:00:00).
 
+## Ephemeral TCP Ports - Any app service.
+Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(5, 01:00:00).
 
 ## Ephemeral Ports - Specific Application - any of its services.
 Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue >= 250, 

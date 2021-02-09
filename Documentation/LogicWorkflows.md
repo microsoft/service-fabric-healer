@@ -207,17 +207,16 @@ Here we've defined an internal predicate named ```MyInternalPredicate()``` and w
 Using internal predicates like this is useful for improving readability and organizing complex repair workflows.
 
 With internal predicates, you can easily configure run interval time for a repair (how often to run the repair) in a convenient way.
-The internal predicate below simply checks if we are inside the run interval (meaning the repair has run in the last n minutes, the value for RunInterval argument) for the specific repair. Like all repair configurations in FH, the settings for run interval here is defined as part of the rule itself. This is the essence of configuration as logic.
+The ```IntervalForRepairTarget``` predicate below simply allows us to express which target we are interested in determining where we are relative to the specified run interval for the specific repair.
+Like all repair configurations in FH, these settings for run interval for various repair targets are defined as part of the rule itself. This is a key part (and advantage) of configuration as logic.
 
-If inside the supplied RunInterval, then cut (!). Here, this effectively means stop processing rules.
+If inside the supplied RunInterval, then cut (!). Here, this effectively means stop processing rules. The logic below specifies that the related Mitigate rule (one that employs the internal predicate) will run for each IntervalForRepairTarget predicate specification.
 ```
-interval(AppName="fabric:/CpuStress", RunInterval=00:15:00).
-interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
+IntervalForRepairTarget(AppName="fabric:/CpuStress", RunInterval=00:15:00).
+IntervalForRepairTarget(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
+IntervalForRepairTarget(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
 
-## This rule means it doesn't matter what the app name is, only that the related metric name is "ActiveTcpPorts".
-interval(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
-
-Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
+Mitigate() :- IntervalForRepairTarget(Target=?target, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
 
 ```
 IMPORTANT: the state machine holding the data that the CheckInsideRunInterval predicate compares your specified RunInterval TimeSpan value against is our friendly neighborhood RepairManagerService(RM), a stateful Service Fabric System Service that orchestrates repairs
@@ -252,6 +251,7 @@ Mitigate(AppName="fabric:/System", MetricName="EphemeralPorts", MetricValue=?Met
 If you wish to do equals checks such as ```?AppName == ...``` you don't actually need to write this in the body of your rules, instead you can specify these values inside Mitigate() like so:
 
 ```
+## This is the preferred way to do this. It is easier to read and employs less (unnecessary) basic logic.
 Mitigate(AppName="fabric:/App1") :- ...
 ```
 
@@ -261,4 +261,4 @@ What that means, is that the rule will only execute when the AppName is equal to
 Mitigate(AppName=?AppName) :- ?AppName == "fabric:/App1", ...
 ```
 
-Obviously, the first way of doing it is more succinct.
+Obviously, the first way of doing it is more succinct and, again, preferred.
