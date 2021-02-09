@@ -38,6 +38,6 @@ Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRe
 Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 01:00:00).
 
 
-## Ephemeral Ports - Specific Application and its services.
+## Ephemeral Ports - Specific Application - any of its services.
 Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue >= 250, 
 	TimeScopedRestartCodePackage(5, 01:00:00).
