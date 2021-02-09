@@ -1,7 +1,11 @@
 ﻿## Logic rules for Application level repairs in the cluster.
 
-## The below rules check if we are inside the run interval for the specific repair. If so, then cut (!). This effectively means stop processing rules.
-## Note: interval is an internal predicate (with no backing impl - it only exists in this logic) used for for convenience.
+## The below rules check if we are inside the run interval (meaning has the repair run in the last n minutes, for example) for the specific repair. The configuration for this interval is defined as part of the rule itself. 
+## The state machine holding the data that CheckInsideRunInterval predicate compares your specified RunInterval TimeSpan value against is RepairManagerService(RM), a stateful Service Fabric System Service that orchestrates repairs
+## and manages repair state. FH requires the presence of RM in order to function.
+
+## If inside the supplied RunInterval, then cut (!). This effectively means stop processing rules.To be precise, it means that the rule engine will not backtrack.
+## interval is an internal predicate (with no backing impl - it only exists in this logic) used for for convenience.
 interval(AppName="fabric:/CpuStress", RunInterval=00:15:00).
 interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
 
