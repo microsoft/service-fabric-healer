@@ -24,7 +24,7 @@ To quickly learn how to use FabricHealer, please see the [simple scenario-based 
 
 ## For Early Adopters while in Private Preview
 
-Please [download the Guan nupkg](https://github.com/microsoft/service-fabric-healer/releases/download/beta/Microsoft.ServiceFabricApps.Guan.1.0.0.nupkg) from the Releases section of this repo to your local dev machine and install it into your local FH project in order to build FH successfully. This will be unnecessary when FH ships in Public Preview as Guan will be shipping concurrently and the Guan nupkg will be available in the nuget.org package gallery, as will FH.  
+Please [download the Guan nupkg](https://github.com/microsoft/Guan/releases/download/nupkg1.0/Microsoft.ServiceFabricApps.Guan.1.0.0.nupkg) from the Releases section of this repo to your local dev machine and install it into your local FH project in order to build FH successfully. This will be unnecessary when FH ships in Public Preview as Guan will be shipping concurrently and the Guan nupkg will be available in the nuget.org package gallery, as will FH.  
 
 # Contributing
 
