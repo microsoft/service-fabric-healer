@@ -4,26 +4,23 @@
 ## Note: FO only generates Application (System) level warnings for system services. There will only ever be ApplicationName as "fabric:/System" in the FO health data that FH emits, so this is an optional argument.
 Mitigate(AppName="fabric:/System") :- CheckInsideRunInterval(RunInterval=01:00:00), !.
 
+## Convenience internal predicate to check for the number of times a repair has run to completion within a supplied time window.
+## If Completed Repair count is less then supplied value, then run RestartFabricNode mitigation.
+TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount < ?count, 
+	RestartFabricNode().
+
 ## CPU Time - Percent
 Mitigate(AppName="fabric:/System", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80,
-	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 5, 
-	RestartFabricNode().
+	TimeScopedRestartFabricNode(5, 01:00:00).
 
 ## Memory Use - Megabytes in use
 Mitigate(AppName="fabric:/System", MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 2048,
-	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 5, 
-	RestartFabricNode().
+	TimeScopedRestartFabricNode(5, 01:00:00).
 
 ## Memory Use - Percent in use
 Mitigate(AppName="fabric:/System", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 40,
-	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 5, 
-	RestartFabricNode().
+	TimeScopedRestartFabricNode(5, 01:00:00).
 
 ## Ephemeral Ports in Use
 Mitigate(AppName="fabric:/System", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue >= 800,
-	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 5, 
-	RestartFabricNode().
+	TimeScopedRestartFabricNode(5, 01:00:00).

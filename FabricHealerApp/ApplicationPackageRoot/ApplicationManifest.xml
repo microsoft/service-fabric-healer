@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.0.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="0.4.2" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="FabricHealer_InstanceCount" DefaultValue="-1" />
     <!-- FabricHealer Enablement, Monitor Loop Timeout -->
@@ -17,7 +17,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.0.0" />
+    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="0.4.2" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -64,6 +64,8 @@
       </StatelessService>
     </Service>
   </DefaultServices>
+  <!-- Because of the actions FabricHealer takes in a cluster, it must run as Admin user on Windows and root on Linux. 
+       SystemUser and LocalSystem AccountType map to both (System on Windows, root on Linux). -->
   <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />
