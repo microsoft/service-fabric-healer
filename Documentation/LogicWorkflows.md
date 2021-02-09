@@ -214,8 +214,8 @@ Mitigate() :- (false branch)
 So far we've only looked at creating rules that are invoked from the root ```Mitigate()``` query, but users can also create their own rules like so:
 
 ```
-Mitigate() :- MyInternalPredicate().
 MyInternalPredicate() :- RestartCodePackage().
+Mitigate() :- MyInternalPredicate().
 ```
 
 Here we've defined an internal predicate named ```MyInternalPredicate()``` and we can see that it is invoked in the body of the ```Mitigate()``` rule. In order to fulfill the ```Mitigate()``` rule, we will need to fulfill the ```MyInternalPredicate()``` predicate since it is part of the body of the ```Mitigate()``` rule. This repair workflow is identical in behaviour to one that directly calls ```RestartCodePackage()``` inside the body of ```Mitigate()```.
