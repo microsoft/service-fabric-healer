@@ -1,0 +1,2 @@
+﻿Whatever() :- IDontExistPredicate()
+Mitigation(AppName="fabric:/TestApp0") :- RestartCodePackage().

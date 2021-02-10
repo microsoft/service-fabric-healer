@@ -1,0 +1,13 @@
+﻿## This rule checks folder size for SF logs, observer logs, E:\temp, for example. If size exceeds supplied threshold, then try and delete the files in the directory. You can supply optional arguments to the DeleteFiles predicate. Size (MaxFolderSizeGB or MaxFolderSizeMB) must be supplied as positive whole number.
+## Optional arguments for DeleteFiles: SortOrder (File sort order - Ascending or Descending. Defaults to Ascending (oldest to newest)), MaxFilesToDelete (The maximum number of files to delete. If not specified (or 0) means delete all files), RecurseSubdirectories (Delete files in child folders of specified directory. Defaults to false if not specified.).
+
+## First, check if we are inside run interval. If so, then cut (!).
+Mitigate() :- CheckInsideRunInterval(RunInterval=01:00:00), !.
+
+## Iterate over a list of folders with a system predicate, member (defined and implemented in Guan) and an internal predicate, config (an internal predicate needs no backing impl, it only exists in this logic).
+## You can just write a rule for each folder should you need to have MB max size values for some folders and GB max size values for others. In the case below, all values are GB so it makes sense to use enumeration for convenience.
+Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
+	?repairCount < 2,
+	member(config(?X,?Y), [config("C:\SFDevCluster\Log\Traces", 50), config("C:\observer_logs", 1), config("E:\temp", 40)]), 
+	CheckFolderSize(FolderPath=?X, MaxFolderSizeGB=?Y),
+	DeleteFiles(FolderPath=?X, MaxRepairs=2, SortOrder=Ascending, MaxFilesToDelete=50, RecurseSubdirectories=true).

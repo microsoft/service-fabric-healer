@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="0.4.2" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+  <Parameters>
+    <Parameter Name="FabricHealer_InstanceCount" DefaultValue="-1" />
+    <!-- FabricHealer Enablement, Monitor Loop Timeout -->
+    <Parameter Name="MonitorLoopSleepSeconds" DefaultValue="10" />
+    <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
+    <!-- Repair Policy Enablement -->
+    <Parameter Name="AppRepairEnabled" DefaultValue="true" />
+    <Parameter Name="DiskRepairEnabled" DefaultValue="true" />
+    <Parameter Name="NodeRepairEnabled" DefaultValue="true" />
+    <Parameter Name="ReplicaRepairEnabled" DefaultValue="false" />
+    <Parameter Name="SystemAppRepairEnabled" DefaultValue="true" />
+    <Parameter Name="VmRepairEnabled" DefaultValue="true" />
+  </Parameters>
+  <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
+       should match the Name and Version attributes of the ServiceManifest element defined in the 
+       ServiceManifest.xml file. -->
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="0.4.2" />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <!-- FabricHealerManager -->
+          <Section Name="RepairManagerConfiguration">
+            <Parameter Name="EnableAutoMitigation" Value="[AutoMitigationEnabled]" />
+            <Parameter Name="HealthCheckLoopSleepTimeSeconds" Value="[MonitorLoopSleepSeconds]" />
+          </Section>
+          <!-- Repair policies -->
+          <Section Name="AppRepairPolicy">
+            <Parameter Name="Enabled" Value="[AppRepairEnabled]" />
+          </Section>
+          <Section Name="DiskRepairPolicy">
+            <Parameter Name="Enabled" Value="[DiskRepairEnabled]" />
+          </Section>
+          <Section Name="FabricNodeRepairPolicy">
+            <Parameter Name="Enabled" Value="[NodeRepairEnabled]" />
+          </Section>
+          <Section Name="ReplicaRepairPolicy">
+            <Parameter Name="Enabled" Value="[ReplicaRepairEnabled]" />
+          </Section>
+          <Section Name="SystemAppRepairPolicy">
+            <Parameter Name="Enabled" Value="[SystemAppRepairEnabled]" />
+          </Section>
+          <Section Name="VMRepairPolicy">
+            <Parameter Name="Enabled" Value="[VmRepairEnabled]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
+    <Policies>
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
+    </Policies>
+  </ServiceManifestImport>
+  <DefaultServices>
+    <!-- The section below creates instances of service types, when an instance of this 
+         application type is created. You can also create one or more instances of service type using the 
+         ServiceFabric PowerShell module.
+         
+         The attribute ServiceTypeName below must match the name defined in the imported ServiceManifest.xml file. -->
+    <Service Name="FabricHealer" ServicePackageActivationMode="ExclusiveProcess">
+      <StatelessService ServiceTypeName="FabricHealerType" InstanceCount="[FabricHealer_InstanceCount]">
+        <SingletonPartition />
+      </StatelessService>
+    </Service>
+  </DefaultServices>
+  <!-- Because of the actions FabricHealer takes in a cluster, it must run as Admin user on Windows and root on Linux. 
+       SystemUser and LocalSystem AccountType map to both (System on Windows, root on Linux). -->
+  <Principals>
+    <Users>
+      <User Name="SystemUser" AccountType="LocalSystem" />
+    </Users>
+  </Principals>
+</ApplicationManifest>

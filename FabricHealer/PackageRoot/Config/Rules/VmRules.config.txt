@@ -1,0 +1,9 @@
+﻿## Logic rules for Virtual Machine level repairs in the cluster. Only OS reboot is supported today.
+
+## First, check if we are inside run interval. If so, then cut (!).
+Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
+
+Mitigate(MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 90,
+	GetRepairHistory(?repairCount, TimeWindow=08:00:00), 
+	?repairCount < 5,
+    RestartVM().

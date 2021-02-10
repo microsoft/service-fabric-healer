@@ -1,0 +1,43 @@
+﻿## Logic rules for Application level repairs in the cluster.
+
+## These internal predicate "calls" form the basis of the configuration for checking if we are inside a specified run interval for a specified repair target. Please see the documentation for supported target types.
+IntervalForRepairTarget(AppName="fabric:/ClusterObserver", RunInterval=01:00:00).
+IntervalForRepairTarget(AppName="fabric:/CpuStress", RunInterval=01:00:00).
+IntervalForRepairTarget(AppName="fabric:/ContainerFoo2", RunInterval=00:30:00).
+IntervalForRepairTarget(AppName="fabric:/MyApp42", RunInterval=00:30:00).
+IntervalForRepairTarget(MetricName="ActiveTcpPorts", RunInterval=00:45:00).
+IntervalForRepairTarget(MetricName="EphemeralPorts", RunInterval=00:30:00).
+
+## This is the rule that will run for each IntervalForRepairTarget predicate specified above.
+## The CheckInsideRunInterval external predicate compares the specified RunInterval TimeSpan value against repair job data managed by the RepairManagerService(RM),
+## a stateful Service Fabric System Service that orchestrates repairs and manages repair state for a Service Fabric cluster. FH requires the presence of RM in order to function.
+Mitigate() :- IntervalForRepairTarget(Target=?target, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
+
+## TimeScopedRestartCodePackage is an internal predicate to check for the number of times a repair has run to completion within a supplied time window. 
+## If Completed Repair count is less then supplied value, then run RestartCodePackage mitigation.
+TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount < ?count, 
+	RestartCodePackage().
+
+## Mitigation queries for multiple metrics and targets.
+
+## CPU - Percent In Use.
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
+    TimeScopedRestartCodePackage(5, 05:00:00).
+
+## Memory - Percent In Use.
+Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
+	TimeScopedRestartCodePackage(5, 05:00:00).
+
+## Memory - Megabytes In Use.
+Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
+Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
+
+## Active TCP Ports - Any app service.
+Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
+
+## Ephemeral TCP Ports - Any app service.
+Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
+
+## Ephemeral Ports - Specific Application - any of its services.
+Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue >= 250, 
+	TimeScopedRestartCodePackage(5, 05:00:00).

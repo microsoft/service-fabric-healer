@@ -1,0 +1,17 @@
+﻿Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
+interval(AppName="fabric:/CpuStress", RunInterval=00:15:00).
+interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
+interval(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
+
+## CPU - Percent In Use.
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
+	GetRepairHistory(?repairCount, TimeWindow="04:00:00"), 
+	?repairCount < 5,
+    RestartCodePackage().
+
+
+## Memory - Percent In Use.
+Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
+	GetRepairHistory(?repairCount, TimeWindow="04:00:00"), 
+	?repairCount < 5,
+	RestartCodePackage().

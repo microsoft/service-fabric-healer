@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+  <Section Name="RepairManagerConfiguration">
+    <!-- Optional: This service makes async SF Api calls that are cluster-wide operations 
+         and can take time in large clusters. -->
+    <Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
+    <Parameter Name="HealthCheckLoopSleepTimeSeconds" Value="" MustOverride="true" />
+    <!-- Required: Location on disk to store observer data, including ObserverManager. 
+         Each observer will write to their own directory on this path.
+         **NOTE: For Linux targets, do not supply a drive prefix. Just supply a folder name.** -->
+    <Parameter Name="LocalLogPath" Value="fabrichealer_logs" />
+    <Parameter Name="EnableVerboseLogging" Value="false" />
+    <!-- Optional: Diagnostic Telemetry. Azure ApplicationInsights and LogAnalytics support is already implemented, 
+         but you can implement whatever provider you want. See IObserverTelemetry interface. -->
+    <Parameter Name="EnableTelemetryProvider" Value="false" />
+    <!-- Required: Values can be either AzureApplicationInsights or AzureLogAnalytics -->
+    <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
+    <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
+    <Parameter Name="AppInsightsInstrumentationKey" Value="" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
+    <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
+    <Parameter Name="LogAnalyticsSharedKey" Value="" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
+    <Parameter Name="LogAnalyticsLogType" Value="FabricHealer" />
+    <!-- Optional: EventSource Tracing. -->
+    <Parameter Name="EnableEventSourceProvider" Value="true" />
+    <Parameter Name="EventSourceProviderName" Value="FabricHealerETWProvider" />
+    <!-- Big on/off switch. You can be more granular below in the Repair policies sections. -->
+    <Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
+    <Parameter Name="EnableRepairAuditTelemetry" Value="true" />
+  </Section>
+  <!-- Repair policies -->
+  <Section Name="AppRepairPolicy">
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="LogicRulesConfigurationFile" Value="AppRules.config.txt" />
+  </Section>
+  <Section Name="DiskRepairPolicy">
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="LogicRulesConfigurationFile" Value="DiskRules.config.txt" />
+  </Section>
+  <Section Name="FabricNodeRepairPolicy">
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="LogicRulesConfigurationFile" Value="FabricNodeRules.config.txt" />
+  </Section>
+  <Section Name="ReplicaRepairPolicy">
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="LogicRulesConfigurationFile" Value="ReplicaRules.config.txt" />
+  </Section>
+  <Section Name="SystemAppRepairPolicy">
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="LogicRulesConfigurationFile" Value="SystemAppRules.config.txt" />
+  </Section>
+  <Section Name="VMRepairPolicy">
+    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="LogicRulesConfigurationFile" Value="VmRules.config.txt" />
+  </Section>
+</Settings>
