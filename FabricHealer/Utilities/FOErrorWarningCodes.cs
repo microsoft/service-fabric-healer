@@ -57,7 +57,18 @@ namespace FabricHealer.Utilities
         public const string NodeErrorTooManyActiveEphemeralPorts = "FO031";
         public const string NodeWarningTooManyActiveEphemeralPorts = "FO032";
 
-        public static Dictionary<string, string> AppErrorCodesDictionary { get; } = new Dictionary<string, string>
+        // Process owned File Handles / File Descriptors - Linux (File Descriptors) and Windows (File Handles)
+        public const string AppErrorTooManyOpenFileHandles = "FO033";
+        public const string AppWarningTooManyOpenFileHandles = "FO034";
+
+        // System-wide open File Handles / File Descriptors - Linux only.
+        public const string NodeErrorTotalOpenFileHandlesPercent = "FO035";
+        public const string NodeWarningTotalOpenFileHandlesPercent = "FO036";
+
+        public static Dictionary<string, string> AppErrorCodesDictionary
+        {
+            get;
+        } = new Dictionary<string, string>
         {
             { Ok, "Ok" },
             { AppErrorCpuPercent, "AppErrorCpuPercent" },
@@ -72,9 +83,14 @@ namespace FabricHealer.Utilities
             { AppWarningTooManyActiveTcpPorts, "AppWarningTooManyActiveTcpPorts" },
             { AppErrorTooManyActiveEphemeralPorts, "AppErrorTooManyActiveEphemeralPorts" },
             { AppWarningTooManyActiveEphemeralPorts, "AppWarningTooManyActiveEphemeralPorts" },
+            { AppErrorTooManyOpenFileHandles, "AppErrorTooManyOpenFileHandles" },
+            { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" },
         };
 
-        public static Dictionary<string, string> NodeErrorCodesDictionary { get; } = new Dictionary<string, string>
+        public static Dictionary<string, string> NodeErrorCodesDictionary
+        {
+            get;
+        } = new Dictionary<string, string>
         {
             { Ok, "Ok" },
             { NodeErrorCpuPercent, "NodeErrorCpuPercent" },
@@ -97,6 +113,8 @@ namespace FabricHealer.Utilities
             { WarningTooManyFirewallRules, "NodeWarningTooManyFirewallRules" },
             { NodeErrorTooManyActiveEphemeralPorts, "NodeErrorTooManyActiveEphemeralPorts" },
             { NodeWarningTooManyActiveEphemeralPorts, "NodeWarningTooManyActiveEphemeralPorts" },
+            { NodeErrorTotalOpenFileHandlesPercent, "NodeErrorTotalOpenFileHandlesPercent" },
+            { NodeWarningTotalOpenFileHandlesPercent, "NodeWarningTotalOpenFileHandlesPercent" },
         };
 
         public static string GetErrorWarningNameFromCode(string id)
@@ -171,7 +189,17 @@ namespace FabricHealer.Utilities
                 return RepairConstants.MemoryMB;
             }
 
-            return GetIsResourceType(code, RepairConstants.MemoryPercent) ? RepairConstants.MemoryPercent : null;
+            if (GetIsResourceType(code, RepairConstants.MemoryPercent))
+            {
+                return RepairConstants.MemoryPercent;
+            }
+
+            if (GetIsResourceType(code, RepairConstants.FileHandles))
+            {
+                return RepairConstants.FileHandles;
+            }
+
+            return GetIsResourceType(code, RepairConstants.FileHandlesPercent) ? RepairConstants.FileHandlesPercent : null;
         }
 
         private static bool GetIsResourceType(string id, string resourceType)

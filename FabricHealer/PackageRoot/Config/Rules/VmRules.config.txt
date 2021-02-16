@@ -5,5 +5,11 @@ Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
 
 Mitigate(MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 90,
 	GetRepairHistory(?repairCount, TimeWindow=08:00:00), 
-	?repairCount < 5,
+	?repairCount < 4,
+    RestartVM().
+
+## This rule - and metric - does not apply to Windows. Only Linux FO will emit warnings related to system-wide file handle abuse.
+Mitigate(MetricName="FileHandlesPercent", MetricValue=?MetricValue) :- ?MetricValue >= 95,
+	GetRepairHistory(?repairCount, TimeWindow=08:00:00), 
+	?repairCount < 2,
     RestartVM().

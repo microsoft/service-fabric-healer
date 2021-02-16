@@ -102,5 +102,7 @@ namespace FabricHealer.Repair
         public const string MemoryMB = "MemoryMB";
         public const string MemoryPercent = "MemoryPercent";
         public const string Network = "Network";
+        public const string FileHandles = "FileHandles";
+        public const string FileHandlesPercent = "FileHandlesPercent";
     }
 }

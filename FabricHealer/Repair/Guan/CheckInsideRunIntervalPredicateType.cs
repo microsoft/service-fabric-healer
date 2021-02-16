@@ -59,12 +59,12 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 string message =
-                    $"Repair {FOHealthData.RepairId}:{FabricObserverErrorWarningCodes.GetMetricNameFromCode(FOHealthData.Code)} has already run once within the specified run interval." +
-                    $"{Environment.NewLine}Run interval: {(runInterval > TimeSpan.MinValue ? runInterval : interval)}. Will not attempt repair at this time.";
+                    $"Repair with ID {FOHealthData.RepairId} has already run once within the specified run interval ({(runInterval > TimeSpan.MinValue ? runInterval : interval)}).{Environment.NewLine}" +
+                    $"Will not attempt repair at this time.";
 
                 RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
-                    $"CheckRunIntervalPredicate::{FOHealthData.RepairId}",
+                    $"CheckInsideRunInterval::{FOHealthData.RepairId}",
                     message,
                     RepairTaskManager.Token).GetAwaiter().GetResult();
 

@@ -741,6 +741,12 @@ namespace FabricHealer
                         }
 
                         repairRules = GetRepairRulesFromFOCode(foHealthData.Code, "fabric:/System");
+                        
+                        if (repairRules == null || repairRules?.Count == 0)
+                        {
+                            continue;
+                        }
+
                         repairId = $"{foHealthData.NodeName}_{foHealthData.ApplicationName.Replace("fabric:/", "")}_{foHealthData.Code}";
                         system = "System ";
 
@@ -755,6 +761,12 @@ namespace FabricHealer
                     else
                     {
                         repairRules = GetRepairRulesFromFOCode(foHealthData.Code);
+
+                        if (repairRules == null || repairRules?.Count == 0)
+                        {
+                            continue;
+                        }
+
                         repairId = $"{foHealthData.NodeName}_{foHealthData.ServiceName?.Replace("fabric:/", "").Replace("/", "")}_{foHealthData.Metric?.Replace(" ", string.Empty)}";
                         
                         // Repair already in progress?
@@ -764,11 +776,6 @@ namespace FabricHealer
                         {
                             continue;
                         }
-                    }
-
-                    if (repairRules == null || !repairRules.Any())
-                    {
-                        continue;
                     }
 
                     foHealthData.RepairId = repairId;
@@ -895,7 +902,7 @@ namespace FabricHealer
                     // Get configuration settings related to supported Node repair.
                     var repairRules = GetRepairRulesFromFOCode(foHealthData.Code);
 
-                    if (repairRules == null || !repairRules.Any())
+                    if (repairRules == null || repairRules?.Count == 0)
                     {
                         continue;
                     }
@@ -1066,11 +1073,14 @@ namespace FabricHealer
                 case FabricObserverErrorWarningCodes.AppErrorMemoryPercent:
                 case FabricObserverErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts:
                 case FabricObserverErrorWarningCodes.AppErrorTooManyActiveTcpPorts:
+                case FabricObserverErrorWarningCodes.AppErrorTooManyOpenFileHandles:
                 case FabricObserverErrorWarningCodes.AppWarningCpuPercent:
                 case FabricObserverErrorWarningCodes.AppWarningMemoryMB:
                 case FabricObserverErrorWarningCodes.AppWarningMemoryPercent:
                 case FabricObserverErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts:
                 case FabricObserverErrorWarningCodes.AppWarningTooManyActiveTcpPorts:
+                case FabricObserverErrorWarningCodes.AppWarningTooManyOpenFileHandles:
+
 
                     if (app == "fabric:/System")
                     {
@@ -1088,11 +1098,13 @@ namespace FabricHealer
                 case FabricObserverErrorWarningCodes.NodeErrorMemoryPercent:
                 case FabricObserverErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts:
                 case FabricObserverErrorWarningCodes.NodeErrorTooManyActiveTcpPorts:
+                case FabricObserverErrorWarningCodes.NodeErrorTotalOpenFileHandlesPercent:
                 case FabricObserverErrorWarningCodes.NodeWarningCpuPercent:
                 case FabricObserverErrorWarningCodes.NodeWarningMemoryMB:
                 case FabricObserverErrorWarningCodes.NodeWarningMemoryPercent:
                 case FabricObserverErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts:
                 case FabricObserverErrorWarningCodes.NodeWarningTooManyActiveTcpPorts:
+                case FabricObserverErrorWarningCodes.NodeWarningTotalOpenFileHandlesPercent:
 
                     repairPolicySectionName = RepairConstants.VmRepairPolicySectionName;
                     break;
