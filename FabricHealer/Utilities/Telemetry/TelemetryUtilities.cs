@@ -76,7 +76,7 @@ namespace FabricHealer.Utilities.Telemetry
 
             if (hasRepairInfo)
             {
-                repairAction = Enum.GetName(typeof(RepairAction), repairConfig.RepairPolicy.CurrentAction);
+                repairAction = Enum.GetName(typeof(RepairActionType), repairConfig.RepairPolicy.RepairAction);
             }
 
             HealthState healthState = HealthState.Ok;
@@ -135,7 +135,7 @@ namespace FabricHealer.Utilities.Telemetry
             var healthReporter = new FabricHealthReporter(this.fabricClient);
             var healthReport = new HealthReport
             {
-                Code = repairConfig?.RepairPolicy.Id,
+                Code = repairConfig?.RepairPolicy.RepairId,
                 HealthMessage = description,
                 NodeName = this.serviceContext.NodeContext.NodeName,
                 ReportType = HealthReportType.Node,

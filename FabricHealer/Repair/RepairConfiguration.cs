@@ -64,5 +64,15 @@ namespace FabricHealer.Repair
         {
             get; set;
         }
+
+        public string SystemServiceProcessName 
+        { 
+            get; set; 
+        }
+
+        public int ProcessId
+        {
+            get; set;
+        }
     }
 }

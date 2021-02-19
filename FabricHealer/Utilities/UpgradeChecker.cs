@@ -189,7 +189,7 @@ namespace FabricHealer.Repair
 
                 FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
-                    $"IsAzureTenantUpdateInProgress::true",
+                    $"AzureTenantUpdateInProgress",
                     message,
                     token).GetAwaiter().GetResult();
 

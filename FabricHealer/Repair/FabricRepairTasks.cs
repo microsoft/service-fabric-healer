@@ -132,11 +132,11 @@ namespace FabricHealer.Repair
 
             RepairTask repairTask;
 
-            var repairAction = repairConfiguration.RepairPolicy.CurrentAction;
+            var repairAction = repairConfiguration.RepairPolicy.RepairAction;
 
             switch (repairAction)
             {
-                case RepairAction.RestartVM:
+                case RepairActionType.RestartVM:
                     
                     repairTask = repairTaskEngine.CreateVmRebootTask(
                         repairConfiguration,
@@ -144,11 +144,12 @@ namespace FabricHealer.Repair
 
                     break;
 
-                case RepairAction.DeleteFiles:
-                case RepairAction.RestartCodePackage:
-                case RepairAction.RestartFabricNode:
-                case RepairAction.RestartReplica:
-
+                case RepairActionType.DeleteFiles:
+                case RepairActionType.RestartCodePackage:
+                case RepairActionType.RestartFabricNode:
+                case RepairActionType.RestartProcess:
+                case RepairActionType.RestartReplica:
+                
                     repairTask = repairTaskEngine.CreateFabricHealerRmRepairTask(
                         repairConfiguration,
                         executorData);

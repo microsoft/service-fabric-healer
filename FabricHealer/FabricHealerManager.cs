@@ -399,7 +399,7 @@ namespace FabricHealer
                     List<string> repairRules;
 
                     // System warnings/errors from FO are Node level. FH will restart the node hosting the troubled SF system service.
-                    if (repairExecutorData.RepairPolicy.Id.Contains("System"))
+                    if (repairExecutorData.RepairPolicy.RepairId.Contains("System"))
                     {
                         repairRules = GetRepairRulesFromConfiguration(RepairConstants.SystemAppRepairPolicySectionName);
                     }
@@ -706,13 +706,15 @@ namespace FabricHealer
 
                     if (app.ApplicationName.OriginalString == "fabric:/System")
                     {
-                        // Don't run fabric node repairs if the target node is the same one where this FH instance is running.
-                        if (foHealthData.NodeName == this.serviceContext.NodeContext.NodeName)
+                        // Node-level safe restarts must not take place in clusters with less than 3 nodes to guarantee quorum.
+                        var nodeList = await fabricClient.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, Token).ConfigureAwait(false);
+                        
+                        if (nodeList?.Count < 3)
                         {
                             continue;
                         }
 
-                        // Block attempts to create node-level repair tasks if one is already running in the cluster.
+                        // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
                         var fhRepairTasks =
                             await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
                                 RepairTaskEngine.FabricHealerExecutorName,
@@ -724,10 +726,10 @@ namespace FabricHealer
                             {
                                 var executorData =
                                     SerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
-
-                                if (executorData?.RepairAction == RepairAction.RestartFabricNode)
+                              
+                                if (executorData?.RepairAction == RepairActionType.RestartFabricNode || executorData?.RepairAction == RepairActionType.RestartProcess)
                                 {
-                                    string message = $"A Fabric Node repair, {repair.TaskId}, is already in progress in the cluster. Will not attempt repair at this time.";
+                                    string message = $"A Service Fabric System service repair ({repair.TaskId}) is already in progress in the cluster. Will not attempt repair at this time.";
 
                                     TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                         LogLevel.Info,
@@ -747,7 +749,7 @@ namespace FabricHealer
                             continue;
                         }
 
-                        repairId = $"{foHealthData.NodeName}_{foHealthData.ApplicationName.Replace("fabric:/", "")}_{foHealthData.Code}";
+                        repairId = $"{foHealthData.NodeName}_{foHealthData.SystemServiceProcessName}_{foHealthData.Code}";
                         system = "System ";
 
                         // Repair already in progress?

@@ -73,11 +73,13 @@ namespace FabricHealer.Repair
         public const string FOErrorCode = "FOErrorCode";
         public const string MetricName = "MetricName";
         public const string MetricValue = "MetricValue";
+        public const string SystemServiceProcessName = "SystemServiceProcessName";
 
         // Repair Actions.
         public const string DeleteFiles = "DeleteFiles";
         public const string RestartCodePackage = "RestartCodePackage";
         public const string RestartFabricNode = "RestartFabricNode";
+        public const string RestartFabricSystemProcess = "RestartFabricSystemProcess";
         public const string RestartReplica = "RestartReplica";
         public const string RestartVM = "RestartVM";
 

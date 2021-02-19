@@ -38,6 +38,12 @@ namespace FabricHealer.Repair.Guan
 
             protected override bool Check()
             {
+                // Can only delete files on the same VM where the FH instance that took the job is running.
+                if (repairConfiguration.NodeName != RepairTaskManager.Context.NodeContext.NodeName)
+                {
+                    return false;
+                }
+
                 bool recurseSubDirectories = false;
                 string path = null;
 
@@ -73,10 +79,15 @@ namespace FabricHealer.Repair.Guan
                     }
                 }
 
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    throw new GuanException("Your DiskRepair logic rule must specify a FolderPath argument.");
+                }
+
                 // RepairPolicy
-                repairConfiguration.RepairPolicy.CurrentAction = RepairAction.DeleteFiles;
+                repairConfiguration.RepairPolicy.RepairAction = RepairActionType.DeleteFiles;
                 ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FolderPath = path;
-                repairConfiguration.RepairPolicy.Id = FOHealthData.RepairId;
+                repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
                 ((DiskRepairPolicy)repairConfiguration.RepairPolicy).MaxNumberOfFilesToDelete = maxFilesToDelete;
                 ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FileAgeSortOrder = direction;
                 repairConfiguration.RepairPolicy.TargetType = RepairTargetType.VirtualMachine;
@@ -95,7 +106,7 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                // Try to execute repair (FH executor does this work and manages repair state).
+                // Try to execute repair (FH executor does this work and manages repair state through RM, as always).
                 bool success = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                     () =>
                     RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
@@ -121,7 +132,7 @@ namespace FabricHealer.Repair.Guan
 
         private DeleteFilesPredicateType(
             string name)
-            : base(name, true, 1, 5)
+            : base(name, true, 1, 4)
         {
            
         }

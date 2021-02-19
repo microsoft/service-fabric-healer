@@ -1,13 +1,18 @@
-﻿## Logic rules for System Application level repairs in the cluster.
+﻿## Logic rules for Service Fabric System Service repairs.
 
 ## First, check if we are inside the run interval. If inside run interval, then cut (no other rules will be processed).
 ## Note: FO only generates Application (System) level warnings for system services. There will only ever be ApplicationName as "fabric:/System" in the FO health data that FH emits, so this is an optional argument.
-Mitigate(AppName="fabric:/System") :- CheckInsideRunInterval(RunInterval=01:00:00), !.
+## Mitigate(AppName="fabric:/System") :- CheckInsideRunInterval(RunInterval=01:00:00), !.
 
-## TimeScopedRestartCodePackage is an internal predicate to check for the number of times a repair has run to completion within a supplied time window. 
-## If Completed Repair count is less then supplied value, then run RestartCodePackage mitigation.
+## TimeScopedRestartFabricNode is an internal predicate to check for the number of times a repair has run to completion within a supplied time window. 
+## If Completed Repair count is less then supplied value, then run RestartFabricNode mitigation.
 TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount < ?count, 
 	RestartFabricNode().
+
+## TimeScopedRestartFabricSystemProcess is an internal predicate to check for the number of times a repair has run to completion within a supplied time window. 
+## If Completed Repair count is less then supplied value, then run RestartFabricSystemProcess mitigation.
+TimeScopedRestartFabricSystemProcess(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount < ?count, 
+	RestartFabricSystemProcess().
 	
 ## Mitigation queries for multiple metrics and targets.
 
@@ -26,3 +31,13 @@ Mitigate(AppName="fabric:/System", MetricName="MemoryPercent", MetricValue=?Metr
 ## Ephemeral Ports in Use
 Mitigate(AppName="fabric:/System", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue >= 800,
 	TimeScopedRestartFabricNode(4, 08:00:00).
+
+## Open File Handles - Any SF system service besides Fabric or FabricHost.
+## Restart the offending Fabric system process.
+Mitigate(AppName="fabric:/System", MetricName="FileHandles", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
+	RestartFabricSystemProcess().
+
+## Open File Handles - Fabric or FabricHost.
+## Restart the Fabric node where the offending instance is running.
+Mitigate(AppName="fabric:/System", MetricName="FileHandles", SystemServiceProcessName="Fabric") :- TimeScopedRestartFabricNode(2, 08:00:00).
+Mitigate(AppName="fabric:/System", MetricName="FileHandles", SystemServiceProcessName="FabricHost") :- TimeScopedRestartFabricNode(2, 08:00:00).

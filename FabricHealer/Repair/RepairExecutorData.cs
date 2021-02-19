@@ -45,7 +45,7 @@ namespace FabricHealer.Repair
         } = FabricNodeRepairStep.Scheduled;
 
         [DataMember]
-        public RepairAction RepairAction
+        public RepairActionType RepairAction
         {
             get; set;
         }

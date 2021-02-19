@@ -7,7 +7,6 @@ using FabricHealer.Utilities.Telemetry;
 using Guan.Logic;
 using System;
 using FabricHealer.Utilities;
-using Guan.Common;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -43,7 +42,7 @@ namespace FabricHealer.Repair.Guan
 
             protected override bool Check()
             {
-                repairConfiguration.RepairPolicy.Id = FOHealthData.RepairId;
+                repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
                 repairConfiguration.RepairPolicy.TargetType = RepairTargetType.Application;
                 
                 // Try to schedule repair with RM.
@@ -85,7 +84,7 @@ namespace FabricHealer.Repair.Guan
 
         private RestartReplicaPredicateType(
             string name)
-            : base(name, true, 0, 2)
+            : base(name, true, 0, 0)
         {
 
         }

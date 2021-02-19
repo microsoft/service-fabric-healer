@@ -78,20 +78,20 @@ namespace FHTest
 
             RepairExecutorData executorData = new RepairExecutorData
             {
-                RepairAction = RepairAction.RestartCodePackage,
+                RepairAction = RepairActionType.RestartCodePackage,
             };
 
             foreach (var file in Directory.GetFiles(FHRulesDirectory))
             {
-                List<string> rules = File.ReadAllLines(file).ToList();
-                List<string> repairAction = ParseRulesFile(rules);
+                List<string> repairRules = ParseRulesFile(File.ReadAllLines(file).ToList());
 
                 try
                 {
-                    Assert.IsTrue(await TestInitializeGuanAndRunQuery(foHealthData, repairAction, executorData).ConfigureAwait(false));
+                    Assert.IsTrue(await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData).ConfigureAwait(false));
                 }
-                catch (GuanException)
+                catch (GuanException ge)
                 {
+                    Console.WriteLine(ge.ToString());
                     throw;
                 }
             }
@@ -107,7 +107,7 @@ namespace FHTest
         {
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed");
             string[] rules = await File.ReadAllLinesAsync(testRulesFilePath).ConfigureAwait(false);
-            List<string> repairAction = ParseRulesFile(rules.ToList());
+            List<string> repairRules = ParseRulesFile(rules.ToList());
             TelemetryData foHealthData = new TelemetryData
             {
                 ApplicationName = "fabric:/test0",
@@ -123,12 +123,12 @@ namespace FHTest
 
             RepairExecutorData executorData = new RepairExecutorData
             {
-                RepairAction = RepairAction.RestartCodePackage,
+                RepairAction = RepairActionType.RestartCodePackage,
             };
 
             try
             {
-                Assert.IsTrue(await TestInitializeGuanAndRunQuery(foHealthData, repairAction, executorData).ConfigureAwait(false));
+                Assert.IsTrue(await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData).ConfigureAwait(false));
             }
             catch (GuanException)
             {
@@ -161,7 +161,7 @@ namespace FHTest
 
             RepairExecutorData executorData = new RepairExecutorData
             {
-                RepairAction = RepairAction.RestartCodePackage,
+                RepairAction = RepairActionType.RestartCodePackage,
             };
 
             await Assert.ThrowsExceptionAsync<GuanException>(async () => { await TestInitializeGuanAndRunQuery(foHealthData, repairAction, executorData); });
@@ -179,19 +179,6 @@ namespace FHTest
         }
 
         /* private Helpers */
-
-        private bool IsLocalSFRuntimePresent()
-        {
-            try
-            {
-                var ps = Process.GetProcessesByName("Fabric");
-                return ps?.Length != 0;
-            }
-            catch (InvalidOperationException)
-            {
-                return false;
-            }
-        }
 
         private async Task<bool> TestInitializeGuanAndRunQuery(
             TelemetryData foHealthData,
@@ -216,24 +203,29 @@ namespace FHTest
             functorTable.Add(DeleteFilesPredicateType.Singleton(RepairConstants.DeleteFiles, repairTaskHelper, foHealthData));
             functorTable.Add(RestartCodePackagePredicateType.Singleton(RepairConstants.RestartCodePackage, repairTaskHelper, foHealthData));
             functorTable.Add(RestartFabricNodePredicateType.Singleton(RepairConstants.RestartFabricNode, repairTaskHelper, executorData, repairTaskEngine, foHealthData));
+            functorTable.Add(RestartFabricSystemProcessPredicateType.Singleton(RepairConstants.RestartFabricSystemProcess, repairTaskHelper, foHealthData));
             functorTable.Add(RestartReplicaPredicateType.Singleton(RepairConstants.RestartReplica, repairTaskHelper, foHealthData));
             functorTable.Add(RestartVMPredicateType.Singleton(RepairConstants.RestartVM, repairTaskHelper, foHealthData));
 
             // Parse rules
-            _ = Module.Parse("Module", repairRules, functorTable);
+            Module module = Module.Parse("Module", repairRules, functorTable);
+            var queryDispatcher = new GuanQueryDispatcher(module);
 
             // Create guan query
             List<CompoundTerm> terms = new List<CompoundTerm>();
             CompoundTerm term = new CompoundTerm("Mitigate");
 
-            /* Pass default arguments in query */
+            /* Pass default arguments in query. */
+            // The type of metric that led FO to generate the unhealthy evaluation for the entity (App, Node, VM, Replica, etc).
+            foHealthData.Metric = FabricObserverErrorWarningCodes.GetMetricNameFromCode(foHealthData.Code);
+
             term.AddArgument(new Constant(foHealthData.ApplicationName), RepairConstants.AppName);
             term.AddArgument(new Constant(foHealthData.Code), RepairConstants.FOErrorCode);
             term.AddArgument(new Constant(foHealthData.Metric), RepairConstants.MetricName);
-            term.AddArgument(new Constant(foHealthData.Value), RepairConstants.MetricValue);
             term.AddArgument(new Constant(foHealthData.NodeName), RepairConstants.NodeName);
             term.AddArgument(new Constant(foHealthData.NodeType), RepairConstants.NodeType);
             term.AddArgument(new Constant(foHealthData.ServiceName), RepairConstants.ServiceName);
+            term.AddArgument(new Constant(foHealthData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);
             term.AddArgument(new Constant(foHealthData.PartitionId), RepairConstants.PartitionId);
             term.AddArgument(new Constant(foHealthData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
 
