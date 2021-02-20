@@ -51,8 +51,8 @@ namespace FHTest
         private readonly CancellationToken token = new CancellationToken { };
 
         // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
-        // e.g., if on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
-        private const string FHRulesDirectory = @"C:\Users\ctorre\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
+        // e.g., if developing on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
+        private const string FHRulesDirectory = @"";
 
         public FHUnitTests()
         {
@@ -224,6 +224,7 @@ namespace FHTest
             term.AddArgument(new Constant(foHealthData.Metric), RepairConstants.MetricName);
             term.AddArgument(new Constant(foHealthData.NodeName), RepairConstants.NodeName);
             term.AddArgument(new Constant(foHealthData.NodeType), RepairConstants.NodeType);
+            term.AddArgument(new Constant(foHealthData.OS), RepairConstants.OS);
             term.AddArgument(new Constant(foHealthData.ServiceName), RepairConstants.ServiceName);
             term.AddArgument(new Constant(foHealthData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);
             term.AddArgument(new Constant(foHealthData.PartitionId), RepairConstants.PartitionId);

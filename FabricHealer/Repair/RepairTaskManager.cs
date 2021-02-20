@@ -226,6 +226,7 @@ namespace FabricHealer.Repair
             term.AddArgument(new Constant(foHealthData.Metric), RepairConstants.MetricName);
             term.AddArgument(new Constant(foHealthData.NodeName), RepairConstants.NodeName);
             term.AddArgument(new Constant(foHealthData.NodeType), RepairConstants.NodeType);
+            term.AddArgument(new Constant(foHealthData.OS), RepairConstants.OS);
             term.AddArgument(new Constant(foHealthData.ServiceName), RepairConstants.ServiceName);
             term.AddArgument(new Constant(foHealthData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);
             term.AddArgument(new Constant(foHealthData.PartitionId), RepairConstants.PartitionId);

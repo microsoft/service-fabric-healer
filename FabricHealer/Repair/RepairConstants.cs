@@ -73,6 +73,7 @@ namespace FabricHealer.Repair
         public const string FOErrorCode = "FOErrorCode";
         public const string MetricName = "MetricName";
         public const string MetricValue = "MetricValue";
+        public const string OS = "OS";
         public const string SystemServiceProcessName = "SystemServiceProcessName";
 
         // Repair Actions.

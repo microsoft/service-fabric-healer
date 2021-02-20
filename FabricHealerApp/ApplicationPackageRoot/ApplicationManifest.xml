@@ -28,7 +28,7 @@
           <Section Name="RepairManagerConfiguration">
             <Parameter Name="HealthCheckLoopSleepTimeSeconds" Value="[MonitorLoopSleepSeconds]" />
             <Parameter Name="EnableAutoMitigation" Value="[AutoMitigationEnabled]" />
-            <Parameter Name="EnableEventSourceProvider" Value="[EventSourceProviderEnabled]"/>
+            <Parameter Name="EnableEventSourceProvider" Value="[EventSourceProviderEnabled]" />
             <Parameter Name="EnableTelemetryProvider" Value="[TelemetryProviderEnabled]" />
             <Parameter Name="EnableVerboseLogging" Value="[VerboseLoggingEnabled]" />
           </Section>
