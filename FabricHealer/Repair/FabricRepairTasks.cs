@@ -214,7 +214,7 @@ namespace FabricHealer.Repair
                 FabricHealerManager.RepairLogger.LogWarning(message);
 
                 FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
+                    LogLevel.Warning,
                     "FabricRepairTasks::TryCreateRepairTaskAsync",
                     message,
                     token).GetAwaiter().GetResult();

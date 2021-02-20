@@ -66,7 +66,7 @@ namespace FabricHealer
 
             RepairLogger = new Logger("FabricHealer")
             {
-                EnableVerboseLogging = ConfigSettings.EnableVerboseLocalLogging,
+                EnableVerboseLogging = ConfigSettings.EnableVerboseLogging,
             };
 
             // Local Logger setup.

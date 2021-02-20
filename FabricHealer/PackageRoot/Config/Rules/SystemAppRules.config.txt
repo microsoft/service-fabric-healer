@@ -37,7 +37,7 @@ Mitigate(AppName="fabric:/System", MetricName="EphemeralPorts", MetricValue=?Met
 Mitigate(AppName="fabric:/System", MetricName="FileHandles", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
 	RestartFabricSystemProcess().
 
-## Open File Handles - Fabric or FabricHost.
+## Open File Handles - Fabric or FabricHost. In these cases, we want a safe (graceful) restart of the Fabric node; not just kill the process, which will restart the node, but not gracefully.
 ## Restart the Fabric node where the offending instance is running.
 Mitigate(AppName="fabric:/System", MetricName="FileHandles", SystemServiceProcessName="Fabric") :- TimeScopedRestartFabricNode(2, 08:00:00).
 Mitigate(AppName="fabric:/System", MetricName="FileHandles", SystemServiceProcessName="FabricHost") :- TimeScopedRestartFabricNode(2, 08:00:00).
