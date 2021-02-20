@@ -20,6 +20,8 @@ using System.IO;
 using System.Security;
 using System.Linq;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.ComponentModel;
 
 namespace FabricHealer.Repair
 {
@@ -493,6 +495,97 @@ namespace FabricHealer.Repair
             }
 
             return replicaResult;
+        }
+
+        public async Task<bool> RestartSystemServiceProcessAsync(RepairConfiguration repairConfiguration, CancellationToken cancellationToken)
+        {
+            Process[] p; 
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && repairConfiguration.SystemServiceProcessName.EndsWith(".dll"))
+            {
+                p = GetDotnetProcessesByFirstArgument(repairConfiguration.SystemServiceProcessName);
+            }
+            else
+            {
+                p = Process.GetProcessesByName(repairConfiguration.SystemServiceProcessName);
+            }
+
+            if (p == null || p.Length == 0)
+            {
+                return false;
+            }
+
+            try
+            {
+                p[0]?.Kill(true);
+            }
+            catch (Exception e) when (e is AggregateException || e is Win32Exception || e is InvalidOperationException || e is OperationCanceledException || e is NotSupportedException)
+            {
+                string err =
+                   $"Handled Exception: Unable to restart process {repairConfiguration.SystemServiceProcessName} " +
+                   $"on node {repairConfiguration.NodeName}.{Environment.NewLine}" +
+                   $"Exception Info:{Environment.NewLine}{e}";
+
+                FabricHealerManager.RepairLogger.LogWarning(err);
+
+                await this.telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                       LogLevel.Warning,
+                       "RepairExecutor.RestartSystemServiceProcessAsync",
+                       err,
+                       cancellationToken,
+                       repairConfiguration);
+
+                return false;
+            }
+            finally
+            {
+                p[0]?.Dispose();
+            }
+
+            return true;
+        }
+
+        private Process[] GetDotnetProcessesByFirstArgument(string argument)
+        {
+            List<Process> result = new List<Process>();
+            Process[] processes = Process.GetProcessesByName("dotnet");
+
+            for (int i = 0; i < processes.Length; ++i)
+            {
+                Process p = processes[i];
+
+                try
+                {
+                    string cmdline = File.ReadAllText($"/proc/{p.Id}/cmdline");
+
+                    // dotnet /mnt/sfroot/_App/__FabricSystem_App4294967295/US.Code.Current/FabricUS.dll 
+                    if (cmdline.Contains("/mnt/sfroot/_App/"))
+                    {
+                        string bin = cmdline[(cmdline.LastIndexOf("/") + 1)..];
+
+                        if (string.Equals(argument, bin, StringComparison.InvariantCulture))
+                        {
+                            result.Add(p);
+                        }
+                    }
+                    else if (cmdline.Contains("Fabric"))
+                    {
+                        // dotnet FabricDCA.dll
+                        string[] parts = cmdline.Split('\0', StringSplitOptions.RemoveEmptyEntries);
+
+                        if (parts.Length > 1 && string.Equals(argument, parts[1], StringComparison.Ordinal))
+                        {
+                            result.Add(p);
+                        }
+                    }
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    // It is possible that the process already exited.
+                }
+            }
+
+            return result.ToArray();
         }
 
         public async Task<RemoveReplicaResult> RemoveReplicaAsync(

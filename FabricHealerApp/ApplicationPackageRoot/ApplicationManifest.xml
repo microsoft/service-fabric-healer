@@ -3,15 +3,18 @@
   <Parameters>
     <Parameter Name="FabricHealer_InstanceCount" DefaultValue="-1" />
     <!-- FabricHealer Enablement, Monitor Loop Timeout -->
-    <Parameter Name="MonitorLoopSleepSeconds" DefaultValue="10" />
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
+    <Parameter Name="MonitorLoopSleepSeconds" DefaultValue="10" />
+    <Parameter Name="TelemetryProviderEnabled" DefaultValue="true" />
+    <Parameter Name="VerboseLoggingEnabled" DefaultValue="true" />
+    <Parameter Name="EventSourceProviderEnabled" DefaultValue="true" />
     <!-- Repair Policy Enablement -->
     <Parameter Name="AppRepairEnabled" DefaultValue="true" />
-    <Parameter Name="DiskRepairEnabled" DefaultValue="true" />
-    <Parameter Name="NodeRepairEnabled" DefaultValue="true" />
+    <Parameter Name="DiskRepairEnabled" DefaultValue="false" />
+    <Parameter Name="NodeRepairEnabled" DefaultValue="false" />
     <Parameter Name="ReplicaRepairEnabled" DefaultValue="false" />
     <Parameter Name="SystemAppRepairEnabled" DefaultValue="true" />
-    <Parameter Name="VmRepairEnabled" DefaultValue="true" />
+    <Parameter Name="VmRepairEnabled" DefaultValue="false" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
@@ -23,8 +26,11 @@
         <Settings>
           <!-- FabricHealerManager -->
           <Section Name="RepairManagerConfiguration">
-            <Parameter Name="EnableAutoMitigation" Value="[AutoMitigationEnabled]" />
             <Parameter Name="HealthCheckLoopSleepTimeSeconds" Value="[MonitorLoopSleepSeconds]" />
+            <Parameter Name="EnableAutoMitigation" Value="[AutoMitigationEnabled]" />
+            <Parameter Name="EnableEventSourceProvider" Value="[EventSourceProviderEnabled]" />
+            <Parameter Name="EnableTelemetryProvider" Value="[TelemetryProviderEnabled]" />
+            <Parameter Name="EnableVerboseLogging" Value="[VerboseLoggingEnabled]" />
           </Section>
           <!-- Repair policies -->
           <Section Name="AppRepairPolicy">

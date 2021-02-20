@@ -8,7 +8,7 @@ namespace FabricHealer.Repair
     /// <summary>
     /// Not all of these actions have corresponding implementations yet.
     /// </summary>
-    public enum RepairAction
+    public enum RepairActionType
     {
         DeleteFiles,
         PauseFabricNode,
@@ -17,6 +17,7 @@ namespace FabricHealer.Repair
         RepairPartition,
         RestartCodePackage,
         RestartFabricNode,
+        RestartProcess,
         RestartReplica,
         RestartVM,
     }

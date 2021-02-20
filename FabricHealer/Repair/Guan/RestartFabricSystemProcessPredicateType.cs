@@ -7,15 +7,14 @@ using FabricHealer.Utilities.Telemetry;
 using Guan.Logic;
 using System;
 using FabricHealer.Utilities;
-using Guan.Common;
 
 namespace FabricHealer.Repair.Guan
 {
-    public class RestartVMPredicateType : PredicateType
+    public class RestartFabricSystemProcessPredicateType : PredicateType
     {
         private static RepairTaskManager RepairTaskManager;
         private static TelemetryData FOHealthData;
-        private static RestartVMPredicateType Instance;
+        private static RestartFabricSystemProcessPredicateType Instance;
 
         class Resolver : BooleanPredicateResolver
         {
@@ -27,13 +26,16 @@ namespace FabricHealer.Repair.Guan
                 QueryContext context)
                 : base(input, constraint, context)
             {
+
                 this.repairConfiguration = new RepairConfiguration
                 {
                     AppName = !string.IsNullOrEmpty(FOHealthData.ApplicationName) ? new Uri(FOHealthData.ApplicationName) : null,
+                    ContainerId = FOHealthData.ContainerId,
                     FOHealthCode = FOHealthData.Code,
                     NodeName = FOHealthData.NodeName,
                     NodeType = FOHealthData.NodeType,
                     PartitionId = !string.IsNullOrEmpty(FOHealthData.PartitionId) ? new Guid(FOHealthData.PartitionId) : default,
+                    SystemServiceProcessName = !string.IsNullOrWhiteSpace(FOHealthData.SystemServiceProcessName) ? FOHealthData.SystemServiceProcessName : string.Empty,
                     ReplicaOrInstanceId = !string.IsNullOrEmpty(FOHealthData.ReplicaId) ? long.Parse(FOHealthData.ReplicaId) : default,
                     ServiceName = !string.IsNullOrEmpty(FOHealthData.ServiceName) ? new Uri(FOHealthData.ServiceName) : null,
                     FOHealthMetricValue = FOHealthData.Value,
@@ -43,58 +45,55 @@ namespace FabricHealer.Repair.Guan
 
             protected override bool Check()
             {
-                // Repair Policy
-                this.repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartVM;
-                repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
-                repairConfiguration.RepairPolicy.TargetType = RepairTargetType.VirtualMachine;
-
-                // FH does not execute repairs for VM level mitigation. InfrastructureService (IS) does,
-                // so, FH schedules VM repairs via RM and the execution is taken care of by IS (the executor).
-                // Block attempts to create duplicate repair tasks.
-                var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
-                var isRepairAlreadyInProgress =
-                    repairTaskEngine.IsFHRepairTaskRunningAsync(
-                        $"fabric:/System/InfrastructureService/{FOHealthData.NodeType}",
-                        repairConfiguration,
-                        RepairTaskManager.Token).GetAwaiter().GetResult();
-                
-                if (isRepairAlreadyInProgress)
+                // Can only kill processes on the same node where the FH instance that took the job is running.
+                if (repairConfiguration.NodeName != RepairTaskManager.Context.NodeContext.NodeName)
                 {
-                    string message =
-                    $"VM Repair {FOHealthData.RepairId} is already in progress. Will not attempt repair at this time.";
-
-                    RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        $"RestartVMPredicateType::{FOHealthData.RepairId}",
-                        message,
-                        RepairTaskManager.Token).GetAwaiter().GetResult();
-
                     return false;
                 }
 
+                // RepairPolicy
+                repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartProcess;
+                repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
+                repairConfiguration.RepairPolicy.TargetType = RepairTargetType.Application;
+
+                // Try to schedule repair with RM.
+                var repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                    () =>
+                        RepairTaskManager.ScheduleFabricHealerRmRepairTaskAsync(
+                            repairConfiguration,
+                            RepairTaskManager.Token),
+                    RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
+
+                if (repairTask == null)
+                {
+                    return false;
+                }
+
+                // Try to execute repair (FH executor does this work and manages repair state).
                 bool success = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                            () =>
-                            RepairTaskManager.ExecuteRMInfrastructureRepairTask(
-                                repairConfiguration,
-                                RepairTaskManager.Token),
-                            RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                    () =>
+                    RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                        repairTask,
+                        repairConfiguration,
+                        RepairTaskManager.Token),
+                    RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 
                 return success;
             }
         }
 
-        public static RestartVMPredicateType Singleton(
-                    string name,
-                    RepairTaskManager repairTaskManager,
-                    TelemetryData foHealthData)
+        public static RestartFabricSystemProcessPredicateType Singleton(
+            string name,
+            RepairTaskManager repairTaskManager,
+            TelemetryData foHealthData)
         {
             RepairTaskManager = repairTaskManager;
             FOHealthData = foHealthData;
 
-            return Instance ??= new RestartVMPredicateType(name);
+            return Instance ??= new RestartFabricSystemProcessPredicateType(name);
         }
 
-        private RestartVMPredicateType(
+        private RestartFabricSystemProcessPredicateType(
             string name)
             : base(name, true, 0, 0)
         {
@@ -110,3 +109,4 @@ namespace FabricHealer.Repair.Guan
         }
     }
 }
+

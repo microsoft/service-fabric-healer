@@ -76,7 +76,7 @@ namespace FabricHealer.Utilities.Telemetry
 
             if (hasRepairInfo)
             {
-                repairAction = Enum.GetName(typeof(RepairAction), repairConfig.RepairPolicy.CurrentAction);
+                repairAction = Enum.GetName(typeof(RepairActionType), repairConfig.RepairPolicy.RepairAction);
             }
 
             HealthState healthState = HealthState.Ok;
@@ -88,6 +88,31 @@ namespace FabricHealer.Utilities.Telemetry
             else if (level == LogLevel.Warning)
             {
                 healthState = HealthState.Warning;
+            }
+
+            // Service Fabric HM - Health Events (local to cluster).
+            var healthReporter = new FabricHealthReporter(this.fabricClient);
+            var healthReport = new HealthReport
+            {
+                Code = repairConfig?.RepairPolicy.RepairId,
+                HealthMessage = description,
+                NodeName = this.serviceContext.NodeContext.NodeName,
+                ReportType = HealthReportType.Node,
+                State = healthState,
+                HealthReportTimeToLive = TimeSpan.FromMinutes(5),
+                Property = "RepairStateInformation",
+                Source = source,
+            };
+
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+
+            /* Telemetry/ETW */
+
+            // Don't log or emit telemetry if the events are Informational (Ok Health State) and Verbose Logging is not enabled.
+            // This limits noise (and cost) for telemetry service usage.
+            if (healthState == HealthState.Ok && !FabricHealerManager.ConfigSettings.EnableVerboseLogging)
+            {
+                return;
             }
 
             if (FabricHealerManager.ConfigSettings.TelemetryEnabled && this.telemetryClient != null)
@@ -128,24 +153,6 @@ namespace FabricHealer.Utilities.Telemetry
                         OSPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
                     });
             }
-
-            // Service Fabric HM - Informational Events
-            // The Warning/Error events are emitted on the offending node. This is
-            // for seeing information in SFX about what happened where vis a vis Repair/Healing.
-            var healthReporter = new FabricHealthReporter(this.fabricClient);
-            var healthReport = new HealthReport
-            {
-                Code = repairConfig?.RepairPolicy.Id,
-                HealthMessage = description,
-                NodeName = this.serviceContext.NodeContext.NodeName,
-                ReportType = HealthReportType.Node,
-                State = healthState,
-                HealthReportTimeToLive = TimeSpan.FromMinutes(5),
-                Property = "RepairStateInformation",
-                Source = source,
-            };
-
-            healthReporter.ReportHealthToServiceFabric(healthReport);
         }
     }
 }

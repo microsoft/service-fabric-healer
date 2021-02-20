@@ -27,7 +27,7 @@ namespace FabricHealer.Utilities
             get; set;
         } = 30;
 
-        public bool EnableVerboseLocalLogging
+        public bool EnableVerboseLogging
         {
             get; set;
         }
@@ -148,7 +148,7 @@ namespace FabricHealer.Utilities
                 RepairConstants.EnableVerboseLoggingParameter),
                 out bool enableVerboseLogging))
             {
-                EnableVerboseLocalLogging = enableVerboseLogging;
+                EnableVerboseLogging = enableVerboseLogging;
             }
 
             LocalLogPathParameter = GetConfigSettingValue(

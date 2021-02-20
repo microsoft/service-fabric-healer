@@ -59,23 +59,25 @@ namespace FabricHealer.Repair.Guan
 
                 if (!Directory.Exists(folderPath))
                 {
+#if DEBUG
                     RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "CheckFolderSizePredicate::DirectoryNotFound",
                         $"Directory {folderPath} does not exist.",
                         RepairTaskManager.Token).GetAwaiter().GetResult();
-
+#endif
                     return false;
                 }
 
                 if (Directory.GetFiles(folderPath, "*", new EnumerationOptions { RecurseSubdirectories = true }).Length == 0)
                 {
+#if DEBUG
                     RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "CheckFolderSizePredicate::NoFilesFound",
                         $"Directory {folderPath} does not contain any files.",
                         RepairTaskManager.Token).GetAwaiter().GetResult();
-
+#endif
                     return false;
                 }
 
@@ -99,7 +101,7 @@ namespace FabricHealer.Repair.Guan
                         return true;
                     }
                 }
-
+#if DEBUG
                 string message =
                 $"Repair {FOHealthData.RepairId}: Supplied Maximum folder size value ({(maxFolderSizeGB > 0 ? maxFolderSizeGB.ToString() + "GB" : maxFolderSizeMB.ToString() + "MB")}) " +
                 $"for path {folderPath} is less than computed folder size ({size}{(maxFolderSizeGB > 0 ? "GB" : "MB")}). " +
@@ -110,7 +112,7 @@ namespace FabricHealer.Repair.Guan
                     "CheckFolderSizePredicate",
                     message,
                     RepairTaskManager.Token).GetAwaiter().GetResult();
-
+#endif
                 return false;
             }
             
@@ -118,13 +120,13 @@ namespace FabricHealer.Repair.Guan
             {
                 var dir = new DirectoryInfo(path);
                 var folderSizeInBytes = dir.EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length);
-                
+#if DEBUG
                 RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
                             "CheckFolderSizePredicate::Size",
                             $"Directory {path} size: {folderSizeInBytes} bytes.",
                             RepairTaskManager.Token).GetAwaiter().GetResult();
-
+#endif
                 if (unit == SizeUnit.GB)
                 {
                     return folderSizeInBytes / 1024 / 1024 / 1024;

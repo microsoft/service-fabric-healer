@@ -37,11 +37,11 @@ namespace FabricHealer.Repair
         {
             NodeImpactLevel impact = NodeImpactLevel.None;
 
-            if (repairConfiguration.RepairPolicy.CurrentAction == RepairAction.RestartFabricNode)
+            if (repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)
             {
                 impact = NodeImpactLevel.Restart;
             }
-            else if (repairConfiguration.RepairPolicy.CurrentAction == RepairAction.RemoveFabricNodeState)
+            else if (repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RemoveFabricNodeState)
             {
                 impact = NodeImpactLevel.RemoveData;
             }
@@ -50,16 +50,16 @@ namespace FabricHealer.Repair
             var impactedNode = new NodeImpact(repairConfiguration.NodeName, impact);
             nodeRepairImpact.ImpactedNodes.Add(impactedNode);
 
-            string taskId = $"{FHTaskIdPrefix}/{Enum.GetName(typeof(RepairAction), repairConfiguration.RepairPolicy.CurrentAction)}/{Guid.NewGuid()}/{repairConfiguration.NodeName}";
+            string taskId = $"{FHTaskIdPrefix}/{Enum.GetName(typeof(RepairActionType), repairConfiguration.RepairPolicy.RepairAction)}/{Guid.NewGuid()}/{repairConfiguration.NodeName}";
             
             var repairTask = new ClusterRepairTask(
                 taskId,
-                Enum.GetName(typeof(RepairAction), repairConfiguration.RepairPolicy.CurrentAction))
+                Enum.GetName(typeof(RepairActionType), repairConfiguration.RepairPolicy.RepairAction))
             {
                 Target = new NodeRepairTargetDescription(repairConfiguration.NodeName),
                 Impact = nodeRepairImpact,
                 Description =
-                    $"FabricHealer executing repair {Enum.GetName(typeof(RepairAction), executorData.RepairAction)} on node {repairConfiguration.NodeName}",
+                    $"FabricHealer executing repair {Enum.GetName(typeof(RepairActionType), executorData.RepairAction)} on node {repairConfiguration.NodeName}",
                 State = RepairTaskState.Preparing,
                 Executor = FabricHealerExecutorName,
                 ExecutorData = SerializationUtility.TrySerialize(executorData, out string exData) ? exData : null,
@@ -109,7 +109,7 @@ namespace FabricHealer.Repair
             var repairTask = new ClusterRepairTask(taskId, HostVMReboot)
             {
                 Target = new NodeRepairTargetDescription(repairConfiguration.NodeName),
-                Description = $"{repairConfiguration.RepairPolicy.Id}",
+                Description = $"{repairConfiguration.RepairPolicy.RepairId}",
                 Executor = executorName,
                 PerformPreparingHealthCheck = false,
                 PerformRestoringHealthCheck = false,
@@ -149,7 +149,7 @@ namespace FabricHealer.Repair
                 {
                     // This would block scheduling any VM level operation (reboot, reimage) already in flight. For IS repairs, state is stored in Description.
                     if (repair.Executor == $"fabric:/System/InfrastructureService/{repairConfig.NodeType}"
-                        && repair.Description == repairConfig.RepairPolicy.Id)
+                        && repair.Description == repairConfig.RepairPolicy.RepairId)
                     {
                         return true;
                     }
@@ -157,8 +157,8 @@ namespace FabricHealer.Repair
                     continue;
                 }
 
-                if (repairConfig.RepairPolicy.Id == executorData.CustomIdentificationData
-                    || executorData.RepairAction == RepairAction.RestartFabricNode)
+                if (repairConfig.RepairPolicy.RepairId == executorData.CustomIdentificationData
+                    || executorData.RepairAction == RepairActionType.RestartFabricNode)
                 {
                     return true;
                 } 

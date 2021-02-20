@@ -1,8 +1,10 @@
-﻿## Logic rules for Application level repairs in the cluster.
+﻿## Logic rules for Service Fabric Application service repairs.
 
-## These internal predicate "calls" form the basis of the configuration for checking if we are inside a specified run interval for a supplied repair target. Please see the documentation for supported target types.
+## These internal predicate "calls" form the basis of the configuration for checking if we are inside the specified run interval for a specified repair target. 
+## Please see the documentation for supported repair target types.
+
 IntervalForRepairTarget(AppName="fabric:/ClusterObserver", RunInterval=01:00:00).
-IntervalForRepairTarget(AppName="fabric:/CpuStress", RunInterval=00:15:00).
+IntervalForRepairTarget(AppName="fabric:/CpuStress", RunInterval=01:00:00).
 IntervalForRepairTarget(AppName="fabric:/ContainerFoo2", RunInterval=00:30:00).
 IntervalForRepairTarget(AppName="fabric:/MyApp42", RunInterval=00:30:00).
 IntervalForRepairTarget(MetricName="ActiveTcpPorts", RunInterval=00:45:00).
@@ -24,14 +26,14 @@ TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, Ti
 Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
     TimeScopedRestartCodePackage(4, 01:00:00).
 
-## File Handles - Total number allocated by any SF Service Process belonging to the specified SF Application.
+## File Handles - Total allocated for Any SF Service Process belonging to the specified SF Application.
 Mitigate(AppName="fabric:/ClusterObserver", MetricName="FileHandles") :- TimeScopedRestartCodePackage(4, 08:00:00).
 
-## Memory - Percent In Use.
+## Memory - Percent In Use for Any SF Service Process belonging to the specified SF Application.
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
 	TimeScopedRestartCodePackage(5, 05:00:00).
 
-## Memory - Megabytes In Use.
+## Memory - Megabytes In Use for Any SF Service Process belonging to the specified SF Applications.
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 

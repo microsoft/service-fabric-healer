@@ -45,8 +45,8 @@ namespace FabricHealer.Repair.Guan
             protected override bool Check()
             {
                 // RepairPolicy
-                repairConfiguration.RepairPolicy.CurrentAction = RepairAction.RestartCodePackage;
-                repairConfiguration.RepairPolicy.Id = FOHealthData.RepairId;
+                repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartCodePackage;
+                repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
                 repairConfiguration.RepairPolicy.TargetType = RepairTargetType.Application;
 
                 // Try to schedule repair with RM.
