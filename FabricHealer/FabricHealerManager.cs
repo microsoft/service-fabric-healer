@@ -1173,7 +1173,7 @@ namespace FabricHealer
             while (ptr1 < rules.Count && ptr2 < rules.Count)
             {
                 // Single line comments removal.
-                if (rules[ptr2].StartsWith("##"))
+                if (rules[ptr2].TrimStart().StartsWith("##"))
                 {
                     ptr1++;
                     ptr2++;

@@ -1,10 +1,27 @@
-﻿Mitigate() :- interval(AppName=?source, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
-interval(AppName="fabric:/CpuStress", RunInterval=00:15:00).
-interval(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
-interval(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
+﻿## These internal predicate "calls" form the basis of the configuration for checking if we are inside the specified run interval for a specified repair target. 
+## Please see the documentation for supported repair target types.
+
+IntervalForRepairTarget(AppName="fabric:/CpuStress", RunInterval=01:00:00).
+IntervalForRepairTarget(AppName="fabric:/MyApp", RunInterval=01:00:00).
+IntervalForRepairTarget(AppName="fabric:/MyApp42", RunInterval=01:00:00).
+
+## This is the rule that will run for each IntervalForRepairTarget predicate specified above.
+## The CheckInsideRunInterval external predicate compares the specified RunInterval TimeSpan value against repair job data managed by the RepairManagerService(RM),
+## a stateful Service Fabric System Service that orchestrates repairs and manages repair state for a Service Fabric cluster. FH requires the presence of RM in order to function.
+Mitigate() :- IntervalForRepairTarget(Target=?target, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
 
 ## CPU - Percent In Use.
-Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 40, 
+	GetRepairHistory(?repairCount, TimeWindow="04:00:00"), 
+	?repairCount < 5,
+    RestartCodePackage().
+
+Mitigate(AppName="fabric:/MyApp", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 40, 
+	GetRepairHistory(?repairCount, TimeWindow="04:00:00"), 
+	?repairCount < 5,
+    RestartCodePackage().
+
+Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 40, 
 	GetRepairHistory(?repairCount, TimeWindow="04:00:00"), 
 	?repairCount < 5,
     RestartCodePackage().
@@ -15,3 +32,13 @@ Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?M
 	GetRepairHistory(?repairCount, TimeWindow="04:00:00"), 
 	?repairCount < 5,
 	RestartCodePackage().
+
+Mitigate(AppName="fabric:/MyApp", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
+	GetRepairHistory(?repairCount, TimeWindow="04:00:00"), 
+	?repairCount < 5,
+    RestartCodePackage().
+
+Mitigate(AppName="fabric:/MyApp42", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
+	GetRepairHistory(?repairCount, TimeWindow="04:00:00"), 
+	?repairCount < 5,
+    RestartCodePackage().

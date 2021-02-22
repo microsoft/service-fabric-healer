@@ -176,7 +176,7 @@ Mitigate() :- (condition T/F), !, (true branch).
 Mitigate() :- (false branch).
 ```
 
-Notice the ```!``` symbol, this is called a cut operator in Prolog and it essentially prevents backtracking past where it is defined. Consider the case where the conditional check succeeds, the execution will continue towards the ```(true branch)```. However if the ```(true branch)``` returns false, the first rule will fail and Guan will "backtrack" try to execute the second rule, so the execution flow will actually end up in the ```(false branch)``` of the second rule. Clearly this is not how traditional if/else conditionals work, so it is important to understand why we need to use the cut operator. However as long as you understand this concept you may remove the cut operator if that is the type of behaviour you desire.
+Notice the ```!``` symbol, this is called a cut operator in Prolog and it essentially prevents backtracking past where it is defined. Consider the case where the conditional check succeeds, the execution will continue towards the ```(true branch)```. However if the ```(true branch)``` returns false, the first rule will fail and Guan will "backtrack" and execute the second rule, so the execution flow will actually end up in the ```(false branch)``` of the second rule. Clearly this is not how traditional if/else conditionals work, so it is important to understand why we need to use the cut operator. However as long as you understand this concept you may remove the cut operator if that is the type of behaviour you desire.
 
 
 This pattern can also be repeated to construct else if branches:

@@ -1,15 +1,21 @@
-﻿## This demonstrates a workflow that employs multiple external predicates to get to a solution for a single unhealthy replica scenario.
+﻿## These rules demonstrates a workflow that employs multiple external predicates to get to a solution for a single unhealthy replica scenario:
+##		[SourceId] ='System.RAP' reported Warning/Error for property...
+##		[Property] = 'IStatefulServiceReplica.ChangeRole(N)Duration'.
+##		[Description] = The api IStatefulServiceReplica.ChangeRole(N) on node [NodeName] is stuck. 
+##		Start Time (UTC): 2020-04-26 19:22:55.492.
 
-## First, check if we are inside run interval. If so, then cut (!), which means stop processing rules.
+## First, check if we are inside run interval. If so, then cut (!), which effectively means stop processing rules (no backtracking to subsequent rules in the file).
 Mitigate() :- CheckInsideRunInterval(RunInterval=00:30:00), !.
 
+## The external predicates here (RestartReplica, RestartCodePackage, RestartFabricNode) implement a BooleanPredicateResolver dervied Resolver type (see /Repair/Guan folder for source code). 
+## This means that these predicates either succeed (pass true back) or fail (pass false back) as the result of their execution. 
 Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 2,
+	?repairCount < 4,
 	RestartReplica().
 
 ## Else, try this.
 Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 2,
+	?repairCount < 4,
 	RestartCodePackage().
 
 ## Else, try this.
