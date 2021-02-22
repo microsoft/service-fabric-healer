@@ -52,7 +52,7 @@ namespace FHTest
 
         // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
         // e.g., if developing on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
-        private const string FHRulesDirectory = @"";
+        private const string FHRulesDirectory = @"C:\Users\ctorre\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
 
         public FHUnitTests()
         {
@@ -236,14 +236,13 @@ namespace FHTest
         private List<string> ParseRulesFile(List<string> rules)
         {
             var repairRules = new List<string>();
-            int ptr1 = 0;
-            int ptr2 = 0;
+            int ptr1 = 0; int ptr2 = 0;
             rules = rules.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
 
             while (ptr1 < rules.Count && ptr2 < rules.Count)
             {
                 // Single line comments removal.
-                if (rules[ptr2].StartsWith("##"))
+                if (rules[ptr2].TrimStart().StartsWith("##"))
                 {
                     ptr1++;
                     ptr2++;
