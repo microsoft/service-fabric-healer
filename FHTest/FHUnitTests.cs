@@ -12,7 +12,6 @@ using System;
 using System.Fabric;
 using System.Threading;
 using FabricHealer.Repair.Guan;
-using System.Diagnostics;
 using System.IO;
 using Guan.Common;
 using System.Linq;
@@ -52,7 +51,7 @@ namespace FHTest
 
         // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
         // e.g., if developing on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
-        private const string FHRulesDirectory = @"C:\Users\ctorre\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
+        private const string FHRulesDirectory = @"C:\Users\ctorre\source\repos\microsoft\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
 
         public FHUnitTests()
         {

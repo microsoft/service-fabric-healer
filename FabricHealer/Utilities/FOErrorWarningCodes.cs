@@ -64,6 +64,8 @@ namespace FabricHealer.Utilities
         // System-wide open File Handles / File Descriptors - Linux only.
         public const string NodeErrorTotalOpenFileHandlesPercent = "FO035";
         public const string NodeWarningTotalOpenFileHandlesPercent = "FO036";
+        public const string NodeErrorTooManyOpenFileHandles = "FO037";
+        public const string NodeWarningTooManyOpenFileHandles = "FO038";
 
         public static Dictionary<string, string> AppErrorCodesDictionary
         {
@@ -115,6 +117,8 @@ namespace FabricHealer.Utilities
             { NodeWarningTooManyActiveEphemeralPorts, "NodeWarningTooManyActiveEphemeralPorts" },
             { NodeErrorTotalOpenFileHandlesPercent, "NodeErrorTotalOpenFileHandlesPercent" },
             { NodeWarningTotalOpenFileHandlesPercent, "NodeWarningTotalOpenFileHandlesPercent" },
+            { NodeErrorTooManyOpenFileHandles, "NodeErrorTooManyOpenFileHandles" },
+            { NodeWarningTooManyOpenFileHandles, "NodeWarningTooManyOpenFileHandles" },
         };
 
         public static string GetErrorWarningNameFromCode(string id)
