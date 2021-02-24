@@ -5,20 +5,19 @@
 ##		Start Time (UTC): 2020-04-26 19:22:55.492.
 
 ## First, check if we are inside run interval. If so, then cut (!), which effectively means stop processing rules (no backtracking to subsequent rules in the file).
-Mitigate() :- CheckInsideRunInterval(RunInterval=00:30:00), !.
+Mitigate() :- CheckInsideRunInterval(RunInterval=00:15:00), !.
+
+## Set ?repairCount (all rules have the same TimeWindow).
+Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00).
 
 ## The external predicates here (RestartReplica, RestartCodePackage, RestartFabricNode) implement a BooleanPredicateResolver dervied Resolver type (see /Repair/Guan folder for source code). 
 ## This means that these predicates either succeed (pass true back) or fail (pass false back) as the result of their execution. 
-Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 4,
-	RestartReplica().
+
+## Try this.
+Mitigate() :- ?repairCount < 4, RestartReplica().
 
 ## Else, try this.
-Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 4,
-	RestartCodePackage().
+Mitigate() :- ?repairCount < 4, RestartCodePackage().
 
 ## Else, try this.
-Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 2,
-	RestartFabricNode().
+Mitigate() :- ?repairCount < 2, RestartFabricNode().
