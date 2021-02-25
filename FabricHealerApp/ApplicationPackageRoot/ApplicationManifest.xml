@@ -12,7 +12,7 @@
     <Parameter Name="AppRepairEnabled" DefaultValue="true" />
     <Parameter Name="DiskRepairEnabled" DefaultValue="false" />
     <Parameter Name="NodeRepairEnabled" DefaultValue="false" />
-    <Parameter Name="ReplicaRepairEnabled" DefaultValue="false" />
+    <Parameter Name="ReplicaRepairEnabled" DefaultValue="true" />
     <Parameter Name="SystemAppRepairEnabled" DefaultValue="true" />
     <Parameter Name="VmRepairEnabled" DefaultValue="false" />
   </Parameters>

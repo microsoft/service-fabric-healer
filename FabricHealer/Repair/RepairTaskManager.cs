@@ -815,6 +815,27 @@ namespace FabricHealer.Repair
                     return false;
             }
 
+            // What was the target (a node, app, replica, etc..)?
+            string repairTarget = repairConfiguration.RepairPolicy.RepairId;
+
+            if (repairConfiguration.RepairPolicy.TargetType == RepairTargetType.Application)
+            {
+                repairTarget = repairConfiguration.AppName.OriginalString;
+
+                if (repairConfiguration.AppName.OriginalString == "fabric:/System" && !string.IsNullOrWhiteSpace(repairConfiguration.SystemServiceProcessName))
+                {
+                    repairTarget = $"{repairConfiguration.SystemServiceProcessName} on Node {repairConfiguration.NodeName}";
+                }
+            }
+            else if (repairConfiguration.RepairPolicy.TargetType == RepairTargetType.Node)
+            {
+                repairTarget = repairConfiguration.NodeName;
+            }
+            else if (repairConfiguration.RepairPolicy.TargetType == RepairTargetType.Replica)
+            {
+                repairTarget = $"{repairConfiguration.ServiceName}";
+            }
+
             if (success)
             {
                 string target = Enum.GetName(
@@ -827,12 +848,12 @@ namespace FabricHealer.Repair
                     && repairConfiguration.AppName.OriginalString != "fabric:/System")
                     || repairConfiguration.RepairPolicy.TargetType == RepairTargetType.Replica)
                 {
-                    maxWaitForHealthStateOk = TimeSpan.FromMinutes(5);
+                    maxWaitForHealthStateOk = TimeSpan.FromMinutes(15);
                 }
                 else if (repairConfiguration.RepairPolicy.TargetType == RepairTargetType.Application
                          && repairConfiguration.AppName.OriginalString == "fabric:/System")
                 {
-                    maxWaitForHealthStateOk = TimeSpan.FromMinutes(20);
+                    maxWaitForHealthStateOk = TimeSpan.FromMinutes(30);
                 }
 
                 // Check healthstate of repair target to see if the repair worked.
@@ -844,7 +865,7 @@ namespace FabricHealer.Repair
                     await this.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         $"RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
-                        $"{target} Repair target {repairConfiguration.RepairPolicy.RepairId} successfully healed on node {repairConfiguration.NodeName}.",
+                        $"{target} Repair target {repairTarget} successfully healed.",
                         cancellationToken).ConfigureAwait(false);
 
                     // Tell RM we are ready to move to Completed state
@@ -864,7 +885,7 @@ namespace FabricHealer.Repair
                 await this.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         $"RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
-                        $"{target} Repair target {repairConfiguration.RepairPolicy.RepairId} not successfully healed.",
+                        $"{target} Repair target {repairTarget} not successfully healed.",
                         cancellationToken).ConfigureAwait(false);
 
                 // Did not solve the problem within specified time. Cancel repair task.
