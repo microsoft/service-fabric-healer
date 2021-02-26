@@ -3,7 +3,7 @@
 ## First, check if we are inside run interval. If so, then cut (!).
 Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
 
-## TimeScopedRestartVM is an internal predicate to check for the number of times a VM repair has run to completion within a supplied time window. 
+## TimeScopedRestartVM is an internal predicate to check for the number of times a VM reboot repair has run to completion within a supplied time window. 
 ## If Completed VM Repair count is less then supplied value, then run RestartVM mitigation.
 TimeScopedRestartVM(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount < ?count, RestartVM().
 
@@ -11,11 +11,11 @@ TimeScopedRestartVM(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=
 Mitigate(MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 95,
     	TimeScopedRestartVM(4, TimeWindow=08:00:00).
 
-## File Handles/FDs.
+## File Handles/FDs. Linux-only.
 ## Percent Allocated, System-wide.
-Mitigate(OS="Linux", MetricName="FileHandlesPercent", MetricValue=?MetricValue) :- ?MetricValue >= 95,
+Mitigate(MetricName="FileHandlesPercent", MetricValue=?MetricValue, OS="Linux") :- ?MetricValue >= 95,
     	TimeScopedRestartVM(2, TimeWindow=08:00:00).
 
 ## Total Allocated, System-wide.
-Mitigate(OS="Linux", MetricName="FileHandles", MetricValue=?MetricValue) :- ?MetricValue >= 1000000,
+Mitigate(MetricName="FileHandles", MetricValue=?MetricValue, OS="Linux") :- ?MetricValue >= 1000000,
     	TimeScopedRestartVM(2, TimeWindow=08:00:00).
