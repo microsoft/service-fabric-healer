@@ -3,13 +3,21 @@
 ## First, check if we are inside run interval. If so, then cut (!).
 Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
 
-Mitigate(MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 90,
+## Percent Memory in Use (of total physical).
+Mitigate(MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 95,
 	GetRepairHistory(?repairCount, TimeWindow=08:00:00), 
 	?repairCount < 4,
-    RestartVM().
+    	RestartVM().
 
-## This rule - and metric - does not apply to Windows. Only Linux FO will emit warnings related to system-wide file handle abuse.
-Mitigate(MetricName="FileHandlesPercent", MetricValue=?MetricValue) :- ?MetricValue >= 95,
+## File Handles/FDs.
+## Percent Allocated, System-wide.
+Mitigate(OS="Linux", MetricName="FileHandlesPercent", MetricValue=?MetricValue) :- ?MetricValue >= 95,
 	GetRepairHistory(?repairCount, TimeWindow=08:00:00), 
 	?repairCount < 2,
-    RestartVM().
+    	RestartVM().
+
+## Total Allocated, System-wide.
+Mitigate(OS="Linux", MetricName="FileHandles", MetricValue=?MetricValue) :- ?MetricValue >= 1000000,
+	GetRepairHistory(?repairCount, TimeWindow=08:00:00), 
+	?repairCount < 2,
+    	RestartVM().
