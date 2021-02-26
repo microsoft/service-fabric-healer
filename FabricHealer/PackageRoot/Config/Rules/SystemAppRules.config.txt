@@ -4,12 +4,12 @@
 ## Note: FO only generates Application (System) level warnings for system services. There will only ever be ApplicationName as "fabric:/System" in the FO health data that FH emits, so this is an optional argument.
 ## Mitigate(AppName="fabric:/System") :- CheckInsideRunInterval(RunInterval=01:00:00), !.
 
-## TimeScopedRestartFabricNode is an internal predicate to check for the number of times a repair has run to completion within a supplied time window. 
+## TimeScopedRestartFabricNode is an internal predicate to check for the number of times a system service node restart repair has run to completion within a supplied time window. 
 ## If Completed Repair count is less then supplied value, then run RestartFabricNode mitigation.
 TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount < ?count, 
 	RestartFabricNode().
 
-## TimeScopedRestartFabricSystemProcess is an internal predicate to check for the number of times a repair has run to completion within a supplied time window. 
+## TimeScopedRestartFabricSystemProcess is an internal predicate to check for the number of times a System service process restart repair has run to completion within a supplied time window. 
 ## If Completed Repair count is less then supplied value, then run RestartFabricSystemProcess mitigation.
 TimeScopedRestartFabricSystemProcess(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount < ?count, 
 	RestartFabricSystemProcess().
