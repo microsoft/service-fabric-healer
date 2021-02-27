@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Fabric;
 using System.Fabric.Query;
 using System.Fabric.Repair;
@@ -281,45 +282,42 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            foreach (var repair in allRecentFHRepairTasksCompleted.Where(r => r.ResultStatus == RepairTaskResult.Succeeded))
+            RepairExecutorData execData = null;
+
+            // Repairs where FH is executor.
+            // There could be several repairs of this type for the same repair target in RM's db.
+            if (allRecentFHRepairTasksCompleted.Any(r => SerializationUtility.TryDeserialize(r.ExecutorData, out execData)))
             {
-                if (cancellationToken.IsCancellationRequested)
+                // Just take the latest repair of the specified id.
+                var completedRepairListDesc = allRecentFHRepairTasksCompleted
+                                               .Where(r => r.ResultStatus == RepairTaskResult.Succeeded && execData.CustomIdentificationData == foHealthData.RepairId)
+                                               .OrderByDescending(o => o.CompletedTimestamp)
+                                               .Take(1)
+                                               .ToList();
+
+                // Completed aborted/cancelled repair tasks should not block repairs if they are inside run interval.
+                if (DateTime.UtcNow.Subtract(completedRepairListDesc[0].CompletedTimestamp.Value) <= interval
+                    && completedRepairListDesc[0].Flags != RepairTaskFlags.CancelRequested && completedRepairListDesc[0].Flags != RepairTaskFlags.AbortRequested)
+                {
+                    return true;
+                }
+                else
                 {
                     return false;
                 }
+            }
 
-                var fhExecutorData =
-                    SerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
-
-                // Non-VM repairs (FH is executor, custom repair ExecutorData supplied by FH.)
-                if (fhExecutorData != null)
-                {
-                    if (foHealthData.RepairId != fhExecutorData.CustomIdentificationData)
-                    {
-                        continue;
-                    }
-
-                    if (repair.CompletedTimestamp == null || !repair.CompletedTimestamp.HasValue)
-                    {
-                        return false;
-                    }
-
-                    // Note: Completed aborted/cancelled repair tasks should not block repairs if they are inside run interval.
-                    if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= interval
-                        && repair.Flags != RepairTaskFlags.CancelRequested && repair.Flags != RepairTaskFlags.AbortRequested)
-                    {
-                        return true;
-                    }
-                }
-                // VM repairs (IS is executor, ExecutorData supplied by IS. Custom FH repair id supplied as repair Description.)
-                else if (repair.Executor == $"fabric:/System/InfrastructureService/{foHealthData.NodeType}" && repair.Description == foHealthData.RepairId)
+            // VM repairs (IS is executor, ExecutorData supplied by IS. Custom FH repair id supplied as repair Description.)
+            foreach (var repair in allRecentFHRepairTasksCompleted.Where(r => r.ResultStatus == RepairTaskResult.Succeeded))
+            {
+                if (repair.Executor == $"fabric:/System/InfrastructureService/{foHealthData.NodeType}" && repair.Description == foHealthData.RepairId)
                 {
                     if (repair.CompletedTimestamp == null || !repair.CompletedTimestamp.HasValue)
                     {
                         return false;
                     }
 
-                    // Note: Completed aborted/cancelled repair tasks should not block repairs if they are inside run interval.
+                    // Completed aborted/cancelled repair tasks should not block repairs if they are inside run interval.
                     if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= interval
                         && repair.Flags != RepairTaskFlags.CancelRequested && repair.Flags != RepairTaskFlags.AbortRequested)
                     {

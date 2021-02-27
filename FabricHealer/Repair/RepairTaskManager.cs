@@ -214,7 +214,7 @@ namespace FabricHealer.Repair
             var queryDispatcher = new GuanQueryDispatcher(module);
 
             // Create guan query
-            List<CompoundTerm> terms = new List<CompoundTerm>();
+            List<CompoundTerm> compoundTerms = new List<CompoundTerm>();
             CompoundTerm term = new CompoundTerm("Mitigate");
 
             /* Pass default arguments in query. */
@@ -231,15 +231,12 @@ namespace FabricHealer.Repair
             term.AddArgument(new Constant(foHealthData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);
             term.AddArgument(new Constant(foHealthData.PartitionId), RepairConstants.PartitionId);
             term.AddArgument(new Constant(foHealthData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
-
-            // FO metric values can be doubles or ints. We don't care about doubles here. That level of precision 
-            // is not important and by converting to long we won't break default (long) Guan numeric comparison..
-            term.AddArgument(new Constant(Convert.ToInt64((double)foHealthData.Value)), RepairConstants.MetricValue);
-
-            terms.Add(term);
+            term.AddArgument(new Constant(Convert.ToInt64(foHealthData.Value)), RepairConstants.MetricValue);
+            
+            compoundTerms.Add(term);
 
             // Dispatch query
-            return await queryDispatcher.RunQueryAsync(terms).ConfigureAwait(false);
+            return await queryDispatcher.RunQueryAsync(compoundTerms).ConfigureAwait(false);
         }
 
         // The repair will be executed by SF Infrastructure service, not FH. This is the case for all
@@ -848,7 +845,7 @@ namespace FabricHealer.Repair
                     && repairConfiguration.AppName.OriginalString != "fabric:/System")
                     || repairConfiguration.RepairPolicy.TargetType == RepairTargetType.Replica)
                 {
-                    maxWaitForHealthStateOk = TimeSpan.FromMinutes(15);
+                    maxWaitForHealthStateOk = TimeSpan.FromMinutes(1);
                 }
                 else if (repairConfiguration.RepairPolicy.TargetType == RepairTargetType.Application
                          && repairConfiguration.AppName.OriginalString == "fabric:/System")
