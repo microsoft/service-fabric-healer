@@ -197,6 +197,7 @@ namespace FHTest
             functorTable.Add(CheckFolderSizePredicateType.Singleton(RepairConstants.CheckFolderSize, repairTaskHelper, foHealthData));
             functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairTaskHelper, foHealthData));
             functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, repairTaskHelper, foHealthData));
+            functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage, repairTaskHelper));
 
             // Add external repair predicates.
             functorTable.Add(DeleteFilesPredicateType.Singleton(RepairConstants.DeleteFiles, repairTaskHelper, foHealthData));
@@ -208,10 +209,10 @@ namespace FHTest
 
             // Parse rules
             Module module = Module.Parse("Module", repairRules, functorTable);
-            var queryDispatcher = new GuanQueryDispatcher(module);
+            _ = new GuanQueryDispatcher(module);
 
             // Create guan query
-            List<CompoundTerm> terms = new List<CompoundTerm>();
+            _ = new List<CompoundTerm>();
             CompoundTerm term = new CompoundTerm("Mitigate");
 
             /* Pass default arguments in query. */

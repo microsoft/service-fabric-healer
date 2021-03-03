@@ -13,19 +13,20 @@ Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), _mitigate(?re
 
 ## Now, let's say you wanted to only repair specific Apps or Paritions where related repair TimeWindow values are *not* the same, unlike the above "global" variable rule.
 ## You could do something like the below three rules, which would mean the _mitigate internal predicate would only run if the supplied Mitigate argument values are matched:
-##	Mitigate(AppName="fabric:/foo") :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), _mitigate(?repairCount). 
-##	Mitigate(AppName="fabric:/bar") :- GetRepairHistory(?repairCount, TimeWindow=02:00:00), _mitigate(?repairCount).
-##	Mitigate(ParititionId="34fb55e9-3d36-451c-8744-5518716acbc1") :- GetRepairHistory(?repairCount, TimeWindow=03:00:00), _mitigate(?repairCount).
+##	Mitigate(AppName="fabric:/foo") :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), _mitigate(?repairCount), !. 
+##	Mitigate(AppName="fabric:/bar") :- GetRepairHistory(?repairCount, TimeWindow=02:00:00), _mitigate(?repairCount), !.
+##	Mitigate(ParititionId="34fb55e9-3d36-451c-8744-5518716acbc1") :- GetRepairHistory(?repairCount, TimeWindow=03:00:00), _mitigate(?repairCount), !.
 
 ## The external predicates here (RestartReplica, RestartCodePackage, RestartFabricNode) implement a BooleanPredicateResolver dervied Resolver type (see /Repair/Guan folder for source code). 
 ## This means that these predicates either succeed (pass true back) or fail (pass false back) as the result of their execution. So, if one fails, then the next rule will be run, etc. When a rule 
-## succeeds, the logic processing is done and Guan has satisfied the query (you got the answer you were looking for - successful mitigation).
+## succeeds, the logic processing is done (the cut is added for good measure, but is not necessary given how FH runs Guan queries)
+## and Guan has satisfied the query (you got the answer you were looking for - successful mitigation).
 
 ## Try this.
-_mitigate(?count) :- ?count < 4, RestartReplica().
+_mitigate(?count) :- ?count < 4, RestartReplica(), !.
 
 ## Else, try this.
-_mitigate(?count) :- ?count < 4, RestartCodePackage().
+_mitigate(?count) :- ?count < 4, RestartCodePackage(), !.
 
 ## Else, try this.
 _mitigate(?count) :- ?count < 2, RestartFabricNode().

@@ -83,6 +83,8 @@ namespace FabricHealer.Repair
             StatelessServiceContext context,
             CancellationToken token)
         {
+            var telemetryUtilities = new TelemetryUtilities(fabricClient, context);
+
             try
             {
                 if (repairTask.ResultStatus == RepairTaskResult.Succeeded 
@@ -100,22 +102,27 @@ namespace FabricHealer.Repair
                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                         token).ConfigureAwait(false);
             }
+            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is OperationCanceledException || e is TimeoutException)
+            {
+                return false;
+            }
+            catch (InvalidOperationException e)
+            {
+                await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            "FabricRepairTasks.CompleteCustomActionRepairJobAsync",
+                             $"Failed to Complete Repair Job {repairTask.TaskId} due to invalid state transition.{Environment.NewLine}:{e}",
+                             token).ConfigureAwait(false);
+
+                return false;
+            }
             catch (Exception e)
             {
-                var telemetryUtilities = new TelemetryUtilities(fabricClient, context);
-
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Error,
-                    "FabricRepairTasks.CompleteCustomActionRepairJobAsync",
-                     $"Failed to Complete Repair Task {repairTask.TaskId} with " +
-                     $"Unhandled Exception:{Environment.NewLine}{e}",
-                     token).ConfigureAwait(false);
-                
-                if (e is FabricException || e is TaskCanceledException || e is OperationCanceledException)
-                {
-                    return false;
-                }
-
+                            LogLevel.Info,
+                            "FabricRepairTasks.CompleteCustomActionRepairJobAsync",
+                             $"Failed to Complete Repair Job {repairTask.TaskId} with unhandled exception:{Environment.NewLine}{e}",
+                             token).ConfigureAwait(false);
                 throw;
             }
 
@@ -290,14 +297,21 @@ namespace FabricHealer.Repair
             {
                 // Just take the latest repair of the specified id.
                 var completedRepairListDesc = allRecentFHRepairTasksCompleted
-                                               .Where(r => r.ResultStatus == RepairTaskResult.Succeeded && execData.CustomIdentificationData == foHealthData.RepairId)
-                                               .OrderByDescending(o => o.CompletedTimestamp)
+                                               .Where(r => r.ResultStatus == RepairTaskResult.Succeeded 
+                                                        && r.Flags != RepairTaskFlags.CancelRequested
+                                                        && r.Flags != RepairTaskFlags.AbortRequested
+                                                        && execData.CustomIdentificationData == foHealthData.RepairId)?
+                                               .OrderByDescending(o => o.CompletedTimestamp)?
                                                .Take(1)
                                                .ToList();
 
+                if (completedRepairListDesc?.Count < 1)
+                {
+                    return false;
+                }
+
                 // Completed aborted/cancelled repair tasks should not block repairs if they are inside run interval.
-                if (DateTime.UtcNow.Subtract(completedRepairListDesc[0].CompletedTimestamp.Value) <= interval
-                    && completedRepairListDesc[0].Flags != RepairTaskFlags.CancelRequested && completedRepairListDesc[0].Flags != RepairTaskFlags.AbortRequested)
+                if (DateTime.UtcNow.Subtract(completedRepairListDesc[0].CompletedTimestamp.Value) <= interval)
                 {
                     return true;
                 }

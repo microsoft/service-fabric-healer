@@ -44,9 +44,9 @@ This [site](https://www.metalevel.at/prolog/concepts) gives a good, fast overvie
 
 The building block for creating Guan logic repair workflows is through the use and composition of **Predicates**. A predicate has a name, and zero or more arguments. In FH, there are two different kinds of predicates: **Internal Predicates** and **External Predicates**. Internal predicates are equivalent to standard predicates in Prolog. An internal predicate defines relations between their arguments and other internal predicates. External predicates on the other hand are more similar to functions in terms of behaviour. External predicates are usually used to perform actions such as checking values, performing calculations, performing repairs, and binding values to variables.
 
-Here is a list of currently implemented External Predicates:
+Here is a list of currently implemented **External Predicates**:
 
-**External Predicates**
+**Repair Predicates**
 
 ```RestartCodePackage()``` 
 
@@ -62,7 +62,34 @@ Attempts to restart the replica of the service that emitted the health event, re
 
 ```RestartVM()``` 
 
-Attempts to restart the underlying virtual machine of the service that emitted the health event, returns true if successful, else false.
+Attempts to restart the underlying virtual machine of the service that emitted the health event, returns true if successful, else false. 
+
+```RestartFabricSystemProcess()``` 
+
+Attempts to restart a system service process that is misbehaving as per the FO health data.  
+
+```DeleteFiles()``` 
+
+Attempts to delete files in a supplied path. You can supply target path, max number of files to remove, sort order (ASC/DESC). 
+
+**Helper Predicates**
+
+```EmitMessage()``` 
+
+This will emit telemetry/etw/health report from a rule which enables informational messaging and can help with debugging. 
+
+```GetRepairHistory()``` 
+
+Gets the number of times a repair has been run with a supplied time window. 
+
+```CheckFolderSize()``` 
+
+Checks the size of a specified folder (full path) and returns a boolean value indicating whether the supplied max size (MB or GB) has been reached or exceeded. 
+
+```CheckInsideRunInterval()``` 
+
+Checks if some repair has already run once within the specified time frame (TimeSpan). 
+
 
 **Forming a Logic Repair Workflow**
 
@@ -93,8 +120,10 @@ By default, for logic-based repair workflows, FH will execute a query which call
 | PartitionId               | Id of the partition                                                                          |
 | ReplicaOrInstanceId       | Id of the replica or instance                                                                |
 | FOErrorCode               | Error Code emitted by FO (e.g. "FO002")                                                      | 
-| MetricName                | Name of the resource supplied by FO (e.g., CpuPercent or MemoryMB, etc.)                        |   
-| MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)                              | 
+| MetricName                | Name of the resource supplied by FO (e.g., CpuPercent or MemoryMB, etc.)                     |   
+| MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)               | 
+| SystemServiceProcessName  | The name of a Fabric system service process supplied in FO health data                       | 
+| OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                   |
 
 For example if you wanted to use AppName and ServiceName in your repair workflow you would specify them like so:
 ```

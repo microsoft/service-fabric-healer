@@ -67,11 +67,11 @@ namespace FabricHealer.Repair
         }
 
         public async Task<RestartDeployedCodePackageResult> RestartCodePackageAsync(
-            Uri appName,
-            Guid partitionId,
-            long replicaId,
-            Uri serviceName,
-            CancellationToken cancellationToken)
+                                                                Uri appName,
+                                                                Guid partitionId,
+                                                                long replicaId,
+                                                                Uri serviceName,
+                                                                CancellationToken cancellationToken)
         {
             try
             {

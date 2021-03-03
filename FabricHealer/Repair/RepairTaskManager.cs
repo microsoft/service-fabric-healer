@@ -200,6 +200,7 @@ namespace FabricHealer.Repair
             functorTable.Add(CheckFolderSizePredicateType.Singleton(RepairConstants.CheckFolderSize, this, foHealthData));
             functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, this, foHealthData));
             functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, this, foHealthData));
+            functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage, this));
 
             // Add external repair predicates.
             functorTable.Add(DeleteFilesPredicateType.Singleton(RepairConstants.DeleteFiles, this, foHealthData));
@@ -835,9 +836,7 @@ namespace FabricHealer.Repair
 
             if (success)
             {
-                string target = Enum.GetName(
-                    typeof(RepairTargetType),
-                    repairConfiguration.RepairPolicy.TargetType);
+                string target = Enum.GetName(typeof(RepairTargetType),repairConfiguration.RepairPolicy.TargetType);
 
                 TimeSpan maxWaitForHealthStateOk = TimeSpan.FromMinutes(60);
 
@@ -845,19 +844,19 @@ namespace FabricHealer.Repair
                     && repairConfiguration.AppName.OriginalString != "fabric:/System")
                     || repairConfiguration.RepairPolicy.TargetType == RepairTargetType.Replica)
                 {
-                    maxWaitForHealthStateOk = TimeSpan.FromMinutes(1);
+                    maxWaitForHealthStateOk = TimeSpan.FromMinutes(5);
                 }
                 else if (repairConfiguration.RepairPolicy.TargetType == RepairTargetType.Application
                          && repairConfiguration.AppName.OriginalString == "fabric:/System")
                 {
-                    maxWaitForHealthStateOk = TimeSpan.FromMinutes(30);
+                    maxWaitForHealthStateOk = TimeSpan.FromMinutes(5);
                 }
 
                 // Check healthstate of repair target to see if the repair worked.
                 if (await IsRepairTargetHealthyAfterCompletedRepair(
-                    repairConfiguration,
-                    maxWaitForHealthStateOk,
-                    cancellationToken).ConfigureAwait(false))
+                            repairConfiguration,
+                            maxWaitForHealthStateOk,
+                            cancellationToken).ConfigureAwait(false))
                 {
                     await this.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
@@ -865,9 +864,9 @@ namespace FabricHealer.Repair
                         $"{target} Repair target {repairTarget} successfully healed.",
                         cancellationToken).ConfigureAwait(false);
 
-                    // Tell RM we are ready to move to Completed state
-                    // as our custom code has completed its repair execution successfully. This function
-                    // puts the repair task into a Restoring State with ResultStatus Succeeded.
+                    // Tell RM we are ready to move to Completed state as our custom code has completed its repair execution successfully.
+                    // This is done by setting the repair task to Restoring State with ResultStatus Succeeded. RM will then move forward to Restoring
+                    // (and do any restoring health checks if specified), then Complete the repair job.
                     _ = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                 () =>
                                 FabricRepairTasks.CompleteCustomActionRepairJobAsync(
