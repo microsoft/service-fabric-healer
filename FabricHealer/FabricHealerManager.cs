@@ -124,11 +124,11 @@ namespace FabricHealer
                 NodeName = serviceContext.NodeContext.NodeName,
                 AppName = new Uri(serviceContext.CodePackageActivationContext.ApplicationName),
                 ReportType = HealthReportType.Application,
-                Code = FabricObserverErrorWarningCodes.Ok,
                 HealthMessage = okMessage,
                 State = HealthState.Ok,
+                Property = "RequirementCheck::RMDeployed",
                 HealthReportTimeToLive = TimeSpan.FromMinutes(5),
-                Source = "CheckRepairManagerDeploymentStatusAsync",
+                Source = "FabricHealer",
             };
 
             var serviceList = await this.fabricClient.QueryManager.GetServiceListAsync(
@@ -764,15 +764,32 @@ namespace FabricHealer
                     {
                         repairRules = GetRepairRulesFromFOCode(foHealthData.Code);
 
+                        // Don't restart thyself.
+                        if (foHealthData.ServiceName == serviceContext.ServiceName.OriginalString && foHealthData.NodeName == serviceContext.NodeContext.NodeName)
+                        {
+                            continue;
+                        }
+                        
+                        // Nothing to do here.
                         if (repairRules == null || repairRules?.Count == 0)
                         {
                             continue;
                         }
 
-                        repairId = $"{foHealthData.NodeName}_{foHealthData.ServiceName?.Replace("fabric:/", "").Replace("/", "")}_{foHealthData.Metric?.Replace(" ", string.Empty)}";
-                        
-                        // Repair already in progress?
+                        string repairIdPart = $"{foHealthData.ServiceName?.Replace("fabric:/", "").Replace("/", "") }_{ foHealthData.Metric?.Replace(" ", string.Empty)}";
+
+                        // Is a repair for the target app already happening in the cluster?
                         var currentRepairs = await this.repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync("FabricHealer", Token).ConfigureAwait(false);
+
+                        if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairIdPart)))
+                        {
+                            continue;
+                        }
+
+                        repairId = $"{foHealthData.NodeName}_{repairIdPart}";
+                        
+                        // Repair already in progress on target node (so, the job has already been taken by another FH instance at this point)?
+                        currentRepairs = await this.repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync("FabricHealer", Token).ConfigureAwait(false);
                         
                         if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
                         {

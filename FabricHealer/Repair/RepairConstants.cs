@@ -67,8 +67,6 @@ namespace FabricHealer.Repair
         public const string NodeType = "NodeType";
         public const string PartitionId = "PartitionId";
         public const string ReplicaOrInstanceId = "ReplicaOrInstanceId";
-        public const string TargetType = "TargetType";
-        public const string CycleTimeDistributionType = "CycleTimeDistributionType";
         public const string RunInterval = "RunInterval";
         public const string FOErrorCode = "FOErrorCode";
         public const string MetricName = "MetricName";
@@ -88,23 +86,21 @@ namespace FabricHealer.Repair
         public const string CheckInsideRunInterval = "CheckInsideRunInterval";
         public const string CheckFolderSize = "CheckFolderSize";
         public const string GetRepairHistory = "GetRepairHistory";
+        public const string EmitMessage = "EmitMessage";
 
         // Resource types.
         public const string ActiveTcpPorts = "ActiveTcpPorts";
         public const string Certificate = "Certificate";
         public const string Cpu = "Cpu";
         public const string CpuPercent = "CpuPercent";
-        public const string Disk = "Disk";
         public const string DiskAverageQueueLength = "DiskAverageQueueLength";
         public const string DiskSpaceMB = "DiskSpaceMB";
         public const string DiskSpacePercent = "DiskSpacePercent";
         public const string EphemeralPorts = "EphemeralPorts";
         public const string EndpointUnreachable = "EndpointUnreachable";
         public const string FirewallRules = "FirewallRules";
-        public const string Memory = "Memory";
         public const string MemoryMB = "MemoryMB";
         public const string MemoryPercent = "MemoryPercent";
-        public const string Network = "Network";
         public const string FileHandles = "FileHandles";
         public const string FileHandlesPercent = "FileHandlesPercent";
     }
