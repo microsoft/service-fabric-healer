@@ -3,10 +3,11 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricHealer.Utilities.Telemetry;
-using Guan.Logic;
 using System;
+using Guan.Common;
+using Guan.Logic;
 using FabricHealer.Utilities;
+using FabricHealer.Utilities.Telemetry;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -51,10 +52,24 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
+                int count = Input.Arguments.Count;
+
+                if (count == 1 && Input.Arguments[0].Value.GetValue().GetType() != typeof(TimeSpan))
+                {
+                    throw new GuanException(
+                        "RestartFabricSystemProcessPredicate: One optional argument is supported and it must be a TimeSpan " +
+                        "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
+                }
+
                 // RepairPolicy
                 repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartProcess;
                 repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
                 repairConfiguration.RepairPolicy.TargetType = RepairTargetType.Application;
+
+                if (count == 1 && Input.Arguments[0].Value.GetValue().GetType() == typeof(TimeSpan))
+                {
+                    repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
+                }
 
                 // Try to schedule repair with RM.
                 var repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -95,7 +110,7 @@ namespace FabricHealer.Repair.Guan
 
         private RestartFabricSystemProcessPredicateType(
             string name)
-            : base(name, true, 0, 0)
+            : base(name, true, 0, 1)
         {
 
         }

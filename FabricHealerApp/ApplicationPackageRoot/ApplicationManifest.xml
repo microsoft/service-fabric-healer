@@ -5,8 +5,8 @@
     <!-- FabricHealer Enablement, Monitor Loop Timeout -->
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
     <Parameter Name="MonitorLoopSleepSeconds" DefaultValue="10" />
-    <Parameter Name="TelemetryProviderEnabled" DefaultValue="true" />
-    <Parameter Name="VerboseLoggingEnabled" DefaultValue="true" />
+    <Parameter Name="TelemetryProviderEnabled" DefaultValue="false" />
+    <Parameter Name="VerboseLoggingEnabled" DefaultValue="false" />
     <Parameter Name="EventSourceProviderEnabled" DefaultValue="true" />
     <!-- Repair Policy Enablement -->
     <Parameter Name="AppRepairEnabled" DefaultValue="true" />

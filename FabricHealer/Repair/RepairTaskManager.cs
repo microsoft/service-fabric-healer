@@ -838,18 +838,31 @@ namespace FabricHealer.Repair
             {
                 string target = Enum.GetName(typeof(RepairTargetType),repairConfiguration.RepairPolicy.TargetType);
 
-                TimeSpan maxWaitForHealthStateOk = TimeSpan.FromMinutes(60);
+                TimeSpan maxWaitForHealthStateOk = TimeSpan.FromMinutes(30);
 
                 if ((repairConfiguration.RepairPolicy.TargetType == RepairTargetType.Application
                     && repairConfiguration.AppName.OriginalString != "fabric:/System")
                     || repairConfiguration.RepairPolicy.TargetType == RepairTargetType.Replica)
                 {
-                    maxWaitForHealthStateOk = TimeSpan.FromMinutes(5);
+                    maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
+                        ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
+                        : TimeSpan.FromMinutes(10);
                 }
                 else if (repairConfiguration.RepairPolicy.TargetType == RepairTargetType.Application
-                         && repairConfiguration.AppName.OriginalString == "fabric:/System")
+                         && repairConfiguration.AppName.OriginalString == "fabric:/System"
+                         && repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartProcess)
                 {
-                    maxWaitForHealthStateOk = TimeSpan.FromMinutes(5);
+                    maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
+                        ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
+                        : TimeSpan.FromMinutes(10);
+                }
+                else if (repairConfiguration.RepairPolicy.TargetType == RepairTargetType.Application
+                         && repairConfiguration.AppName.OriginalString == "fabric:/System"
+                         && repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)
+                {
+                    maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
+                        ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
+                        : TimeSpan.FromMinutes(30);
                 }
 
                 // Check healthstate of repair target to see if the repair worked.

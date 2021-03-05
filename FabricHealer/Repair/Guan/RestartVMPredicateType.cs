@@ -3,11 +3,11 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricHealer.Utilities.Telemetry;
-using Guan.Logic;
 using System;
-using FabricHealer.Utilities;
 using Guan.Common;
+using Guan.Logic;
+using FabricHealer.Utilities;
+using FabricHealer.Utilities.Telemetry;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -43,10 +43,24 @@ namespace FabricHealer.Repair.Guan
 
             protected override bool Check()
             {
+                int count = Input.Arguments.Count;
+
+                if (count == 1 && Input.Arguments[0].Value.GetValue().GetType() != typeof(TimeSpan))
+                {
+                    throw new GuanException(
+                        "RestartVMPredicate: One optional argument is supported and it must be a TimeSpan " +
+                        "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
+                }
+
                 // Repair Policy
-                this.repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartVM;
+                repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartVM;
                 repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
                 repairConfiguration.RepairPolicy.TargetType = RepairTargetType.VirtualMachine;
+
+                if (count == 1 && Input.Arguments[0].Value.GetValue().GetType() == typeof(TimeSpan))
+                {
+                    repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
+                }
 
                 // FH does not execute repairs for VM level mitigation. InfrastructureService (IS) does,
                 // so, FH schedules VM repairs via RM and the execution is taken care of by IS (the executor).
@@ -96,7 +110,7 @@ namespace FabricHealer.Repair.Guan
 
         private RestartVMPredicateType(
             string name)
-            : base(name, true, 0, 0)
+            : base(name, true, 0, 1)
         {
 
         }

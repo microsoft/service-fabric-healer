@@ -302,10 +302,10 @@ namespace FabricHealer
                 if (ConfigSettings.EtwEnabled)
                 {
                     Logger.EtwLogger?.Write(
-                        "FabricHealerServiceCriticalHealthEvent",
+                        RepairConstants.EventSourceEventName,
                         new
                         {
-                            Level = 2, // Error
+                            HealthState = "Warning",
                             Node = serviceContext.NodeContext.NodeName,
                             Source = "FabricHealer.FabricHealerManager",
                             Value = message,

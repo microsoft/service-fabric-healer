@@ -3,12 +3,12 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricHealer.Utilities.Telemetry;
-using Guan.Logic;
 using System;
 using System.Fabric.Repair;
-using FabricHealer.Utilities;
 using Guan.Common;
+using Guan.Logic;
+using FabricHealer.Utilities;
+using FabricHealer.Utilities.Telemetry;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -46,12 +46,26 @@ namespace FabricHealer.Repair.Guan
 
             protected override bool Check()
             {
+                int count = Input.Arguments.Count;
+
+                if (count == 1 && Input.Arguments[0].Value.GetValue().GetType() != typeof(TimeSpan))
+                {
+                    throw new GuanException(
+                        "RestartFabricNodePredicate: One optional argument is supported and it must be a TimeSpan " +
+                        "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
+                }
+
                 RepairTask repairTask;
 
                 // Repair Policy
                 repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartFabricNode;
                 repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
                 repairConfiguration.RepairPolicy.TargetType = FOHealthData.ApplicationName == "fabric:/System" ? RepairTargetType.Application : RepairTargetType.Node;
+                
+                if (count == 1 && Input.Arguments[0].Value.GetValue().GetType() == typeof(TimeSpan))
+                {
+                    repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
+                }
 
                 bool success;
 
@@ -135,7 +149,7 @@ namespace FabricHealer.Repair.Guan
 
         private RestartFabricNodePredicateType(
             string name)
-            : base(name, true, 0, 0)
+            : base(name, true, 0, 1)
         {
 
         }

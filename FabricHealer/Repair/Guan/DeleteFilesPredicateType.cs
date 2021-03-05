@@ -1,8 +1,13 @@
-﻿using FabricHealer.Utilities.Telemetry;
-using Guan.Logic;
+﻿// ------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
+// ------------------------------------------------------------
+
 using System;
-using FabricHealer.Utilities;
 using Guan.Common;
+using Guan.Logic;
+using FabricHealer.Utilities;
+using FabricHealer.Utilities.Telemetry;
 
 namespace FabricHealer.Repair.Guan
 {
