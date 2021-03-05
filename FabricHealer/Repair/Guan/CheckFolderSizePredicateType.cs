@@ -3,12 +3,12 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricHealer.Utilities;
-using FabricHealer.Utilities.Telemetry;
-using Guan.Common;
-using Guan.Logic;
 using System.IO;
 using System.Linq;
+using Guan.Common;
+using Guan.Logic;
+using FabricHealer.Utilities;
+using FabricHealer.Utilities.Telemetry;
 
 namespace FabricHealer.Repair.Guan
 {

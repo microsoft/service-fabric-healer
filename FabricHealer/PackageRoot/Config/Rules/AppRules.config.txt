@@ -55,6 +55,10 @@ Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?Metr
 Mitigate(AppName=?AppName, MetricName="FileHandles", MetricValue=?MetricValue) :- Contains("ClusterObserver", ?AppName), ?MetricValue >= 450, 
 	TimeScopedRestartCodePackage(5, 01:00:00), !.
 
+Mitigate(AppName=?AppName, MetricName="FileHandles", MetricValue=?MetricValue) :- Contains("CpuStress", ?AppName), ?MetricValue >= 300, 
+	TimeScopedRestartCodePackage(15, 01:00:00), !.
+
+
 ## Memory - Percent In Use for Any SF Service Process belonging to the specified SF Application.
 
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
@@ -92,5 +96,8 @@ TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, Ti
 
 
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
+## Note the argument (optional) passed to RestartCodePackage below (you could name it whatever you want or omit the name, it just has to be a TimeSpan value). 
+## This represents how long you want to wait to see if the target app service is healed. Internally, FH will check healthstate of repair target after repair execution (with sleeps)
+## for a default of 10 minutes for app repair, 30 minutes for a FabricNode repair, and 2 hours for a VM repair. All FH external repair predicates support this optional arg.
 
-TimeScopedRestartCodePackage() :- RestartCodePackage().
+TimeScopedRestartCodePackage() :- RestartCodePackage(MaxPostRepairHealthCheckTime=00:15:00).

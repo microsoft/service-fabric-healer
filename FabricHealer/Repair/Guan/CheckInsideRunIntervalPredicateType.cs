@@ -4,10 +4,10 @@
 // ------------------------------------------------------------
 
 using System;
-using FabricHealer.Utilities;
-using FabricHealer.Utilities.Telemetry;
 using Guan.Common;
 using Guan.Logic;
+using FabricHealer.Utilities;
+using FabricHealer.Utilities.Telemetry;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -34,9 +34,11 @@ namespace FabricHealer.Repair.Guan
                 int count = Input.Arguments.Count;
                 bool insideRunInterval = false;
 
-                if (count == 0 || Input.Arguments[0].Name.ToLower() != "runinterval")
+                if (count == 0 || Input.Arguments[0].Value.GetValue().GetType() != typeof(TimeSpan))
                 {
-                    throw new GuanException("RunInterval argument is required.");
+                    throw new GuanException(
+                        "CheckInsideRunInterval: One argument is required and it must be a TimeSpan " +
+                        "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
                 }
 
                 TimeSpan interval = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();

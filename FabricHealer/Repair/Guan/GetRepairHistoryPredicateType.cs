@@ -3,10 +3,10 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
 using System.Threading.Tasks;
 using Guan.Common;
 using Guan.Logic;
-using System;
 using FabricHealer.Utilities.Telemetry;
 using FabricHealer.Utilities;
 
