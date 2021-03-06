@@ -185,7 +185,7 @@ namespace FHTest
             RepairExecutorData executorData)
         {
             var fabricClient = new FabricClient(FabricClientRole.Admin);
-            var repairTaskHelper = new RepairTaskManager(fabricClient, this.context, this.token);
+            var repairTaskHelper = new RepairTaskManager(fabricClient, context, token);
             var repairTaskEngine = new RepairTaskEngine(fabricClient);
 
             // ----- Guan Processing Logic -----

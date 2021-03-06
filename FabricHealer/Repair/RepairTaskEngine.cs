@@ -78,7 +78,7 @@ namespace FabricHealer.Repair
             string executorName,
             CancellationToken cancellationToken)
         {
-            var repairTasks = await this.fabricClient.RepairManager.GetRepairTaskListAsync(
+            var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
                 FHTaskIdPrefix,
                 RepairTaskStateFilter.Active |
                 RepairTaskStateFilter.Approved |
@@ -96,7 +96,7 @@ namespace FabricHealer.Repair
             string executorName)
         {
             // Do not allow this to take place in one-node cluster.
-            var nodes = this.fabricClient.QueryManager.GetNodeListAsync().GetAwaiter().GetResult();
+            var nodes = fabricClient.QueryManager.GetNodeListAsync().GetAwaiter().GetResult();
             int nodeCount = nodes.Count;
 
             if (nodeCount == 1)
@@ -124,7 +124,7 @@ namespace FabricHealer.Repair
             RepairConfiguration repairConfig,
             CancellationToken token)
         {
-            // All RepairTasks are prefixed with FH, regardless of repair target type (VM, fabric node, codepackage, replica...).
+            // All RepairTasks are prefixed with FH, regardless of repair target type (VM, fabric node, system service process, codepackage, replica).
             // For VM-level repair, RM will create a new task for IS that replaces FH executor data with IS job info, but the original FH repair task will
             // remain in an active state which will block any duplicate scheduling by another FH instance.
             var currentFHRepairTasksInProgress =
@@ -142,26 +142,23 @@ namespace FabricHealer.Repair
 
             foreach (var repair in currentFHRepairTasksInProgress)
             {
-                var executorData =
-                    SerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
-                
-                if (executorData == null)
+                if (SerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData))
                 {
-                    // This would block scheduling any VM level operation (reboot, reimage) already in flight. For IS repairs, state is stored in Description.
+                    if (repairConfig.RepairPolicy.RepairId == exData.CustomIdentificationData
+                         || exData.RepairAction == RepairActionType.RestartFabricNode)
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    // This would block scheduling any VM level operation (reboot) already in flight. For IS repairs, state is stored in Description.
                     if (repair.Executor == $"fabric:/System/InfrastructureService/{repairConfig.NodeType}"
                         && repair.Description == repairConfig.RepairPolicy.RepairId)
                     {
                         return true;
                     }
-
-                    continue;
                 }
-
-                if (repairConfig.RepairPolicy.RepairId == executorData.CustomIdentificationData
-                    || executorData.RepairAction == RepairActionType.RestartFabricNode)
-                {
-                    return true;
-                } 
             }
 
             return false;

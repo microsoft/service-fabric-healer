@@ -121,7 +121,7 @@ namespace FabricHealer.Utilities
 
         internal void UpdateConfigSettings(ConfigurationSettings settings = null)
         {
-            this.configSettings = settings;
+            configSettings = settings;
 
             // General
             if (bool.TryParse(
@@ -231,7 +231,7 @@ namespace FabricHealer.Utilities
                 RepairConstants.Enabled),
                 out bool appRepairEnabled))
             {
-                this.EnableAppRepair = appRepairEnabled;
+                EnableAppRepair = appRepairEnabled;
             }
 
             if (bool.TryParse(GetConfigSettingValue(
@@ -239,7 +239,7 @@ namespace FabricHealer.Utilities
                 RepairConstants.Enabled),
                 out bool nodeRepairEnabled))
             {
-                this.EnableNodeRepair = nodeRepairEnabled;
+                EnableNodeRepair = nodeRepairEnabled;
             }
 
             if (bool.TryParse(GetConfigSettingValue(
@@ -247,7 +247,7 @@ namespace FabricHealer.Utilities
                 RepairConstants.Enabled),
                 out bool replicaRepairEnabled))
             {
-                this.EnableReplicaRepair = replicaRepairEnabled;
+                EnableReplicaRepair = replicaRepairEnabled;
             }
 
             if (bool.TryParse(GetConfigSettingValue(
@@ -255,7 +255,7 @@ namespace FabricHealer.Utilities
                 RepairConstants.Enabled),
                 out bool systemAppRepairEnabled))
             {
-                this.EnableSystemAppRepair = systemAppRepairEnabled;
+                EnableSystemAppRepair = systemAppRepairEnabled;
             }
 
             if (bool.TryParse(GetConfigSettingValue(
@@ -263,7 +263,7 @@ namespace FabricHealer.Utilities
                 RepairConstants.Enabled),
                 out bool vmRepairEnabled))
             {
-                this.EnableVmRepair = vmRepairEnabled;
+                EnableVmRepair = vmRepairEnabled;
             }
         }
 
@@ -271,12 +271,12 @@ namespace FabricHealer.Utilities
         {
             try
             {
-                var settings = this.configSettings;
+                var settings = configSettings;
 
                 // This will always be null unless there is a configuration update.
                 if (settings == null)
                 {
-                    settings = this.context.CodePackageActivationContext?.GetConfigurationPackageObject("Config")?.Settings;
+                    settings = context.CodePackageActivationContext?.GetConfigurationPackageObject("Config")?.Settings;
                     
                     if (settings == null)
                     {
@@ -288,7 +288,7 @@ namespace FabricHealer.Utilities
                 var parameter = section.Parameters[parameterName];
 
                 // reset.
-                this.configSettings = null;
+                configSettings = null;
 
                 return parameter.Value;  
             }

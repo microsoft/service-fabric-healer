@@ -68,7 +68,7 @@ namespace FabricHealer
         [NonEvent]
         public void ServiceMessage(StatefulServiceContext serviceContext, string message, params object[] args)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
                 string finalMessage = string.Format(message, args);
                 ServiceMessage(
@@ -157,30 +157,30 @@ namespace FabricHealer
         [NonEvent]
         public void VerboseMessage(string message, params object[] args)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
                 string finalMessage = string.Format(message, args);
-                this.VerboseMessage(finalMessage);
+                VerboseMessage(finalMessage);
             }
         }
 
         [NonEvent]
         public void InfoMessage(string message, params object[] args)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
                 string finalMessage = string.Format(message, args);
-                this.InfoMessage(finalMessage);
+                InfoMessage(finalMessage);
             }
         }
 
         [NonEvent]
         public void ErrorMessage(string message, params object[] args)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
                 string finalMessage = string.Format(message, args);
-                this.ErrorMessage(finalMessage);
+                ErrorMessage(finalMessage);
             }
         }
 
@@ -188,9 +188,9 @@ namespace FabricHealer
         [Event(ErrorMessageEventId, Level = EventLevel.Error, Message = "{0}")]
         public void ErrorMessage(string message)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
-                this.WriteEvent(ErrorMessageEventId, message);
+                WriteEvent(ErrorMessageEventId, message);
             }
         }
 
@@ -198,9 +198,9 @@ namespace FabricHealer
         [Event(InfoMessageEventId, Level = EventLevel.Informational, Message = "{0}")]
         public void InfoMessage(string message)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
-                this.WriteEvent(InfoMessageEventId, message);
+                WriteEvent(InfoMessageEventId, message);
             }
         }
 
@@ -208,9 +208,9 @@ namespace FabricHealer
         [Event(PrintRepairTaskEventId, Level = EventLevel.Verbose, Message = "TasksID = {0}, State = {1}, Action = {2}, Executor = {3}, Description = {4}, ExecutorData = {5}, Target = {6}")]
         public void PrintRepairTasks(string taskId, string state, string action, string executor, string description, string executordata, string target)
         {
-            if (this.IsEnabled())
+            if (IsEnabled())
             {
-                this.WriteEvent(PrintRepairTaskEventId, taskId, state, action, executor, description, executordata, target);
+                WriteEvent(PrintRepairTaskEventId, taskId, state, action, executor, description, executordata, target);
             }
         }
 

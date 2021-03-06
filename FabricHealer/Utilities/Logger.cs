@@ -79,7 +79,7 @@ namespace FabricHealer.Utilities
         {
             FolderName = sourceName;
             Filename = sourceName + ".log";
-            this.loggerName = sourceName;
+            loggerName = sourceName;
 
             if (!string.IsNullOrEmpty(logFolderBasePath))
             {
@@ -104,26 +104,26 @@ namespace FabricHealer.Utilities
             }
 
             // log directory supplied in config. Set in ObserverManager.
-            if (!string.IsNullOrEmpty(this.LogFolderBasePath))
+            if (!string.IsNullOrEmpty(LogFolderBasePath))
             {
                 // Add current drive letter if not supplied for Windows path target.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    if (!this.LogFolderBasePath.Substring(0, 3).Contains(":\\"))
+                    if (!LogFolderBasePath.Substring(0, 3).Contains(":\\"))
                     {
                         string windrive = Environment.SystemDirectory.Substring(0, 3);
-                        logFolderBase = windrive + this.LogFolderBasePath;
+                        logFolderBase = windrive + LogFolderBasePath;
                     }
                 }
                 else
                 {
                     // Remove supplied drive letter if Linux is the runtime target.
-                    if (this.LogFolderBasePath.Substring(0, 3).Contains(":\\"))
+                    if (LogFolderBasePath.Substring(0, 3).Contains(":\\"))
                     {
-                        this.LogFolderBasePath = this.LogFolderBasePath.Remove(0, 3);
+                        LogFolderBasePath = LogFolderBasePath.Remove(0, 3);
                     }
 
-                    logFolderBase = this.LogFolderBasePath;
+                    logFolderBase = LogFolderBasePath;
                 }
             }
 
@@ -137,7 +137,7 @@ namespace FabricHealer.Utilities
 
             FilePath = file;
 
-            var targetName = this.loggerName + "LogFile";
+            var targetName = loggerName + "LogFile";
 
             if (LogManager.Configuration == null)
             {
@@ -157,16 +157,16 @@ namespace FabricHealer.Utilities
                     AutoFlush = true,
                 };
 
-                LogManager.Configuration.AddTarget(this.loggerName + "LogFile", target);
+                LogManager.Configuration.AddTarget(loggerName + "LogFile", target);
 
-                var ruleInfo = new LoggingRule(this.loggerName, NLog.LogLevel.Debug, target);
+                var ruleInfo = new LoggingRule(loggerName, NLog.LogLevel.Debug, target);
 
                 LogManager.Configuration.LoggingRules.Add(ruleInfo);
                 LogManager.ReconfigExistingLoggers();
             }
 
             TimeSource.Current = new AccurateUtcTimeSource();
-            OLogger = LogManager.GetLogger(this.loggerName);
+            OLogger = LogManager.GetLogger(loggerName);
         }
 
         public void LogInfo(string format, params object[] parameters)

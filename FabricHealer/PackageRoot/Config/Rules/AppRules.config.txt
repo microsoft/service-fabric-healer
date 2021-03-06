@@ -52,11 +52,8 @@ Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?Metr
 ## This is because in Prolog a string is a list of characters. In Guan, a string is just a built-in .NET object, System.String, which already defines a Contains() function. 
 ## This is one of the great things about Guan: It's .NET all the way down.
 
-Mitigate(AppName=?AppName, MetricName="FileHandles", MetricValue=?MetricValue) :- Contains("ClusterObserver", ?AppName), ?MetricValue >= 450, 
+Mitigate(AppName=?AppName, MetricName="FileHandles") :- Contains("ClusterObserver", ?AppName), 
 	TimeScopedRestartCodePackage(5, 01:00:00), !.
-
-Mitigate(AppName=?AppName, MetricName="FileHandles", MetricValue=?MetricValue) :- Contains("CpuStress", ?AppName), ?MetricValue >= 300, 
-	TimeScopedRestartCodePackage(15, 01:00:00), !.
 
 
 ## Memory - Percent In Use for Any SF Service Process belonging to the specified SF Application.
@@ -92,7 +89,7 @@ Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?Me
 ## the repair was not attempted at this time. EmitMessage always succeeds. After it runs, cut (don't process any more rules).
 
 TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount >= ?count,
-	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window {1}. Will not attempt restart code package repair at this time.", ?count, ?time), !.
+	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt restart code package repair at this time.", ?count, ?time), !.
 
 
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
