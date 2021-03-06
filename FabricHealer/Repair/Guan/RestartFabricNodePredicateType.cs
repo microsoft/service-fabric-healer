@@ -30,7 +30,7 @@ namespace FabricHealer.Repair.Guan
                 QueryContext context)
                 : base(input, constraint, context)
             {
-                this.repairConfiguration = new RepairConfiguration
+                repairConfiguration = new RepairConfiguration
                 {
                     AppName = !string.IsNullOrEmpty(FOHealthData.ApplicationName) ? new Uri(FOHealthData.ApplicationName) : null,
                     FOHealthCode = FOHealthData.Code,
@@ -74,11 +74,11 @@ namespace FabricHealer.Repair.Guan
                 {
                     // Historical info, like what step the healer was in when the node went down, is contained in the
                     // executordata instance.
-                    repairTask = RepairTaskEngine.CreateFabricHealerRmRepairTask(this.repairConfiguration, RepairExecutorData);
+                    repairTask = RepairTaskEngine.CreateFabricHealerRmRepairTask(repairConfiguration, RepairExecutorData);
 
                     success = RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                             repairTask,
-                            this.repairConfiguration,
+                            repairConfiguration,
                             RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 
                     return success;
@@ -110,7 +110,7 @@ namespace FabricHealer.Repair.Guan
                 repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                     () =>
                     RepairTaskManager.ScheduleFabricHealerRmRepairTaskAsync(
-                            this.repairConfiguration,
+                            repairConfiguration,
                             RepairTaskManager.Token),
                         RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
 
@@ -124,7 +124,7 @@ namespace FabricHealer.Repair.Guan
                     () =>
                     RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                             repairTask,
-                            this.repairConfiguration,
+                            repairConfiguration,
                             RepairTaskManager.Token),
                         RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 

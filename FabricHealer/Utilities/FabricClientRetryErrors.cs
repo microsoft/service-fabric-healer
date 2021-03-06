@@ -142,14 +142,14 @@ namespace FabricHealer.Utilities
         /// </summary>
         public FabricClientRetryErrors()
         {
-            this.RetryableExceptions = new List<Type>();
-            this.RetryableFabricErrorCodes = new List<FabricErrorCode>();
-            this.RetrySuccessExceptions = new List<Type>();
-            this.RetrySuccessFabricErrorCodes = new List<FabricErrorCode>();
+            RetryableExceptions = new List<Type>();
+            RetryableFabricErrorCodes = new List<FabricErrorCode>();
+            RetrySuccessExceptions = new List<Type>();
+            RetrySuccessFabricErrorCodes = new List<FabricErrorCode>();
 
-            this.publicRetrySuccessFabricErrorCodes = new List<uint>();
+            publicRetrySuccessFabricErrorCodes = new List<uint>();
 
-            this.PopulateDefaultValues();
+            PopulateDefaultValues();
         }
 
         /// <summary>
@@ -179,15 +179,15 @@ namespace FabricHealer.Utilities
 
         private void PopulateDefaultValues()
         {
-            this.RetryableExceptions.Add(typeof(TimeoutException));
-            this.RetryableExceptions.Add(typeof(OperationCanceledException));
-            this.RetryableExceptions.Add(typeof(FabricNotReadableException));
-            this.RetryableFabricErrorCodes.Add(FabricErrorCode.OperationTimedOut);
-            this.RetryableFabricErrorCodes.Add(FabricErrorCode.CommunicationError);
+            RetryableExceptions.Add(typeof(TimeoutException));
+            RetryableExceptions.Add(typeof(OperationCanceledException));
+            RetryableExceptions.Add(typeof(FabricNotReadableException));
+            RetryableFabricErrorCodes.Add(FabricErrorCode.OperationTimedOut);
+            RetryableFabricErrorCodes.Add(FabricErrorCode.CommunicationError);
 
             // TODO: Enable after updating ServiceFabricClientPackage in SF-AppStore Repo
             // this.RetryableFabricErrorCodes.Add(FabricErrorCode.GatewayNotReachable);
-            this.RetryableFabricErrorCodes.Add(FabricErrorCode.ServiceTooBusy);
+            RetryableFabricErrorCodes.Add(FabricErrorCode.ServiceTooBusy);
         }
     }
 }

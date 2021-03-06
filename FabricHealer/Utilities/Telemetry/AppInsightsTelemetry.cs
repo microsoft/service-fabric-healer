@@ -34,23 +34,23 @@ namespace FabricHealer.Utilities.Telemetry
                 throw new ArgumentException("Argument is empty", nameof(key));
             }
 
-            this.logger = new Logger("TelemetryLog");
+            logger = new Logger("TelemetryLog");
 
-            this.telemetryClient = new TelemetryClient(new TelemetryConfiguration() { InstrumentationKey = key });
+            telemetryClient = new TelemetryClient(new TelemetryConfiguration() { InstrumentationKey = key });
         }
 
         /// <summary>
         /// Gets a value indicating whether telemetry is enabled or not.
         /// </summary>
-        public bool IsEnabled => this.telemetryClient.IsEnabled() && FabricHealerManager.ConfigSettings.TelemetryEnabled;
+        public bool IsEnabled => telemetryClient.IsEnabled() && FabricHealerManager.ConfigSettings.TelemetryEnabled;
 
         /// <summary>
         /// Gets or sets the key.
         /// </summary>
         public string Key
         {
-            get => this.telemetryClient?.InstrumentationKey;
-            set => this.telemetryClient.InstrumentationKey = value;
+            get => telemetryClient?.InstrumentationKey;
+            set => telemetryClient.InstrumentationKey = value;
         }
 
         /// <summary>
@@ -77,7 +77,7 @@ namespace FabricHealer.Utilities.Telemetry
             CancellationToken cancellationToken,
             string message = null)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return Task.FromResult(1);
             }
@@ -87,7 +87,7 @@ namespace FabricHealer.Utilities.Telemetry
             at.Properties.Add("Service", serviceName?.OriginalString);
             at.Properties.Add("Instance", instance);
 
-            this.telemetryClient.TrackAvailability(at);
+            telemetryClient.TrackAvailability(at);
 
             return Task.FromResult(0);
         }
@@ -114,7 +114,7 @@ namespace FabricHealer.Utilities.Telemetry
             string serviceName = null,
             string instanceName = null)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return Task.FromResult(1);
             }
@@ -137,11 +137,11 @@ namespace FabricHealer.Utilities.Telemetry
                 tt.Context.Cloud.RoleName = serviceName;
                 tt.Context.Cloud.RoleInstance = instanceName;
 
-                this.telemetryClient.TrackTrace(tt);
+                telemetryClient.TrackTrace(tt);
             }
             catch (Exception e)
             {
-                this.logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
+                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
                 throw;
             }
 
@@ -163,14 +163,14 @@ namespace FabricHealer.Utilities.Telemetry
             string source,
             CancellationToken cancellationToken)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return false;
             }
 
             TraceTelemetry tt = new TraceTelemetry(name, SeverityLevel.Information);
 
-            this.telemetryClient?.TrackTrace(tt);
+            telemetryClient?.TrackTrace(tt);
 
             return await Task.FromResult(true).ConfigureAwait(false);
         }
@@ -206,7 +206,7 @@ namespace FabricHealer.Utilities.Telemetry
                 { "Value", telemetryData.Value?.ToString() ?? string.Empty },
             };
 
-            this.telemetryClient.TrackEvent(
+            telemetryClient.TrackEvent(
                 $"{telemetryData.ObserverName ?? "FabricObserver"}DataEvent",
                 properties);
 
@@ -227,12 +227,12 @@ namespace FabricHealer.Utilities.Telemetry
             IDictionary<string, string> properties,
             CancellationToken cancellationToken)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return Task.FromResult(1);
             }
 
-            _ = this.telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
+            _ = telemetryClient.GetMetric(name).TrackValue(value, string.Join(";", properties));
 
             return Task.FromResult(0);
         }
@@ -253,7 +253,7 @@ namespace FabricHealer.Utilities.Telemetry
             long value,
             CancellationToken cancellationToken)
         {
-            return this.ReportMetricAsync(role, partition.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
+            return ReportMetricAsync(role, partition.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
         }
 
         /// <summary>
@@ -272,7 +272,7 @@ namespace FabricHealer.Utilities.Telemetry
             long value,
             CancellationToken cancellationToken)
         {
-            await this.ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
+            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -303,7 +303,7 @@ namespace FabricHealer.Utilities.Telemetry
             IDictionary<string, string> properties,
             CancellationToken cancellationToken)
         {
-            if (!this.IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
                 return Task.FromResult(false);
             }
@@ -329,7 +329,7 @@ namespace FabricHealer.Utilities.Telemetry
             }
 
             // Track the telemetry.
-            this.telemetryClient.TrackMetric(mt);
+            telemetryClient.TrackMetric(mt);
 
             return Task.FromResult(0);
         }
@@ -338,14 +338,14 @@ namespace FabricHealer.Utilities.Telemetry
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            this.Dispose(true);
+            Dispose(true);
         }
 
         private bool disposedValue; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
         {
-            if (this.disposedValue)
+            if (disposedValue)
             {
                 return;
             }
@@ -354,7 +354,7 @@ namespace FabricHealer.Utilities.Telemetry
             {
             }
 
-            this.disposedValue = true;
+            disposedValue = true;
         }
     }
 }

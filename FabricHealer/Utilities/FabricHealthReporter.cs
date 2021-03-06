@@ -64,19 +64,19 @@ namespace FabricHealer.Utilities
                 case HealthReportType.Application when healthReport.AppName != null:
                 
                     var appHealthReport = new ApplicationHealthReport(healthReport.AppName, healthInformation);
-                    this.fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
+                    fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
                     break;
                 
                 case HealthReportType.Node when healthReport.NodeName != null:
                 
                     var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
-                    this.fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
+                    fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                     break;
                 
                 case HealthReportType.Service when healthReport.ServiceName != null:
                 
                     var serviceHealthReport = new ServiceHealthReport(healthReport.ServiceName, healthInformation);
-                    this.fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
+                    fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
                     break;
                 
                 default:

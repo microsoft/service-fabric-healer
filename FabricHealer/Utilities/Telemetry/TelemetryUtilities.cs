@@ -31,13 +31,13 @@ namespace FabricHealer.Utilities.Telemetry
                 {
                     case TelemetryProviderType.AzureApplicationInsights:
                     {
-                        this.telemetryClient = new AppInsightsTelemetry(FabricHealerManager.ConfigSettings.AppInsightsInstrumentationKey);
+                        telemetryClient = new AppInsightsTelemetry(FabricHealerManager.ConfigSettings.AppInsightsInstrumentationKey);
 
                         break;
                     }
                     case TelemetryProviderType.AzureLogAnalytics:
                     {
-                        this.telemetryClient = new LogAnalyticsTelemetry(
+                        telemetryClient = new LogAnalyticsTelemetry(
                             FabricHealerManager.ConfigSettings.LogAnalyticsWorkspaceId,
                             FabricHealerManager.ConfigSettings.LogAnalyticsSharedKey,
                             FabricHealerManager.ConfigSettings.LogAnalyticsLogType);
@@ -91,12 +91,12 @@ namespace FabricHealer.Utilities.Telemetry
             }
 
             // Service Fabric HM - Health Events (local to cluster).
-            var healthReporter = new FabricHealthReporter(this.fabricClient);
+            var healthReporter = new FabricHealthReporter(fabricClient);
             var healthReport = new HealthReport
             {
                 Code = repairConfig?.RepairPolicy.RepairId,
                 HealthMessage = description,
-                NodeName = this.serviceContext.NodeContext.NodeName,
+                NodeName = serviceContext.NodeContext.NodeName,
                 ReportType = HealthReportType.Node,
                 State = healthState,
                 HealthReportTimeToLive = TimeSpan.FromMinutes(5),
@@ -115,7 +115,7 @@ namespace FabricHealer.Utilities.Telemetry
                 return;
             }
 
-            if (FabricHealerManager.ConfigSettings.TelemetryEnabled && this.telemetryClient != null)
+            if (FabricHealerManager.ConfigSettings.TelemetryEnabled && telemetryClient != null)
             {
                 var telemData = new TelemetryData()
                 {
@@ -130,7 +130,7 @@ namespace FabricHealer.Utilities.Telemetry
                     Source = $"{(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows_" : "Linux_")}{source}",
                 };
 
-                await (this.telemetryClient?.ReportMetricAsync(telemData, token)).ConfigureAwait(false);
+                await (telemetryClient?.ReportMetricAsync(telemData, token)).ConfigureAwait(false);
             }
 
             // ETW.

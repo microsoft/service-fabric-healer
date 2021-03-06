@@ -28,7 +28,7 @@ namespace FabricHealer.Repair.Guan
                 : base(input, constraint, context)
             {
 
-                this.repairConfiguration = new RepairConfiguration
+                repairConfiguration = new RepairConfiguration
                 {
                     AppName = !string.IsNullOrEmpty(FOHealthData.ApplicationName) ? new Uri(FOHealthData.ApplicationName) : null,
                     ContainerId = FOHealthData.ContainerId,
