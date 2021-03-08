@@ -30,7 +30,7 @@ namespace FabricHealer.Repair.Guan
                 repairConfiguration = new RepairConfiguration
                 {
                     AppName = !string.IsNullOrEmpty(FOHealthData.ApplicationName) ? new Uri(FOHealthData.ApplicationName) : null,
-                    FOHealthCode = FOHealthData.Code,
+                    FOErrorCode = FOHealthData.Code,
                     NodeName = FOHealthData.NodeName,
                     NodeType = FOHealthData.NodeType,
                     PartitionId = !string.IsNullOrEmpty(FOHealthData.PartitionId) ? new Guid(FOHealthData.PartitionId) : default,

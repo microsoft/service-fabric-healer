@@ -30,7 +30,7 @@
 ## First, check if we are inside the run interval. If inside run interval, then cut (no other rules will be processed).
 ## Note: FO only generates Application (System) level warnings for system services. There will only ever be ApplicationName as "fabric:/System" in the FO health data that FH emits, so this is an optional argument.
 
-Mitigate() :- CheckInsideRunInterval(RunInterval=01:00:00), !.
+Mitigate() :- CheckInsideRunInterval(RunInterval=00:10:00), !.
 
 
 ## TimeScopedRestartFabricNode is an internal predicate to check for the number of times a system service node restart repair has run to completion within a supplied time window. 
@@ -44,7 +44,7 @@ TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, Tim
 ## If Completed Repair count is less then supplied value, then run RestartFabricSystemProcess mitigation.
 
 TimeScopedRestartFabricSystemProcess(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount < ?count, 
-	RestartFabricSystemProcess(MaxPostRepairHealthCheckTime=00:15:00).
+	RestartFabricSystemProcess(MaxPostRepairHealthCheckTime=00:00:30).
 	
 
 ## Mitigation queries for multiple metrics and targets.
@@ -80,7 +80,7 @@ Mitigate(MetricName="EphemeralPorts", SystemServiceProcessName=?SysProcName) :- 
 ## Restart the offending Fabric system process named FabricGateway, regardless of OS.
 
 Mitigate(MetricName="FileHandles", SystemServiceProcessName=?SysProcName) :- Contains("FabricGateway", ?SysProcName),
-	TimeScopedRestartFabricSystemProcess(5, 01:00:00), !.
+	TimeScopedRestartFabricSystemProcess(15, 01:00:00), !.
 
 
 ## Open File Handles - Linux-only: Any SF system service besides Fabric or FabricHost.

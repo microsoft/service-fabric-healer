@@ -33,7 +33,7 @@ namespace FabricHealer.Repair.Guan
                 repairConfiguration = new RepairConfiguration
                 {
                     AppName = !string.IsNullOrEmpty(FOHealthData.ApplicationName) ? new Uri(FOHealthData.ApplicationName) : null,
-                    FOHealthCode = FOHealthData.Code,
+                    FOErrorCode = FOHealthData.Code,
                     NodeName = FOHealthData.NodeName,
                     NodeType = FOHealthData.NodeType,
                     PartitionId = !string.IsNullOrEmpty(FOHealthData.PartitionId) ? new Guid(FOHealthData.PartitionId) : default,
@@ -74,12 +74,12 @@ namespace FabricHealer.Repair.Guan
                 {
                     // Historical info, like what step the healer was in when the node went down, is contained in the
                     // executordata instance.
-                    repairTask = RepairTaskEngine.CreateFabricHealerRmRepairTask(repairConfiguration, RepairExecutorData);
+                    repairTask = RepairTaskEngine.CreateFabricHealerRmRepairTask(RepairExecutorData);
 
                     success = RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
-                            repairTask,
-                            repairConfiguration,
-                            RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                                    repairTask,
+                                                    repairConfiguration,
+                                                    RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 
                     return success;
                 }
@@ -88,9 +88,9 @@ namespace FabricHealer.Repair.Guan
                 var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
                 var isNodeRepairAlreadyInProgress =
                     repairTaskEngine.IsFHRepairTaskRunningAsync(
-                        $"FabricHealer",
-                        repairConfiguration,
-                        RepairTaskManager.Token).GetAwaiter().GetResult();
+                                        $"FabricHealer",
+                                        repairConfiguration,
+                                        RepairTaskManager.Token).GetAwaiter().GetResult();
 
                 if (isNodeRepairAlreadyInProgress)
                 {

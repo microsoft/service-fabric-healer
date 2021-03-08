@@ -31,35 +31,38 @@ namespace FabricHealer.Repair
             this.fabricClient = fabricClient;
         }
 
-        public RepairTask CreateFabricHealerRmRepairTask(
-            RepairConfiguration repairConfiguration,
-            RepairExecutorData executorData)
+        public RepairTask CreateFabricHealerRmRepairTask(RepairExecutorData executorData)
         {
+            if (executorData == null)
+            {
+                return null;
+            }
+
             NodeImpactLevel impact = NodeImpactLevel.None;
 
-            if (repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)
+            if (executorData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)
             {
                 impact = NodeImpactLevel.Restart;
             }
-            else if (repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RemoveFabricNodeState)
+            else if (executorData.RepairPolicy.RepairAction == RepairActionType.RemoveFabricNodeState)
             {
                 impact = NodeImpactLevel.RemoveData;
             }
 
             var nodeRepairImpact = new NodeRepairImpactDescription();
-            var impactedNode = new NodeImpact(repairConfiguration.NodeName, impact);
+            var impactedNode = new NodeImpact(executorData.NodeName, impact);
             nodeRepairImpact.ImpactedNodes.Add(impactedNode);
+            RepairActionType repairAction = executorData.RepairPolicy.RepairAction;
+            string repair = Enum.GetName(typeof(RepairActionType), repairAction);
 
-            string taskId = $"{FHTaskIdPrefix}/{Enum.GetName(typeof(RepairActionType), repairConfiguration.RepairPolicy.RepairAction)}/{Guid.NewGuid()}/{repairConfiguration.NodeName}";
+            string taskId = $"{FHTaskIdPrefix}/{Guid.NewGuid()}/{repair}/{executorData.NodeName}";
             
-            var repairTask = new ClusterRepairTask(
-                taskId,
-                Enum.GetName(typeof(RepairActionType), repairConfiguration.RepairPolicy.RepairAction))
+            var repairTask = new ClusterRepairTask(taskId, repair)
             {
-                Target = new NodeRepairTargetDescription(repairConfiguration.NodeName),
+                Target = new NodeRepairTargetDescription(executorData.NodeName),
                 Impact = nodeRepairImpact,
                 Description =
-                    $"FabricHealer executing repair {Enum.GetName(typeof(RepairActionType), executorData.RepairAction)} on node {repairConfiguration.NodeName}",
+                    $"FabricHealer executing repair {repair} on node {executorData.NodeName}",
                 State = RepairTaskState.Preparing,
                 Executor = FabricHealerExecutorName,
                 ExecutorData = SerializationUtility.TrySerialize(executorData, out string exData) ? exData : null,
@@ -91,9 +94,7 @@ namespace FabricHealer.Repair
         }
 
         // This allows InfrastructureService to schedule and run reboot
-        public RepairTask CreateVmRebootTask(
-            RepairConfiguration repairConfiguration,
-            string executorName)
+        public RepairTask CreateVmRebootTask(RepairConfiguration repairConfiguration, string executorName)
         {
             // Do not allow this to take place in one-node cluster.
             var nodes = fabricClient.QueryManager.GetNodeListAsync().GetAwaiter().GetResult();
@@ -104,7 +105,7 @@ namespace FabricHealer.Repair
                 return null;
             }
 
-            string taskId = $"{FHTaskIdPrefix}/{HostVMReboot}/{Guid.NewGuid()}/{repairConfiguration.NodeName}/{repairConfiguration.NodeType}";
+            string taskId = $"{FHTaskIdPrefix}/{HostVMReboot}/{repairConfiguration.NodeName.GetHashCode()}/{repairConfiguration.NodeType}";
 
             var repairTask = new ClusterRepairTask(taskId, HostVMReboot)
             {
@@ -144,8 +145,8 @@ namespace FabricHealer.Repair
             {
                 if (SerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData))
                 {
-                    if (repairConfig.RepairPolicy.RepairId == exData.CustomIdentificationData
-                         || exData.RepairAction == RepairActionType.RestartFabricNode)
+                    // The node repair check ensures that only one node-level repair can take place in a cluster (no concurrent node restarts), by default. FH is conservative, by design.
+                    if (repairConfig.RepairPolicy.RepairId == exData.CustomIdentificationData || exData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)
                     {
                         return true;
                     }

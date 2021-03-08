@@ -55,7 +55,7 @@ namespace FabricHealer.Repair
             get; set;
         }
 
-        public string FOHealthCode
+        public string FOErrorCode
         {
             get; set;
         }
