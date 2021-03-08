@@ -42,6 +42,6 @@ namespace FabricHealer.Repair
         public TimeSpan MaxTimePostRepairHealthCheck
         {
             get; set;
-        }
+        } = TimeSpan.MinValue;
     }
 }

@@ -17,6 +17,13 @@ All warning and error reports created by [FabricObserver](https://github.com/mic
 ```
 This is a pre-release and is not meant for use in production. 
 ```
+In this release, we are experimenting with a new approach to health validation for repaired targets. FabricHealer will assume success when some repair operation is successful (like restarting a code package or system service process). FH
+will emit an Ok Health Report that will clear FabricObserver's Warning on the target. This is because FH has no understanding of the source Observer's run intervals. If in fact, the repair did not solve the problem, then FO will emit another warning
+for the health entity with specific details of the problem and FH will treat this as a new repair target. This has been implemented for service healing and system process healing in this release. For node and VM level repairs, FH will wait until FO reports health state
+for the target node before deciding a repair was successful or not.
+
+Also, a reminder that this is beta quality software and there are probably some bugs and the code will churn. That said, it is usable as is today and appropriate for use in **test** enviroments. Please create Issues on this repo if you find bugs. If you are comfortable fixing them, then
+pull requests will be evaluated and merged if they meet the quality bar. Thanks in advance for your partnership and for experimenting with FabricHealer.
 ## Quickstart
 
 To quickly learn how to use FabricHealer, please see the [simple scenario-based examples.](Documentation/Using.md)

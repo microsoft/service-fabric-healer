@@ -130,11 +130,11 @@ namespace FabricHealer.Repair
         }
 
         public static async Task<RepairTask> ScheduleRepairTaskAsync(
-            RepairConfiguration repairConfiguration,
-            RepairExecutorData executorData,
-            string executorName,
-            FabricClient fabricClient,
-            CancellationToken token)
+                                RepairConfiguration repairConfiguration,
+                                RepairExecutorData executorData,
+                                string executorName,
+                                FabricClient fabricClient,
+                                CancellationToken token)
         {
             var repairTaskEngine = new RepairTaskEngine(fabricClient);
 
@@ -146,9 +146,7 @@ namespace FabricHealer.Repair
             {
                 case RepairActionType.RestartVM:
                     
-                    repairTask = repairTaskEngine.CreateVmRebootTask(
-                        repairConfiguration,
-                        executorName);
+                    repairTask = repairTaskEngine.CreateVmRebootTask(repairConfiguration, executorName);
 
                     break;
 
@@ -158,9 +156,7 @@ namespace FabricHealer.Repair
                 case RepairActionType.RestartProcess:
                 case RepairActionType.RestartReplica:
                 
-                    repairTask = repairTaskEngine.CreateFabricHealerRmRepairTask(
-                        repairConfiguration,
-                        executorData);
+                    repairTask = repairTaskEngine.CreateFabricHealerRmRepairTask(executorData);
 
                     break;
 
@@ -185,10 +181,10 @@ namespace FabricHealer.Repair
         }
 
         private static async Task<bool> TryCreateRepairTaskAsync(
-            FabricClient fabricClient, 
-            RepairTask repairTask,
-            RepairConfiguration repairConfiguration,
-            CancellationToken token)
+                                FabricClient fabricClient, 
+                                RepairTask repairTask,
+                                RepairConfiguration repairConfiguration,
+                                CancellationToken token)
         {
             if (repairTask == null)
             {
@@ -200,9 +196,9 @@ namespace FabricHealer.Repair
                 var repairTaskEngine = new RepairTaskEngine(fabricClient);
                 var isRepairAlreadyInProgress =
                     await repairTaskEngine.IsFHRepairTaskRunningAsync(
-                        repairTask.Executor,
-                        repairConfiguration,
-                        token).ConfigureAwait(false);
+                                            repairTask.Executor,
+                                            repairConfiguration,
+                                            token).ConfigureAwait(false);
 
                 if (!isRepairAlreadyInProgress)
                 {

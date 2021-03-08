@@ -45,12 +45,6 @@ namespace FabricHealer.Repair
         } = FabricNodeRepairStep.Scheduled;
 
         [DataMember]
-        public RepairActionType RepairAction
-        {
-            get; set;
-        }
-
-        [DataMember]
         public string NodeType
         {
             get; set;
@@ -78,6 +72,30 @@ namespace FabricHealer.Repair
         public object FOMetricValue
         {
             get; set;
+        }
+
+        [DataMember]
+        public Guid PartitionId 
+        { 
+            get; internal set; 
+        }
+
+        [DataMember]
+        public long ReplicaOrInstanceId 
+        { 
+            get; internal set; 
+        }
+
+        [DataMember]
+        public Uri ServiceName 
+        { 
+            get; internal set; 
+        }
+
+        [DataMember]
+        public string SystemServiceProcessName 
+        {
+            get; internal set; 
         }
     }
 }
