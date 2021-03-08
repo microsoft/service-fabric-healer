@@ -77,7 +77,7 @@ namespace FHTest
 
             RepairExecutorData executorData = new RepairExecutorData
             {
-                RepairAction = RepairActionType.RestartCodePackage,
+                RepairPolicy = new RepairPolicy { RepairAction = RepairActionType.RestartCodePackage },
             };
 
             foreach (var file in Directory.GetFiles(FHRulesDirectory))
@@ -122,7 +122,7 @@ namespace FHTest
 
             RepairExecutorData executorData = new RepairExecutorData
             {
-                RepairAction = RepairActionType.RestartCodePackage,
+                RepairPolicy = new RepairPolicy { RepairAction = RepairActionType.RestartCodePackage },
             };
 
             try
@@ -160,7 +160,7 @@ namespace FHTest
 
             RepairExecutorData executorData = new RepairExecutorData
             {
-                RepairAction = RepairActionType.RestartCodePackage,
+                RepairPolicy = new RepairPolicy { RepairAction = RepairActionType.RestartCodePackage },
             };
 
             await Assert.ThrowsExceptionAsync<GuanException>(async () => { await TestInitializeGuanAndRunQuery(foHealthData, repairAction, executorData); });
