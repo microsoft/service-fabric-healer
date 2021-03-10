@@ -408,7 +408,7 @@ namespace FabricHealer.Repair
 
             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
-                    "RepairExecutor.RestartDeployedCodePackageAsync",
+                    "RestartDeployedCodePackageAsync::Starting",
                     actionMessage,
                     cancellationToken,
                     repairConfiguration).ConfigureAwait(false);
@@ -419,6 +419,18 @@ namespace FabricHealer.Repair
             {
                 return false;
             }
+
+            actionMessage =
+                $"Successfully restarted deployed code package for service " +
+                $"{repairConfiguration.ServiceName.OriginalString} " +
+                $"({repairConfiguration.ReplicaOrInstanceId}) on Node {repairConfiguration.NodeName}.";
+
+            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                    LogLevel.Info,
+                    "RestartDeployedCodePackageAsync::Success",
+                    actionMessage,
+                    cancellationToken,
+                    repairConfiguration).ConfigureAwait(false);
 
             return true;
         }
@@ -447,7 +459,7 @@ namespace FabricHealer.Repair
 
             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
-                    "RepairExecutor.RestartSystemServiceProcessAsync",
+                    "RepairExecutor.RestartSystemServiceProcessAsync::Start",
                     actionMessage,
                     cancellationToken,
                     repairConfiguration).ConfigureAwait(false);
@@ -463,7 +475,7 @@ namespace FabricHealer.Repair
 
             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                 LogLevel.Info,
-                "RepairExecutor.RestartSystemServiceProcessAsync",
+                "RepairExecutor.RestartSystemServiceProcessAsync::Success",
                 statusSuccess,
                 cancellationToken,
                 repairConfiguration).ConfigureAwait(false);

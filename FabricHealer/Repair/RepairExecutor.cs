@@ -72,6 +72,7 @@ namespace FabricHealer.Repair
             {
                 PartitionSelector partitionSelector = PartitionSelector.PartitionIdOf(repairConfiguration.ServiceName, repairConfiguration.PartitionId);
                 long replicaId = repairConfiguration.ReplicaOrInstanceId;
+                Replica replica = null;
 
                 // Verify target replica still exists.
                 var replicaList = await fabricClient.QueryManager.GetReplicaListAsync(
@@ -79,7 +80,12 @@ namespace FabricHealer.Repair
                                             replicaId,
                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                             cancellationToken).ConfigureAwait(false);
-                if (replicaList.Count == 0)
+                
+                if (replicaList.Any(r => r.ReplicaStatus == ServiceReplicaStatus.Ready))
+                {
+                    replica = replicaList.First(r => r.ReplicaStatus == ServiceReplicaStatus.Ready);
+                }
+                else
                 {
                     await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
 
@@ -100,18 +106,27 @@ namespace FabricHealer.Repair
                         return null;
                     }
 
-                    Replica replica = replicaList.First(r => r.ReplicaStatus == ServiceReplicaStatus.Ready);
+                    replica = replicaList.First(r => r.ReplicaStatus == ServiceReplicaStatus.Ready);
                     replicaId = replica.Id;
                 }
 
                 ReplicaSelector replicaSelector = ReplicaSelector.ReplicaIdOf(partitionSelector, replicaId);
+
+                // There is a bug with Verify for Stateless services...
+                // CompletionMode must be set to DoNotVerify for stateless services.
+                CompletionMode completionMode = CompletionMode.DoNotVerify;
+
+                if (replica?.ServiceKind == ServiceKind.Stateful)
+                {
+                    completionMode = CompletionMode.Verify;
+                }
 
                 var restartCodePackageResult = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                     () =>
                         fabricClient.FaultManager.RestartDeployedCodePackageAsync(
                             repairConfiguration.AppName,
                             replicaSelector,
-                            CompletionMode.DoNotVerify, // There is a bug with Verify for Stateless services...
+                            completionMode, 
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken),
                     cancellationToken).ConfigureAwait(true);
@@ -124,7 +139,6 @@ namespace FabricHealer.Repair
                         var unhealthyFOAppEvents = appHealth.HealthEvents?.Where(
                                                       s => s.HealthInformation.SourceId.Contains("AppObserver")
                                                         && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning)
-                                                        && s.HealthInformation.Property == "ApplicationHealth"
                                                         && SerializationUtility.TryDeserialize(s.HealthInformation.Description, out TelemetryData foHealthData)
                                                         && foHealthData?.ApplicationName == repairConfiguration.AppName.OriginalString
                                                         && foHealthData?.ServiceName == repairConfiguration.ServiceName.OriginalString);
@@ -493,7 +507,7 @@ namespace FabricHealer.Repair
 
             await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
-                    "RepairExecutor.RestartCodePackageAsync",
+                    "RepairExecutor.RestartCodePackageAsync::Start",
                     actionMessage,
                     cancellationToken,
                     repairConfiguration).ConfigureAwait(false);
@@ -523,7 +537,7 @@ namespace FabricHealer.Repair
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        "RepairExecutor.RestartReplicaAsync",
+                        "RepairExecutor.RestartReplicaAsync::Success",
                         statusSuccess,
                         cancellationToken,
                         repairConfiguration).ConfigureAwait(false);
@@ -540,7 +554,7 @@ namespace FabricHealer.Repair
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                        LogLevel.Warning,
-                       "RepairExecutor.RestartReplicaAsync",
+                       "RepairExecutor.RestartReplicaAsync::Exception",
                        err,
                        cancellationToken,
                        repairConfiguration).ConfigureAwait(false);
@@ -696,7 +710,7 @@ namespace FabricHealer.Repair
 
             await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
-                    "RepairExecutor.RemoveCodePackageAsync",
+                    "RepairExecutor.RemoveReplicaAsync::Start",
                     actionMessage,
                     cancellationToken,
                     repairConfiguration).ConfigureAwait(false);
@@ -726,7 +740,7 @@ namespace FabricHealer.Repair
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        "RepairExecutor.RemoveReplicaAsync",
+                        "RepairExecutor.RemoveReplicaAsync::Success",
                         statusSuccess,
                         cancellationToken,
                         repairConfiguration).ConfigureAwait(false);
@@ -743,7 +757,7 @@ namespace FabricHealer.Repair
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                        LogLevel.Warning,
-                       "RepairExecutor.RemoveReplicaAsync",
+                       "RepairExecutor.RemoveReplicaAsync::Exception",
                        err,
                        cancellationToken,
                        repairConfiguration).ConfigureAwait(false);
@@ -766,7 +780,7 @@ namespace FabricHealer.Repair
 
             await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
-                    "RepairExecutor.DeleteFilesAsync",
+                    "RepairExecutor.DeleteFilesAsync::Start",
                     actionMessage,
                     cancellationToken,
                     repairConfiguration).ConfigureAwait(false);
