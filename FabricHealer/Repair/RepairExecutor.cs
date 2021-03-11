@@ -149,7 +149,7 @@ namespace FabricHealer.Repair
                             ServiceName = repairConfiguration.ServiceName.OriginalString,
                             Code = "FO000",
                             HealthState = "Ok",
-                            HealthEventDescription = $"{repairConfiguration.ServiceName.OriginalString} has been repaired.",
+                            Description = $"{repairConfiguration.ServiceName.OriginalString} has been repaired.",
                             NodeName = repairConfiguration.NodeName,
                             NodeType = repairConfiguration.NodeType,
                             Source = RepairTaskEngine.FabricHealerExecutorName,
@@ -589,6 +589,7 @@ namespace FabricHealer.Repair
 
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
 
+                // Clear Warning from FO. If in fact, the issue has not been solved, FO will generate a new report for the target and the game will be played again.
                 try
                 {
                     var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(repairConfiguration.AppName).ConfigureAwait(false);
@@ -604,7 +605,7 @@ namespace FabricHealer.Repair
                         SystemServiceProcessName = repairConfiguration.SystemServiceProcessName,
                         Code = "FO000",
                         HealthState = "Ok",
-                        HealthEventDescription = $"{repairConfiguration.SystemServiceProcessName} has been repaired.",
+                        Description = $"{repairConfiguration.SystemServiceProcessName} has been repaired.",
                         NodeName = repairConfiguration.NodeName,
                         NodeType = repairConfiguration.NodeType,
                         Source = RepairTaskEngine.FabricHealerExecutorName,
