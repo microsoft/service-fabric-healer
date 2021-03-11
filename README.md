@@ -6,7 +6,7 @@ FabricHealer is a Service Fabric application that attempts to fix a set of relia
 To learn more about FabricHealer's configuration-as-logic model, [click here.](Documentation/LogicWorkflows.md)
 
 ```
-FabricHealer requires that FabricObserver is deployed in the same cluster. 
+FabricHealer requires that FabricObserver 3.1.6 and higher is deployed in the same cluster. 
 ```
 FabricHealer is implemented as a stateless singleton service that runs on all nodes 
 in a Linux or Windows Service Fabric cluster. It is a .NET Core 3.1 application and has been tested on 
