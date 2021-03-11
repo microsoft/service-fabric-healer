@@ -46,12 +46,12 @@ Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?Metr
 ## This is example of how to use the Guan system predicate, Contains. It takes two string args, the first is the substring to look for in the second arg. 
 ## So, arg1 is the needle and arg 2 is the haystack.
 ## In practice, for this scenario, you would just pass the target app name string into Mitigate, Mitigate(AppName="fabric:/ClusterObserver", ...), for example. 
-## Use of the Contains GuanFunc here is just an example of how to use it. Note that in Prolog, this type of substring matching capability could be expressed as an internal predicate 
+## Use of the StringContains GuanFunc here is just an example of how to use it. Note that in Prolog, this type of substring matching capability could be expressed as an internal predicate 
 ## in a much more complex format, in terms of human readability: substring(X,S) :-append(_,T,S), append(X,_,T), X \= []. 
 ## This is because in Prolog a string is a list of characters. In Guan, a string is just a built-in .NET object, System.String, which already defines a Contains() function. 
 ## This is one of the great things about Guan: It's .NET all the way down.
 
-Mitigate(AppName=?AppName, MetricName="FileHandles") :- Contains("ClusterObserver", ?AppName), 
+Mitigate(AppName=?AppName, MetricName="FileHandles") :- StringContains("ClusterObserver", ?AppName), 
 	TimeScopedRestartCodePackage(6, 01:00:00), !.
 
 Mitigate(AppName="fabric:/MyApp", MetricName="FileHandles") :- TimeScopedRestartCodePackage(6, 01:00:00), !.
