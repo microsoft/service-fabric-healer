@@ -1,3 +1,16 @@
+function Install-Nuget {
+    # Path to Latest nuget.exe on nuget.org
+    $source = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
+
+    # Save file to top level directory in repo
+    $destination = "$scriptPath\nuget.exe"
+
+    if (-Not [System.IO.File]::Exists($destination)) {
+        #Download the file
+        Invoke-WebRequest -Uri $source -OutFile $destination
+    }
+}
+
 function Build-Nuget {
     param (
         [string]
@@ -19,7 +32,10 @@ function Build-Nuget {
 [string] $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 try {
+
     Push-Location $scriptPath
+
+    Install-Nuget
 
     Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.SelfContained.Beta" "$scriptPath\bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType"
     Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.FrameworkDependent.Beta" "$scriptPath\bin\release\FabricHealer\linux-x64\framework-dependent\FabricHealerType"
