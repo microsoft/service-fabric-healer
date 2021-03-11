@@ -124,7 +124,7 @@ namespace FabricHealer.Utilities.Telemetry
                     ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
                     PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
                     ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
-                    HealthEventDescription = description,
+                    Description = description,
                     HealthState = Enum.GetName(typeof(HealthState), healthState),
                     NodeName = repairConfig?.NodeName ?? string.Empty,
                     Source = $"{(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows_" : "Linux_")}{source}",
