@@ -6,7 +6,7 @@ FabricHealer is a Service Fabric application that attempts to fix a set of relia
 To learn more about FabricHealer's configuration-as-logic model, [click here.](Documentation/LogicWorkflows.md)
 
 ```
-FabricHealer requires that FabricObserver (3.1.6 and higher) and the RepairManager (RM) service are deployed. 
+FabricHealer requires that FabricObserver (v 3.1.6+) and RepairManager (RM) service are deployed. 
 ```
 ```
 For VM level repair, InfrastructureService (IS) service must be deployed.
