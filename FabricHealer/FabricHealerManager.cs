@@ -482,8 +482,8 @@ namespace FabricHealer
                 // Check cluster upgrade status. If the cluster is upgrading to a new version (or rolling back)
                 // then do not attempt repairs.
                 int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(
-                                            fabricClient,
-                                            Token).ConfigureAwait(false);
+                                                    fabricClient,
+                                                    Token).ConfigureAwait(false);
 
                 if (udInClusterUpgrade > -1 && udInClusterUpgrade < int.MaxValue)
                 {
@@ -502,9 +502,9 @@ namespace FabricHealer
 
                 // Check to see if an Azure tenant update is in progress. Do not conduct repairs if so.
                 if (await UpgradeChecker.IsAzureTenantUpdateInProgress(
-                    fabricClient,
-                    serviceContext.NodeContext.NodeType,
-                    Token).ConfigureAwait(false))
+                                fabricClient,
+                                serviceContext.NodeContext.NodeType,
+                                Token).ConfigureAwait(false))
                 {
                     return true;
                 }
@@ -601,18 +601,25 @@ namespace FabricHealer
 
                 return true;
             }
+            catch (Exception e) when
+                   (e is FabricException ||
+                    e is OperationCanceledException ||
+                    e is TimeoutException)
+            {
+                return false;
+            }
             catch (Exception e)
             {
-#if DEBUG
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
-                    $"MonitorRepairableHealthEventsAsync::HandledException",
+                    $"MonitorRepairableHealthEventsAsync::UnhandledException",
                     $"Failure in MonitorRepairableHealthEventAsync:{Environment.NewLine}{e}",
                     Token);
-#endif
+
                 RepairLogger.LogWarning($"Unhandled exception in MonitorRepairableHealthEventsAsync:{Environment.NewLine}{e}");
-                
-                return false;
+
+                // Fix the bug(s)..
+                throw;
             }
         }
 
@@ -1036,14 +1043,18 @@ namespace FabricHealer
                                             eval.ReplicaOrInstanceId,
                                             ConfigSettings.AsyncTimeout,
                                             Token).ConfigureAwait(false);
+                // Replica still exist?
+                if (replicaList.Count == 0)
+                {
+                    continue;
+                }
 
                 var appName = app?.ApplicationName?.OriginalString;
                 var replica = replicaList[0];
                 var nodeName = replica?.NodeName;
 
                 // Get configuration settings related to Replica repair. 
-                var repairRules
-                     = GetRepairRulesFromConfiguration(RepairConstants.ReplicaRepairPolicySectionName);
+                var repairRules = GetRepairRulesFromConfiguration(RepairConstants.ReplicaRepairPolicySectionName);
 
                 if (repairRules == null || !repairRules.Any())
                 {

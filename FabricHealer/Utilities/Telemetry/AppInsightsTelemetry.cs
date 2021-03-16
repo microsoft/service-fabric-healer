@@ -19,7 +19,7 @@ namespace FabricHealer.Utilities.Telemetry
     /// Abstracts the ApplicationInsights telemetry API calls allowing
     /// other telemetry providers to be plugged in.
     /// </summary>
-    public class AppInsightsTelemetry : ITelemetryProvider, IDisposable
+    public class AppInsightsTelemetry : ITelemetryProvider
     {
         /// <summary>
         /// ApplicationInsights telemetry client.
@@ -181,9 +181,7 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="telemetryData">TelemetryData instance.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A task.</returns>
-        public Task ReportMetricAsync(
-          TelemetryData telemetryData,
-          CancellationToken cancellationToken)
+        public Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
         {
             if (telemetryData == null)
             {
@@ -332,29 +330,6 @@ namespace FabricHealer.Utilities.Telemetry
             telemetryClient.TrackMetric(mt);
 
             return Task.FromResult(0);
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-        }
-
-        private bool disposedValue; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposedValue)
-            {
-                return;
-            }
-
-            if (disposing)
-            {
-            }
-
-            disposedValue = true;
         }
     }
 }

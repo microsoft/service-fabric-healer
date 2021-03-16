@@ -15,8 +15,6 @@ namespace FabricHealer
     /// </summary>
     public sealed class FabricHealer : StatelessService
     {
-        private FabricHealerManager healerManager;
-
         public FabricHealer(StatelessServiceContext context)
             : base(context)
         {
@@ -30,8 +28,8 @@ namespace FabricHealer
         {
             // FabricHealerManager will create an instance member cancellation token object (see Token) that is this cancellation token,
             // which is threaded through all async operations throughout the program.
-            healerManager = FabricHealerManager.Singleton(Context, cancellationToken);
-            
+            using FabricHealerManager healerManager = FabricHealerManager.Singleton(Context, cancellationToken);
+
             // Blocks until cancellationToken cancellation.
             await healerManager.StartAsync().ConfigureAwait(true);
         }
