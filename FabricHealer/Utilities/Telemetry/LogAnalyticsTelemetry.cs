@@ -24,13 +24,25 @@ namespace FabricHealer.Utilities.Telemetry
         private readonly Logger logger;
         private int retries;
 
-        public string WorkspaceId { get; set; }
+        public string WorkspaceId 
+        { 
+            get; set; 
+        }
 
-        public string Key { get; set; }
+        public string Key 
+        { 
+            get; set; 
+        }
 
-        public string ApiVersion { get; set; }
+        public string ApiVersion 
+        { 
+            get; set; 
+        }
 
-        public string LogType { get; set; }
+        public string LogType 
+        { 
+            get; set; 
+        }
 
         public LogAnalyticsTelemetry(
             string workspaceId,

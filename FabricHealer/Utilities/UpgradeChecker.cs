@@ -25,16 +25,12 @@ namespace FabricHealer.Repair
         /// <param name="fabricClient">FabricClient</param>
         /// <param name="token"></param>
         /// <returns>List of uds</returns>
-        public static async Task<IList<int>>
-            GetUDsWhereUpgradeInProgressAsync(FabricClient fabricClient, CancellationToken token)
+        public static async Task<IList<int>> GetUDsWhereUpgradeInProgressAsync(FabricClient fabricClient, CancellationToken token)
         {
             var domainsWhereUpgradeInProgress = new List<int>();
 
-            domainsWhereUpgradeInProgress.AddRange(
-                await GetUdsWhereApplicationUpgradeInProgressAsync(fabricClient, token).ConfigureAwait(true));
-
-            domainsWhereUpgradeInProgress.Add(
-                await GetUdsWhereFabricUpgradeInProgressAsync(fabricClient, token).ConfigureAwait(true));
+            domainsWhereUpgradeInProgress.AddRange(await GetUdsWhereApplicationUpgradeInProgressAsync(fabricClient, token).ConfigureAwait(true));
+            domainsWhereUpgradeInProgress.Add(await GetUdsWhereFabricUpgradeInProgressAsync(fabricClient, token).ConfigureAwait(true));
 
             return domainsWhereUpgradeInProgress;
         }
@@ -47,11 +43,10 @@ namespace FabricHealer.Repair
         /// <param name="token">CancellationToken</param>
         /// <param name="appName" type="optional">Application Name (Uri)</param>
         /// <returns>List of integers representing UDs</returns>
-        internal static async Task<List<int>>
-            GetUdsWhereApplicationUpgradeInProgressAsync(
-            FabricClient fabricClient,
-            CancellationToken token,
-            Uri appName = null)
+        internal static async Task<List<int>> GetUdsWhereApplicationUpgradeInProgressAsync(
+                                                FabricClient fabricClient,
+                                                CancellationToken token,
+                                                Uri appName = null)
         {
             try
             {
@@ -127,9 +122,7 @@ namespace FabricHealer.Repair
         /// <param name="fabricClient">FabricClient</param>
         /// <param name="token"></param>
         /// <returns>UD in progress</returns>
-        public static async Task<int> GetUdsWhereFabricUpgradeInProgressAsync(
-            FabricClient fabricClient, 
-            CancellationToken token)
+        public static async Task<int> GetUdsWhereFabricUpgradeInProgressAsync(FabricClient fabricClient, CancellationToken token)
         {
             try
             {
@@ -169,9 +162,9 @@ namespace FabricHealer.Repair
         /// <param name="token">CancellationToken instance</param>
         /// <returns>true if tenant update is in progress, false otherwise</returns>
         public static async Task<bool> IsAzureTenantUpdateInProgress(
-            FabricClient fabricClient,
-            string nodeType,
-            CancellationToken token)
+                                        FabricClient fabricClient,
+                                        string nodeType,
+                                        CancellationToken token)
         {
             var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
                 "Azure",

@@ -60,11 +60,11 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="repairAction">Repair action.</param>
         /// <returns></returns>
         public async Task EmitTelemetryEtwHealthEventAsync(
-            LogLevel level,
-            string source,
-            string description,
-            CancellationToken token,
-            RepairConfiguration repairConfig = null)
+                            LogLevel level,
+                            string source,
+                            string description,
+                            CancellationToken token,
+                            RepairConfiguration repairConfig = null)
         {
             bool hasRepairInfo = repairConfig != null;
             string repairAction = string.Empty;
@@ -108,7 +108,7 @@ namespace FabricHealer.Utilities.Telemetry
 
             /* Telemetry/ETW */
 
-            // Don't log or emit telemetry if the events are Informational (Ok Health State) and Verbose Logging is not enabled.
+            // Don't log etw or emit telemetry if the events are Informational (Ok Health State) and Verbose Logging is not enabled.
             // This limits noise (and cost) for telemetry service usage.
             if (healthState == HealthState.Ok && !FabricHealerManager.ConfigSettings.EnableVerboseLogging)
             {
@@ -127,7 +127,7 @@ namespace FabricHealer.Utilities.Telemetry
                     Description = description,
                     HealthState = Enum.GetName(typeof(HealthState), healthState),
                     NodeName = repairConfig?.NodeName ?? string.Empty,
-                    Source = $"{(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows_" : "Linux_")}{source}",
+                    Source = source,
                 };
 
                 await (telemetryClient?.ReportMetricAsync(telemData, token)).ConfigureAwait(false);
@@ -146,11 +146,11 @@ namespace FabricHealer.Utilities.Telemetry
                         ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
                         PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
                         ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
-                        HealthEventDescription = description,
+                        Description = description,
                         HealthState = Enum.GetName(typeof(HealthState), healthState),
                         NodeName = repairConfig?.NodeName ?? string.Empty,
                         Source = source,
-                        OSPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                        OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
                     });
             }
         }
