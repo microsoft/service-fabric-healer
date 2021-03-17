@@ -272,6 +272,8 @@ namespace FabricHealer.Repair
             TelemetryData foHealthData,
             CancellationToken cancellationToken)
         {
+
+            // Repairs where FH or IS is executor.
             var allRecentFHRepairTasksCompleted =
                             await fabricClient.RepairManager.GetRepairTaskListAsync(
                                 RepairTaskEngine.FHTaskIdPrefix,
@@ -285,39 +287,27 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            RepairExecutorData execData = null;
+            var orderedRepairList = allRecentFHRepairTasksCompleted.OrderByDescending(o => o.CompletedTimestamp);
 
-            // Repairs where FH is executor.
             // There could be several repairs of this type for the same repair target in RM's db.
-            if (allRecentFHRepairTasksCompleted.Any(r => SerializationUtility.TryDeserialize(r.ExecutorData, out execData)))
+            if (orderedRepairList.Any(r => r.ExecutorData.Contains(foHealthData.RepairId)))
             {
-                // Just take the latest repair of the specified id.
-                var completedRepairListDesc = allRecentFHRepairTasksCompleted
-                                               .Where(r => r.ResultStatus == RepairTaskResult.Succeeded 
-                                                        && r.Flags != RepairTaskFlags.CancelRequested
-                                                        && r.Flags != RepairTaskFlags.AbortRequested
-                                                        && execData.CustomIdentificationData == foHealthData.RepairId)?
-                                               .OrderByDescending(o => o.CompletedTimestamp)?
-                                               .Take(1)
-                                               .ToList();
-
-                if (completedRepairListDesc?.Count < 1)
+                foreach (var repair in orderedRepairList.Where(r => r.ExecutorData.Contains(foHealthData.RepairId)))
                 {
-                    return false;
-                }
-
-                // Completed aborted/cancelled repair tasks should not block repairs if they are inside run interval.
-                if (DateTime.UtcNow.Subtract(completedRepairListDesc[0].CompletedTimestamp.Value) <= interval)
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
+                    // Completed aborted/cancelled repair tasks should not block repairs if they are inside run interval.
+                    if (repair.Flags != RepairTaskFlags.AbortRequested && repair.Flags != RepairTaskFlags.CancelRequested
+                        && DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= interval)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
             }
 
-            // VM repairs (IS is executor, ExecutorData supplied by IS. Custom FH repair id supplied as repair Description.)
+            // VM repairs - IS is executor, ExecutorData is supplied by IS. Custom FH repair id supplied as repair Description.
             foreach (var repair in allRecentFHRepairTasksCompleted.Where(r => r.ResultStatus == RepairTaskResult.Succeeded))
             {
                 if (repair.Executor == $"fabric:/System/InfrastructureService/{foHealthData.NodeType}" && repair.Description == foHealthData.RepairId)

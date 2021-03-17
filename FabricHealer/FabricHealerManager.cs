@@ -611,7 +611,7 @@ namespace FabricHealer
             catch (Exception e)
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
+                    LogLevel.Error,
                     $"MonitorRepairableHealthEventsAsync::UnhandledException",
                     $"Failure in MonitorRepairableHealthEventAsync:{Environment.NewLine}{e}",
                     Token);
