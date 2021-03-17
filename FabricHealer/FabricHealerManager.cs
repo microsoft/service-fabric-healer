@@ -604,6 +604,7 @@ namespace FabricHealer
             catch (Exception e) when
                    (e is FabricException ||
                     e is OperationCanceledException ||
+                    e is TaskCanceledException ||
                     e is TimeoutException)
             {
                 return false;
