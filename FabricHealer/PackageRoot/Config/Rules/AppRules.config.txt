@@ -70,12 +70,12 @@ Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRe
 
 ## Active TCP Ports - Any app service.
 
-Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 05:00:00), !.
+Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(15, 05:00:00), !.
 
 
 ## Ephemeral TCP Ports - Any app service.
 
-Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(5, 05:00:00), !.
+Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(15, 05:00:00), !.
 
 
 ## Ephemeral Ports - Specific Application - any of its services.
