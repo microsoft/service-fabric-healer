@@ -78,9 +78,9 @@ Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
 Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
 	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
-	RestartCodePackage().
+	RestartCodePackage(), !.
 ```
-***Problem***: I want to check the observed value for the supplied resource metric (Cpu, Disk, Memory, etc.) and ensure the we are within the specified run interval before running the RestartCodePackage repair on any service belonging to the specified Application that FabricObserver is monitoring.
+***Problem***: I want to check the value for the supplied resource metric (CpuPercent) and ensure that the repair for the target app has not run more than 5 times in the last 1 hour before running the RestartCodePackage repair on any service belonging to the specified app.
 
 ***Solution***:
 ```
@@ -88,7 +88,7 @@ Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 2
 Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
 	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
-	RestartCodePackage().
+	RestartCodePackage(), !.
 ```
 
-
+Note the use of cuts (!) after the external predicate call in the rules above. This is technically the correct thing to do if there are other rules below these in a rules file. This makes it really clear to Guan that there is no need to backtrack. It's work is done and we got our anwser (the repair succeeded, for example). Please look through the [existing rules files](/FabricHealer/PackageRoot/Config/Rules) for real examples that have been tested.
