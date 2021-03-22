@@ -686,9 +686,12 @@ namespace FabricHealer
 
                     // Random wait to limit duplicate job creation from other FH instances.
                     // This is hacky and will be replaced at some point with a better approach. This is fine for Beta.
-                    var random = new Random();
-                    int waitTime = random.Next(nodeCount + 42);
-                    //await Task.Delay(TimeSpan.FromSeconds(waitTime), Token).ConfigureAwait(false);
+                    if (nodeCount > 1)
+                    {
+                        var random = new Random();
+                        int waitTime = random.Next(nodeCount + 42);
+                        await Task.Delay(TimeSpan.FromSeconds(waitTime), Token).ConfigureAwait(false);
+                    }
 
                     if (string.IsNullOrEmpty(evt.HealthInformation.Description))
                     {
@@ -719,7 +722,7 @@ namespace FabricHealer
                         // (like for a Fabric process), must not take place in clusters with less than 3 nodes to guarantee quorum..
                         if (nodeCount < 3 && foHealthData.SystemServiceProcessName == "Fabric")
                         {
-                            //continue;
+                            continue;
                         }
 
                         // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
@@ -893,11 +896,14 @@ namespace FabricHealer
                 {
                     Token.ThrowIfCancellationRequested();
 
-                    // Random wait to limit duplicate job creation attempts from other FH instances.
+                    // Random wait to limit duplicate job creation from other FH instances.
                     // This is hacky and will be replaced at some point with a better approach. This is fine for Beta.
-                    var random = new Random();
-                    int waitTime = random.Next(nodeList.Count + 42);
-                    await Task.Delay(TimeSpan.FromSeconds(waitTime), Token).ConfigureAwait(false);
+                    if (nodeList.Count > 1)
+                    {
+                        var random = new Random();
+                        int waitTime = random.Next(nodeList.Count + 42);
+                        await Task.Delay(TimeSpan.FromSeconds(waitTime), Token).ConfigureAwait(false);
+                    }
 
                     if (string.IsNullOrEmpty(evt.HealthInformation.Description))
                     {
@@ -996,9 +1002,12 @@ namespace FabricHealer
 
                 // Random wait to limit duplicate job creation from other FH instances.
                 // This is hacky and will be replaced at some point with a better approach. This is fine for Beta.
-                var random = new Random();
-                int waitTime = random.Next(nodeCount + 42);
-                await Task.Delay(TimeSpan.FromSeconds(waitTime)).ConfigureAwait(false);
+                if (nodeCount > 1)
+                {
+                    var random = new Random();
+                    int waitTime = random.Next(nodeCount + 42);
+                    await Task.Delay(TimeSpan.FromSeconds(waitTime)).ConfigureAwait(false);
+                }
 
                 var service = await fabricClient.QueryManager.GetServiceNameAsync(
                     eval.PartitionId,
