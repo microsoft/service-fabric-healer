@@ -218,7 +218,7 @@ namespace FabricHealer.Repair
 
             /* Pass default arguments in query. */
             // The type of metric that led FO to generate the unhealthy evaluation for the entity (App, Node, VM, Replica, etc).
-            foHealthData.Metric = FabricObserverErrorWarningCodes.GetMetricNameFromCode(foHealthData.Code);
+            foHealthData.Metric = FOErrorWarningCodes.GetMetricNameFromCode(foHealthData.Code);
 
             term.AddArgument(new Constant(foHealthData.ApplicationName), RepairConstants.AppName);
             term.AddArgument(new Constant(foHealthData.Code), RepairConstants.FOErrorCode);
@@ -298,10 +298,10 @@ namespace FabricHealer.Repair
 
             // Make sure there is not already a repair job executing reboot repair for target node.
             var isRepairAlreadyInProgress =
-                await repairTaskEngine.IsFHRepairTaskRunningAsync(
-                    executorName,
-                    repairConfiguration,
-                    cancellationToken).ConfigureAwait(true);
+                    await repairTaskEngine.IsFHRepairTaskRunningAsync(
+                        executorName,
+                        repairConfiguration,
+                        cancellationToken).ConfigureAwait(true);
 
             if (isRepairAlreadyInProgress)
             {
@@ -567,11 +567,11 @@ namespace FabricHealer.Repair
 
             // Create custom FH repair task for target node.
             var repairTask = await FabricRepairTasks.ScheduleRepairTaskAsync(
-                    repairConfiguration,
-                    executorData,
-                    RepairTaskEngine.FabricHealerExecutorName,
-                    FabricClientInstance,
-                    cancellationToken).ConfigureAwait(false);
+                                                        repairConfiguration,
+                                                        executorData,
+                                                        RepairTaskEngine.FabricHealerExecutorName,
+                                                        FabricClientInstance,
+                                                        cancellationToken).ConfigureAwait(false);
 
             return repairTask;
         }

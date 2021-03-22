@@ -16,8 +16,7 @@ namespace FabricHealer.Repair
             HealthReportKind kind, 
             bool treatWarningAsError = false)
         {
-            if (healthEvent?.HealthInformation.HealthState 
-                != HealthState.Error && !treatWarningAsError)
+            if (healthEvent?.HealthInformation.HealthState != HealthState.Error && !treatWarningAsError)
             {
                 return false;
             }
@@ -31,11 +30,11 @@ namespace FabricHealer.Repair
                 case HealthReportKind.StatefulServiceReplica:
                 case HealthReportKind.StatelessServiceInstance:
                 case HealthReportKind.DeployedServicePackage:
-                    return healthEvent != null && FabricObserverErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(healthEvent.HealthInformation.SourceId);
+                    return healthEvent != null && FOErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(healthEvent.HealthInformation.SourceId);
                 
                     // Node level (as in VM scope)
                 case HealthReportKind.Node:
-                    return healthEvent != null && FabricObserverErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(healthEvent.HealthInformation.SourceId);
+                    return healthEvent != null && FOErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(healthEvent.HealthInformation.SourceId);
                 
                 case HealthReportKind.Invalid:
                     break;

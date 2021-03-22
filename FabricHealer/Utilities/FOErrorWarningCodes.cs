@@ -10,7 +10,7 @@ using System.Linq;
 namespace FabricHealer.Utilities
 {
     // FabricObserver Error/Warning/Ok Codes.
-    public sealed class FabricObserverErrorWarningCodes
+    public sealed class FOErrorWarningCodes
     {
         // Ok
         public const string Ok = "FO000";

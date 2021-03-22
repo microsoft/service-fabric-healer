@@ -146,7 +146,7 @@ namespace FabricHealer.Repair
             {
                 case RepairActionType.RestartVM:
                     
-                    repairTask = repairTaskEngine.CreateVmRebootTask(repairConfiguration, executorName);
+                    repairTask = await repairTaskEngine.CreateVmRebootTaskAsync(repairConfiguration, executorName, token).ConfigureAwait(false);
 
                     break;
 
@@ -181,10 +181,10 @@ namespace FabricHealer.Repair
         }
 
         private static async Task<bool> TryCreateRepairTaskAsync(
-                                FabricClient fabricClient, 
-                                RepairTask repairTask,
-                                RepairConfiguration repairConfiguration,
-                                CancellationToken token)
+                                            FabricClient fabricClient, 
+                                            RepairTask repairTask,
+                                            RepairConfiguration repairConfiguration,
+                                            CancellationToken token)
         {
             if (repairTask == null)
             {
@@ -212,27 +212,26 @@ namespace FabricHealer.Repair
             }
             catch (FabricException fe)
             {
-                string message =
-                    $"Unable to create repairtask:{Environment.NewLine}{fe}";
+                string message = $"Unable to create repairtask:{Environment.NewLine}{fe}";
 
                 FabricHealerManager.RepairLogger.LogWarning(message);
 
-                FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Warning,
-                    "FabricRepairTasks::TryCreateRepairTaskAsync",
-                    message,
-                    token).GetAwaiter().GetResult();
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                            LogLevel.Warning,
+                                            "FabricRepairTasks::TryCreateRepairTaskAsync",
+                                            message,
+                                            token).ConfigureAwait(false);
             }
 
             return false;
         }
 
         public static async Task<long> SetFabricRepairJobStateAsync(
-            RepairTask repairTask, 
-            RepairTaskState repairState,
-            RepairTaskResult repairResult,
-            FabricClient fabricClient,
-            CancellationToken token)
+                                        RepairTask repairTask, 
+                                        RepairTaskState repairState,
+                                        RepairTaskResult repairResult,
+                                        FabricClient fabricClient,
+                                        CancellationToken token)
         {
             repairTask.State = repairState;
             repairTask.ResultStatus = repairResult;
@@ -244,33 +243,28 @@ namespace FabricHealer.Repair
                             token).ConfigureAwait(false);
         }
 
-        public static async Task<IEnumerable<Service>> GetInfrastructureServiceInstancesAsync(
-            FabricClient fabricClient,
-            CancellationToken cancellationToken)
+        public static async Task<IEnumerable<Service>> GetInfrastructureServiceInstancesAsync(FabricClient fabricClient, CancellationToken cancellationToken)
         {
             var allSystemServices =
                 await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                () =>
-                    fabricClient.QueryManager.GetServiceListAsync(
-                        new Uri("fabric:/System"),
-                        null,
-                        FabricHealerManager.ConfigSettings.AsyncTimeout,
-                        cancellationToken),
-                cancellationToken).ConfigureAwait(false);
+                        () =>
+                            fabricClient.QueryManager.GetServiceListAsync(
+                                new Uri("fabric:/System"),
+                                null,
+                                FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                cancellationToken),
+                        cancellationToken).ConfigureAwait(false);
 
-            var infraInstances = allSystemServices.Where(
-                i => i.ServiceTypeName.Equals(
-                    RepairConstants.InfrastructureServiceType,
-                    StringComparison.InvariantCultureIgnoreCase));
+            var infraInstances = allSystemServices.Where(i => i.ServiceTypeName.Equals(RepairConstants.InfrastructureServiceType, StringComparison.InvariantCultureIgnoreCase));
 
             return infraInstances;
         }
 
         public static async Task<bool> IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
-            TimeSpan interval, 
-            FabricClient fabricClient,
-            TelemetryData foHealthData,
-            CancellationToken cancellationToken)
+                                        TimeSpan interval, 
+                                        FabricClient fabricClient,
+                                        TelemetryData foHealthData,
+                                        CancellationToken cancellationToken)
         {
 
             // Repairs where FH or IS is executor.
@@ -330,10 +324,10 @@ namespace FabricHealer.Repair
         }
 
         public static async Task<int> GetCompletedRepairCountWithinTimeRangeAsync(
-           TimeSpan timeWindow,
-           FabricClient fabricClient,
-           TelemetryData foHealthData,
-           CancellationToken cancellationToken)
+                                       TimeSpan timeWindow,
+                                       FabricClient fabricClient,
+                                       TelemetryData foHealthData,
+                                       CancellationToken cancellationToken)
         {
             var allRecentFHRepairTasksCompleted =
                             await fabricClient.RepairManager.GetRepairTaskListAsync(
