@@ -142,7 +142,7 @@ namespace FabricHealer
 
                 healthReport.HealthMessage = warnMessage;
                 healthReport.State = HealthState.Warning;
-                healthReport.Code = FabricObserverErrorWarningCodes.Ok;
+                healthReport.Code = FOErrorWarningCodes.Ok;
                 healthReport.HealthReportTimeToLive = TimeSpan.MaxValue;
                 healthReport.Source = "CheckRepairManagerDeploymentStatusAsync";
                 isRmDeployed = false;
@@ -387,7 +387,7 @@ namespace FabricHealer
                         return;
                     }
 
-                    if (FabricObserverErrorWarningCodes.GetErrorWarningNameFromCode(errorCode).Contains("Disk"))
+                    if (FOErrorWarningCodes.GetErrorWarningNameFromCode(errorCode).Contains("Disk"))
                     {
                         return;
                     }
@@ -688,7 +688,7 @@ namespace FabricHealer
                     // This is hacky and will be replaced at some point with a better approach. This is fine for Beta.
                     var random = new Random();
                     int waitTime = random.Next(nodeCount + 42);
-                    await Task.Delay(TimeSpan.FromSeconds(waitTime), Token).ConfigureAwait(false);
+                    //await Task.Delay(TimeSpan.FromSeconds(waitTime), Token).ConfigureAwait(false);
 
                     if (string.IsNullOrEmpty(evt.HealthInformation.Description))
                     {
@@ -700,9 +700,9 @@ namespace FabricHealer
                         continue;
                     }
 
-                    if (!FabricObserverErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(foHealthData.Code)
-                        || foHealthData.Code == FabricObserverErrorWarningCodes.AppErrorNetworkEndpointUnreachable
-                        || foHealthData.Code == FabricObserverErrorWarningCodes.AppWarningNetworkEndpointUnreachable)
+                    if (!FOErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(foHealthData.Code)
+                        || foHealthData.Code == FOErrorWarningCodes.AppErrorNetworkEndpointUnreachable
+                        || foHealthData.Code == FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable)
                     {
                         // Network endpoint test failures have no general mitigation yet.
                         continue;
@@ -717,9 +717,9 @@ namespace FabricHealer
                     {
                         // Node-level safe restarts, should that be the specified repair for a system service issue
                         // (like for a Fabric process), must not take place in clusters with less than 3 nodes to guarantee quorum..
-                        if (nodeCount < 3)
+                        if (nodeCount < 3 && foHealthData.SystemServiceProcessName == "Fabric")
                         {
-                            continue;
+                            //continue;
                         }
 
                         // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
@@ -910,12 +910,12 @@ namespace FabricHealer
                     }
 
                     // Supported Error code from FO? If not, then get next event..
-                    if (!FabricObserverErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(foHealthData.Code))
+                    if (!FOErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(foHealthData.Code))
                     {
                         continue;
                     }
 
-                    string errorWarningName = FabricObserverErrorWarningCodes.GetErrorWarningNameFromCode(foHealthData.Code);
+                    string errorWarningName = FOErrorWarningCodes.GetErrorWarningNameFromCode(foHealthData.Code);
 
                     // Don't try any VM-level repairs - except for Disk repair - if the target VM is the same one where this instance of FH is running.
                     // Another FH instance on a different VM will run repair.
@@ -963,7 +963,7 @@ namespace FabricHealer
                             LogLevel.Info,
                             $"MonitorRepairableHealthEventsAsync:{Id}",
                             $"Detected VM hosting {foHealthData.NodeName} is in {errOrWarn}. " +
-                            $"{errOrWarn} Code: {foHealthData.Code}({FabricObserverErrorWarningCodes.GetErrorWarningNameFromCode(foHealthData.Code)}){Environment.NewLine}" +
+                            $"{errOrWarn} Code: {foHealthData.Code}({FOErrorWarningCodes.GetErrorWarningNameFromCode(foHealthData.Code)}){Environment.NewLine}" +
                             $"VM repair policy is enabled. {repairRules.Count} Logic rules found for VM-level repair.",
                             Token).ConfigureAwait(false);
 
@@ -1102,8 +1102,8 @@ namespace FabricHealer
         
         private List<string> GetRepairRulesFromFOCode(string foErrorCode, string app = null)
         {
-            if (!FabricObserverErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(foErrorCode)
-                && !FabricObserverErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(foErrorCode))
+            if (!FOErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(foErrorCode)
+                && !FOErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(foErrorCode))
             {
                 return null;
             }
@@ -1113,18 +1113,18 @@ namespace FabricHealer
             switch (foErrorCode)
             {
                 // App level.
-                case FabricObserverErrorWarningCodes.AppErrorCpuPercent:
-                case FabricObserverErrorWarningCodes.AppErrorMemoryMB:
-                case FabricObserverErrorWarningCodes.AppErrorMemoryPercent:
-                case FabricObserverErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts:
-                case FabricObserverErrorWarningCodes.AppErrorTooManyActiveTcpPorts:
-                case FabricObserverErrorWarningCodes.AppErrorTooManyOpenFileHandles:
-                case FabricObserverErrorWarningCodes.AppWarningCpuPercent:
-                case FabricObserverErrorWarningCodes.AppWarningMemoryMB:
-                case FabricObserverErrorWarningCodes.AppWarningMemoryPercent:
-                case FabricObserverErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts:
-                case FabricObserverErrorWarningCodes.AppWarningTooManyActiveTcpPorts:
-                case FabricObserverErrorWarningCodes.AppWarningTooManyOpenFileHandles:
+                case FOErrorWarningCodes.AppErrorCpuPercent:
+                case FOErrorWarningCodes.AppErrorMemoryMB:
+                case FOErrorWarningCodes.AppErrorMemoryPercent:
+                case FOErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts:
+                case FOErrorWarningCodes.AppErrorTooManyActiveTcpPorts:
+                case FOErrorWarningCodes.AppErrorTooManyOpenFileHandles:
+                case FOErrorWarningCodes.AppWarningCpuPercent:
+                case FOErrorWarningCodes.AppWarningMemoryMB:
+                case FOErrorWarningCodes.AppWarningMemoryPercent:
+                case FOErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts:
+                case FOErrorWarningCodes.AppWarningTooManyActiveTcpPorts:
+                case FOErrorWarningCodes.AppWarningTooManyOpenFileHandles:
 
 
                     if (app == "fabric:/System")
@@ -1138,26 +1138,26 @@ namespace FabricHealer
                     break;
 
                 // Node level. (node = VM, not Fabric node)
-                case FabricObserverErrorWarningCodes.NodeErrorCpuPercent:
-                case FabricObserverErrorWarningCodes.NodeErrorMemoryMB:
-                case FabricObserverErrorWarningCodes.NodeErrorMemoryPercent:
-                case FabricObserverErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts:
-                case FabricObserverErrorWarningCodes.NodeErrorTooManyActiveTcpPorts:
-                case FabricObserverErrorWarningCodes.NodeErrorTotalOpenFileHandlesPercent:
-                case FabricObserverErrorWarningCodes.NodeWarningCpuPercent:
-                case FabricObserverErrorWarningCodes.NodeWarningMemoryMB:
-                case FabricObserverErrorWarningCodes.NodeWarningMemoryPercent:
-                case FabricObserverErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts:
-                case FabricObserverErrorWarningCodes.NodeWarningTooManyActiveTcpPorts:
-                case FabricObserverErrorWarningCodes.NodeWarningTotalOpenFileHandlesPercent:
+                case FOErrorWarningCodes.NodeErrorCpuPercent:
+                case FOErrorWarningCodes.NodeErrorMemoryMB:
+                case FOErrorWarningCodes.NodeErrorMemoryPercent:
+                case FOErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts:
+                case FOErrorWarningCodes.NodeErrorTooManyActiveTcpPorts:
+                case FOErrorWarningCodes.NodeErrorTotalOpenFileHandlesPercent:
+                case FOErrorWarningCodes.NodeWarningCpuPercent:
+                case FOErrorWarningCodes.NodeWarningMemoryMB:
+                case FOErrorWarningCodes.NodeWarningMemoryPercent:
+                case FOErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts:
+                case FOErrorWarningCodes.NodeWarningTooManyActiveTcpPorts:
+                case FOErrorWarningCodes.NodeWarningTotalOpenFileHandlesPercent:
 
                     repairPolicySectionName = RepairConstants.VmRepairPolicySectionName;
                     break;
 
-                case FabricObserverErrorWarningCodes.NodeWarningDiskSpaceMB:
-                case FabricObserverErrorWarningCodes.NodeErrorDiskSpaceMB:
-                case FabricObserverErrorWarningCodes.NodeWarningDiskSpacePercent:
-                case FabricObserverErrorWarningCodes.NodeErrorDiskSpacePercent:
+                case FOErrorWarningCodes.NodeWarningDiskSpaceMB:
+                case FOErrorWarningCodes.NodeErrorDiskSpaceMB:
+                case FOErrorWarningCodes.NodeWarningDiskSpacePercent:
+                case FOErrorWarningCodes.NodeErrorDiskSpacePercent:
 
                     repairPolicySectionName = RepairConstants.DiskRepairPolicySectionName;
                     break;

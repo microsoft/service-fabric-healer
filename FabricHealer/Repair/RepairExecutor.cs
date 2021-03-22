@@ -129,51 +129,7 @@ namespace FabricHealer.Repair
 
                 if (restartCodePackageResult != null)
                 {
-                    try
-                    {
-                        var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(
-                                             repairConfiguration.AppName,
-                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                             cancellationToken).ConfigureAwait(false);
-
-                        var unhealthyFOAppEvents = appHealth.HealthEvents?.Where(
-                                                      s => s.HealthInformation.SourceId.Contains("Observer")
-                                                        && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning)
-                                                        && SerializationUtility.TryDeserialize(s.HealthInformation.Description, out TelemetryData foHealthData)
-                                                        && foHealthData?.ApplicationName == repairConfiguration.AppName.OriginalString
-                                                        && foHealthData?.ServiceName == repairConfiguration.ServiceName.OriginalString);
-                        
-                        TelemetryData telemetryData = new TelemetryData
-                        {
-                            ApplicationName = repairConfiguration.AppName.OriginalString,
-                            ServiceName = repairConfiguration.ServiceName.OriginalString,
-                            Code = "FO000",
-                            HealthState = "Ok",
-                            Description = $"{repairConfiguration.ServiceName.OriginalString} has been repaired.",
-                            NodeName = repairConfiguration.NodeName,
-                            NodeType = repairConfiguration.NodeType,
-                            Source = RepairTaskEngine.FabricHealerExecutorName,
-                        };
-
-                        foreach (var evt in unhealthyFOAppEvents)
-                        {
-                            HealthInformation healthInfo = new HealthInformation(evt.HealthInformation.SourceId, evt.HealthInformation.Property, HealthState.Ok)
-                            {
-                                Description = SerializationUtility.TrySerialize(telemetryData, out string data) ? data : $"{repairConfiguration.ServiceName.OriginalString} has been repaired.",
-                                TimeToLive = TimeSpan.FromMinutes(5),
-                                RemoveWhenExpired = true,
-                            };
-
-                            ApplicationHealthReport healthReport = new ApplicationHealthReport(repairConfiguration.AppName, healthInfo);
-                            fabricClient.HealthManager.ReportHealth(healthReport, new HealthReportSendOptions { Immediate = true });
-
-                            await Task.Delay(250);
-                        }
-                    }
-                    catch (Exception e) when (e is FabricException || e is TimeoutException)
-                    {
-
-                    }
+                    await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Application, cancellationToken, "AppObserver").ConfigureAwait(false);
                 }
 
                 return restartCodePackageResult;
@@ -547,53 +503,7 @@ namespace FabricHealer.Repair
 
             if (replicaResult != null)
             {
-                try
-                {
-                    var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(
-                                            repairConfiguration.AppName,
-                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                            cancellationToken).ConfigureAwait(false);
-
-                    var unhealthyFOAppEvents = appHealth.HealthEvents?.Where(
-                                                  s => s.HealthInformation.SourceId.Contains("Observer")
-                                                    && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning)
-                                                    && SerializationUtility.TryDeserialize(s.HealthInformation.Description, out TelemetryData foHealthData)
-                                                    && foHealthData?.ApplicationName == repairConfiguration.AppName.OriginalString
-                                                    && foHealthData?.ServiceName == repairConfiguration.ServiceName.OriginalString);
-
-                    TelemetryData telemetryData = new TelemetryData
-                    {
-                        ApplicationName = repairConfiguration.AppName.OriginalString,
-                        ServiceName = repairConfiguration.ServiceName.OriginalString,
-                        Code = "FO000",
-                        HealthState = "Ok",
-                        Description = $"{repairConfiguration.ServiceName.OriginalString} has been repaired.",
-                        NodeName = repairConfiguration.NodeName,
-                        NodeType = repairConfiguration.NodeType,
-                        Source = RepairTaskEngine.FabricHealerExecutorName,
-                    };
-
-                    foreach (var evt in unhealthyFOAppEvents)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        HealthInformation healthInfo = new HealthInformation(evt.HealthInformation.SourceId, evt.HealthInformation.Property, HealthState.Ok)
-                        {
-                            Description = SerializationUtility.TrySerialize(telemetryData, out string data) ? data : $"{repairConfiguration.ServiceName.OriginalString} has been repaired.",
-                            TimeToLive = TimeSpan.FromMinutes(5),
-                            RemoveWhenExpired = true,
-                        };
-
-                        ApplicationHealthReport healthReport = new ApplicationHealthReport(repairConfiguration.AppName, healthInfo);
-                        fabricClient.HealthManager.ReportHealth(healthReport, new HealthReportSendOptions { Immediate = true });
-
-                        await Task.Delay(250);
-                    }
-                }
-                catch (Exception e) when (e is FabricException || e is TimeoutException)
-                {
-
-                }
+                await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Application, cancellationToken).ConfigureAwait(false);
             }
 
             return replicaResult;
@@ -621,48 +531,8 @@ namespace FabricHealer.Repair
             {
                 p[0]?.Kill(true);
 
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
-
-                // Clear Warning from FO. If in fact, the issue has not been solved, FO will generate a new report for the target and the game will be played again.
-                try
-                {
-                    var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(repairConfiguration.AppName).ConfigureAwait(false);
-                    var unhealthyFOAppEvents = appHealth.HealthEvents?.Where(
-                                                  s => s.HealthInformation.SourceId.Contains("FabricSystemObserver")
-                                                    && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning)
-                                                    && SerializationUtility.TryDeserialize(s.HealthInformation.Description, out TelemetryData foHealthData)
-                                                    && foHealthData?.SystemServiceProcessName == repairConfiguration.SystemServiceProcessName);
-
-                    TelemetryData telemetryData = new TelemetryData
-                    {
-                        ApplicationName = repairConfiguration.AppName.OriginalString,
-                        SystemServiceProcessName = repairConfiguration.SystemServiceProcessName,
-                        Code = "FO000",
-                        HealthState = "Ok",
-                        Description = $"{repairConfiguration.SystemServiceProcessName} has been repaired.",
-                        NodeName = repairConfiguration.NodeName,
-                        NodeType = repairConfiguration.NodeType,
-                        Source = RepairTaskEngine.FabricHealerExecutorName,
-                    };
-
-                    foreach (var evt in unhealthyFOAppEvents)
-                    {
-                        HealthInformation healthInfo = new HealthInformation(evt.HealthInformation.SourceId, evt.HealthInformation.Property, HealthState.Ok)
-                        {
-                            Description = SerializationUtility.TrySerialize(telemetryData, out string data) ? data : $"{repairConfiguration.SystemServiceProcessName} has been repaired.",
-                            TimeToLive = TimeSpan.FromMinutes(5),
-                            RemoveWhenExpired = true,
-                        };
-
-                        ApplicationHealthReport healthReport = new ApplicationHealthReport(repairConfiguration.AppName, healthInfo);
-                        fabricClient.HealthManager.ReportHealth(healthReport, new HealthReportSendOptions { Immediate = true });
-
-                        await Task.Delay(250);
-                    }
-                }
-                catch (Exception)
-                {
-                }
+                // Clear Warning from FO. If in fact the issue has not been solved, then FO will generate a new health report for the target and the game will be played again.
+                await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Application, cancellationToken, "FabricSystemObserver").ConfigureAwait(false);
             }
             catch (Exception e) when (e is AggregateException || e is Win32Exception || e is InvalidOperationException || e is OperationCanceledException || e is NotSupportedException)
             {
@@ -800,53 +670,7 @@ namespace FabricHealer.Repair
 
             if (replicaResult != null)
             {
-                try
-                {
-                    var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(
-                                            repairConfiguration.AppName,
-                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                            cancellationToken).ConfigureAwait(false);
-
-                    var unhealthyFOAppEvents = appHealth.HealthEvents?.Where(
-                                                  s => s.HealthInformation.SourceId.Contains("Observer")
-                                                    && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning)
-                                                    && SerializationUtility.TryDeserialize(s.HealthInformation.Description, out TelemetryData foHealthData)
-                                                    && foHealthData?.ApplicationName == repairConfiguration.AppName.OriginalString
-                                                    && foHealthData?.ServiceName == repairConfiguration.ServiceName.OriginalString);
-
-                    TelemetryData telemetryData = new TelemetryData
-                    {
-                        ApplicationName = repairConfiguration.AppName.OriginalString,
-                        ServiceName = repairConfiguration.ServiceName.OriginalString,
-                        Code = "FO000",
-                        HealthState = "Ok",
-                        Description = $"{repairConfiguration.ServiceName.OriginalString} has been repaired.",
-                        NodeName = repairConfiguration.NodeName,
-                        NodeType = repairConfiguration.NodeType,
-                        Source = RepairTaskEngine.FabricHealerExecutorName,
-                    };
-
-                    foreach (var evt in unhealthyFOAppEvents)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        HealthInformation healthInfo = new HealthInformation(evt.HealthInformation.SourceId, evt.HealthInformation.Property, HealthState.Ok)
-                        {
-                            Description = SerializationUtility.TrySerialize(telemetryData, out string data) ? data : $"{repairConfiguration.ServiceName.OriginalString} has been repaired.",
-                            TimeToLive = TimeSpan.FromMinutes(5),
-                            RemoveWhenExpired = true,
-                        };
-
-                        ApplicationHealthReport healthReport = new ApplicationHealthReport(repairConfiguration.AppName, healthInfo);
-                        fabricClient.HealthManager.ReportHealth(healthReport, new HealthReportSendOptions { Immediate = true });
-
-                        await Task.Delay(250);
-                    }
-                }
-                catch (Exception e) when (e is FabricException || e is TimeoutException)
-                {
-
-                }
+                await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Application, cancellationToken).ConfigureAwait(false);
             }
 
             return replicaResult;
@@ -956,51 +780,7 @@ namespace FabricHealer.Repair
                         cancellationToken,
                         repairConfiguration).ConfigureAwait(false);
 
-            try
-            {
-                var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(
-                                        repairConfiguration.NodeName,
-                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                        cancellationToken).ConfigureAwait(false);
-
-                var unhealthyFONodeEvents = nodeHealth.HealthEvents?.Where(
-                                              s => s.HealthInformation.SourceId.Contains("DiskObserver")
-                                                && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning)
-                                                && SerializationUtility.TryDeserialize(s.HealthInformation.Description, out TelemetryData foHealthData)
-                                                && foHealthData?.NodeName == repairConfiguration.NodeName
-                                                && foHealthData?.Code == repairConfiguration.FOErrorCode);
-
-                TelemetryData telemetryData = new TelemetryData
-                {
-                    Code = "FO000",
-                    HealthState = "Ok",
-                    Description = $"{repairConfiguration.NodeName} has been repaired (Disk Space, VM).",
-                    NodeName = repairConfiguration.NodeName,
-                    NodeType = repairConfiguration.NodeType,
-                    Source = RepairTaskEngine.FabricHealerExecutorName,
-                };
-
-                foreach (var evt in unhealthyFONodeEvents)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    HealthInformation healthInfo = new HealthInformation(evt.HealthInformation.SourceId, evt.HealthInformation.Property, HealthState.Ok)
-                    {
-                        Description = SerializationUtility.TrySerialize(telemetryData, out string data) ? data : $"{repairConfiguration.NodeName} has been repaired (Disk Space, VM).",
-                        TimeToLive = TimeSpan.FromMinutes(5),
-                        RemoveWhenExpired = true,
-                    };
-
-                    NodeHealthReport healthReport = new NodeHealthReport(repairConfiguration.NodeName, healthInfo);
-                    fabricClient.HealthManager.ReportHealth(healthReport, new HealthReportSendOptions { Immediate = true });
-
-                    await Task.Delay(250);
-                }
-            }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
-            {
-
-            }
+            await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Node, cancellationToken, "DiskObserver").ConfigureAwait(false);
 
             return true;
         }
@@ -1039,6 +819,108 @@ namespace FabricHealer.Repair
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Clears existing health warnings for target repair entity. This should only be called after a repair operation succeeds.
+        /// </summary>
+        /// <param name="repairConfiguration">RepairConfiguration instance used for repair.</param>
+        /// <param name="healthScope">Repair target health scope (FO, by default, produces 2 types of reports: Application and Node)</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        /// <param name="source">Optional: The name of the source Observer (AppObserver, DiskObserver, etc...)</param>
+        /// <returns></returns>
+        private async Task ClearHealthWarningsAsync(RepairConfiguration repairConfiguration, HealthScope healthScope, CancellationToken cancellationToken, string source = null)
+        {
+            try
+            {
+                if (healthScope == HealthScope.Application)
+                {
+                    var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(
+                                         repairConfiguration.AppName,
+                                         FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                         cancellationToken).ConfigureAwait(false);
+
+                    var unhealthyFOAppEvents = appHealth.HealthEvents?.Where(
+                                                  s => s.HealthInformation.SourceId.Contains(source ?? "Observer")
+                                                    && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning)
+                                                    && SerializationUtility.TryDeserialize(s.HealthInformation.Description, out TelemetryData foHealthData)
+                                                    && foHealthData?.ApplicationName == repairConfiguration.AppName.OriginalString
+                                                    && (source != null && source == "FabricSystemObserver" ? foHealthData?.SystemServiceProcessName == repairConfiguration.SystemServiceProcessName : foHealthData?.ServiceName == repairConfiguration.ServiceName.OriginalString));
+
+                    TelemetryData telemetryData = new TelemetryData
+                    {
+                        ApplicationName = repairConfiguration.AppName?.OriginalString,
+                        ServiceName = repairConfiguration.ServiceName?.OriginalString,
+                        Code = "FO000",
+                        HealthState = "Ok",
+                        Description = $"{(source != null && source == "FabricSystemObserver" ? repairConfiguration.SystemServiceProcessName : repairConfiguration.ServiceName.OriginalString)} has been repaired.",
+                        NodeName = repairConfiguration.NodeName,
+                        NodeType = repairConfiguration.NodeType,
+                        Source = RepairTaskEngine.FabricHealerExecutorName,
+                        SystemServiceProcessName = $"{(source != null && source == "FabricSystemObserver" ? repairConfiguration.SystemServiceProcessName : string.Empty)}",
+                    };
+
+                    foreach (var evt in unhealthyFOAppEvents)
+                    {
+                        HealthInformation healthInfo = new HealthInformation(evt.HealthInformation.SourceId, evt.HealthInformation.Property, HealthState.Ok)
+                        {
+                            Description = SerializationUtility.TrySerialize(telemetryData, out string data) ? data : $"{(source != null && source == "FabricSystemObserver" ? repairConfiguration.SystemServiceProcessName : repairConfiguration.ServiceName.OriginalString)} has been repaired.",
+                            TimeToLive = TimeSpan.FromMinutes(5),
+                            RemoveWhenExpired = true,
+                        };
+
+                        ApplicationHealthReport healthReport = new ApplicationHealthReport(repairConfiguration.AppName, healthInfo);
+                        fabricClient.HealthManager.ReportHealth(healthReport, new HealthReportSendOptions { Immediate = true });
+
+                        await Task.Delay(250);
+                    }
+                }
+                else
+                {
+                    var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(
+                                                repairConfiguration.NodeName,
+                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                cancellationToken).ConfigureAwait(false);
+
+                    var unhealthyFONodeEvents = nodeHealth.HealthEvents?.Where(
+                                                  s => s.HealthInformation.SourceId.Contains(source ?? "Observer")
+                                                    && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning)
+                                                    && SerializationUtility.TryDeserialize(s.HealthInformation.Description, out TelemetryData foHealthData)
+                                                    && foHealthData?.NodeName == repairConfiguration.NodeName
+                                                    && foHealthData?.Code == repairConfiguration.FOErrorCode);
+
+                    TelemetryData telemetryData = new TelemetryData
+                    {
+                        Code = "FO000",
+                        HealthState = "Ok",
+                        Description = $"{repairConfiguration.NodeName} has been repaired.",
+                        NodeName = repairConfiguration.NodeName,
+                        NodeType = repairConfiguration.NodeType,
+                        Source = RepairTaskEngine.FabricHealerExecutorName,
+                    };
+
+                    foreach (var evt in unhealthyFONodeEvents)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        HealthInformation healthInfo = new HealthInformation(evt.HealthInformation.SourceId, evt.HealthInformation.Property, HealthState.Ok)
+                        {
+                            Description = SerializationUtility.TrySerialize(telemetryData, out string data) ? data : $"{repairConfiguration.NodeName} has been repaired.",
+                            TimeToLive = TimeSpan.FromMinutes(5),
+                            RemoveWhenExpired = true,
+                        };
+
+                        NodeHealthReport healthReport = new NodeHealthReport(repairConfiguration.NodeName, healthInfo);
+                        fabricClient.HealthManager.ReportHealth(healthReport, new HealthReportSendOptions { Immediate = true });
+
+                        await Task.Delay(250);
+                    }
+                }
+            }
+            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            {
+
+            }
         }
     }
 }

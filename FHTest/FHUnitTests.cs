@@ -51,7 +51,7 @@ namespace FHTest
 
         // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
         // e.g., if developing on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
-        private const string FHRulesDirectory = @"C:\Users\ctorre\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
+        private const string FHRulesDirectory = @"";
 
         public FHUnitTests()
         {
@@ -71,7 +71,7 @@ namespace FHTest
                 ApplicationName = "fabric:/test0",
                 NodeName = "TEST_0",
                 RepairId = "Test42",
-                Code = FabricObserverErrorWarningCodes.AppErrorMemoryMB,
+                Code = FOErrorWarningCodes.AppErrorMemoryMB,
                 ServiceName = "fabric/test0/service0",
             };
 
@@ -113,7 +113,7 @@ namespace FHTest
                 NodeName = "TEST_0",
                 Metric = "Memory",
                 RepairId = "Test42",
-                Code = FabricObserverErrorWarningCodes.AppErrorMemoryMB,
+                Code = FOErrorWarningCodes.AppErrorMemoryMB,
                 ServiceName = "fabric/test0/service0",
                 Value = 42,
                 ReplicaId = default(long).ToString(),
@@ -151,7 +151,7 @@ namespace FHTest
                 NodeName = "TEST_0",
                 Metric = "Memory",
                 RepairId = "Test42",
-                Code = FabricObserverErrorWarningCodes.AppErrorMemoryMB,
+                Code = FOErrorWarningCodes.AppErrorMemoryMB,
                 ServiceName = "fabric/test0/service0",
                 Value = 42,
                 ReplicaId = default(long).ToString(),
@@ -217,7 +217,7 @@ namespace FHTest
 
             /* Pass default arguments in query. */
             // The type of metric that led FO to generate the unhealthy evaluation for the entity (App, Node, VM, Replica, etc).
-            foHealthData.Metric = FabricObserverErrorWarningCodes.GetMetricNameFromCode(foHealthData.Code);
+            foHealthData.Metric = FOErrorWarningCodes.GetMetricNameFromCode(foHealthData.Code);
 
             term.AddArgument(new Constant(foHealthData.ApplicationName), RepairConstants.AppName);
             term.AddArgument(new Constant(foHealthData.Code), RepairConstants.FOErrorCode);
