@@ -719,7 +719,7 @@ namespace FabricHealer
                     if (app.ApplicationName.OriginalString == "fabric:/System")
                     {
                         // Node-level safe restarts, should that be the specified repair for a system service issue
-                        // (like for a Fabric process), must not take place in clusters with less than 3 nodes to guarantee quorum..
+                        // (like for a Fabric process issue), must not take place in clusters with less than 3 nodes to guarantee quorum..
                         if (nodeCount < 3 && foHealthData.SystemServiceProcessName == "Fabric")
                         {
                             continue;
@@ -841,7 +841,7 @@ namespace FabricHealer
                             $"{system}Application repair policy is enabled. {repairRules.Count} Logic rules found for {system}Application-level repair.",
                             Token).ConfigureAwait(false);
 
-                    // Schedule repair task.
+                    // Start the repair workflow.
                     await repairTaskManager.StartRepairWorkflowAsync(foHealthData, repairRules, Token).ConfigureAwait(false);
                 }
             }
@@ -973,8 +973,7 @@ namespace FabricHealer
                             $"VM repair policy is enabled. {repairRules.Count} Logic rules found for VM-level repair.",
                             Token).ConfigureAwait(false);
 
-                    // Schedule repair task. This will only schedule once if there is an existing
-                    // repair job that is not completed yet.
+                    // Start the repair workflow.
                     await repairTaskManager.StartRepairWorkflowAsync(foHealthData, repairRules, Token).ConfigureAwait(false);
                 }
             }
@@ -1105,6 +1104,7 @@ namespace FabricHealer
                         $"Replica repair policy is enabled. {repairRules.Count} Logic rules found for unhealthy Replica repair.",
                         Token).ConfigureAwait(false);
 
+                // Start the repair workflow.
                 await repairTaskManager.StartRepairWorkflowAsync(foHealthData, repairRules, Token).ConfigureAwait(false);
             }
         }
