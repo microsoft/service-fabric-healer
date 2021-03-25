@@ -25,8 +25,7 @@ namespace FabricHealer.Repair
             get; private set;
         }
 
-        public RepairTaskEngine(
-            FabricClient fabricClient)
+        public RepairTaskEngine(FabricClient fabricClient)
         {
             this.fabricClient = fabricClient;
         }
@@ -157,7 +156,7 @@ namespace FabricHealer.Repair
                 if (SerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData))
                 {
                     // The node repair check ensures that only one node-level repair can take place in a cluster (no concurrent node restarts), by default. FH is conservative, by design.
-                    if (repairConfig.RepairPolicy.RepairId == exData.CustomIdentificationData || exData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)
+                    if (repairConfig.RepairPolicy.RepairId == exData.RepairPolicy.RepairId || exData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)
                     {
                         return true;
                     }

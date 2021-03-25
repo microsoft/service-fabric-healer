@@ -9,31 +9,13 @@ using System.Runtime.Serialization;
 namespace FabricHealer.Repair
 {
     /// <summary>
-    /// Executor Data is used to store the state of an executing repair task.
+    /// RepairExecutorData is used to store custom FH state for an executing repair task.
     /// </summary>
     [DataContract]
     public class RepairExecutorData
     {
-        [DataMember]
-        public int ExecutorSubState 
-        { 
-            get; set; 
-        }
-
         [DataMember] 
         public int ExecutorTimeoutInMinutes
-        {
-            get; set;
-        }
-
-        [DataMember] 
-        public DateTime RestartRequestedTime
-        {
-            get; set;
-        }
-
-        [DataMember]
-        public string CustomIdentificationData
         {
             get; set;
         }
