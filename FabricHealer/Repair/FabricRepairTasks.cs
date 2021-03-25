@@ -357,7 +357,7 @@ namespace FabricHealer.Repair
                 // Non-VM repairs (FH is executor, custom repair ExecutorData supplied by FH.)
                 if (fhExecutorData != null)
                 {
-                    if (foHealthData.RepairId != fhExecutorData.CustomIdentificationData)
+                    if (foHealthData.RepairId != fhExecutorData.RepairPolicy.RepairId)
                     {
                         continue;
                     }

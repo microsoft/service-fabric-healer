@@ -21,7 +21,6 @@ namespace FabricHealer
 {
     public class FabricHealerManager : IDisposable
     {
-        private static FabricHealerManager singleton = null;
         private bool disposedValue;
         private readonly StatelessServiceContext serviceContext;
         private readonly FabricClient fabricClient;
@@ -30,27 +29,26 @@ namespace FabricHealer
         private readonly Uri systemAppUri = new Uri("fabric:/System");
         private readonly Uri repairManagerServiceUri = new Uri("fabric:/System/RepairManagerService");
         private readonly FabricHealthReporter healthReporter;
+        private static FabricHealerManager singleton = null;
         internal static TelemetryUtilities TelemetryUtilities;
 
-        public static Logger RepairLogger
+        internal static Logger RepairLogger
         {
             get; set;
         }
 
-        public static ConfigSettings ConfigSettings
+        internal static ConfigSettings ConfigSettings
         {
             get; set;
         }
 
         // CancellationToken from FabricHealer.RunAsync. See ctor.
-        public CancellationToken Token
+        internal CancellationToken Token
         {
-            get; set;
+            get;
         }
 
-        private FabricHealerManager(
-            StatelessServiceContext context,
-            CancellationToken token)
+        private FabricHealerManager(StatelessServiceContext context, CancellationToken token)
         {
             serviceContext = context;
             fabricClient = new FabricClient(FabricClientRole.Admin);
@@ -90,9 +88,7 @@ namespace FabricHealer
         /// <param name="context">StatefulService context instance.</param>
         /// <param name="token">Cancellation token.</param>
         /// <returns>The singleton instance of FabricHealerManager.</returns>
-        public static FabricHealerManager Singleton(
-            StatelessServiceContext context,
-            CancellationToken token)
+        public static FabricHealerManager Singleton(StatelessServiceContext context, CancellationToken token)
         {
             if (singleton == null)
             {
@@ -108,9 +104,7 @@ namespace FabricHealer
         /// <param name="serviceNameFabricUri"></param>
         /// <param name="cancellationToken">cancellation token to stop the async operation</param>
         /// <returns>true if repair manager application is present in cluster, otherwise false</returns>
-        public async Task<bool> CheckRepairManagerDeploymentStatusAsync(
-            Uri serviceNameFabricUri,
-            CancellationToken cancellationToken)
+        public async Task<bool> CheckRepairManagerDeploymentStatusAsync(Uri serviceNameFabricUri, CancellationToken cancellationToken)
         {
             string okMessage = $"{serviceNameFabricUri} is deployed.";
             bool isRmDeployed = true;
@@ -201,10 +195,9 @@ namespace FabricHealer
 
                 return setting;
             }
-            catch (Exception e) when (
-                    e is ArgumentException ||
-                    e is KeyNotFoundException)
+            catch (Exception e) when (e is ArgumentException || e is KeyNotFoundException)
             {
+
             }
 
             return null;
@@ -368,34 +361,32 @@ namespace FabricHealer
                     // Cancel existing repair. We may need to create a new one for abandoned fabric node repairs.
                     await FabricRepairTasks.CancelRepairTaskAsync(repair, fabricClient).ConfigureAwait(false);
 
-                    // There is no need to resume simple repairs that do not require multiple repair steps (e.g., service code package restarts).
-                    if (repairExecutorData.RepairPolicy?.TargetType == RepairTargetType.Application
-                        || repairExecutorData.RepairPolicy?.TargetType == RepairTargetType.Replica)
+                    /* Resume interrupted Fabric Node restart repairs */
+
+                    // There is no need to resume simple repairs that do not require multiple repair steps (e.g., codepackage/process/replica restarts).
+                    if (repairExecutorData.RepairPolicy.RepairAction != RepairActionType.RestartFabricNode)
                     {
                         continue;
                     }
 
-                    // Wait...
-                    await Task.Delay(3000).ConfigureAwait(false);
-
-                    /* Node-level repairs */
-
                     string errorCode = repairExecutorData.FOErrorCode;
                     
-                    if (string.IsNullOrEmpty(errorCode))
+                    if (string.IsNullOrWhiteSpace(errorCode))
                     {
-                        return;
+                        continue;
                     }
 
+                    // File Deletion repair is a node-level (VM) repair, but is not multi-step. Ignore.
                     if (FOErrorWarningCodes.GetErrorWarningNameFromCode(errorCode).Contains("Disk"))
                     {
-                        return;
+                        continue;
                     }
 
                     List<string> repairRules;
 
-                    // System warnings/errors from FO can be Node level. FH will restart the node hosting the troubled SF system service if specified in related logic rules.
-                    if (repairExecutorData.RepairPolicy.RepairId.Contains("System"))
+                    // Fabric System service warnings/errors from FO can be Node level repair targets (e.g., Fabric binary needs to be restarted).
+                    // FH will restart the node hosting the troubled SF system service if specified in related logic rules.
+                    if (!string.IsNullOrWhiteSpace(repairExecutorData.SystemServiceProcessName))
                     {
                         repairRules = GetRepairRulesFromConfiguration(RepairConstants.SystemAppRepairPolicySectionName);
                     }
@@ -410,10 +401,7 @@ namespace FabricHealer
                         Code = errorCode,
                     };
 
-                    _ = await repairTaskManager.InitializeGuanAndRunQuery(
-                                foHealthData,
-                                repairRules,
-                                repairExecutorData);
+                    _ = await repairTaskManager.InitializeGuanAndRunQuery(foHealthData, repairRules, repairExecutorData);
                 }
             }
             catch (Exception e) when (
@@ -429,9 +417,7 @@ namespace FabricHealer
             }
         }
 
-        private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(
-                object sender,
-                PackageModifiedEventArgs<ConfigurationPackage> e)
+        private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
             ConfigSettings.UpdateConfigSettings(e.NewPackage.Settings);
 
@@ -441,30 +427,21 @@ namespace FabricHealer
             }
         }
 
-        // app/service/replica, Fabric node, and VM repair is implemented.
-        // Note that for replica issues, FO does not support replica monitoring and as such,
-        // it does not emit specific error codes that FH recognizes. The impl below therefore has no
-        // dependency on FO health data.
+        // app/service/replica, Fabric node, disk, and VM repair is implemented.
 
-        /* TODO...
+        /* Potential TODOs. This list should grow and external predicates should be written to support related workflow composition in logic rule file(s).
 
             Symptom                                                 Mitigation 
             ------------------------------------------------------  ---------------------------------------------------
-            Application Unresponsive (Memory leak)	                Restart the related Service
-            Application Unresponsive (Socket Leak)	                Restart the related Service
-            Application Unresponsive (High CPU)	                    Restart the related Service
-            Exhaust Disk space: FabricDCA unable upload	            Clean the  DCA log folder
             Expired Certificate [TP Scenario]	                    Modify the cluster manifest AEPCC to true (we already have an automation script for this scenario)
             Node crash due to lease issue 	                        Restart the neighboring VM
             Node Crash due to slow network issue	                Restart the VM
-            Node failed open due to dockerd connectivity            Reimage the VM
-            System Service in quorum loss	                        Repair the partition/ Restart the VM
+            System Service in quorum loss	                        Repair the partition/Restart the VM
             Node stuck in disabling state due to MR [safety check]	Address safety issue through automation
             [MR Scenario] Node in down state: MR unable 
             to send the Remove-ServiceFabricNodeState in time	    Remove-ServiceFabricNodeState
             Unused container fill the disk space	                Call docker prune cmd 
             Primary replica for system service in IB state forever	Restart the primary partition 
-
         */
         private async Task<bool> MonitorRepairableHealthEventsAsync()
         {
@@ -528,10 +505,10 @@ namespace FabricHealer
                         {
                             await ProcessNodeHealthAsync(clusterHealth.NodeHealthStates).ConfigureAwait(false);
                         }
-                        catch (Exception e) when
-                        (e is FabricException ||
-                         e is OperationCanceledException ||
-                         e is TimeoutException)
+                        catch (Exception e) when (
+                                e is FabricException ||
+                                e is OperationCanceledException ||
+                                e is TimeoutException)
                         {
 #if DEBUG
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -553,10 +530,10 @@ namespace FabricHealer
                         {
                             await ProcessApplicationHealthAsync(clusterHealth.ApplicationHealthStates).ConfigureAwait(false);
                         }
-                        catch (Exception e) when
-                        (e is FabricException ||
-                         e is OperationCanceledException ||
-                         e is TimeoutException)
+                        catch (Exception e) when (
+                                e is FabricException ||
+                                e is OperationCanceledException ||
+                                e is TimeoutException)
                         {
 #if DEBUG
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -579,10 +556,10 @@ namespace FabricHealer
                         {
                             await ProcessReplicaHealthAsync(evaluation).ConfigureAwait(false);
                         }
-                        catch (Exception e) when
-                        (e is FabricException ||
-                         e is TimeoutException ||
-                         e is OperationCanceledException)
+                        catch (Exception e) when (
+                                e is FabricException ||
+                                e is TimeoutException ||
+                                e is OperationCanceledException)
                         {
 #if DEBUG
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -601,8 +578,8 @@ namespace FabricHealer
 
                 return true;
             }
-            catch (Exception e) when
-                   (e is FabricException ||
+            catch (Exception e) when (
+                    e is FabricException ||
                     e is OperationCanceledException ||
                     e is TaskCanceledException ||
                     e is TimeoutException)
@@ -980,7 +957,8 @@ namespace FabricHealer
         }
 
         // This is an example of a repair for a non-FO-originating health event. This function needs some work, but you get the basic idea here.
-        // This has not been tested thoroughly..
+        // FO does not support replica monitoring and as such it does not emit specific error codes that FH recognizes.
+        // *This is an experimental function/workflow in need of more testing.*
         private async Task ProcessReplicaHealthAsync(HealthEvaluation evaluation)
         {
             if (evaluation.Kind != HealthEvaluationKind.Replica)
@@ -1182,10 +1160,10 @@ namespace FabricHealer
         {
             // Get config filename and read lines from file.
             string logicRulesConfigFileName = GetSettingParameterValue(
-                    serviceContext,
-                    repairPolicySectionName,
-                    RepairConstants.LogicRulesConfigurationFile,
-                    null);
+                                                serviceContext,
+                                                repairPolicySectionName,
+                                                RepairConstants.LogicRulesConfigurationFile,
+                                                null);
 
             var configPath = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Path;
             var rulesFolderPath = Path.Combine(configPath, "Rules");
@@ -1246,6 +1224,7 @@ namespace FabricHealer
                         {
                             rule = rule + ' ' + rules[i].Replace('\t', ' ').TrimStart(' ');
                         }
+
                         repairRules.Add(rule.Remove(rule.Length - 1, 1));
                     }
                     ptr2++;
