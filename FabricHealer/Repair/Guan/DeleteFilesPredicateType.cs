@@ -21,11 +21,8 @@ namespace FabricHealer.Repair.Guan
         {
             private readonly RepairConfiguration repairConfiguration;
 
-            public Resolver(
-                CompoundTerm input,
-                Constraint constraint,
-                QueryContext context)
-                : base(input, constraint, context)
+            public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
+                    : base(input, constraint, context)
             {
                 repairConfiguration = new RepairConfiguration
                 {
@@ -100,11 +97,11 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to schedule repair with RM.
                 var repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                    () =>
-                        RepairTaskManager.ScheduleFabricHealerRmRepairTaskAsync(
-                            repairConfiguration,
-                            RepairTaskManager.Token),
-                    RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
+                                      () =>
+                                          RepairTaskManager.ScheduleFabricHealerRmRepairTaskAsync(
+                                                                repairConfiguration,
+                                                                RepairTaskManager.Token),
+                                      RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
 
                 if (repairTask == null)
                 {
@@ -113,21 +110,18 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to execute repair (FH executor does this work and manages repair state through RM, as always).
                 bool success = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                    () =>
-                    RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
-                        repairTask,
-                        repairConfiguration,
-                        RepairTaskManager.Token),
-                    RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                    () =>
+                                         RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                                                            repairTask,
+                                                            repairConfiguration,
+                                                            RepairTaskManager.Token),
+                                     RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 
                 return success;
             }
         }
 
-        public static DeleteFilesPredicateType Singleton(
-            string name,
-            RepairTaskManager repairTaskManager,
-            TelemetryData foHealthData)
+        public static DeleteFilesPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData foHealthData)
         {
             FOHealthData = foHealthData;
             RepairTaskManager = repairTaskManager;
@@ -135,17 +129,13 @@ namespace FabricHealer.Repair.Guan
             return Instance ??= new DeleteFilesPredicateType(name);
         }
 
-        private DeleteFilesPredicateType(
-            string name)
-            : base(name, true, 1, 4)
+        private DeleteFilesPredicateType(string name)
+                 : base(name, true, 1, 4)
         {
            
         }
 
-        public override PredicateResolver CreateResolver(
-            CompoundTerm input,
-            Constraint constraint,
-            QueryContext context)
+        public override PredicateResolver CreateResolver(CompoundTerm input, Constraint constraint, QueryContext context)
         {
             return new Resolver(input, constraint, context);
         }

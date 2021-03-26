@@ -11,10 +11,7 @@ namespace FabricHealer.Repair
 {
     public static class HealthEventChecker
     {
-        public static bool IsHealthPropertyInError(
-            HealthEvent healthEvent, 
-            HealthReportKind kind, 
-            bool treatWarningAsError = false)
+        public static bool IsHealthPropertyInError(HealthEvent healthEvent,  HealthReportKind kind, bool treatWarningAsError = false)
         {
             if (healthEvent?.HealthInformation.HealthState != HealthState.Error && !treatWarningAsError)
             {

@@ -58,8 +58,7 @@ namespace FabricHealer.Utilities
 
         static Logger()
         {
-            if (!FabricHealerManager.ConfigSettings.EtwEnabled 
-                || string.IsNullOrEmpty(FabricHealerManager.ConfigSettings.EtwProviderName))
+            if (!FabricHealerManager.ConfigSettings.EtwEnabled || string.IsNullOrEmpty(FabricHealerManager.ConfigSettings.EtwProviderName))
             {
                 return;
             }

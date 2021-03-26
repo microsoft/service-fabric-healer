@@ -6,12 +6,12 @@
 namespace FabricHealer.Repair
 {
     /// <summary>
-    /// Not all of these actions have corresponding implementations yet.
+    /// The type of repair action.
+    /// Not all of these have implementations yet.
     /// </summary>
     public enum RepairActionType
     {
         DeleteFiles,
-        PauseFabricNode,
         RemoveFabricNodeState,
         RemoveReplica,
         RepairPartition,

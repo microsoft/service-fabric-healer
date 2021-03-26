@@ -19,11 +19,8 @@ namespace FabricHealer.Repair.Guan
 
         class Resolver : BooleanPredicateResolver
         {
-            public Resolver(
-                CompoundTerm input,
-                Constraint constraint,
-                QueryContext context)
-                : base(input, constraint, context)
+            public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
+                    : base(input, constraint, context)
             {
 
             }
@@ -37,8 +34,8 @@ namespace FabricHealer.Repair.Guan
                 if (count == 0 || Input.Arguments[0].Value.GetValue().GetType() != typeof(TimeSpan))
                 {
                     throw new GuanException(
-                        "CheckInsideRunInterval: One argument is required and it must be a TimeSpan " +
-                        "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
+                                "CheckInsideRunInterval: One argument is required and it must be a TimeSpan " +
+                                "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
                 }
 
                 TimeSpan interval = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
@@ -49,10 +46,10 @@ namespace FabricHealer.Repair.Guan
                 {
                     // Since FH is stateless -1, check for interval state outside of what is maintained in an FH instance state container.
                     insideRunInterval = FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
-                                            interval,
-                                            RepairTaskManager.FabricClientInstance,
-                                            FOHealthData,
-                                            RepairTaskManager.Token).GetAwaiter().GetResult();
+                                                            interval,
+                                                            RepairTaskManager.FabricClientInstance,
+                                                            FOHealthData,
+                                                            RepairTaskManager.Token).GetAwaiter().GetResult();
                 }
 
                 if (!insideRunInterval)
@@ -60,24 +57,20 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                string message =
-                    $"Repair with ID {FOHealthData.RepairId} has already run once within the specified run interval ({(runInterval > TimeSpan.MinValue ? runInterval : interval)}).{Environment.NewLine}" +
-                    $"Will not attempt repair at this time.";
+                string message = $"Repair with ID {FOHealthData.RepairId} has already run once within the specified run interval ({(runInterval > TimeSpan.MinValue ? runInterval : interval)}).{Environment.NewLine}" +
+                                 $"Will not attempt repair at this time.";
 
                 RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    $"CheckInsideRunInterval::{FOHealthData.RepairId}",
-                    message,
-                    RepairTaskManager.Token).GetAwaiter().GetResult();
+                                    LogLevel.Info,
+                                    $"CheckInsideRunInterval::{FOHealthData.RepairId}",
+                                    message,
+                                    RepairTaskManager.Token).GetAwaiter().GetResult();
 
                 return insideRunInterval;
             }
         }
 
-        public static CheckInsideRunIntervalPredicateType Singleton(
-            string name,
-            RepairTaskManager repairTaskManager,
-            TelemetryData foHealthData)
+        public static CheckInsideRunIntervalPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData foHealthData)
         {
             RepairTaskManager = repairTaskManager;
             FOHealthData = foHealthData;
@@ -85,17 +78,13 @@ namespace FabricHealer.Repair.Guan
             return Instance ??= new CheckInsideRunIntervalPredicateType(name);
         }
 
-        private CheckInsideRunIntervalPredicateType(
-            string name)
-            : base(name, true, 1, 3)
+        private CheckInsideRunIntervalPredicateType(string name)
+                 : base(name, true, 1, 3)
         {
 
         }
 
-        public override PredicateResolver CreateResolver(
-            CompoundTerm input,
-            Constraint constraint,
-            QueryContext context)
+        public override PredicateResolver CreateResolver(CompoundTerm input, Constraint constraint, QueryContext context)
         {
             return new Resolver(input, constraint, context);
         }

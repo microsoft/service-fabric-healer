@@ -124,59 +124,37 @@ namespace FabricHealer.Utilities
             configSettings = settings;
 
             // General
-            if (bool.TryParse(
-                GetConfigSettingValue(
-                    RepairConstants.RepairManagerConfigurationSectionName,
-                    RepairConstants.EnableAutoMitigation),
-                out bool enableAutoMitigation))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableAutoMitigation), out bool enableAutoMitigation))
             {
                 EnableAutoMitigation = enableAutoMitigation;
             }
             
-            if (int.TryParse(GetConfigSettingValue(
-                RepairConstants.RepairManagerConfigurationSectionName,
-                RepairConstants.AsyncOperationTimeout),
-                out int timeout))
+            if (int.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AsyncOperationTimeout), out int timeout))
             {
                 AsyncTimeout = TimeSpan.FromSeconds(timeout);
             }
 
             // Logger
-            if (bool.TryParse(
-                GetConfigSettingValue(
-                RepairConstants.RepairManagerConfigurationSectionName,
-                RepairConstants.EnableVerboseLoggingParameter),
-                out bool enableVerboseLogging))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableVerboseLoggingParameter), out bool enableVerboseLogging))
             {
                 EnableVerboseLogging = enableVerboseLogging;
             }
 
-            LocalLogPathParameter = GetConfigSettingValue(
-                RepairConstants.RepairManagerConfigurationSectionName,
-                RepairConstants.LocalLogPathParameter);
+            LocalLogPathParameter = GetConfigSettingValue( RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LocalLogPathParameter);
 
-            if (int.TryParse(
-                GetConfigSettingValue(
-                    RepairConstants.RepairManagerConfigurationSectionName,
-                    RepairConstants.HealthCheckLoopSleepTimeSeconds),
-                out int execFrequency))
+            if (int.TryParse( GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.HealthCheckLoopSleepTimeSeconds), out int execFrequency))
             {
                 ExecutionLoopSleepSeconds = execFrequency;
             }
 
             // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
-            if (bool.TryParse(GetConfigSettingValue(
-                RepairConstants.RepairManagerConfigurationSectionName,
-                RepairConstants.AppInsightsTelemetryEnabled), 
-                out bool telemEnabled))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AppInsightsTelemetryEnabled), out bool telemEnabled))
             {
                 TelemetryEnabled = telemEnabled;
 
                 if (TelemetryEnabled)
                 {
-                    string telemetryProviderType = GetConfigSettingValue(
-                        RepairConstants.RepairManagerConfigurationSectionName,
-                        RepairConstants.TelemetryProviderType);
+                    string telemetryProviderType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.TelemetryProviderType);
                     
                     if (string.IsNullOrEmpty(telemetryProviderType))
                     {
@@ -191,77 +169,49 @@ namespace FabricHealer.Utilities
 
                         if (telemetryProvider == TelemetryProviderType.AzureLogAnalytics)
                         {
-                            LogAnalyticsLogType = GetConfigSettingValue(
-                                RepairConstants.RepairManagerConfigurationSectionName,
-                                RepairConstants.LogAnalyticsLogTypeParameter);
+                            LogAnalyticsLogType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsLogTypeParameter);
 
-                            LogAnalyticsSharedKey = GetConfigSettingValue(
-                                RepairConstants.RepairManagerConfigurationSectionName,
-                                RepairConstants.LogAnalyticsSharedKeyParameter);
+                            LogAnalyticsSharedKey = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsSharedKeyParameter);
 
-                            LogAnalyticsWorkspaceId = GetConfigSettingValue(
-                                RepairConstants.RepairManagerConfigurationSectionName,
-                                RepairConstants.LogAnalyticsWorkspaceIdParameter);
+                            LogAnalyticsWorkspaceId = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsWorkspaceIdParameter);
                         }
                         else
                         {
-                            AppInsightsInstrumentationKey = GetConfigSettingValue(
-                                RepairConstants.RepairManagerConfigurationSectionName,
-                                RepairConstants.AppInsightsInstrumentationKeyParameter);
+                            AppInsightsInstrumentationKey = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AppInsightsInstrumentationKeyParameter);
                         }
                     }
                 }
             }
 
             // FabricHealer ETW telemetry.
-            if (bool.TryParse(GetConfigSettingValue(
-                RepairConstants.RepairManagerConfigurationSectionName,
-                RepairConstants.EnableEventSourceProvider),
-                out bool etwEnabled))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableEventSourceProvider), out bool etwEnabled))
             {
                 EtwEnabled = etwEnabled;
-                EtwProviderName = GetConfigSettingValue(
-                    RepairConstants.RepairManagerConfigurationSectionName,
-                    RepairConstants.EventSourceProviderName);
+                EtwProviderName = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EventSourceProviderName);
             }
 
             // Repair Policies
-            if (bool.TryParse(GetConfigSettingValue(
-                RepairConstants.AppRepairPolicySectionName,
-                RepairConstants.Enabled),
-                out bool appRepairEnabled))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.AppRepairPolicySectionName, RepairConstants.Enabled), out bool appRepairEnabled))
             {
                 EnableAppRepair = appRepairEnabled;
             }
 
-            if (bool.TryParse(GetConfigSettingValue(
-                RepairConstants.FabricNodeRepairPolicySectionName,
-                RepairConstants.Enabled),
-                out bool nodeRepairEnabled))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.FabricNodeRepairPolicySectionName, RepairConstants.Enabled), out bool nodeRepairEnabled))
             {
                 EnableNodeRepair = nodeRepairEnabled;
             }
 
-            if (bool.TryParse(GetConfigSettingValue(
-                RepairConstants.ReplicaRepairPolicySectionName,
-                RepairConstants.Enabled),
-                out bool replicaRepairEnabled))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.ReplicaRepairPolicySectionName, RepairConstants.Enabled), out bool replicaRepairEnabled))
             {
                 EnableReplicaRepair = replicaRepairEnabled;
             }
 
-            if (bool.TryParse(GetConfigSettingValue(
-                RepairConstants.SystemAppRepairPolicySectionName,
-                RepairConstants.Enabled),
-                out bool systemAppRepairEnabled))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.SystemAppRepairPolicySectionName, RepairConstants.Enabled), out bool systemAppRepairEnabled))
             {
                 EnableSystemAppRepair = systemAppRepairEnabled;
             }
 
-            if (bool.TryParse(GetConfigSettingValue(
-                RepairConstants.VmRepairPolicySectionName,
-                RepairConstants.Enabled),
-                out bool vmRepairEnabled))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.VmRepairPolicySectionName, RepairConstants.Enabled), out bool vmRepairEnabled))
             {
                 EnableVmRepair = vmRepairEnabled;
             }
@@ -292,13 +242,9 @@ namespace FabricHealer.Utilities
 
                 return parameter.Value;  
             }
-            catch (KeyNotFoundException)
+            catch (Exception e) when (e is KeyNotFoundException || e is FabricElementNotFoundException)
             {
 
-            }
-            catch (FabricElementNotFoundException)
-            {
-    
             }
 
             return null;

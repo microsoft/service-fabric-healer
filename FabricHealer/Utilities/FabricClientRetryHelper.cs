@@ -26,15 +26,13 @@ namespace FabricHealer.Utilities
         /// <param name="function">Action to be performed</param>
         /// <param name="cancellationToken">Cancellation token for Async operation</param>
         /// <returns>Task object</returns>
-        public static async Task<T> ExecuteFabricActionWithRetryAsync<T>(
-            Func<Task<T>> function, 
-            CancellationToken cancellationToken)
+        public static async Task<T> ExecuteFabricActionWithRetryAsync<T>(Func<Task<T>> function, CancellationToken cancellationToken)
         {
             return await ExecuteFabricActionWithRetryAsync(
-                function, 
-                new FabricClientRetryErrors(), 
-                DefaultOperationTimeout, 
-                cancellationToken).ConfigureAwait(false);
+                            function, 
+                            new FabricClientRetryErrors(), 
+                            DefaultOperationTimeout, 
+                            cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -46,10 +44,10 @@ namespace FabricHealer.Utilities
         /// <param name="cancellationToken">Cancellation token for Async operation</param>
         /// <returns>Task object</returns>
         public static async Task<T> ExecuteFabricActionWithRetryAsync<T>(
-            Func<Task<T>> function,
-            FabricClientRetryErrors errors,
-            TimeSpan operationTimeout,
-            CancellationToken cancellationToken)
+                                        Func<Task<T>> function,
+                                        FabricClientRetryErrors errors,
+                                        TimeSpan operationTimeout,
+                                        CancellationToken cancellationToken)
         {
             bool needToWait = false;
             var watch = new Stopwatch();
@@ -104,10 +102,7 @@ namespace FabricHealer.Utilities
             }
         }
 
-        private static bool HandleException(
-            Exception e, 
-            FabricClientRetryErrors errors, 
-            out bool retryElseSuccess)
+        private static bool HandleException(Exception e, FabricClientRetryErrors errors, out bool retryElseSuccess)
         {
             var fabricException = e as FabricException;
 

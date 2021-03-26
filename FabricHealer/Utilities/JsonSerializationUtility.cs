@@ -12,11 +12,9 @@ namespace FabricHealer.Utilities
     /// <summary>
     /// Serialization and deserialization utility for Json objects
     /// </summary>
-    public static class SerializationUtility
+    public static class JsonSerializationUtility
     {
-#pragma warning disable CA1720 // Identifier contains type name
         public static bool TrySerialize<T>(T objTarget, out string obj)
-#pragma warning restore CA1720 // Identifier contains type name
         {
             try
             {
@@ -44,9 +42,7 @@ namespace FabricHealer.Utilities
             }
         }
 
-#pragma warning disable CA1720 // Identifier contains type name
         public static bool TrySerializeObjectToFile<T>(string fileName, T obj)
-#pragma warning restore CA1720 // Identifier contains type name
         {
             if (TrySerialize(obj, out string file))
             {
