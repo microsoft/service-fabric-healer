@@ -67,15 +67,15 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="message">Error message on availability test run failure.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportAvailabilityAsync(
-            Uri serviceName,
-            string instance,
-            string testName,
-            DateTimeOffset captured,
-            TimeSpan duration,
-            string location,
-            bool success,
-            CancellationToken cancellationToken,
-            string message = null)
+                        Uri serviceName,
+                        string instance,
+                        string testName,
+                        DateTimeOffset captured,
+                        TimeSpan duration,
+                        string location,
+                        bool success,
+                        CancellationToken cancellationToken,
+                        string message = null)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -105,14 +105,14 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="instanceName">Optional: TraceTelemetry context cloud instance name.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportHealthAsync(
-            HealthScope scope,
-            string propertyName,
-            HealthState state,
-            string unhealthyEvaluations,
-            string source,
-            CancellationToken cancellationToken,
-            string serviceName = null,
-            string instanceName = null)
+                        HealthScope scope,
+                        string propertyName,
+                        HealthState state,
+                        string unhealthyEvaluations,
+                        string source,
+                        CancellationToken cancellationToken,
+                        string serviceName = null,
+                        string instanceName = null)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -158,10 +158,10 @@ namespace FabricHealer.Utilities.Telemetry
        /// <param name="cancellationToken">cancellation token.</param>
        /// <returns>A Task of bool.</returns>
         public async Task<bool> ReportMetricAsync<T>(
-            string name,
-            T value,
-            string source,
-            CancellationToken cancellationToken)
+                                    string name,
+                                    T value,
+                                    string source,
+                                    CancellationToken cancellationToken)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -220,10 +220,10 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportMetricAsync(
-            string name,
-            long value,
-            IDictionary<string, string> properties,
-            CancellationToken cancellationToken)
+                        string name,
+                        long value,
+                        IDictionary<string, string> properties,
+                        CancellationToken cancellationToken)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
@@ -245,11 +245,11 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportMetricAsync(
-            string role,
-            Guid partition,
-            string name,
-            long value,
-            CancellationToken cancellationToken)
+                        string role,
+                        Guid partition,
+                        string name,
+                        long value,
+                        CancellationToken cancellationToken)
         {
             return ReportMetricAsync(role, partition.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
         }
@@ -264,11 +264,11 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task ReportMetricAsync(
-            string role,
-            long id,
-            string name,
-            long value,
-            CancellationToken cancellationToken)
+                            string role,
+                            long id,
+                            string name,
+                            long value,
+                            CancellationToken cancellationToken)
         {
             await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
         }
@@ -289,17 +289,17 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportMetricAsync(
-            string roleName,
-            string instance,
-            string name,
-            long value,
-            int count,
-            long min,
-            long max,
-            long sum,
-            double deviation,
-            IDictionary<string, string> properties,
-            CancellationToken cancellationToken)
+                        string roleName,
+                        string instance,
+                        string name,
+                        long value,
+                        int count,
+                        long min,
+                        long max,
+                        long sum,
+                        double deviation,
+                        IDictionary<string, string> properties,
+                        CancellationToken cancellationToken)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {

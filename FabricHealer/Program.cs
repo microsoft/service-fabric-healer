@@ -24,9 +24,7 @@ namespace FabricHealer
                 // When Service Fabric creates an instance of this service type,
                 // an instance of the class is created in this host process.
 
-                ServiceRuntime.RegisterServiceAsync("FabricHealerType",
-                    context => new FabricHealer(context)).GetAwaiter().GetResult();
-
+                ServiceRuntime.RegisterServiceAsync("FabricHealerType", context => new FabricHealer(context)).GetAwaiter().GetResult();
                 ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(FabricHealer).Name);
 
                 // Prevents this host process from terminating so services keep running.
@@ -35,6 +33,7 @@ namespace FabricHealer
             catch (Exception e)
             {
                 ServiceEventSource.Current.ServiceHostInitializationFailed(e.ToString());
+
                 throw;
             }
         }

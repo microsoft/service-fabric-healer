@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Query;
 using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities;
@@ -61,18 +60,18 @@ namespace FabricHealer.Repair
                 else
                 {
                     appList = await fabricClient.QueryManager.GetApplicationListAsync(
-                        appName, 
-                        TimeSpan.FromMinutes(1), 
-                        token).ConfigureAwait(true);
+                                                                appName, 
+                                                                TimeSpan.FromMinutes(1), 
+                                                                token).ConfigureAwait(true);
                 }
 
                 foreach (var application in appList)
                 {
                     var upgradeProgress =
                         await fabricClient.ApplicationManager.GetApplicationUpgradeProgressAsync(
-                            application.ApplicationName, 
-                            TimeSpan.FromMinutes(1), 
-                            token).ConfigureAwait(true);
+                                                                application.ApplicationName, 
+                                                                TimeSpan.FromMinutes(1), 
+                                                                token).ConfigureAwait(true);
 
                     if (upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingBackInProgress)
                         || upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingForwardInProgress)
@@ -128,8 +127,8 @@ namespace FabricHealer.Repair
             {
                 var fabricUpgradeProgress =
                     await fabricClient.ClusterManager.GetFabricUpgradeProgressAsync(
-                        FabricHealerManager.ConfigSettings.AsyncTimeout, 
-                        token).ConfigureAwait(true);
+                                                        FabricHealerManager.ConfigSettings.AsyncTimeout, 
+                                                        token).ConfigureAwait(true);
 
                 int currentUpgradeDomainInProgress = -1;
 
@@ -167,24 +166,23 @@ namespace FabricHealer.Repair
                                         CancellationToken token)
         {
             var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
-                "Azure",
-                System.Fabric.Repair.RepairTaskStateFilter.Active | System.Fabric.Repair.RepairTaskStateFilter.Executing,
-                $"fabric:/System/InfrastructureService/{nodeType}",
-                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                token).ConfigureAwait(false);
+                                                                "Azure",
+                                                                System.Fabric.Repair.RepairTaskStateFilter.Active | System.Fabric.Repair.RepairTaskStateFilter.Executing,
+                                                                $"fabric:/System/InfrastructureService/{nodeType}",
+                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                token).ConfigureAwait(false);
 
             bool isAzureTenantRepairInProgress = repairTasks.Count > 0;
 
             if (isAzureTenantRepairInProgress)
             {
-                string message =
-                $"Azure Tenant Update in progress. Will not attempt repairs at this time.";
+                string message = $"Azure Tenant Update in progress. Will not attempt repairs at this time.";
 
                 FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    $"AzureTenantUpdateInProgress",
-                    message,
-                    token).GetAwaiter().GetResult();
+                                      LogLevel.Info,
+                                      $"AzureTenantUpdateInProgress",
+                                      message,
+                                      token).GetAwaiter().GetResult();
 
                 return true;
             }

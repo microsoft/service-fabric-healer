@@ -50,9 +50,9 @@ namespace FabricHealer.Utilities
             }
 
             var healthInformation = new HealthInformation(
-                healthReport.Source,
-                healthReport.Code ?? healthReport.Property,
-                healthReport.State)
+                                            healthReport.Source,
+                                            healthReport.Code ?? healthReport.Property,
+                                            healthReport.State)
             {
                 Description = healthReport.HealthMessage,
                 TimeToLive = timeToLive,

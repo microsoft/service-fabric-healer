@@ -16,7 +16,7 @@ namespace FabricHealer
     public sealed class FabricHealer : StatelessService
     {
         public FabricHealer(StatelessServiceContext context)
-            : base(context)
+                : base(context)
         {
         }
 

@@ -71,7 +71,7 @@ namespace FabricHealer.Repair
                 Description = $"FabricHealer executing repair {repair} on node {executorData.NodeName}",
                 State = RepairTaskState.Preparing,
                 Executor = FabricHealerExecutorName,
-                ExecutorData = SerializationUtility.TrySerialize(executorData, out string exData) ? exData : null,
+                ExecutorData = JsonSerializationUtility.TrySerialize(executorData, out string exData) ? exData : null,
                 PerformPreparingHealthCheck = doHealthChecks,
                 PerformRestoringHealthCheck = doHealthChecks,
             };
@@ -86,13 +86,13 @@ namespace FabricHealer.Repair
         public async Task<RepairTaskList> GetFHRepairTasksCurrentlyProcessingAsync(string executorName, CancellationToken cancellationToken)
         {
             var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                        FHTaskIdPrefix,
-                                        RepairTaskStateFilter.Active |
-                                        RepairTaskStateFilter.Approved |
-                                        RepairTaskStateFilter.Executing,
-                                        executorName,
-                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                        cancellationToken).ConfigureAwait(false);
+                                                                FHTaskIdPrefix,
+                                                                RepairTaskStateFilter.Active |
+                                                                RepairTaskStateFilter.Approved |
+                                                                RepairTaskStateFilter.Executing,
+                                                                executorName,
+                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                cancellationToken).ConfigureAwait(false);
 
             return repairTasks;
         }
@@ -153,7 +153,7 @@ namespace FabricHealer.Repair
 
             foreach (var repair in currentFHRepairTasksInProgress)
             {
-                if (SerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData))
+                if (JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData))
                 {
                     // The node repair check ensures that only one node-level repair can take place in a cluster (no concurrent node restarts), by default. FH is conservative, by design.
                     if (repairConfig.RepairPolicy.RepairId == exData.RepairPolicy.RepairId || exData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)

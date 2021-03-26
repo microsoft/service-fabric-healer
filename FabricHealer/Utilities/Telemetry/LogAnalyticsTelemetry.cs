@@ -45,10 +45,10 @@ namespace FabricHealer.Utilities.Telemetry
         }
 
         public LogAnalyticsTelemetry(
-            string workspaceId,
-            string sharedKey,
-            string logType,
-            string apiVersion = "2016-04-01")
+                string workspaceId,
+                string sharedKey,
+                string logType,
+                string apiVersion = "2016-04-01")
         {
             WorkspaceId = workspaceId;
             Key = sharedKey;
@@ -58,14 +58,14 @@ namespace FabricHealer.Utilities.Telemetry
         }
 
         public async Task ReportHealthAsync(
-            HealthScope scope,
-            string propertyName,
-            HealthState state,
-            string unhealthyEvaluations,
-            string source,
-            CancellationToken cancellationToken,
-            string serviceName = null,
-            string instanceName = null)
+                            HealthScope scope,
+                            string propertyName,
+                            HealthState state,
+                            string unhealthyEvaluations,
+                            string source,
+                            CancellationToken cancellationToken,
+                            string serviceName = null,
+                            string instanceName = null)
         {
             string jsonPayload = JsonConvert.SerializeObject(
                 new
@@ -85,16 +85,14 @@ namespace FabricHealer.Utilities.Telemetry
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task ReportMetricAsync(
-          TelemetryData telemetryData,
-          CancellationToken cancellationToken)
+        public async Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
         {
             if (telemetryData == null)
             {
                 return;
             }
 
-            if (!SerializationUtility.TrySerialize<TelemetryData>(telemetryData, out string jsonPayload))
+            if (!JsonSerializationUtility.TrySerialize<TelemetryData>(telemetryData, out string jsonPayload))
             {
                 return;
             }
@@ -103,10 +101,10 @@ namespace FabricHealer.Utilities.Telemetry
         }
 
         public async Task<bool> ReportMetricAsync<T>(
-            string name,
-            T value,
-            string source,
-            CancellationToken cancellationToken)
+                                    string name,
+                                    T value,
+                                    string source,
+                                    CancellationToken cancellationToken)
         {
             string jsonPayload = JsonConvert.SerializeObject(
                 new
@@ -126,60 +124,60 @@ namespace FabricHealer.Utilities.Telemetry
 
         // Implement functions below as you need.
         public Task ReportAvailabilityAsync(
-            Uri serviceUri,
-            string instance,
-            string testName,
-            DateTimeOffset captured,
-            TimeSpan duration,
-            string location,
-            bool success,
-            CancellationToken cancellationToken,
-            string message = null)
+                        Uri serviceUri,
+                        string instance,
+                        string testName,
+                        DateTimeOffset captured,
+                        TimeSpan duration,
+                        string location,
+                        bool success,
+                        CancellationToken cancellationToken,
+                        string message = null)
         {
             return Task.CompletedTask;
         }
 
         public Task ReportMetricAsync(
-            string name,
-            long value,
-            IDictionary<string, string> properties,
-            CancellationToken cancellationToken)
+                        string name,
+                        long value,
+                        IDictionary<string, string> properties,
+                        CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
         public Task ReportMetricAsync(
-            string service,
-            Guid partition,
-            string name,
-            long value,
-            CancellationToken cancellationToken)
+                        string service,
+                        Guid partition,
+                        string name,
+                        long value,
+                        CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
         public Task ReportMetricAsync(
-            string role,
-            long id,
-            string name,
-            long value,
-            CancellationToken cancellationToken)
+                        string role,
+                        long id,
+                        string name,
+                        long value,
+                        CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
         public Task ReportMetricAsync(
-            string roleName,
-            string instance,
-            string name,
-            long value,
-            int count,
-            long min,
-            long max,
-            long sum,
-            double deviation,
-            IDictionary<string, string> properties,
-            CancellationToken cancellationToken)
+                        string roleName,
+                        string instance,
+                        string name,
+                        long value,
+                        int count,
+                        long min,
+                        long max,
+                        long sum,
+                        double deviation,
+                        IDictionary<string, string> properties,
+                        CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
@@ -267,11 +265,11 @@ namespace FabricHealer.Utilities.Telemetry
         }
 
         private string GetSignature(
-            string method,
-            int contentLength,
-            string contentType,
-            string date,
-            string resource)
+                        string method,
+                        int contentLength,
+                        string contentType,
+                        string date,
+                        string resource)
         {
             string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
             byte[] bytes = Encoding.UTF8.GetBytes(message);

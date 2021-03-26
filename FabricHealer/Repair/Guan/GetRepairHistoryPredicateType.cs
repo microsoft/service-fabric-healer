@@ -20,11 +20,8 @@ namespace FabricHealer.Repair.Guan
 
         class Resolver : GroundPredicateResolver
         {
-            public Resolver(
-                CompoundTerm input, 
-                Constraint constraint, 
-                QueryContext context)
-                : base(input, constraint, context, 1)
+            public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
+                    : base(input, constraint, context, 1)
             {
 
             }
@@ -62,10 +59,7 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static GetRepairHistoryPredicateType Singleton(
-            string name,
-            RepairTaskManager repairTaskManager,
-            TelemetryData foHealthData)
+        public static GetRepairHistoryPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData foHealthData)
         {
             RepairTaskManager = repairTaskManager;
             FOHealthData = foHealthData;
@@ -73,9 +67,8 @@ namespace FabricHealer.Repair.Guan
             return Instance ??= new GetRepairHistoryPredicateType(name);
         }
 
-        private GetRepairHistoryPredicateType(
-            string name)
-            : base(name, true, 2, 2)
+        private GetRepairHistoryPredicateType(string name)
+                 : base(name, true, 2, 2)
         {
 
         }

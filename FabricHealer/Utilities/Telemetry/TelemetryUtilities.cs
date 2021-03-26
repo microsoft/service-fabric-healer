@@ -30,20 +30,19 @@ namespace FabricHealer.Utilities.Telemetry
                 switch (FabricHealerManager.ConfigSettings.TelemetryProvider)
                 {
                     case TelemetryProviderType.AzureApplicationInsights:
-                    {
+                    
                         telemetryClient = new AppInsightsTelemetry(FabricHealerManager.ConfigSettings.AppInsightsInstrumentationKey);
 
                         break;
-                    }
+                    
                     case TelemetryProviderType.AzureLogAnalytics:
-                    {
+                    
                         telemetryClient = new LogAnalyticsTelemetry(
-                            FabricHealerManager.ConfigSettings.LogAnalyticsWorkspaceId,
-                            FabricHealerManager.ConfigSettings.LogAnalyticsSharedKey,
-                            FabricHealerManager.ConfigSettings.LogAnalyticsLogType);
+                                                FabricHealerManager.ConfigSettings.LogAnalyticsWorkspaceId,
+                                                FabricHealerManager.ConfigSettings.LogAnalyticsSharedKey,
+                                                FabricHealerManager.ConfigSettings.LogAnalyticsLogType);
 
                         break;
-                    }
                 }
             }
         }
@@ -115,22 +114,24 @@ namespace FabricHealer.Utilities.Telemetry
                 return;
             }
 
+            // Telemetry.
             if (FabricHealerManager.ConfigSettings.TelemetryEnabled && telemetryClient != null)
             {
                 var telemData = new TelemetryData()
                 {
-                    Metric = repairAction,
                     ApplicationName = repairConfig?.AppName?.OriginalString ?? string.Empty,
-                    ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
-                    PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
-                    ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
                     Description = description,
                     HealthState = Enum.GetName(typeof(HealthState), healthState),
+                    Metric = repairAction,
                     NodeName = repairConfig?.NodeName ?? string.Empty,
+                    PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
+                    ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
+                    ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
                     Source = source,
+                    SystemServiceProcessName = repairConfig?.SystemServiceProcessName ?? string.Empty,
                 };
 
-                await (telemetryClient?.ReportMetricAsync(telemData, token)).ConfigureAwait(false);
+                await telemetryClient.ReportMetricAsync(telemData, token).ConfigureAwait(false);
             }
 
             // ETW.
@@ -140,17 +141,18 @@ namespace FabricHealer.Utilities.Telemetry
                     RepairConstants.EventSourceEventName,
                     new
                     {
-                        Level = level,
-                        Metric = repairAction,
                         ApplicationName = repairConfig?.AppName?.OriginalString ?? string.Empty,
-                        ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
-                        PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
-                        ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
                         Description = description,
                         HealthState = Enum.GetName(typeof(HealthState), healthState),
+                        Metric = repairAction,
+                        PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
+                        ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
+                        Level = level,
                         NodeName = repairConfig?.NodeName ?? string.Empty,
-                        Source = source,
                         OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                        ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
+                        Source = source,
+                        SystemServiceProcessName = repairConfig?.SystemServiceProcessName ?? string.Empty,
                     });
             }
         }

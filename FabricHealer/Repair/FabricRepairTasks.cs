@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Fabric;
 using System.Fabric.Query;
 using System.Fabric.Repair;
@@ -26,9 +25,9 @@ namespace FabricHealer.Repair
             List<RepairTaskState> desiredStates)
         {
             IList<RepairTask> repairTaskList = await fabricClient.RepairManager.GetRepairTaskListAsync(
-                taskId, 
-                RepairTaskStateFilter.All,
-                executorName).ConfigureAwait(true);
+                                                                                    taskId, 
+                                                                                    RepairTaskStateFilter.All,
+                                                                                    executorName).ConfigureAwait(true);
 
             return desiredStates.Any(desiredState => repairTaskList.Count(rt => rt.State == desiredState) > 0);
         }
@@ -78,10 +77,10 @@ namespace FabricHealer.Repair
         }
 
         public static async Task<bool> CompleteCustomActionRepairJobAsync(
-            RepairTask repairTask,
-            FabricClient fabricClient,
-            StatelessServiceContext context,
-            CancellationToken token)
+                                        RepairTask repairTask,
+                                        FabricClient fabricClient,
+                                        StatelessServiceContext context,
+                                        CancellationToken token)
         {
             var telemetryUtilities = new TelemetryUtilities(fabricClient, context);
 
@@ -130,11 +129,11 @@ namespace FabricHealer.Repair
         }
 
         public static async Task<RepairTask> ScheduleRepairTaskAsync(
-                                RepairConfiguration repairConfiguration,
-                                RepairExecutorData executorData,
-                                string executorName,
-                                FabricClient fabricClient,
-                                CancellationToken token)
+                                                RepairConfiguration repairConfiguration,
+                                                RepairExecutorData executorData,
+                                                string executorName,
+                                                FabricClient fabricClient,
+                                                CancellationToken token)
         {
             var repairTaskEngine = new RepairTaskEngine(fabricClient);
 
@@ -331,11 +330,11 @@ namespace FabricHealer.Repair
         {
             var allRecentFHRepairTasksCompleted =
                             await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                RepairTaskEngine.FHTaskIdPrefix,
-                                RepairTaskStateFilter.Completed,
-                                null,
-                                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                cancellationToken).ConfigureAwait(true);
+                                                                RepairTaskEngine.FHTaskIdPrefix,
+                                                                RepairTaskStateFilter.Completed,
+                                                                null,
+                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                cancellationToken).ConfigureAwait(true);
 
             if (allRecentFHRepairTasksCompleted?.Count == 0)
             {
@@ -352,7 +351,7 @@ namespace FabricHealer.Repair
                 }
 
                 var fhExecutorData =
-                    SerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
+                    JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
                 // Non-VM repairs (FH is executor, custom repair ExecutorData supplied by FH.)
                 if (fhExecutorData != null)

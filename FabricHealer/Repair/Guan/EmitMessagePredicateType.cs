@@ -20,11 +20,8 @@ namespace FabricHealer.Repair.Guan
 
         class Resolver : BooleanPredicateResolver
         {
-            public Resolver(
-                CompoundTerm input,
-                Constraint constraint,
-                QueryContext context)
-                : base(input, constraint, context)
+            public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
+                    : base(input, constraint, context)
             {
 
             }
@@ -73,26 +70,20 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static EmitMessagePredicateType Singleton(
-            string name,
-            RepairTaskManager repairTaskManager)
+        public static EmitMessagePredicateType Singleton(string name, RepairTaskManager repairTaskManager)
         {
             RepairTaskManager = repairTaskManager;
 
             return Instance ??= new EmitMessagePredicateType(name);
         }
 
-        private EmitMessagePredicateType(
-            string name)
-            : base(name, true, 1, 30)
+        private EmitMessagePredicateType(string name)
+                 : base(name, true, 1, 30)
         {
 
         }
 
-        public override PredicateResolver CreateResolver(
-            CompoundTerm input,
-            Constraint constraint,
-            QueryContext context)
+        public override PredicateResolver CreateResolver(CompoundTerm input, Constraint constraint, QueryContext context)
         {
             return new Resolver(input, constraint, context);
         }

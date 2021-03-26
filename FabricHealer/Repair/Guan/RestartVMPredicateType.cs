@@ -21,11 +21,8 @@ namespace FabricHealer.Repair.Guan
         {
             private readonly RepairConfiguration repairConfiguration;
 
-            public Resolver(
-                CompoundTerm input,
-                Constraint constraint,
-                QueryContext context)
-                : base(input, constraint, context)
+            public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
+                    : base(input, constraint, context)
             {
                 repairConfiguration = new RepairConfiguration
                 {
@@ -48,8 +45,8 @@ namespace FabricHealer.Repair.Guan
                 if (count == 1 && Input.Arguments[0].Value.GetValue().GetType() != typeof(TimeSpan))
                 {
                     throw new GuanException(
-                        "RestartVMPredicate: One optional argument is supported and it must be a TimeSpan " +
-                        "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
+                                "RestartVMPredicate: One optional argument is supported and it must be a TimeSpan " +
+                                "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
                 }
 
                 // Repair Policy
@@ -68,39 +65,35 @@ namespace FabricHealer.Repair.Guan
                 var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
                 var isRepairAlreadyInProgress =
                     repairTaskEngine.IsFHRepairTaskRunningAsync(
-                        $"fabric:/System/InfrastructureService/{FOHealthData.NodeType}",
-                        repairConfiguration,
-                        RepairTaskManager.Token).GetAwaiter().GetResult();
+                                        $"fabric:/System/InfrastructureService/{FOHealthData.NodeType}",
+                                        repairConfiguration,
+                                        RepairTaskManager.Token).GetAwaiter().GetResult();
                 
                 if (isRepairAlreadyInProgress)
                 {
-                    string message =
-                    $"VM Repair {FOHealthData.RepairId} is already in progress. Will not attempt repair at this time.";
+                    string message = $"VM Repair {FOHealthData.RepairId} is already in progress. Will not attempt repair at this time.";
 
                     RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        $"RestartVMPredicateType::{FOHealthData.RepairId}",
-                        message,
-                        RepairTaskManager.Token).GetAwaiter().GetResult();
+                                        LogLevel.Info,
+                                        $"RestartVMPredicateType::{FOHealthData.RepairId}",
+                                        message,
+                                        RepairTaskManager.Token).GetAwaiter().GetResult();
 
                     return false;
                 }
 
                 bool success = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                            () =>
-                            RepairTaskManager.ExecuteRMInfrastructureRepairTask(
-                                repairConfiguration,
-                                RepairTaskManager.Token),
-                            RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                    () =>
+                                        RepairTaskManager.ExecuteRMInfrastructureRepairTask(
+                                                            repairConfiguration,
+                                                            RepairTaskManager.Token),
+                                    RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 
                 return success;
             }
         }
 
-        public static RestartVMPredicateType Singleton(
-                    string name,
-                    RepairTaskManager repairTaskManager,
-                    TelemetryData foHealthData)
+        public static RestartVMPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData foHealthData)
         {
             RepairTaskManager = repairTaskManager;
             FOHealthData = foHealthData;
@@ -108,17 +101,13 @@ namespace FabricHealer.Repair.Guan
             return Instance ??= new RestartVMPredicateType(name);
         }
 
-        private RestartVMPredicateType(
-            string name)
-            : base(name, true, 0, 1)
+        private RestartVMPredicateType(string name)
+                 : base(name, true, 0, 1)
         {
 
         }
 
-        public override PredicateResolver CreateResolver(
-            CompoundTerm input,
-            Constraint constraint,
-            QueryContext context)
+        public override PredicateResolver CreateResolver(CompoundTerm input, Constraint constraint, QueryContext context)
         {
             return new Resolver(input, constraint, context);
         }
