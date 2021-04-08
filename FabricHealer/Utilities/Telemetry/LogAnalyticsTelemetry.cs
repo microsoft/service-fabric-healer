@@ -189,7 +189,7 @@ namespace FabricHealer.Utilities.Telemetry
         /// <returns>A completed task or task containing exception info.</returns>
         private async Task SendTelemetryAsync(string payload, CancellationToken token)
         {
-            if (string.IsNullOrEmpty(WorkspaceId))
+            if (string.IsNullOrWhiteSpace(WorkspaceId))
             {
                 return;
             }

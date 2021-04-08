@@ -67,7 +67,7 @@ namespace FabricHealer
             string logFolderBasePath;
             string localLogPath = ConfigSettings.LocalLogPathParameter;
 
-            if (!string.IsNullOrEmpty(localLogPath))
+            if (!string.IsNullOrWhiteSpace(localLogPath))
             {
                 logFolderBasePath = localLogPath;
             }
@@ -162,7 +162,7 @@ namespace FabricHealer
             string parameterName,
             string defaultValue = null)
         {
-            if (string.IsNullOrEmpty(sectionName) || string.IsNullOrEmpty(parameterName))
+            if (string.IsNullOrWhiteSpace(sectionName) || string.IsNullOrWhiteSpace(parameterName))
             {
                 return null;
             }
@@ -178,17 +178,17 @@ namespace FabricHealer
 
                 if (serviceConfiguration.Settings.Sections.All(sec => sec.Name != sectionName))
                 {
-                    return !string.IsNullOrEmpty(defaultValue) ? defaultValue : null;
+                    return !string.IsNullOrWhiteSpace(defaultValue) ? defaultValue : null;
                 }
 
                 if (serviceConfiguration.Settings.Sections[sectionName].Parameters.All(param => param.Name != parameterName))
                 {
-                    return !string.IsNullOrEmpty(defaultValue) ? defaultValue : null;
+                    return !string.IsNullOrWhiteSpace(defaultValue) ? defaultValue : null;
                 }
 
                 string setting = serviceConfiguration.Settings.Sections[sectionName].Parameters[parameterName]?.Value;
 
-                if (string.IsNullOrEmpty(setting) && defaultValue != null)
+                if (string.IsNullOrWhiteSpace(setting) && defaultValue != null)
                 {
                     return defaultValue;
                 }
@@ -338,7 +338,7 @@ namespace FabricHealer
                     // Grab the executor data from existing repair.
                     var executorData = repair.ExecutorData;
 
-                    if (string.IsNullOrEmpty(executorData))
+                    if (string.IsNullOrWhiteSpace(executorData))
                     {
                         continue;
                     }
@@ -656,7 +656,7 @@ namespace FabricHealer
                         await Task.Delay(TimeSpan.FromSeconds(waitTime), Token).ConfigureAwait(false);
                     }
 
-                    if (string.IsNullOrEmpty(evt.HealthInformation.Description))
+                    if (string.IsNullOrWhiteSpace(evt.HealthInformation.Description))
                     {
                         continue;
                     }   
@@ -868,7 +868,7 @@ namespace FabricHealer
                         await Task.Delay(TimeSpan.FromSeconds(waitTime), Token).ConfigureAwait(false);
                     }
 
-                    if (string.IsNullOrEmpty(evt.HealthInformation.Description))
+                    if (string.IsNullOrWhiteSpace(evt.HealthInformation.Description))
                     {
                         continue;
                     }
@@ -905,7 +905,7 @@ namespace FabricHealer
                         }
                     }
 
-                    if (string.IsNullOrEmpty(errorWarningName))
+                    if (string.IsNullOrWhiteSpace(errorWarningName))
                     {
                         continue;
                     }
@@ -986,7 +986,7 @@ namespace FabricHealer
                     Start Time (UTC): 2020-04-26 19:22:55.492. 
                 */
 
-                if (string.IsNullOrEmpty(healthEvent.UnhealthyEvent.HealthInformation.Description))
+                if (string.IsNullOrWhiteSpace(healthEvent.UnhealthyEvent.HealthInformation.Description))
                 {
                     continue;
                 }

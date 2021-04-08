@@ -511,30 +511,44 @@ namespace FabricHealer.Repair
 
         public async Task<bool> RestartSystemServiceProcessAsync(RepairConfiguration repairConfiguration, CancellationToken cancellationToken)
         {
-            Process[] p; 
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && repairConfiguration.SystemServiceProcessName.EndsWith(".dll"))
-            {
-                p = GetDotnetProcessesByFirstArgument(repairConfiguration.SystemServiceProcessName);
-            }
-            else
-            {
-                p = Process.GetProcessesByName(repairConfiguration.SystemServiceProcessName);
-            }
-
-            if (p == null || p.Length == 0)
-            {
-                return false;
-            }
+            Process p = null;
 
             try
             {
-                p[0]?.Kill(true);
+                // FO provided the offending process id in TelemetryData instance. Chances are good it will still be running.
+                // If the process with this id is no longer running, then we can assume it makes no sense to try to restart it:
+                // Just let the ArgumentException bubble out to the catch.
+                if (repairConfiguration.ProcessId > -1)
+                {
+                    p = Process.GetProcessById(repairConfiguration.ProcessId);  
+                }
+                else // We need to figure out the procId from the FO-supplied proc name.
+                {
+                    Process[] ps;
+
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && repairConfiguration.SystemServiceProcessName.EndsWith(".dll"))
+                    {
+                        ps = GetDotnetProcessesByFirstArgument(repairConfiguration.SystemServiceProcessName);
+                    }
+                    else
+                    {
+                        ps = Process.GetProcessesByName(repairConfiguration.SystemServiceProcessName);
+                    }
+
+                    if (ps == null || ps.Length == 0)
+                    {
+                        return false;
+                    }
+
+                    p = ps[0];
+                }
+
+                p?.Kill(true);
 
                 // Clear Warning from FO. If in fact the issue has not been solved, then FO will generate a new health report for the target and the game will be played again.
                 await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Application, cancellationToken, "FabricSystemObserver").ConfigureAwait(false);
             }
-            catch (Exception e) when (e is AggregateException || e is Win32Exception || e is InvalidOperationException || e is OperationCanceledException || e is NotSupportedException)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException  || e is NotSupportedException || e is Win32Exception)
             {
                 string err =
                    $"Handled Exception: Unable to restart process {repairConfiguration.SystemServiceProcessName} " +
@@ -554,7 +568,7 @@ namespace FabricHealer.Repair
             }
             finally
             {
-                p[0]?.Dispose();
+                p?.Dispose();
             }
 
             return true;

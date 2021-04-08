@@ -128,7 +128,7 @@ namespace FabricHealer.Utilities.Telemetry
 
                 string healthInfo = string.Empty;
 
-                if (!string.IsNullOrEmpty(unhealthyEvaluations))
+                if (!string.IsNullOrWhiteSpace(unhealthyEvaluations))
                 {
                     healthInfo += $"{Environment.NewLine}{unhealthyEvaluations}";
                 }

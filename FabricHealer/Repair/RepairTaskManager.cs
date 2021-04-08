@@ -547,19 +547,14 @@ namespace FabricHealer.Repair
             return repairTask;
         }
 
-        public async Task<bool> ExecuteFabricHealerRmRepairTaskAsync(
-                                    RepairTask repairTask,
-                                    RepairConfiguration repairConfiguration,
-                                    CancellationToken cancellationToken)
+        public async Task<bool> ExecuteFabricHealerRmRepairTaskAsync(RepairTask repairTask, RepairConfiguration repairConfiguration, CancellationToken cancellationToken)
         {
             TimeSpan approvalTimeout = TimeSpan.FromMinutes(10);
             Stopwatch stopWatch = Stopwatch.StartNew();
             RepairTaskList repairs;
             bool isApproved = false;
 
-            repairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                                               RepairTaskEngine.FabricHealerExecutorName,
-                                               cancellationToken).ConfigureAwait(true);
+            repairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, cancellationToken).ConfigureAwait(true);
 
             if (repairs.All(repair => repair.TaskId != repairTask.TaskId))
             {
@@ -580,9 +575,7 @@ namespace FabricHealer.Repair
 #endif
             while (approvalTimeout >= stopWatch.Elapsed)
             {
-                repairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                                                   RepairTaskEngine.FabricHealerExecutorName,
-                                                   cancellationToken).ConfigureAwait(true);
+                repairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, cancellationToken).ConfigureAwait(true);
 
                 // Was repair cancelled (or cancellation requested) by another FH instance for some reason? Could be due to FH going down or a new deployment or a bug (fix it...).
                 if (repairs.Any(repair => repair.TaskId == repairTask.TaskId
@@ -665,7 +658,7 @@ namespace FabricHealer.Repair
                 // Thus, using Restart/Remove(stateful/stateless)Replica API instead, which does restart container instances.
                 case RepairActionType.RestartCodePackage:
 
-                    if (string.IsNullOrEmpty(repairConfiguration.ContainerId))
+                    if (string.IsNullOrWhiteSpace(repairConfiguration.ContainerId))
                     {
                         success = await RestartDeployedCodePackageAsync(repairConfiguration, cancellationToken).ConfigureAwait(true);
                     }
@@ -751,7 +744,7 @@ namespace FabricHealer.Repair
 
                     var executorData = repairTask.ExecutorData;
 
-                    if (string.IsNullOrEmpty(executorData))
+                    if (string.IsNullOrWhiteSpace(executorData))
                     {
 #if DEBUG
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
