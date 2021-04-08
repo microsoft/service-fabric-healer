@@ -6,7 +6,7 @@ FabricHealer is a Service Fabric application that attempts to fix a set of relia
 To learn more about FabricHealer's configuration-as-logic model, [click here.](Documentation/LogicWorkflows.md)
 
 ```
-FabricHealer requires that FabricObserver (v 3.1.6+) and RepairManager (RM) service are deployed. 
+FabricHealer requires that FabricObserver (v 3.1.8+) and RepairManager (RM) service are deployed. 
 ```
 ```
 For VM level repair, InfrastructureService (IS) service must be deployed.
@@ -18,7 +18,7 @@ Windows (2016/2019) and Ubuntu (16/18.04).
 All warning and error reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) and subsequently repaired by FabricHealer are user-configured - developer control extends from unhealthy event source to related healing operations.
 
 ```
-This is a pre-release and is not meant for use in production. 
+This is pre-release Beta quality and is not meant for production use. Only use this in test environments.
 ```
 In this release, we are experimenting with a new approach to health validation for repaired targets. FabricHealer will assume success when some repair operation is successful (like restarting a code package or system service process). FH
 will emit an Ok Health Report that will clear FabricObserver's Warning on the target. This is because FH has no understanding of the source Observer's run intervals. If in fact, the repair did not solve the problem, then FO will emit another warning

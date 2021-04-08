@@ -51,37 +51,42 @@ Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?Metr
 ## This is because in Prolog a string is a list of characters. In Guan, a string is just a built-in .NET object, System.String, which already defines a Contains() function. 
 ## This is one of the great things about Guan: It's .NET all the way down.
 
+## Constrained on AppName, MetricName (FileHandles). 5 repairs within 1 hour window.
+
 Mitigate(AppName=?AppName, MetricName="FileHandles") :- StringContains("ClusterObserver", ?AppName), 
-	TimeScopedRestartCodePackage(6, 01:00:00), !.
+	TimeScopedRestartCodePackage(5, 01:00:00), !.
 
-Mitigate(AppName="fabric:/MyApp", MetricName="FileHandles") :- TimeScopedRestartCodePackage(6, 01:00:00), !.
+## Constrained on AppName, MetricName (FileHandles). 5 repairs within 1 hour window.
 
-## Memory - Percent In Use for Any SF Service Process belonging to the specified SF Application.
+Mitigate(AppName="fabric:/MyApp", MetricName="FileHandles") :- TimeScopedRestartCodePackage(5, 01:00:00), !.
+
+
+## Memory - Percent In Use for Any SF Service Process belonging to the specified SF Application. 3 repairs within 10 minute window.
 
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
-	TimeScopedRestartCodePackage(6, 00:10:00), !.
+	TimeScopedRestartCodePackage(3, 00:10:00), !.
 
 
-## Memory - Megabytes In Use for Any SF Service Process belonging to the specified SF Applications.
+## Memory - Megabytes In Use for Any SF Service Process belonging to the specified SF Applications. 5 repairs within 5 hour window.
 
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00), !.
 Mitigate(AppName="fabric:/ContainerFoo", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00), !.
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00), !.
 
 
-## Active TCP Ports - Any app service.
+## Local Active TCP Ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Active Ports, then heal. There are no conditional checks (on MetricValue) to take place.
 
-Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(15, 05:00:00), !.
-
-
-## Ephemeral TCP Ports - Any app service.
-
-Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(15, 05:00:00), !.
+Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 05:00:00), !.
 
 
-## Ephemeral Ports - Specific Application - any of its services.
+## Local Ephemeral TCP Ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Ephemeral ports, then heal. There are no conditional checks (on MetricValue) to take place.
 
-Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- TimeScopedRestartCodePackage(6, 01:00:00), !.
+Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(5, 05:00:00), !.
+
+
+## Ephemeral Ports - Specific Application - any of its services, constrained (conditional check on MetricValue) on number of local ephemeral ports open. 5 repairs within 5 hour window.
+
+Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue > 5000, TimeScopedRestartCodePackage(5, 05:00:00), !.
 
 
 ## TimeScopedRestartCodePackage is an internal predicate to check for the number of times a repair has run to completion within a supplied time window. 

@@ -550,8 +550,12 @@ namespace FabricHealer.Repair
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException  || e is NotSupportedException || e is Win32Exception)
             {
+                return false;
+            }
+            catch (Exception e)
+            {
                 string err =
-                   $"Handled Exception: Unable to restart process {repairConfiguration.SystemServiceProcessName} " +
+                   $"Unhandled Exception in RestartSystemServiceProcessAsync: Unable to restart process {repairConfiguration.SystemServiceProcessName} " +
                    $"on node {repairConfiguration.NodeName}.{Environment.NewLine}" +
                    $"Exception Info:{Environment.NewLine}{e}";
 
@@ -564,7 +568,8 @@ namespace FabricHealer.Repair
                        cancellationToken,
                        repairConfiguration);
 
-                return false;
+                // fix the bug..
+                throw;
             }
             finally
             {
