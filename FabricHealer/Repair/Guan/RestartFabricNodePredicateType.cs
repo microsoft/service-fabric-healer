@@ -29,13 +29,13 @@ namespace FabricHealer.Repair.Guan
             {
                 repairConfiguration = new RepairConfiguration
                 {
-                    AppName = !string.IsNullOrEmpty(FOHealthData.ApplicationName) ? new Uri(FOHealthData.ApplicationName) : null,
+                    AppName = !string.IsNullOrWhiteSpace(FOHealthData.ApplicationName) ? new Uri(FOHealthData.ApplicationName) : null,
                     FOErrorCode = FOHealthData.Code,
                     NodeName = FOHealthData.NodeName,
                     NodeType = FOHealthData.NodeType,
-                    PartitionId = !string.IsNullOrEmpty(FOHealthData.PartitionId) ? new Guid(FOHealthData.PartitionId) : default,
-                    ReplicaOrInstanceId = !string.IsNullOrEmpty(FOHealthData.ReplicaId) ? long.Parse(FOHealthData.ReplicaId) : default,
-                    ServiceName = (!string.IsNullOrEmpty(FOHealthData.ServiceName) && FOHealthData.ServiceName.Contains("fabric:/")) ? new Uri(FOHealthData.ServiceName) : null,
+                    PartitionId = !string.IsNullOrWhiteSpace(FOHealthData.PartitionId) ? new Guid(FOHealthData.PartitionId) : default,
+                    ReplicaOrInstanceId = !string.IsNullOrWhiteSpace(FOHealthData.ReplicaId) ? long.Parse(FOHealthData.ReplicaId) : default,
+                    ServiceName = (!string.IsNullOrWhiteSpace(FOHealthData.ServiceName) && FOHealthData.ServiceName.Contains("fabric:/")) ? new Uri(FOHealthData.ServiceName) : null,
                     FOHealthMetricValue = FOHealthData.Value,
                     RepairPolicy = new RepairPolicy(),
                 };

@@ -156,7 +156,7 @@ namespace FabricHealer.Utilities
                 {
                     string telemetryProviderType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.TelemetryProviderType);
                     
-                    if (string.IsNullOrEmpty(telemetryProviderType))
+                    if (string.IsNullOrWhiteSpace(telemetryProviderType))
                     {
                         TelemetryEnabled = false;
                         

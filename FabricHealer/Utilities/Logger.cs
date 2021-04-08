@@ -58,7 +58,7 @@ namespace FabricHealer.Utilities
 
         static Logger()
         {
-            if (!FabricHealerManager.ConfigSettings.EtwEnabled || string.IsNullOrEmpty(FabricHealerManager.ConfigSettings.EtwProviderName))
+            if (!FabricHealerManager.ConfigSettings.EtwEnabled || string.IsNullOrWhiteSpace(FabricHealerManager.ConfigSettings.EtwProviderName))
             {
                 return;
             }
@@ -80,7 +80,7 @@ namespace FabricHealer.Utilities
             Filename = sourceName + ".log";
             loggerName = sourceName;
 
-            if (!string.IsNullOrEmpty(logFolderBasePath))
+            if (!string.IsNullOrWhiteSpace(logFolderBasePath))
             {
                 LogFolderBasePath = logFolderBasePath;
             }
@@ -103,7 +103,7 @@ namespace FabricHealer.Utilities
             }
 
             // log directory supplied in config. Set in ObserverManager.
-            if (!string.IsNullOrEmpty(LogFolderBasePath))
+            if (!string.IsNullOrWhiteSpace(LogFolderBasePath))
             {
                 // Add current drive letter if not supplied for Windows path target.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -128,7 +128,7 @@ namespace FabricHealer.Utilities
 
             string file = Path.Combine(logFolderBase, "fabrichealer.log");
 
-            if (!string.IsNullOrEmpty(FolderName) && !string.IsNullOrEmpty(Filename))
+            if (!string.IsNullOrWhiteSpace(FolderName) && !string.IsNullOrWhiteSpace(Filename))
             {
                 string folderPath = Path.Combine(logFolderBase, FolderName);
                 file = Path.Combine(folderPath, Filename);
@@ -190,7 +190,7 @@ namespace FabricHealer.Utilities
 
         public static bool TryWriteLogFile(string path, string content)
         {
-            if (string.IsNullOrEmpty(content))
+            if (string.IsNullOrWhiteSpace(content))
             {
                 return false;
             }

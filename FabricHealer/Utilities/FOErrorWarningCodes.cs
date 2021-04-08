@@ -123,7 +123,7 @@ namespace FabricHealer.Utilities
 
         public static string GetErrorWarningNameFromCode(string id)
         {
-            if (string.IsNullOrEmpty(id))
+            if (string.IsNullOrWhiteSpace(id))
             {
                 return null;
             }
@@ -208,7 +208,7 @@ namespace FabricHealer.Utilities
 
         private static bool GetIsResourceType(string id, string resourceType)
         {
-            if (string.IsNullOrEmpty(id))
+            if (string.IsNullOrWhiteSpace(id))
             {
                 return false;
             }

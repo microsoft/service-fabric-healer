@@ -40,6 +40,11 @@ namespace FabricHealer.Repair
             get; set; 
         } = Guid.Empty;
 
+        public int ProcessId
+        {
+            get; set;
+        }
+
         public RepairPolicy RepairPolicy
         {
             get; set;
@@ -68,11 +73,6 @@ namespace FabricHealer.Repair
         public string SystemServiceProcessName 
         { 
             get; set; 
-        }
-
-        public int ProcessId
-        {
-            get; set;
         }
     }
 }

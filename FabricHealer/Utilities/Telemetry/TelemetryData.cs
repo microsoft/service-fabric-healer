@@ -65,6 +65,11 @@ namespace FabricHealer.Utilities.Telemetry
             get; set;
         }
 
+        public string ProcessId
+        {
+            get; set;
+        }
+
         public string ReplicaId
         {
             get; set;
