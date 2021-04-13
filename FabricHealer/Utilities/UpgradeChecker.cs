@@ -19,22 +19,6 @@ namespace FabricHealer.Repair
         private static readonly Logger Logger = new Logger("UpgradeLogger");
 
         /// <summary>
-        /// Gather list of UD's from all upgrades
-        /// </summary>
-        /// <param name="fabricClient">FabricClient</param>
-        /// <param name="token"></param>
-        /// <returns>List of uds</returns>
-        public static async Task<IList<int>> GetUDsWhereUpgradeInProgressAsync(FabricClient fabricClient, CancellationToken token)
-        {
-            var domainsWhereUpgradeInProgress = new List<int>();
-
-            domainsWhereUpgradeInProgress.AddRange(await GetUdsWhereApplicationUpgradeInProgressAsync(fabricClient, token).ConfigureAwait(true));
-            domainsWhereUpgradeInProgress.Add(await GetUdsWhereFabricUpgradeInProgressAsync(fabricClient, token).ConfigureAwait(true));
-
-            return domainsWhereUpgradeInProgress;
-        }
-
-        /// <summary>
         /// Gets Application Upgrade Domains (integers) for application or applications
         /// currently upgrading (or rolling back).
         /// </summary>
@@ -42,10 +26,7 @@ namespace FabricHealer.Repair
         /// <param name="token">CancellationToken</param>
         /// <param name="appName" type="optional">Application Name (Uri)</param>
         /// <returns>List of integers representing UDs</returns>
-        internal static async Task<List<int>> GetUdsWhereApplicationUpgradeInProgressAsync(
-                                                FabricClient fabricClient,
-                                                CancellationToken token,
-                                                Uri appName = null)
+        internal static async Task<List<int>> GetUdsWhereApplicationUpgradeInProgressAsync(FabricClient fabricClient, Uri appName, CancellationToken token)
         {
             try
             {
@@ -55,14 +36,11 @@ namespace FabricHealer.Repair
 
                 if (appName == null)
                 {
-                    appList = await fabricClient.QueryManager.GetApplicationListAsync().ConfigureAwait(true);
+                    throw new ArgumentException("appName must be supplied");
                 }
                 else
                 {
-                    appList = await fabricClient.QueryManager.GetApplicationListAsync(
-                                                                appName, 
-                                                                TimeSpan.FromMinutes(1), 
-                                                                token).ConfigureAwait(true);
+                    appList = await fabricClient.QueryManager.GetApplicationListAsync(appName, FabricHealerManager.ConfigSettings.AsyncTimeout, token).ConfigureAwait(true);
                 }
 
                 foreach (var application in appList)
@@ -125,10 +103,11 @@ namespace FabricHealer.Repair
         {
             try
             {
-                var fabricUpgradeProgress =
-                    await fabricClient.ClusterManager.GetFabricUpgradeProgressAsync(
-                                                        FabricHealerManager.ConfigSettings.AsyncTimeout, 
-                                                        token).ConfigureAwait(true);
+                FabricUpgradeProgress fabricUpgradeProgress =
+                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                    () => fabricClient.ClusterManager.GetFabricUpgradeProgressAsync(
+                                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                    token), token).ConfigureAwait(false);
 
                 int currentUpgradeDomainInProgress = -1;
 
@@ -148,7 +127,7 @@ namespace FabricHealer.Repair
 
                 return currentUpgradeDomainInProgress;
             }
-            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException || e is TimeoutException)
             {
                 return int.MaxValue;
             }
@@ -160,10 +139,7 @@ namespace FabricHealer.Repair
         /// <param name="fabricClient">FabricClient instance</param>
         /// <param name="token">CancellationToken instance</param>
         /// <returns>true if tenant update is in progress, false otherwise</returns>
-        public static async Task<bool> IsAzureTenantUpdateInProgress(
-                                        FabricClient fabricClient,
-                                        string nodeType,
-                                        CancellationToken token)
+        public static async Task<bool> IsAzureTenantUpdateInProgress(FabricClient fabricClient, string nodeType, CancellationToken token)
         {
             var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
                                                                 "Azure",
@@ -178,12 +154,11 @@ namespace FabricHealer.Repair
             {
                 string message = $"Azure Tenant Update in progress. Will not attempt repairs at this time.";
 
-                FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                      LogLevel.Info,
-                                      $"AzureTenantUpdateInProgress",
-                                      message,
-                                      token).GetAwaiter().GetResult();
-
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                                              LogLevel.Info,
+                                                              $"AzureTenantUpdateInProgress",
+                                                              message,
+                                                              token).ConfigureAwait(false);
                 return true;
             }
 
