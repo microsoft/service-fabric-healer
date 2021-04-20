@@ -16,7 +16,7 @@
     <dependencies>
       <group targetFramework=".NETStandard2.1" />
     </dependencies>
-    <projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
+    <projectUrl>https://github.com/microsoft/service-fabric-healer</projectUrl>
     <tags>azure servicefabric fabrichealer utility auto-mitigation</tags>
     <copyright>© Microsoft Corporation. All rights reserved.</copyright>
   </metadata>
