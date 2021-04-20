@@ -5,8 +5,8 @@ function Install-Nuget {
     # Save file to top level directory in repo
     $destination = "$scriptPath\nuget.exe"
 
+    #Download the file
     if (-Not [System.IO.File]::Exists($destination)) {
-        #Download the file
         Invoke-WebRequest -Uri $source -OutFile $destination
     }
 }
@@ -37,11 +37,11 @@ try {
 
     Install-Nuget
 
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.SelfContained.Beta" "$scriptPath\bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType"
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.FrameworkDependent.Beta" "$scriptPath\bin\release\FabricHealer\linux-x64\framework-dependent\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.SelfContained" "$scriptPath\bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.FrameworkDependent" "$scriptPath\bin\release\FabricHealer\linux-x64\framework-dependent\FabricHealerType"
 
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.Beta" "$scriptPath\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent.Beta" "$scriptPath\bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" "$scriptPath\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent" "$scriptPath\bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType"
 }
 finally {
     Pop-Location
