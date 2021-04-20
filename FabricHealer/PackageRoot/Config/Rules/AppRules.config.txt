@@ -40,7 +40,7 @@ Mitigate() :- CheckInsideRunInterval(RunInterval=00:10:00), !.
 
 ## CPU - Percent In Use.
 
-Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- TimeScopedRestartCodePackage(20, 01:00:00), !.
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- TimeScopedRestartCodePackage(20, 01:00:00), !.
 
 ## File Handles - Total allocated for Any SF Service Process belonging to the specified SF Application.
 ## This is example of how to use the Guan system predicate, Contains. It takes two string args, the first is the substring to look for in the second arg. 
