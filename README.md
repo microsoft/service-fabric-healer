@@ -1,4 +1,4 @@
-# FabricHealer Beta
+# FabricHealer Preview
 ### Configuration as logic and auto-mitigation in Service Fabric clusters
 
 FabricHealer is a Service Fabric application that attempts to fix a set of reliably solvable problems that can take place in a Service Fabric application service or host virtual machine, including logical disks, but scoped to space usage problems only. These repairs mostly employ a set of Service Fabric API calls, but can also be fully custom. All repairs are orchestrated through Service Fabric’s RepairManager service. Repair configuration is written as [Prolog](http://www.learnprolognow.org/)-like [logic](https://github.com/microsoft/service-fabric-healer/tree/main/FabricHealer/PackageRoot/Config/Rules) with [supporting external predicates](https://github.com/microsoft/service-fabric-healer/tree/main/FabricHealer/Repair/Guan) written in C#. This is made possible by a new logic programming system, [Guan](https://github.com/microsoft/guan). The fun starts when FabricHealer detects supported error or warning states reported by [FabricObserver](https://github.com/microsoft/service-fabric-observer) running in the same cluster.  
@@ -18,7 +18,7 @@ Windows (2016/2019) and Ubuntu (16/18.04).
 All warning and error reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) and subsequently repaired by FabricHealer are user-configured - developer control extends from unhealthy event source to related healing operations.
 
 ```
-This is pre-release Beta quality and is not meant for production use. Only use this in test environments.
+This is Preview technology and is not meant for production use. Only use in Test environments.
 ```
 In this release, we are experimenting with a new approach to health validation for repaired targets. FabricHealer will assume success when some repair operation is successful (like restarting a code package or system service process). FH
 will emit an Ok Health Report that will clear FabricObserver's Warning on the target. This is because FH has no understanding of the source Observer's run intervals. If in fact, the repair did not solve the problem, then FO will emit another warning
