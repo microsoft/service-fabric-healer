@@ -20,33 +20,24 @@ namespace FabricHealer.Repair
         public const string AzureTaskIdPrefix = "Azure";
         public const string FabricHealerExecutorName = "FabricHealer";
 
-        public bool IsFabricRepairManagerServiceDeployed
-        {
-            get; private set;
-        }
-
         public RepairTaskEngine(FabricClient fabricClient)
         {
             this.fabricClient = fabricClient;
         }
 
-        public RepairTask CreateFabricHealerRmRepairTask(RepairExecutorData executorData)
+        public static RepairTask CreateFabricHealerRmRepairTask(RepairExecutorData executorData)
         {
             if (executorData == null)
             {
                 return null;
             }
 
-            NodeImpactLevel impact = NodeImpactLevel.None;
-
-            if (executorData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)
+            var impact = executorData.RepairPolicy.RepairAction switch
             {
-                impact = NodeImpactLevel.Restart;
-            }
-            else if (executorData.RepairPolicy.RepairAction == RepairActionType.RemoveFabricNodeState)
-            {
-                impact = NodeImpactLevel.RemoveData;
-            }
+                RepairActionType.RestartFabricNode => NodeImpactLevel.Restart,
+                RepairActionType.RemoveFabricNodeState => NodeImpactLevel.RemoveData,
+                _ => NodeImpactLevel.None
+            };
 
             var nodeRepairImpact = new NodeRepairImpactDescription();
             var impactedNode = new NodeImpact(executorData.NodeName, impact);
@@ -110,15 +101,11 @@ namespace FabricHealer.Repair
             }
 
             string taskId = $"{FHTaskIdPrefix}/{HostVMReboot}/{repairConfiguration.NodeName.GetHashCode()}/{repairConfiguration.NodeType}";
-            bool doHealthChecks = true;
+            bool doHealthChecks = !FOErrorWarningCodes.GetErrorWarningNameFromCode(repairConfiguration.FOErrorCode).Contains("Error");
 
             // Error health state on target SF entity can block RM from approving the job to repair it (which is the whole point of doing the job).
             // So, do not do health checks if customer configures FO to emit Error health reports.
             // In general, FO should *not* be configured to emit Error events. See FO documentation.
-            if (FOErrorWarningCodes.GetErrorWarningNameFromCode(repairConfiguration.FOErrorCode).Contains("Error"))
-            {
-                doHealthChecks = false;
-            }
 
             var repairTask = new ClusterRepairTask(taskId, HostVMReboot)
             {
@@ -140,13 +127,13 @@ namespace FabricHealer.Repair
             // remain in an active state which will block any duplicate scheduling by another FH instance.
             var currentFHRepairTasksInProgress =
                             await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                FHTaskIdPrefix,
-                                RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
-                                executorName,
-                                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                token).ConfigureAwait(true);
+                                                FHTaskIdPrefix,
+                                                RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                                                executorName,
+                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                token).ConfigureAwait(true);
 
-            if (currentFHRepairTasksInProgress?.Count == 0)
+            if (currentFHRepairTasksInProgress == null ||currentFHRepairTasksInProgress.Count == 0)
             {
                 return false;
             }
@@ -156,7 +143,8 @@ namespace FabricHealer.Repair
                 if (JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData))
                 {
                     // The node repair check ensures that only one node-level repair can take place in a cluster (no concurrent node restarts), by default. FH is conservative, by design.
-                    if (repairConfig.RepairPolicy.RepairId == exData.RepairPolicy.RepairId || exData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)
+                    if (repairConfig.RepairPolicy.RepairId == exData.RepairPolicy.RepairId ||
+                        exData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)
                     {
                         return true;
                     }
@@ -164,7 +152,8 @@ namespace FabricHealer.Repair
                 else
                 {
                     // This would block scheduling any VM level operation (reboot) already in flight. For IS repairs, unique id is stored in the repair task's Description property.
-                    if (repair.Executor == $"fabric:/System/InfrastructureService/{repairConfig.NodeType}" && repair.Description == repairConfig.RepairPolicy.RepairId)
+                    if (repair.Executor == $"fabric:/System/InfrastructureService/{repairConfig.NodeType}" &&
+                        repair.Description == repairConfig.RepairPolicy.RepairId)
                     {
                         return true;
                     }

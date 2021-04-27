@@ -25,26 +25,20 @@ namespace FabricHealer.Utilities.Telemetry
             this.fabricClient = fabricClient;
             this.serviceContext = serviceContext;
 
-            if (FabricHealerManager.ConfigSettings != null && FabricHealerManager.ConfigSettings.TelemetryEnabled)
+            if (!(FabricHealerManager.ConfigSettings is {TelemetryEnabled: true}))
             {
-                switch (FabricHealerManager.ConfigSettings.TelemetryProvider)
-                {
-                    case TelemetryProviderType.AzureApplicationInsights:
-                    
-                        telemetryClient = new AppInsightsTelemetry(FabricHealerManager.ConfigSettings.AppInsightsInstrumentationKey);
-
-                        break;
-                    
-                    case TelemetryProviderType.AzureLogAnalytics:
-                    
-                        telemetryClient = new LogAnalyticsTelemetry(
-                                                FabricHealerManager.ConfigSettings.LogAnalyticsWorkspaceId,
-                                                FabricHealerManager.ConfigSettings.LogAnalyticsSharedKey,
-                                                FabricHealerManager.ConfigSettings.LogAnalyticsLogType);
-
-                        break;
-                }
+                return;
             }
+
+            telemetryClient = FabricHealerManager.ConfigSettings.TelemetryProvider switch
+            {
+                TelemetryProviderType.AzureApplicationInsights => new AppInsightsTelemetry(FabricHealerManager.ConfigSettings.AppInsightsInstrumentationKey),
+                TelemetryProviderType.AzureLogAnalytics => new LogAnalyticsTelemetry(
+                                        FabricHealerManager.ConfigSettings.LogAnalyticsWorkspaceId,
+                                        FabricHealerManager.ConfigSettings.LogAnalyticsSharedKey,
+                                        FabricHealerManager.ConfigSettings.LogAnalyticsLogType),
+                _ => telemetryClient
+            };
         }
 
         /// <summary>
@@ -55,8 +49,7 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="source">Err/Warning source id.</param>
         /// <param name="description">Message.</param>
         /// <param name="token">Cancellation token.</param>
-        /// <param name="node">Node name.</param>
-        /// <param name="repairAction">Repair action.</param>
+        /// <param name="repairConfig">RepairConfiguration instance.</param>
         /// <returns></returns>
         public async Task EmitTelemetryEtwHealthEventAsync(
                             LogLevel level,
@@ -67,27 +60,20 @@ namespace FabricHealer.Utilities.Telemetry
         {
             bool hasRepairInfo = repairConfig != null;
             string repairAction = string.Empty;
-            
-            if (source != null)
-            {
-                source = source.Insert(0, "FabricHealer.");
-            }
+
+            source = source?.Insert(0, "FabricHealer.");
 
             if (hasRepairInfo)
             {
                 repairAction = Enum.GetName(typeof(RepairActionType), repairConfig.RepairPolicy.RepairAction);
             }
 
-            HealthState healthState = HealthState.Ok;
-
-            if (level == LogLevel.Error)
+            HealthState healthState = level switch
             {
-                healthState = HealthState.Error;
-            }
-            else if (level == LogLevel.Warning)
-            {
-                healthState = HealthState.Warning;
-            }
+                LogLevel.Error => HealthState.Error,
+                LogLevel.Warning => HealthState.Warning,
+                _ => HealthState.Ok
+            };
 
             // Service Fabric HM - Health Events (local to cluster).
             var healthReporter = new FabricHealthReporter(fabricClient);

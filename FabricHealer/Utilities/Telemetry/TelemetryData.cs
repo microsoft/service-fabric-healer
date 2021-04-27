@@ -57,7 +57,7 @@ namespace FabricHealer.Utilities.Telemetry
 
         public string OS
         {
-            get; set;
+            get;
         } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
 
         public string PartitionId
@@ -97,14 +97,12 @@ namespace FabricHealer.Utilities.Telemetry
 
         public string NodeType
         {
-            get;
-            set;
+            get; set;
         }
 
         public string RepairId
         {
-            get;
-            set;
+            get; set;
         }
 
         [JsonConstructor]

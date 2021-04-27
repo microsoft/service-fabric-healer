@@ -7,23 +7,10 @@ namespace FabricHealer.Repair
 {
     public static class RepairConstants
     {
-        // Queue Constants
-        public const int QueueRetries = 3;
-
-        // Time Constants
-        public const int QueueVisibilityTimeInMin = 60;
-        public const int TaskDelayTimeInMin = 3;
-        public const int QueueRetryTimeInSec = 3;
-        public const int QueueRetryCount = 5;
-
         // Logic rules file parameter.
         public const string LogicRulesConfigurationFile = "LogicRulesConfigurationFile";
 
         // Health event sourceId constants.
-        public const string FabricObserverSourceId = "FabricObserver";
-        public const string InfrastructureServiceSourceId = "System.InfrastructureService";
-        public const string RepairPolicyEngineServiceSourceId = "RepairPolicyEngineService";
-        public const string MonitoringHealthProperty = "MonitoringHealth";
         public const string InfrastructureServiceType = "InfrastructureServiceType";
 
         // Telemetry Settings Parameters.
@@ -36,10 +23,8 @@ namespace FabricHealer.Repair
         // RepairManager Settings Parameters.
         public const string RepairManagerConfigurationSectionName = "RepairManagerConfiguration";
         public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
-        public const string ShutdownGracePeriodInSeconds = "ShutdownGracePeriodInSeconds";
         public const string AppInsightsTelemetryEnabled = "EnableTelemetryProvider";
         public const string AppInsightsInstrumentationKeyParameter = "AppInsightsInstrumentationKey";
-        public const string FabricHealerpublicTelemetryEnabled = "FabricHealerpublicTelemetryEnabled";
         public const string EnableEventSourceProvider = "EnableEventSourceProvider";
         public const string EventSourceProviderName = "EventSourceProviderName";
         public const string HealthCheckLoopSleepTimeSeconds = "HealthCheckLoopSleepTimeSeconds";
@@ -58,7 +43,6 @@ namespace FabricHealer.Repair
         public const string VmRepairPolicySectionName = "VMRepairPolicy";
 
         // RepairPolicy Settings Parameters.
-        public const string ActionParameter = "RepairAction";
         public const string Enabled = "Enabled";
 
         public const string AppName = "AppName";
@@ -67,7 +51,6 @@ namespace FabricHealer.Repair
         public const string NodeType = "NodeType";
         public const string PartitionId = "PartitionId";
         public const string ReplicaOrInstanceId = "ReplicaOrInstanceId";
-        public const string RunInterval = "RunInterval";
         public const string FOErrorCode = "FOErrorCode";
         public const string MetricName = "MetricName";
         public const string MetricValue = "MetricValue";

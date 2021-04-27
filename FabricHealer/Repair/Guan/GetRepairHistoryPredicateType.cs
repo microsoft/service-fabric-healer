@@ -18,7 +18,7 @@ namespace FabricHealer.Repair.Guan
         private static TelemetryData FOHealthData;
         private static GetRepairHistoryPredicateType Instance;
 
-        class Resolver : GroundPredicateResolver
+        private class Resolver : GroundPredicateResolver
         {
             public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
                     : base(input, constraint, context, 1)
@@ -41,7 +41,7 @@ namespace FabricHealer.Repair.Guan
                 }
                 else
                 {
-                    string message = $"You must supply a valid TimeSpan string for TimeWindow argument of GetRepairHistoryPredicate. Default result has been supplied (0).";
+                    string message = "You must supply a valid TimeSpan string for TimeWindow argument of GetRepairHistoryPredicate. Default result has been supplied (0).";
 
                     RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,

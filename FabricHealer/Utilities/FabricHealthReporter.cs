@@ -78,9 +78,6 @@ namespace FabricHealer.Utilities
                     var serviceHealthReport = new ServiceHealthReport(healthReport.ServiceName, healthInformation);
                     fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
                     break;
-                
-                default:
-                    break;
             }
         }
     }

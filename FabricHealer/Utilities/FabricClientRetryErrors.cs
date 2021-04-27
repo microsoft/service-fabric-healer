@@ -113,7 +113,7 @@ namespace FabricHealer.Utilities
         public static readonly Lazy<FabricClientRetryErrors> RemoveUnreliableTransportBehaviorErrors = new Lazy<FabricClientRetryErrors>(() =>
         {
             var retryErrors = new FabricClientRetryErrors();
-            retryErrors.publicRetrySuccessFabricErrorCodes.Add(2147949808);
+            retryErrors.PublicRetrySuccessFabricErrorCodes.Add(2147949808);
             return retryErrors;
         });
 
@@ -147,7 +147,7 @@ namespace FabricHealer.Utilities
             RetrySuccessExceptions = new List<Type>();
             RetrySuccessFabricErrorCodes = new List<FabricErrorCode>();
 
-            publicRetrySuccessFabricErrorCodes = new List<uint>();
+            PublicRetrySuccessFabricErrorCodes = new List<uint>();
 
             PopulateDefaultValues();
         }
@@ -155,27 +155,27 @@ namespace FabricHealer.Utilities
         /// <summary>
         /// List of exceptions that are retry-able
         /// </summary>
-        public IList<Type> RetryableExceptions { get; private set; }
+        public IList<Type> RetryableExceptions { get; }
 
         /// <summary>
         /// List of Fabric error codes that are retry-able
         /// </summary>
-        public IList<FabricErrorCode> RetryableFabricErrorCodes { get; private set; }
+        public IList<FabricErrorCode> RetryableFabricErrorCodes { get; }
 
         /// <summary>
         /// List of success exceptions that are retry-able
         /// </summary>
-        public IList<Type> RetrySuccessExceptions { get; private set; }
+        public IList<Type> RetrySuccessExceptions { get; }
 
         /// <summary>
         /// List of success error codes that are retry-able
         /// </summary>
-        public IList<FabricErrorCode> RetrySuccessFabricErrorCodes { get; private set; }
+        public IList<FabricErrorCode> RetrySuccessFabricErrorCodes { get; }
 
         /// <summary>
         /// List of public success error codes that are retry-able
         /// </summary>
-        public IList<uint> publicRetrySuccessFabricErrorCodes { get; private set; }
+        public IList<uint> PublicRetrySuccessFabricErrorCodes { get; }
 
         private void PopulateDefaultValues()
         {

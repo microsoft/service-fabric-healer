@@ -43,7 +43,7 @@ namespace FabricHealer.Utilities
         /// <param name="operationTimeout">Timeout for the operation</param>
         /// <param name="cancellationToken">Cancellation token for Async operation</param>
         /// <returns>Task object</returns>
-        public static async Task<T> ExecuteFabricActionWithRetryAsync<T>(
+        private static async Task<T> ExecuteFabricActionWithRetryAsync<T>(
                                         Func<Task<T>> function,
                                         FabricClientRetryErrors errors,
                                         TimeSpan operationTimeout,
@@ -68,36 +68,35 @@ namespace FabricHealer.Utilities
                 }
                 catch (Exception e)
                 {
-                    if (HandleException(e, errors, out bool retryElseSuccess))
+                    if (!HandleException(e, errors, out bool retryElseSuccess))
                     {
-                        if (retryElseSuccess)
-                        {
-                            Logger.LogInfo(
-                                $"ExecuteFabricActionWithRetryAsync: Retrying due to Exception: {e}");
-                            
-                            if (watch.Elapsed > operationTimeout)
-                            {
-                                Logger.LogWarning(
-                                    "ExecuteFabricActionWithRetryAsync: Done Retrying. " +
-                                    $"Time Elapsed: {watch.Elapsed.TotalSeconds}, " +
-                                    $"Timeout: {operationTimeout.TotalSeconds}. " +
-                                    $"Throwing Exception: {e}");
-
-                                throw;
-                            }
-
-                            needToWait = true;
-
-                            continue;
-                        }
-
-                        Logger.LogInfo(
-                            $"ExecuteFabricActionWithRetryAsync: Exception {e} Handled but No Retry.");
-                        
-                        return default;
+                        throw;
                     }
 
-                    throw;
+                    if (retryElseSuccess)
+                    {
+                        Logger.LogInfo($"ExecuteFabricActionWithRetryAsync: Retrying due to Exception: {e}");
+                            
+                        if (watch.Elapsed > operationTimeout)
+                        {
+                            Logger.LogWarning(
+                                "ExecuteFabricActionWithRetryAsync: Done Retrying. " +
+                                $"Time Elapsed: {watch.Elapsed.TotalSeconds}, " +
+                                $"Timeout: {operationTimeout.TotalSeconds}. " +
+                                $"Throwing Exception: {e}");
+
+                            throw;
+                        }
+
+                        needToWait = true;
+
+                        continue;
+                    }
+
+                    Logger.LogInfo(
+                        $"ExecuteFabricActionWithRetryAsync: Exception {e} Handled but No Retry.");
+                        
+                    return default;
                 }
             }
         }
@@ -145,7 +144,7 @@ namespace FabricHealer.Utilities
             if (fabricException?.InnerException != null)
             {
                 if (fabricException.InnerException is COMException ex 
-                    && errors.publicRetrySuccessFabricErrorCodes.Contains((uint)ex.ErrorCode))
+                    && errors.PublicRetrySuccessFabricErrorCodes.Contains((uint)ex.ErrorCode))
                 {
                     retryElseSuccess = false /*success*/;
 

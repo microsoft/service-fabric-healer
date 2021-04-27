@@ -20,7 +20,7 @@ namespace FabricHealer.Repair.Guan
         private static TelemetryData FOHealthData;
         private static RestartFabricNodePredicateType Instance;
 
-        class Resolver : BooleanPredicateResolver
+        private class Resolver : BooleanPredicateResolver
         {
             private readonly RepairConfiguration repairConfiguration;
 
@@ -59,7 +59,7 @@ namespace FabricHealer.Repair.Guan
                 repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
                 repairConfiguration.RepairPolicy.TargetType = FOHealthData.ApplicationName == "fabric:/System" ? RepairTargetType.Application : RepairTargetType.Node;
                 
-                if (count == 1 && Input.Arguments[0].Value.GetValue().GetType() == typeof(TimeSpan))
+                if (count == 1 && Input.Arguments[0].Value.GetValue() is TimeSpan)
                 {
                     repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
                 }
@@ -85,7 +85,7 @@ namespace FabricHealer.Repair.Guan
                 var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
                 var isNodeRepairAlreadyInProgress =
                     repairTaskEngine.IsFHRepairTaskRunningAsync(
-                                        $"FabricHealer",
+                                        "FabricHealer",
                                         repairConfiguration,
                                         RepairTaskManager.Token).GetAwaiter().GetResult();
 

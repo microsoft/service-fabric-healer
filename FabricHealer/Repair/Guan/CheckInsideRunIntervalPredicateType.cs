@@ -17,7 +17,7 @@ namespace FabricHealer.Repair.Guan
         private static RepairTaskManager RepairTaskManager;
         private static TelemetryData FOHealthData;
 
-        class Resolver : BooleanPredicateResolver
+        private class Resolver : BooleanPredicateResolver
         {
             public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
                     : base(input, constraint, context)
@@ -58,7 +58,7 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 string message = $"Repair with ID {FOHealthData.RepairId} has already run once within the specified run interval ({(runInterval > TimeSpan.MinValue ? runInterval : interval)}).{Environment.NewLine}" +
-                                 $"Will not attempt repair at this time.";
+                                 "Will not attempt repair at this time.";
 
                 RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
@@ -66,7 +66,7 @@ namespace FabricHealer.Repair.Guan
                                     message,
                                     RepairTaskManager.Token).GetAwaiter().GetResult();
 
-                return insideRunInterval;
+                return true;
             }
         }
 

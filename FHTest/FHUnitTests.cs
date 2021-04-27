@@ -47,16 +47,11 @@ namespace FHTest
                     Guid.NewGuid(),
                     long.MaxValue);
 
-        private readonly CancellationToken token = new CancellationToken { };
+        private readonly CancellationToken token = new CancellationToken();
 
         // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
         // e.g., if developing on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
         private const string FHRulesDirectory = @"";
-
-        public FHUnitTests()
-        {
-
-        }
 
         /* GuanLogic Tests */
         // TODO: More of them.
@@ -66,7 +61,7 @@ namespace FHTest
         [TestMethod]
         public async Task TestGuanLogic_AllRules_FabricHealer_EnsureWellFormedRules_QueryInitialized()
         {
-            TelemetryData foHealthData = new TelemetryData
+            var foHealthData = new TelemetryData
             {
                 ApplicationName = "fabric:/test0",
                 NodeName = "TEST_0",
@@ -75,14 +70,14 @@ namespace FHTest
                 ServiceName = "fabric/test0/service0",
             };
 
-            RepairExecutorData executorData = new RepairExecutorData
+            var executorData = new RepairExecutorData
             {
                 RepairPolicy = new RepairPolicy { RepairAction = RepairActionType.RestartCodePackage },
             };
 
             foreach (var file in Directory.GetFiles(FHRulesDirectory))
             {
-                List<string> repairRules = ParseRulesFile(File.ReadAllLines(file).ToList());
+                List<string> repairRules = ParseRulesFile((await File.ReadAllLinesAsync(file, token)).ToList());
 
                 try
                 {
@@ -105,9 +100,9 @@ namespace FHTest
         public async Task TestGuanLogicRule_GoodRule_QueryInitialized()
         {
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed");
-            string[] rules = await File.ReadAllLinesAsync(testRulesFilePath).ConfigureAwait(false);
+            string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token).ConfigureAwait(false);
             List<string> repairRules = ParseRulesFile(rules.ToList());
-            TelemetryData foHealthData = new TelemetryData
+            var foHealthData = new TelemetryData
             {
                 ApplicationName = "fabric:/test0",
                 NodeName = "TEST_0",
@@ -120,21 +115,12 @@ namespace FHTest
                 PartitionId = default(Guid).ToString(),
             };
 
-            RepairExecutorData executorData = new RepairExecutorData
+            var executorData = new RepairExecutorData
             {
                 RepairPolicy = new RepairPolicy { RepairAction = RepairActionType.RestartCodePackage },
             };
 
-            try
-            {
-                Assert.IsTrue(await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData).ConfigureAwait(false));
-            }
-            catch (GuanException)
-            {
-                throw;
-            }
-            
-            Assert.IsTrue(true);
+            Assert.IsTrue(await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData).ConfigureAwait(false));
         }
 
         // All rules in target rules file are malformed. They should all lead to GuanExceptions.
@@ -142,10 +128,10 @@ namespace FHTest
         [TestMethod]
         public async Task TestGuanLogicRule_BadRule_ShouldThrowGuanException()
         {
-            string[] rules = await File.ReadAllLinesAsync(Path.Combine(Environment.CurrentDirectory, "testrules_malformed")).ConfigureAwait(false);
+            string[] rules = await File.ReadAllLinesAsync(Path.Combine(Environment.CurrentDirectory, "testrules_malformed"), token).ConfigureAwait(false);
             List<string> repairAction = ParseRulesFile(rules.ToList());
 
-            TelemetryData foHealthData = new TelemetryData
+            var foHealthData = new TelemetryData
             {
                 ApplicationName = "fabric:/test0",
                 NodeName = "TEST_0",
@@ -158,7 +144,7 @@ namespace FHTest
                 PartitionId = default(Guid).ToString(),
             };
 
-            RepairExecutorData executorData = new RepairExecutorData
+            var executorData = new RepairExecutorData
             {
                 RepairPolicy = new RepairPolicy { RepairAction = RepairActionType.RestartCodePackage },
             };

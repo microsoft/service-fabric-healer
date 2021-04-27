@@ -24,9 +24,9 @@ namespace FabricHealer.Utilities.Telemetry
         private readonly Logger logger;
         private int retries;
 
-        public string WorkspaceId 
+        private string WorkspaceId 
         { 
-            get; set; 
+            get;
         }
 
         public string Key 
@@ -34,14 +34,14 @@ namespace FabricHealer.Utilities.Telemetry
             get; set; 
         }
 
-        public string ApiVersion 
+        private string ApiVersion 
         { 
-            get; set; 
+            get;
         }
 
-        public string LogType 
+        private string LogType 
         { 
-            get; set; 
+            get;
         }
 
         public LogAnalyticsTelemetry(
@@ -92,7 +92,7 @@ namespace FabricHealer.Utilities.Telemetry
                 return;
             }
 
-            if (!JsonSerializationUtility.TrySerialize<TelemetryData>(telemetryData, out string jsonPayload))
+            if (!JsonSerializationUtility.TrySerialize(telemetryData, out string jsonPayload))
             {
                 return;
             }
@@ -186,6 +186,7 @@ namespace FabricHealer.Utilities.Telemetry
         /// Sends telemetry data to Azure LogAnalytics via REST.
         /// </summary>
         /// <param name="payload">Json string containing telemetry data.</param>
+        /// <param name="token">CancellatonToken instance.</param>
         /// <returns>A completed task or task containing exception info.</returns>
         private async Task SendTelemetryAsync(string payload, CancellationToken token)
         {
@@ -213,14 +214,14 @@ namespace FabricHealer.Utilities.Telemetry
 
             try
             {
-                using (var requestStreamAsync = await request.GetRequestStreamAsync())
+                await using (var requestStreamAsync = await request.GetRequestStreamAsync())
                 {
                     if (token.IsCancellationRequested)
                     {
                         return;
                     }
 
-                    await requestStreamAsync.WriteAsync(content, 0, content.Length);
+                    await requestStreamAsync.WriteAsync(content, 0, content.Length, token);
                 }
 
                 using var responseAsync = await request.GetResponseAsync() as HttpWebResponse;
@@ -253,7 +254,7 @@ namespace FabricHealer.Utilities.Telemetry
                 }
 
                 retries++;
-                await Task.Delay(1000).ConfigureAwait(false);
+                await Task.Delay(1000, token).ConfigureAwait(false);
                 await SendTelemetryAsync(payload, token).ConfigureAwait(false);
             }
             else

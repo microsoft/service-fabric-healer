@@ -15,11 +15,6 @@ namespace FabricHealer.Repair
             get; set;
         }
 
-        public DeployedCodePackage CodePackage
-        {
-            get; set;
-        }
-
         public string ContainerId
         {
             get; set;
@@ -53,7 +48,7 @@ namespace FabricHealer.Repair
         public long ReplicaOrInstanceId 
         { 
             get; set; 
-        } = default;
+        }
 
         public Uri ServiceName
         {

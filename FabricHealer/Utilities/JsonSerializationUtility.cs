@@ -44,13 +44,15 @@ namespace FabricHealer.Utilities
 
         public static bool TrySerializeObjectToFile<T>(string fileName, T obj)
         {
-            if (TrySerialize(obj, out string file))
+            if (!TrySerialize(obj, out string file))
             {
-                File.WriteAllText(fileName, file);
-                return true;
+                return false;
             }
 
-            return false;
+            File.WriteAllText(fileName, file);
+
+            return true;
+
         }
 
         public static bool TryDeserializeObjectFromFile<T>(string fileName, out T obj)

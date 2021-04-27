@@ -17,7 +17,7 @@ namespace FabricHealer.Repair.Guan
         private static TelemetryData FOHealthData;
         private static DeleteFilesPredicateType Instance;
 
-        class Resolver : BooleanPredicateResolver
+        private class Resolver : BooleanPredicateResolver
         {
             private readonly RepairConfiguration repairConfiguration;
 
@@ -52,8 +52,6 @@ namespace FabricHealer.Repair.Guan
                 // default as 0 means delete all files.
                 long maxFilesToDelete = 0;
                 FileSortOrder direction = FileSortOrder.Ascending;
-                TimeSpan maxTimeWindow = TimeSpan.MinValue;
-                TimeSpan runInterval = TimeSpan.MinValue;
                 int count = Input.Arguments.Count;
 
                 for (int i = 0; i < count; i++)
