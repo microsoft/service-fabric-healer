@@ -18,7 +18,7 @@ namespace FabricHealer.Repair.Guan
         private static EmitMessagePredicateType Instance;
         private static RepairTaskManager RepairTaskManager;
 
-        class Resolver : BooleanPredicateResolver
+        private class Resolver : BooleanPredicateResolver
         {
             public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
                     : base(input, constraint, context)
@@ -62,7 +62,7 @@ namespace FabricHealer.Repair.Guan
 
                 RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
-                                    $"EmitMessagePredicate",
+                                    "EmitMessagePredicate",
                                     output,
                                     RepairTaskManager.Token).GetAwaiter().GetResult();
 

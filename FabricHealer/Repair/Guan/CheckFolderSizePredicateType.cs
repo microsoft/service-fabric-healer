@@ -18,7 +18,7 @@ namespace FabricHealer.Repair.Guan
         private static RepairTaskManager RepairTaskManager;
         private static TelemetryData FOHealthData;
 
-        class Resolver : BooleanPredicateResolver
+        private class Resolver : BooleanPredicateResolver
         {
             public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
                     : base(input, constraint,  context)
@@ -100,9 +100,9 @@ namespace FabricHealer.Repair.Guan
                 }
 #if DEBUG
                 string message =
-                $"Repair {FOHealthData.RepairId}: Supplied Maximum folder size value ({(maxFolderSizeGB > 0 ? maxFolderSizeGB.ToString() + "GB" : maxFolderSizeMB.ToString() + "MB")}) " +
+                $"Repair {FOHealthData.RepairId}: Supplied Maximum folder size value ({(maxFolderSizeGB > 0 ? maxFolderSizeGB + "GB" : maxFolderSizeMB + "MB")}) " +
                 $"for path {folderPath} is less than computed folder size ({size}{(maxFolderSizeGB > 0 ? "GB" : "MB")}). " +
-                $"Will not attempt repair.";
+                "Will not attempt repair.";
 
                 RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
@@ -113,7 +113,7 @@ namespace FabricHealer.Repair.Guan
                 return false;
             }
             
-            private long GetFolderSize(string path, SizeUnit unit)
+            private static long GetFolderSize(string path, SizeUnit unit)
             {
                 var dir = new DirectoryInfo(path);
                 var folderSizeInBytes = dir.EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length);
@@ -153,7 +153,7 @@ namespace FabricHealer.Repair.Guan
         }
     }
 
-    enum SizeUnit
+    internal enum SizeUnit
     {
         GB,
         MB

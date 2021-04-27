@@ -19,14 +19,13 @@ using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
 using Guan.Common;
-using System.Data;
 
 namespace FabricHealer.Repair
 {
     public class RepairTaskManager : IRepairTasks
     {
         private readonly RepairTaskEngine repairTaskEngine;
-        internal readonly RepairExecutor RepairExec;
+        private readonly RepairExecutor RepairExec;
         internal readonly StatelessServiceContext Context;
         internal readonly CancellationToken Token;
         internal readonly TelemetryUtilities TelemetryUtilities;
@@ -37,7 +36,7 @@ namespace FabricHealer.Repair
             get; 
         } = TimeSpan.FromSeconds(60);
 
-        public static readonly TimeSpan MaxWaitTimeForInfraRepairTaskCompleted = TimeSpan.FromHours(2);
+        private static readonly TimeSpan MaxWaitTimeForInfraRepairTaskCompleted = TimeSpan.FromHours(2);
 
         public RepairTaskManager(FabricClient fabricClient, StatelessServiceContext context, CancellationToken token)
         {
@@ -101,17 +100,15 @@ namespace FabricHealer.Repair
 
             if (foHealthData.NodeName != null)
             {
-                node = await GetFabricNodeFromNodeNameAsync(
-                                foHealthData.NodeName,
-                                cancellationToken).ConfigureAwait(false);
+                node = await GetFabricNodeFromNodeNameAsync(foHealthData.NodeName, cancellationToken).ConfigureAwait(false);
             }
 
             if (node == null)
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
-                        $"RepairTaskManager.StartRepairWorkflowAsync",
-                        $"Unable to attempt repair. Target node exists in cluster? {node == null}.",
+                        "RepairTaskManager.StartRepairWorkflowAsync",
+                        "Unable to locate target node. Aborting repair.",
                         cancellationToken).ConfigureAwait(false);
               
                 return;
@@ -133,8 +130,8 @@ namespace FabricHealer.Repair
                     {
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                   LogLevel.Warning,
-                                  $"RepairTaskManager.StartRepairWorkflowAsync::OneNodeCluster",
-                                  $"Will not attempt VM-level repair in a one node cluster.",
+                                  "RepairTaskManager.StartRepairWorkflowAsync::OneNodeCluster",
+                                  "Will not attempt VM-level repair in a one node cluster.",
                                   cancellationToken).ConfigureAwait(false);
 
                         return;
@@ -145,7 +142,7 @@ namespace FabricHealer.Repair
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                           LogLevel.Warning,
-                          $"RepairTaskManager.StartRepairWorkflowAsync::NodeCount",
+                          "RepairTaskManager.StartRepairWorkflowAsync::NodeCount",
                           $"Unable to determine node count. Will not attempt VM level repairs:{Environment.NewLine}{e}",
                           cancellationToken).ConfigureAwait(false);
 
@@ -165,8 +162,6 @@ namespace FabricHealer.Repair
                            "StartRepairWorkflowAsync:GuanException",
                            $"Failed in Guan: {ge}",
                            cancellationToken).ConfigureAwait(false);
-
-                return;
             }
         }
 
@@ -231,7 +226,9 @@ namespace FabricHealer.Repair
         {
             var infraServices = await FabricRepairTasks.GetInfrastructureServiceInstancesAsync(FabricClientInstance, cancellationToken).ConfigureAwait(false);
 
-            if (infraServices.Count() == 0)
+            var arrServices = infraServices as Service[] ?? infraServices.ToArray();
+
+            if (arrServices.Length == 0)
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
@@ -245,7 +242,7 @@ namespace FabricHealer.Repair
 
             string executorName = null;
 
-            foreach (var service in infraServices)
+            foreach (var service in arrServices)
             {
                 if (!service.ServiceName.OriginalString.Contains(repairConfiguration.NodeType))
                 {
@@ -253,15 +250,15 @@ namespace FabricHealer.Repair
                 }
 
                 executorName = service.ServiceName.OriginalString;
-
+#if DEBUG
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairTaskManager.ExecuteRMInfrastructureRepairTask",
-                        $"IS RepairTask {RepairTaskEngine.HostVMReboot} " +
-                        $"Executor set to {executorName}.",
-                        cancellationToken,
-                        repairConfiguration).ConfigureAwait(false);
-
+                    LogLevel.Info,
+                    "RepairTaskManager.ExecuteRMInfrastructureRepairTask",
+                    $"IS RepairTask {RepairTaskEngine.HostVMReboot} " +
+                    $"Executor set to {executorName}.",
+                    cancellationToken,
+                    repairConfiguration).ConfigureAwait(false);
+#endif
                 break;
             }
 
@@ -270,7 +267,7 @@ namespace FabricHealer.Repair
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "RepairTaskManager.ExecuteRMInfrastructureRepairTask",
-                        "Unable to determine InfrastructureService service instance." +
+                        "Unable to find InfrastructureService service instance." +
                         "Exiting RepairTaskManager.ScheduleFHRepairTaskAsync.",
                         cancellationToken,
                         repairConfiguration).ConfigureAwait(false);
@@ -290,9 +287,9 @@ namespace FabricHealer.Repair
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "RepairTaskManager.ExecuteRMInfrastructureRepairTask",
-                        $"Virtual machine repair task for VM " +
+                        "Virtual machine repair task for VM " +
                         $"{await RepairExec.GetMachineHostNameFromFabricNodeNameAsync(repairConfiguration.NodeName, cancellationToken)} is already in progress. " +
-                        $"Will not schedule another VM repair at this time.",
+                        "Will not schedule another VM repair at this time.",
                         cancellationToken,
                         repairConfiguration).ConfigureAwait(false);
 
@@ -379,7 +376,7 @@ namespace FabricHealer.Repair
         {
 #if DEBUG
             string actionMessage =
-                $"Attempting to restart deployed code package for service " +
+                "Attempting to restart deployed code package for service " +
                 $"{repairConfiguration.ServiceName.OriginalString} " +
                 $"({repairConfiguration.ReplicaOrInstanceId}) on Node {repairConfiguration.NodeName}.";
 
@@ -398,7 +395,7 @@ namespace FabricHealer.Repair
             }
 #if DEBUG
             actionMessage =
-                $"Successfully restarted deployed code package for service " +
+                "Successfully restarted deployed code package for service " +
                 $"{repairConfiguration.ServiceName.OriginalString} " +
                 $"({repairConfiguration.ReplicaOrInstanceId}) on Node {repairConfiguration.NodeName}.";
 
@@ -460,7 +457,7 @@ namespace FabricHealer.Repair
             return true;
         }
 
-        public async Task<Node> GetFabricNodeFromNodeNameAsync(string nodeName, CancellationToken cancellationToken)
+        private async Task<Node> GetFabricNodeFromNodeNameAsync(string nodeName, CancellationToken cancellationToken)
         {
             try
             {
@@ -631,12 +628,12 @@ namespace FabricHealer.Repair
             }
 
 
-            await FabricRepairTasks.SetFabricRepairJobStateAsync(
-                                        repairTask,
-                                        RepairTaskState.Executing,
-                                        RepairTaskResult.Pending,
-                                        FabricClientInstance,
-                                        cancellationToken).ConfigureAwait(true);
+            _ = await FabricRepairTasks.SetFabricRepairJobStateAsync(
+                                            repairTask,
+                                            RepairTaskState.Executing,
+                                            RepairTaskResult.Pending,
+                                            FabricClientInstance,
+                                            cancellationToken).ConfigureAwait(true);
 #if DEBUG
             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                         LogLevel.Info,
@@ -718,7 +715,7 @@ namespace FabricHealer.Repair
 #if DEBUG
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                            LogLevel.Info,
-                           $"RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
+                           "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
                            $"Replica or Instance {repairConfiguration.ReplicaOrInstanceId} not found on partition {repairConfiguration.PartitionId}.",
                            cancellationToken).ConfigureAwait(false);
 #endif
@@ -824,7 +821,7 @@ namespace FabricHealer.Repair
                 {
                     await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            $"RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
+                            "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
                             $"{target} Repair target {repairTarget} successfully healed.",
                             cancellationToken).ConfigureAwait(false);
 
@@ -834,7 +831,7 @@ namespace FabricHealer.Repair
                 {
                     await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            $"RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
+                            "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
                             $"{target} Repair target {repairTarget} not successfully healed.",
                             cancellationToken).ConfigureAwait(false);
                 }

@@ -137,6 +137,7 @@ namespace FabricHealer.Repair
         /// Determines if an Azure tenant update is in progress for cluster VMs.
         /// </summary>
         /// <param name="fabricClient">FabricClient instance</param>
+        /// <param name="nodeType">NodeType string</param>
         /// <param name="token">CancellationToken instance</param>
         /// <returns>true if tenant update is in progress, false otherwise</returns>
         public static async Task<bool> IsAzureTenantUpdateInProgress(FabricClient fabricClient, string nodeType, CancellationToken token)
@@ -150,19 +151,19 @@ namespace FabricHealer.Repair
 
             bool isAzureTenantRepairInProgress = repairTasks.Count > 0;
 
-            if (isAzureTenantRepairInProgress)
+            if (!isAzureTenantRepairInProgress)
             {
-                string message = $"Azure Tenant Update in progress. Will not attempt repairs at this time.";
-
-                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                              LogLevel.Info,
-                                                              $"AzureTenantUpdateInProgress",
-                                                              message,
-                                                              token).ConfigureAwait(false);
-                return true;
+                return false;
             }
 
-            return false;
+            string message = "Azure Tenant Update in progress. Will not attempt repairs at this time.";
+
+            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                        LogLevel.Info,
+                                        "AzureTenantUpdateInProgress",
+                                        message,
+                                        token).ConfigureAwait(false);
+            return true;
         }
     }
 }

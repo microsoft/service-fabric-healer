@@ -17,7 +17,7 @@ namespace FabricHealer.Repair.Guan
         private static TelemetryData FOHealthData;
         private static RestartFabricSystemProcessPredicateType Instance;
 
-        class Resolver : BooleanPredicateResolver
+        private class Resolver : BooleanPredicateResolver
         {
             private readonly RepairConfiguration repairConfiguration;
 
@@ -64,7 +64,7 @@ namespace FabricHealer.Repair.Guan
                 repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
                 repairConfiguration.RepairPolicy.TargetType = RepairTargetType.Application;
 
-                if (count == 1 && Input.Arguments[0].Value.GetValue().GetType() == typeof(TimeSpan))
+                if (count == 1 && Input.Arguments[0].Value.GetValue() is TimeSpan)
                 {
                     repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
                 }

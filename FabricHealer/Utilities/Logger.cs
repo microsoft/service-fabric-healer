@@ -26,12 +26,12 @@ namespace FabricHealer.Utilities
             get; set;
         }
 
-        public string FolderName
+        private string FolderName
         {
             get;
         }
 
-        public string Filename
+        private string Filename
         {
             get;
         }
@@ -39,14 +39,9 @@ namespace FabricHealer.Utilities
         public bool EnableVerboseLogging
         {
             get; set;
-        } = false;
-
-        public string LogFolderBasePath
-        {
-            get; set;
         }
 
-        public string FilePath
+        public string LogFolderBasePath
         {
             get; set;
         }
@@ -63,10 +58,7 @@ namespace FabricHealer.Utilities
                 return;
             }
 
-            if (EtwLogger == null)
-            {
-                EtwLogger = new EventSource(FabricHealerManager.ConfigSettings.EtwProviderName);
-            }
+            EtwLogger ??= new EventSource(FabricHealerManager.ConfigSettings.EtwProviderName);
         }
 
         /// <summary>
@@ -88,13 +80,13 @@ namespace FabricHealer.Utilities
             InitializeLoggers();
         }
 
-        public void InitializeLoggers()
+        private void InitializeLoggers()
         {
             string logFolderBase;
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                string windrive = Environment.SystemDirectory.Substring(0, 3);
+                string windrive = Environment.SystemDirectory[..3];
                 logFolderBase = windrive + "fabrichealer_logs";
             }
             else
@@ -108,16 +100,16 @@ namespace FabricHealer.Utilities
                 // Add current drive letter if not supplied for Windows path target.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    if (!LogFolderBasePath.Substring(0, 3).Contains(":\\"))
+                    if (!LogFolderBasePath[..3].Contains(":\\"))
                     {
-                        string windrive = Environment.SystemDirectory.Substring(0, 3);
+                        string windrive = Environment.SystemDirectory[..3];
                         logFolderBase = windrive + LogFolderBasePath;
                     }
                 }
                 else
                 {
                     // Remove supplied drive letter if Linux is the runtime target.
-                    if (LogFolderBasePath.Substring(0, 3).Contains(":\\"))
+                    if (LogFolderBasePath[..3].Contains(":\\"))
                     {
                         LogFolderBasePath = LogFolderBasePath.Remove(0, 3);
                     }
@@ -134,14 +126,9 @@ namespace FabricHealer.Utilities
                 file = Path.Combine(folderPath, Filename);
             }
 
-            FilePath = file;
-
             var targetName = loggerName + "LogFile";
 
-            if (LogManager.Configuration == null)
-            {
-                LogManager.Configuration = new LoggingConfiguration();
-            }
+            LogManager.Configuration ??= new LoggingConfiguration();
 
             if ((FileTarget)LogManager.Configuration?.FindTargetByName(targetName) == null)
             {
@@ -218,11 +205,6 @@ namespace FabricHealer.Utilities
             }
 
             return false;
-        }
-
-        public static void Flush()
-        {
-            LogManager.Flush();
         }
     }
 }

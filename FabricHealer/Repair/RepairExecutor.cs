@@ -32,7 +32,7 @@ namespace FabricHealer.Repair
         private readonly TelemetryUtilities telemetryUtilities;
         private readonly StatelessServiceContext serviceContext;
 
-        public bool IsOneNodeCluster
+        private bool IsOneNodeCluster
         {
             get;
         }
@@ -112,7 +112,7 @@ namespace FabricHealer.Repair
                 // CompletionMode must be set to DoNotVerify for stateless services.
                 CompletionMode completionMode = CompletionMode.DoNotVerify;
 
-                if (replica?.ServiceKind == ServiceKind.Stateful)
+                if (replica.ServiceKind == ServiceKind.Stateful)
                 {
                     completionMode = CompletionMode.Verify;
                 }
@@ -163,6 +163,21 @@ namespace FabricHealer.Repair
         /// <returns></returns>
         public async Task<bool> SafeRestartFabricNodeAsync(string nodeName, RepairTask repairTask, CancellationToken cancellationToken)
         {
+            if (IsOneNodeCluster)
+            {
+                string info = "One node cluster detected. Aborting node restart operation.";
+
+                await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        "RepairExecutor.SafeRestartFabricNodeAsync::NodeCount_1",
+                        info,
+                        cancellationToken).ConfigureAwait(false);
+
+                FabricHealerManager.RepairLogger.LogInfo(info);
+
+                return false;
+            }
+
             bool isTargetNodeHostingFH = nodeName == serviceContext.NodeContext.NodeName;
 
             if (isTargetNodeHostingFH)
@@ -183,10 +198,10 @@ namespace FabricHealer.Repair
                 string info = $"Target node not found: {nodeName}. Aborting node restart operation.";
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairExecutor.SafeRestartFabricNodeAsync::NodeCount0",
-                    info,
-                    cancellationToken).ConfigureAwait(false);
+                        LogLevel.Info,
+                        "RepairExecutor.SafeRestartFabricNodeAsync::NodeCount0",
+                        info,
+                        cancellationToken).ConfigureAwait(false);
 
                 FabricHealerManager.RepairLogger.LogInfo(info);
 
@@ -421,7 +436,7 @@ namespace FabricHealer.Repair
 
                 return false;
             }
-            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TimeoutException)
             {
                 string err = $"Handled Exception restarting Fabric node {nodeName}, NodeInstanceId {nodeInstanceId}:{e.GetType().Name}";
 
@@ -584,10 +599,8 @@ namespace FabricHealer.Repair
             List<Process> result = new List<Process>();
             Process[] processes = Process.GetProcessesByName("dotnet");
 
-            for (int i = 0; i < processes.Length; ++i)
+            foreach (var p in processes)
             {
-                Process p = processes[i];
-
                 try
                 {
                     string cmdline = File.ReadAllText($"/proc/{p.Id}/cmdline");
@@ -595,7 +608,7 @@ namespace FabricHealer.Repair
                     // dotnet /mnt/sfroot/_App/__FabricSystem_App4294967295/US.Code.Current/FabricUS.dll 
                     if (cmdline.Contains("/mnt/sfroot/_App/"))
                     {
-                        string bin = cmdline[(cmdline.LastIndexOf("/") + 1)..];
+                        string bin = cmdline[(cmdline.LastIndexOf("/", StringComparison.Ordinal) + 1)..];
 
                         if (string.Equals(argument, bin, StringComparison.InvariantCulture))
                         {
@@ -785,7 +798,7 @@ namespace FabricHealer.Repair
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "RepairExecutor.DeleteFilesAsync::IncompleteOperation",
-                        $"Unable to delete all files.",
+                        "Unable to delete all files.",
                         cancellationToken,
                         repairConfiguration).ConfigureAwait(false); 
 
@@ -795,7 +808,7 @@ namespace FabricHealer.Repair
             await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
                     "RepairExecutor.DeleteFilesAsync::Success",
-                    $"Successfully deleted {(maxFiles > 0 ? "up to " + maxFiles.ToString() : "all")} files in {targetFolderPath}",
+                    $"Successfully deleted {(maxFiles > 0 ? "up to " + maxFiles : "all")} files in {targetFolderPath}",
                     cancellationToken,
                         repairConfiguration).ConfigureAwait(false);
 
@@ -825,7 +838,7 @@ namespace FabricHealer.Repair
                     return null;
                 }
 
-                string ipOrDnsName = targetNode?.IpAddressOrFQDN;
+                string ipOrDnsName = targetNode.IpAddressOrFQDN;
                 var hostEntry = await Dns.GetHostEntryAsync(ipOrDnsName).ConfigureAwait(false);
                 var machineName = hostEntry.HostName;
 
@@ -863,35 +876,44 @@ namespace FabricHealer.Repair
                                                   s => s.HealthInformation.SourceId.Contains(source ?? "Observer")
                                                     && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning)
                                                     && JsonSerializationUtility.TryDeserialize(s.HealthInformation.Description, out TelemetryData foHealthData)
-                                                    && foHealthData?.ApplicationName == repairConfiguration.AppName.OriginalString
-                                                    && (source != null && source == "FabricSystemObserver" ? foHealthData?.SystemServiceProcessName == repairConfiguration.SystemServiceProcessName : foHealthData?.ServiceName == repairConfiguration.ServiceName.OriginalString));
+                                                    && foHealthData.ApplicationName == repairConfiguration.AppName.OriginalString
+                                                    && (source is "FabricSystemObserver" ? foHealthData.SystemServiceProcessName == repairConfiguration.SystemServiceProcessName : foHealthData.ServiceName == repairConfiguration.ServiceName.OriginalString));
 
-                    TelemetryData telemetryData = new TelemetryData
+                    var telemetryData = new TelemetryData
                     {
                         ApplicationName = repairConfiguration.AppName?.OriginalString,
                         ServiceName = repairConfiguration.ServiceName?.OriginalString,
                         Code = "FO000",
                         HealthState = "Ok",
-                        Description = $"{(source != null && source == "FabricSystemObserver" ? repairConfiguration.SystemServiceProcessName : repairConfiguration.ServiceName.OriginalString)} has been repaired.",
+                        Description = $"{(source is "FabricSystemObserver" ? repairConfiguration.SystemServiceProcessName : repairConfiguration.ServiceName.OriginalString)} has been repaired.",
                         NodeName = repairConfiguration.NodeName,
                         NodeType = repairConfiguration.NodeType,
                         Source = RepairTaskEngine.FabricHealerExecutorName,
-                        SystemServiceProcessName = $"{(source != null && source == "FabricSystemObserver" ? repairConfiguration.SystemServiceProcessName : string.Empty)}",
+                        SystemServiceProcessName = $"{(source is "FabricSystemObserver" ? repairConfiguration.SystemServiceProcessName : string.Empty)}",
                     };
 
-                    foreach (var evt in unhealthyFOAppEvents)
+                    if (unhealthyFOAppEvents != null)
                     {
-                        HealthInformation healthInfo = new HealthInformation(evt.HealthInformation.SourceId, evt.HealthInformation.Property, HealthState.Ok)
+                        foreach (var evt in unhealthyFOAppEvents)
                         {
-                            Description = JsonSerializationUtility.TrySerialize(telemetryData, out string data) ? data : $"{(source != null && source == "FabricSystemObserver" ? repairConfiguration.SystemServiceProcessName : repairConfiguration.ServiceName.OriginalString)} has been repaired.",
-                            TimeToLive = TimeSpan.FromMinutes(5),
-                            RemoveWhenExpired = true,
-                        };
+                            if (repairConfiguration.ServiceName is { })
+                            {
+                                var healthInfo = new HealthInformation(evt.HealthInformation.SourceId, evt.HealthInformation.Property, HealthState.Ok)
+                                {
+                                    Description = JsonSerializationUtility.TrySerialize(telemetryData, out string data)
+                                        ? data
+                                        : $"{(source is "FabricSystemObserver" ? repairConfiguration.SystemServiceProcessName : repairConfiguration.ServiceName.OriginalString)} has been repaired.",
+                                    TimeToLive = TimeSpan.FromMinutes(5),
+                                    RemoveWhenExpired = true,
+                                };
 
-                        ApplicationHealthReport healthReport = new ApplicationHealthReport(repairConfiguration.AppName, healthInfo);
-                        fabricClient.HealthManager.ReportHealth(healthReport, new HealthReportSendOptions { Immediate = true });
+                                var healthReport = new ApplicationHealthReport(repairConfiguration.AppName, healthInfo);
+                                fabricClient.HealthManager.ReportHealth(healthReport,
+                                    new HealthReportSendOptions {Immediate = true});
+                            }
 
-                        await Task.Delay(250);
+                            await Task.Delay(250, cancellationToken);
+                        }
                     }
                 }
                 else
@@ -908,7 +930,7 @@ namespace FabricHealer.Repair
                                                     && foHealthData?.NodeName == repairConfiguration.NodeName
                                                     && foHealthData?.Code == repairConfiguration.FOErrorCode);
 
-                    TelemetryData telemetryData = new TelemetryData
+                    var telemetryData = new TelemetryData
                     {
                         Code = "FO000",
                         HealthState = "Ok",
@@ -922,17 +944,17 @@ namespace FabricHealer.Repair
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        HealthInformation healthInfo = new HealthInformation(evt.HealthInformation.SourceId, evt.HealthInformation.Property, HealthState.Ok)
+                        var healthInfo = new HealthInformation(evt.HealthInformation.SourceId, evt.HealthInformation.Property, HealthState.Ok)
                         {
                             Description = JsonSerializationUtility.TrySerialize(telemetryData, out string data) ? data : $"{repairConfiguration.NodeName} has been repaired.",
                             TimeToLive = TimeSpan.FromMinutes(5),
                             RemoveWhenExpired = true,
                         };
 
-                        NodeHealthReport healthReport = new NodeHealthReport(repairConfiguration.NodeName, healthInfo);
+                        var healthReport = new NodeHealthReport(repairConfiguration.NodeName, healthInfo);
                         fabricClient.HealthManager.ReportHealth(healthReport, new HealthReportSendOptions { Immediate = true });
 
-                        await Task.Delay(250);
+                        await Task.Delay(250, cancellationToken);
                     }
                 }
             }
