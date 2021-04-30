@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric;
-using System.Fabric.Query;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,18 +29,16 @@ namespace FabricHealer.Repair
         {
             try
             {
-                ApplicationList appList;
+                if (appName == null)
+                {
+                    throw new ArgumentException("appName must be supplied.");
+                }
+
                 int currentUpgradeDomainInProgress = -1;
                 var upgradeDomainsInProgress = new List<int>();
 
-                if (appName == null)
-                {
-                    throw new ArgumentException("appName must be supplied");
-                }
-                else
-                {
-                    appList = await fabricClient.QueryManager.GetApplicationListAsync(appName, FabricHealerManager.ConfigSettings.AsyncTimeout, token).ConfigureAwait(true);
-                }
+
+                var appList = await fabricClient.QueryManager.GetApplicationListAsync(appName, FabricHealerManager.ConfigSettings.AsyncTimeout, token).ConfigureAwait(true);
 
                 foreach (var application in appList)
                 {
@@ -51,45 +48,40 @@ namespace FabricHealer.Repair
                                                                 TimeSpan.FromMinutes(1), 
                                                                 token).ConfigureAwait(true);
 
-                    if (upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingBackInProgress)
-                        || upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingForwardInProgress)
-                        || upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingForwardPending))
+                    if (!upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingBackInProgress) &&
+                        !upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingForwardInProgress) &&
+                        !upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingForwardPending))
                     {
-                        if (int.TryParse(upgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName, out currentUpgradeDomainInProgress))
-                        {
-                            Logger.LogInfo($"Application Upgrade for {application.ApplicationName} is in progress in {currentUpgradeDomainInProgress} upgrade domain.");
+                        continue;
+                    }
 
-                            if (!upgradeDomainsInProgress.Contains(currentUpgradeDomainInProgress))
-                            {
-                                upgradeDomainsInProgress.Add(currentUpgradeDomainInProgress);
-                            }
-                        }
-                        else
+                    if (int.TryParse(upgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName, out currentUpgradeDomainInProgress))
+                    {
+                        if (!upgradeDomainsInProgress.Contains(currentUpgradeDomainInProgress))
                         {
-                            // TryParse fails out value currentUpgradeDomainInProgress will be set to 0, 
-                            // 0 is valid UD name, so setting it to -1 to return right value
-                            currentUpgradeDomainInProgress = -1;
+                            upgradeDomainsInProgress.Add(currentUpgradeDomainInProgress);
                         }
+                    }
+                    else
+                    {
+                        currentUpgradeDomainInProgress = -1;
                     }
                 }
                
                 // If no UD's are being upgraded then currentUpgradeDomainInProgress
-                // remains -1, otherwise it will be added only once
+                // remains -1, otherwise it will be added only once.
                 if (!upgradeDomainsInProgress.Any())
                 {
-                    Logger.LogInfo(
-                        $"No Application Upgrade is in progress in domain {currentUpgradeDomainInProgress}");
-
                     upgradeDomainsInProgress.Add(currentUpgradeDomainInProgress);
                 }
 
                 return upgradeDomainsInProgress;
             }
-            catch (Exception e)
+            catch (Exception e) when (e is ArgumentException || e is FabricException || e is TimeoutException)
             {
-                Logger.LogError(e.ToString());
+                Logger.LogError($"Exception getting UDs for application upgrades in progress:{Environment.NewLine}{e}");
 
-                return new List<int>{ int.MaxValue };
+                return new List<int>{ -1 };
             }
         }
 
@@ -109,27 +101,18 @@ namespace FabricHealer.Repair
                                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                     token), token).ConfigureAwait(false);
 
-                int currentUpgradeDomainInProgress = -1;
-
-                if (fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingBackInProgress)
-                    || fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingForwardInProgress)
-                    || fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingForwardPending))
+                if (!fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingBackInProgress) &&
+                    !fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingForwardInProgress) &&
+                    !fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingForwardPending))
                 {
-                    if (int.TryParse(fabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName, out currentUpgradeDomainInProgress))
-                    {
-                        return currentUpgradeDomainInProgress;
-                    }
-
-                    // TryParse fails out value currentUpgradeDomainInProgress will be set to 0, 
-                    // 0 is valid UD name, so setting it to -1 to return right value.
-                    currentUpgradeDomainInProgress = -1;
+                    return -1;
                 }
 
-                return currentUpgradeDomainInProgress;
+                return int.TryParse(fabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName, out int currentUpgradeDomainInProgress) ? currentUpgradeDomainInProgress : -1;
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException)
             {
-                return int.MaxValue;
+                return -1;
             }
         }
 
@@ -159,10 +142,10 @@ namespace FabricHealer.Repair
             string message = "Azure Tenant Update in progress. Will not attempt repairs at this time.";
 
             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                        LogLevel.Info,
-                                        "AzureTenantUpdateInProgress",
-                                        message,
-                                        token).ConfigureAwait(false);
+                                                            LogLevel.Info,
+                                                            "AzureTenantUpdateInProgress",
+                                                            message,
+                                                            token).ConfigureAwait(false);
             return true;
         }
     }

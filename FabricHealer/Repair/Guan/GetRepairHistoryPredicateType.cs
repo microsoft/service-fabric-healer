@@ -29,7 +29,7 @@ namespace FabricHealer.Repair.Guan
             protected override Task<Term> GetNextTermAsync()
             {
                 long repairCount = 0;
-                TimeSpan timeWindow = (TimeSpan)Input.Arguments[1].Value.GetEffectiveTerm().GetValue();
+                var timeWindow = (TimeSpan)Input.Arguments[1].Value.GetEffectiveTerm().GetValue();
 
                 if (timeWindow > TimeSpan.MinValue)
                 {
@@ -44,10 +44,10 @@ namespace FabricHealer.Repair.Guan
                     string message = "You must supply a valid TimeSpan string for TimeWindow argument of GetRepairHistoryPredicate. Default result has been supplied (0).";
 
                     RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            $"GetRepairHistoryPredicate::{FOHealthData.RepairId}",
-                            message,
-                            RepairTaskManager.Token).GetAwaiter().GetResult();
+                                                            LogLevel.Info,
+                                                            $"GetRepairHistoryPredicate::{FOHealthData.RepairId}",
+                                                            message,
+                                                            RepairTaskManager.Token).GetAwaiter().GetResult();
                 }
 
                 var result = new CompoundTerm(Instance, null);

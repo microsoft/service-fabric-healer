@@ -407,8 +407,6 @@ namespace FabricHealer
             }
         }
 
-        // app/service/replica, Fabric node, disk, and VM repair is implemented.
-
         /* Potential TODOs. This list should grow and external predicates should be written to support related workflow composition in logic rule file(s).
 
             Symptom                                                 Mitigation 
@@ -421,8 +419,9 @@ namespace FabricHealer
             [MR Scenario] Node in down state: MR unable 
             to send the Remove-ServiceFabricNodeState in time	    Remove-ServiceFabricNodeState
             Unused container fill the disk space	                Call docker prune cmd 
-            Primary replica for system service in IB state forever	Restart the primary partition 
+            Primary replica for system service in IB state forever	Restart the primary replica 
         */
+
         private async Task<bool> MonitorRepairableHealthEventsAsync()
         {
             try
@@ -440,7 +439,7 @@ namespace FabricHealer
                 // then do not attempt repairs.
                 int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(fabricClient, Token).ConfigureAwait(false);
 
-                if (udInClusterUpgrade > -1 && udInClusterUpgrade < int.MaxValue)
+                if (udInClusterUpgrade > -1)
                 {
                     string telemetryDescription = $"Cluster is currently upgrading in UD {udInClusterUpgrade}. Will not schedule or execute repairs at this time.";
 
@@ -484,6 +483,7 @@ namespace FabricHealer
                         catch (Exception e) when (
                                 e is FabricException ||
                                 e is OperationCanceledException ||
+                                e is TaskCanceledException ||
                                 e is TimeoutException)
                         {
 #if DEBUG
@@ -509,6 +509,7 @@ namespace FabricHealer
                         catch (Exception e) when (
                                 e is FabricException ||
                                 e is OperationCanceledException ||
+                                e is TaskCanceledException ||
                                 e is TimeoutException)
                         {
 #if DEBUG
@@ -555,10 +556,7 @@ namespace FabricHealer
 
                 return true;
             }
-            catch (Exception e) when (
-                    e is FabricException ||
-                    e is OperationCanceledException ||
-                    e is TimeoutException)
+            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TimeoutException)
             {
                 return false;
             }
@@ -577,7 +575,7 @@ namespace FabricHealer
             }
         }
 
-        private async Task ProcessApplicationHealthAsync(IList<ApplicationHealthState> appHealthStates)
+        private async Task ProcessApplicationHealthAsync(IEnumerable<ApplicationHealthState> appHealthStates)
         {
             var supportedAppHealthStates = appHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
             var nodeList = await fabricClient.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, Token).ConfigureAwait(false);
@@ -601,12 +599,10 @@ namespace FabricHealer
                         List<int> udInAppUpgrade = await UpgradeChecker.GetUdsWhereApplicationUpgradeInProgressAsync(fabricClient, appName, Token).ConfigureAwait(false);
                         string udText = string.Empty;
 
-                        // -1 means no upgrade in progress for application
-                        // int.MaxValue means an exception was thrown during upgrade check and you should
-                        // check the logs for what went wrong, then fix the bug (if it's a bug you can fix).
-                        if (udInAppUpgrade.Any(ud => ud > -1 && ud < int.MaxValue))
+                        // -1 means no upgrade in progress for application.
+                        if (udInAppUpgrade.Any(ud => ud > -1))
                         {
-                            udText = $"in UD {udInAppUpgrade.First(ud => ud > -1 && ud < int.MaxValue)}";
+                            udText = $"in UD {udInAppUpgrade.First(ud => ud > -1)}";
                         }
 
                         string telemetryDescription = $"{appName} is upgrading {udText}. Will not attempt application repair at this time.";
@@ -797,7 +793,7 @@ namespace FabricHealer
         // As far as FabricObserver(FO) is concerned, a node is a VM, so FO only creates NodeHealthReports when a VM level issue
         // is detected. So, FO does not monitor Fabric node health, but will put a node in Error or Warning if the underlying 
         // VM is using too much of some monitored machine resource..).
-        private async Task ProcessNodeHealthAsync(IList<NodeHealthState> nodeHealthStates)
+        private async Task ProcessNodeHealthAsync(IEnumerable<NodeHealthState> nodeHealthStates)
         {
             var supportedNodeHealthStates = nodeHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
 
@@ -807,9 +803,9 @@ namespace FabricHealer
 
                 // Get target node. Make sure it still exists in cluster..
                 var nodeList = await fabricClient.QueryManager.GetNodeListAsync(
-                    node.NodeName,
-                    ConfigSettings.AsyncTimeout, 
-                    Token).ConfigureAwait(false);
+                                                                node.NodeName,
+                                                                ConfigSettings.AsyncTimeout, 
+                                                                Token).ConfigureAwait(false);
 
                 // No node-level repairs in dev clusters..
                 if (nodeList.Count < 3)
@@ -1138,27 +1134,28 @@ namespace FabricHealer
 
         private void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (disposedValue)
             {
-                if (disposing)
-                {
-                    fabricClient?.Dispose();
-                }
-
-                disposedValue = true;
+                return;
             }
+
+            if (disposing)
+            {
+                fabricClient?.Dispose();
+            }
+
+            disposedValue = true;
         }
 
         public void Dispose()
         {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
+            Dispose(true);
         }
 
-        private List<string> ParseRulesFile(List<string> rules)
+        private static List<string> ParseRulesFile(List<string> rules)
         {
             var repairRules = new List<string>();
-            int ptr1 = 0; int ptr2 = 0;
+            int ptr1 = 0, ptr2 = 0;
             rules = rules.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
 
             while (ptr1 < rules.Count && ptr2 < rules.Count)

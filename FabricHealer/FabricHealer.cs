@@ -26,7 +26,7 @@ namespace FabricHealer
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            // FabricHealerManager will create an instance member cancellation token object (see Token) that is this cancellation token,
+            // FabricHealerManager will create an instance member cancellation token object (see Token) that is this RunAsync cancellation token,
             // which is threaded through all async operations throughout the program.
             using var healerManager = FabricHealerManager.Singleton(Context, cancellationToken);
 

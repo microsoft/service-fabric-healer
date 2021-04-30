@@ -195,11 +195,12 @@ namespace FabricHealer.Utilities.Telemetry
                 return;
             }
 
-            var requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
+            var requestUri =
+                new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
             string date = DateTime.UtcNow.ToString("r");
             string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
 
-            var request = (HttpWebRequest)WebRequest.Create(requestUri);
+            var request = (HttpWebRequest) WebRequest.Create(requestUri);
             request.ContentType = "application/json";
             request.Method = "POST";
             request.Headers["Log-Type"] = LogType;
@@ -231,14 +232,19 @@ namespace FabricHealer.Utilities.Telemetry
                     return;
                 }
 
-                if (responseAsync.StatusCode == HttpStatusCode.OK ||
-                    responseAsync.StatusCode == HttpStatusCode.Accepted)
+                if (responseAsync != null && (responseAsync.StatusCode == HttpStatusCode.OK ||
+                                              responseAsync.StatusCode == HttpStatusCode.Accepted))
                 {
                     retries = 0;
                     return;
                 }
 
-                logger.LogWarning($"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
+                if (responseAsync != null)
+                {
+                    logger.LogWarning(
+                        $"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}" +
+                        $"{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
+                }
             }
             catch (Exception e)
             {

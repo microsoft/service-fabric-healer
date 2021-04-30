@@ -71,11 +71,11 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to schedule repair with RM.
                 var repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                      () =>
-                                          RepairTaskManager.ScheduleFabricHealerRmRepairTaskAsync(
-                                                                repairConfiguration,
-                                                                RepairTaskManager.Token),
-                                      RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
+                                                          () =>
+                                                              RepairTaskManager.ScheduleFabricHealerRmRepairTaskAsync(
+                                                                                    repairConfiguration,
+                                                                                    RepairTaskManager.Token),
+                                                          RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
 
                 if (repairTask == null)
                 {
@@ -84,12 +84,12 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to execute repair (FH executor does this work and manages repair state).
                 bool success = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () =>
-                                        RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
-                                                            repairTask,
-                                                            repairConfiguration,
-                                                            RepairTaskManager.Token),
-                                    RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                                        () =>
+                                                            RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                                                                                repairTask,
+                                                                                repairConfiguration,
+                                                                                RepairTaskManager.Token),
+                                                        RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 
                 return success;
             }

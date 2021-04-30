@@ -32,8 +32,8 @@
     <PackageReference Include="Microsoft.ServiceFabric.Diagnostics.Internal" Version="4.2.452" />
     <PackageReference Include="Microsoft.ServiceFabric.Services" Version="4.2.452" />
     <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" Version="4.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabricApps.Guan" Version="1.0.0-Preview" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Microsoft.ServiceFabricApps.Guan" Version="1.0.0-Preview" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="NLog" Version="4.7.9" />
     <PackageReference Include="System.Configuration.Abstractions" Version="2.0.2.45" />

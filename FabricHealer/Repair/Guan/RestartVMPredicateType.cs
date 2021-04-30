@@ -74,20 +74,20 @@ namespace FabricHealer.Repair.Guan
                     string message = $"VM Repair {FOHealthData.RepairId} is already in progress. Will not attempt repair at this time.";
 
                     RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                        LogLevel.Info,
-                                        $"RestartVMPredicateType::{FOHealthData.RepairId}",
-                                        message,
-                                        RepairTaskManager.Token).GetAwaiter().GetResult();
+                                                            LogLevel.Info,
+                                                            $"RestartVMPredicateType::{FOHealthData.RepairId}",
+                                                            message,
+                                                            RepairTaskManager.Token).GetAwaiter().GetResult();
 
                     return false;
                 }
 
                 bool success = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () =>
-                                        RepairTaskManager.ExecuteRMInfrastructureRepairTask(
-                                                            repairConfiguration,
-                                                            RepairTaskManager.Token),
-                                    RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                                        () =>
+                                                            RepairTaskManager.ExecuteRMInfrastructureRepairTask(
+                                                                                repairConfiguration,
+                                                                                RepairTaskManager.Token),
+                                                        RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 
                 return success;
             }

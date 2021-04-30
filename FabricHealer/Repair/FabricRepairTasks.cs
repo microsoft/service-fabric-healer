@@ -358,7 +358,7 @@ namespace FabricHealer.Repair
                         continue;
                     }
 
-                    if (repair.CompletedTimestamp == null || !repair.CompletedTimestamp.HasValue)
+                    if (repair.CompletedTimestamp == null)
                     {
                         continue;
                     }
