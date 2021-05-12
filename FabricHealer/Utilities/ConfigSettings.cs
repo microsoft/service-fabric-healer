@@ -19,97 +19,121 @@ namespace FabricHealer.Utilities
 
         public bool EnableAutoMitigation
         {
-            get; set;
+            get;
+            private set;
         }
 
         public int ExecutionLoopSleepSeconds
         {
-            get; set;
+            get;
+            private set;
         } = 30;
 
         public bool EnableVerboseLogging
         {
-            get; set;
+            get;
+            private set;
         }
 
         public bool TelemetryEnabled
         {
-            get; set;
+            get;
+            private set;
         }
 
         public TelemetryProviderType TelemetryProvider
         {
-            get; set;
+            get;
+            private set;
         }
 
         // For Azure ApplicationInsights Telemetry
         public string AppInsightsInstrumentationKey
         {
-            get; set;
+            get;
+            private set;
         }
 
         // For Azure LogAnalytics Telemetry
         public string LogAnalyticsWorkspaceId
         {
-            get; set;
+            get;
+            private set;
         }
 
         public string LogAnalyticsSharedKey
         {
-            get; set;
+            get;
+            private set;
         }
 
         public string LogAnalyticsLogType
         {
-            get; set;
+            get;
+            private set;
         }
 
         public TimeSpan AsyncTimeout
         {
-            get; set;
+            get;
+            private set;
         } = TimeSpan.FromSeconds(120);
 
         // For EventSource Telemetry
         public bool EtwEnabled
         {
-            get; set;
+            get;
+            private set;
         }
 
         // For EventSource Telemetry
         public string EtwProviderName
         {
-            get; set;
+            get;
+            private set;
         }
 
         public string LocalLogPathParameter
         {
-            get; set;
+            get;
+            private set;
         }
 
         // RepairPolicy Enablement
         public bool EnableAppRepair
         {
-            get; set;
+            get;
+            private set;
+        }
+
+        public bool EnableDiskRepair
+        {
+            get;
+            private set;
         }
 
         public bool EnableNodeRepair
         {
-            get; set;
+            get;
+            private set;
         }
 
         public bool EnableReplicaRepair
         {
-            get; set;
+            get;
+            private set;
         }
 
         public bool EnableSystemAppRepair
         {
-            get; set;
+            get;
+            private set;
         }
 
         public bool EnableVmRepair
         {
-            get; set;
+            get;
+            private set;
         }
 
         public ConfigSettings(StatelessServiceContext context)
@@ -170,9 +194,7 @@ namespace FabricHealer.Utilities
                         if (telemetryProvider == TelemetryProviderType.AzureLogAnalytics)
                         {
                             LogAnalyticsLogType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsLogTypeParameter);
-
                             LogAnalyticsSharedKey = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsSharedKeyParameter);
-
                             LogAnalyticsWorkspaceId = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsWorkspaceIdParameter);
                         }
                         else
@@ -194,6 +216,11 @@ namespace FabricHealer.Utilities
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.AppRepairPolicySectionName, RepairConstants.Enabled), out bool appRepairEnabled))
             {
                 EnableAppRepair = appRepairEnabled;
+            }
+
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.DiskRepairPolicySectionName, RepairConstants.Enabled), out bool diskRepairEnabled))
+            {
+                EnableDiskRepair = diskRepairEnabled;
             }
 
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.FabricNodeRepairPolicySectionName, RepairConstants.Enabled), out bool nodeRepairEnabled))

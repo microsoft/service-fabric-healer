@@ -10,7 +10,7 @@ using System.Linq;
 namespace FabricHealer.Utilities
 {
     // FabricObserver Error/Warning/Ok Codes.
-    public sealed class FOErrorWarningCodes
+    public static class FOErrorWarningCodes
     {
         // Ok
         public const string Ok = "FO000";
@@ -133,12 +133,7 @@ namespace FabricHealer.Utilities
                 return AppErrorCodesDictionary.First(k => k.Key == id).Value;
             }
 
-            if (NodeErrorCodesDictionary.Any(k => k.Key == id))
-            {
-                return NodeErrorCodesDictionary.First(k => k.Key == id).Value;
-            }
-
-            return null;
+            return NodeErrorCodesDictionary.Any(k => k.Key == id) ? NodeErrorCodesDictionary.First(k => k.Key == id).Value : null;
         }
 
         public static string GetMetricNameFromCode(string code)
@@ -213,17 +208,8 @@ namespace FabricHealer.Utilities
                 return false;
             }
 
-            if (AppErrorCodesDictionary.Any(k => k.Key == id && k.Value.Contains(resourceType)))
-            {
-                return true;
-            }
-
-            if (NodeErrorCodesDictionary.Any(k => k.Key == id && k.Value.Contains(resourceType)))
-            {
-                return true;
-            }
-
-            return false;
+            return AppErrorCodesDictionary.Any(k => k.Key == id && k.Value.Contains(resourceType)) 
+                   || NodeErrorCodesDictionary.Any(k => k.Key == id && k.Value.Contains(resourceType));
         }
     }
 }

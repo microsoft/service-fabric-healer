@@ -16,6 +16,8 @@ namespace FabricHealer.Interfaces
     {
         Task ActivateServiceFabricNodeAsync(string nodeName, CancellationToken cancellationToken);
 
+        Task<bool> DeleteFilesAsyncAsync(RepairConfiguration repairConfiguration, CancellationToken cancellationToken);
+
         Task RemoveServiceFabricNodeStateAsync(string nodeName, CancellationToken cancellationToken);
 
         Task<bool> RestartDeployedCodePackageAsync(RepairConfiguration repairConfiguration, CancellationToken cancellationToken);

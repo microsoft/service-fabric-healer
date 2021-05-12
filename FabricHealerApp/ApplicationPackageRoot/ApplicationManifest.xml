@@ -10,11 +10,11 @@
     <Parameter Name="EventSourceProviderEnabled" DefaultValue="true" />
     <!-- Repair Policy Enablement -->
     <Parameter Name="AppRepairEnabled" DefaultValue="true" />
-    <Parameter Name="DiskRepairEnabled" DefaultValue="false" />
-    <Parameter Name="NodeRepairEnabled" DefaultValue="false" />
+    <Parameter Name="DiskRepairEnabled" DefaultValue="true" />
+    <Parameter Name="NodeRepairEnabled" DefaultValue="true" />
     <Parameter Name="ReplicaRepairEnabled" DefaultValue="true" />
     <Parameter Name="SystemAppRepairEnabled" DefaultValue="true" />
-    <Parameter Name="VmRepairEnabled" DefaultValue="false" />
+    <Parameter Name="VmRepairEnabled" DefaultValue="true" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
@@ -71,7 +71,7 @@
     </Service>
   </DefaultServices>
   <!-- Because of the actions FabricHealer takes in a cluster, it must run as Admin user on Windows and root on Linux. 
-       SystemUser and LocalSystem AccountType map to both (System on Windows, root on Linux). -->
+       LocalSystem AccountType maps to System on Windows and root on Linux. -->
   <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />

@@ -5,28 +5,26 @@
 ##		Start Time (UTC): 2020-04-26 19:22:55.492.
 
 ## First, check if we are inside run interval. If so, then cut (!), which effectively means stop processing rules (no backtracking to subsequent rules in the file).
-Mitigate() :- CheckInsideRunInterval(RunInterval=00:15:00), !.
+Mitigate() :- CheckInsideRunInterval(RunInterval=00:15:00), !
 
 ## Set a repair count variable for use by any rule in this file (NOTE: all rules must have the same TimeWindow value) as an internal predicate, _mitigate(?count),
 ## where ?repairCount and ?count variables are unified when _mitigate(?count) predicate runs. The concept here is sharing a variable value across different rules.
-Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), _mitigate(?repairCount).
+Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), _mitigate(?repairCount)
 
 ## Now, let's say you wanted to only repair specific Apps or Paritions where related repair TimeWindow values are *not* the same, unlike the above "global" variable rule.
 ## You could do something like the below three rules, which would mean the _mitigate internal predicate would only run if the supplied Mitigate argument values are matched:
-##	Mitigate(AppName="fabric:/foo") :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), _mitigate(?repairCount), !. 
-##	Mitigate(AppName="fabric:/bar") :- GetRepairHistory(?repairCount, TimeWindow=02:00:00), _mitigate(?repairCount), !.
-##	Mitigate(ParititionId="34fb55e9-3d36-451c-8744-5518716acbc1") :- GetRepairHistory(?repairCount, TimeWindow=03:00:00), _mitigate(?repairCount), !.
+##	Mitigate(AppName="fabric:/foo") :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), _mitigate(?repairCount)
+##	Mitigate(AppName="fabric:/bar") :- GetRepairHistory(?repairCount, TimeWindow=02:00:00), _mitigate(?repairCount)
+##	Mitigate(ParititionId="34fb55e9-3d36-451c-8744-5518716acbc1") :- GetRepairHistory(?repairCount, TimeWindow=03:00:00), _mitigate(?repairCount)
 
 ## The external predicates here (RestartReplica, RestartCodePackage, RestartFabricNode) implement a BooleanPredicateResolver dervied Resolver type (see /Repair/Guan folder for source code). 
-## This means that these predicates either succeed (pass true back) or fail (pass false back) as the result of their execution. So, if one fails, then the next rule will be run, etc. When a rule 
-## succeeds, the logic processing is done (the cut is added for good measure, but is not necessary given how FH runs Guan queries)
-## and Guan has satisfied the query (you got the answer you were looking for - successful mitigation).
+## This means that these predicates either succeed (pass true back) or fail (pass false back) as the result of their execution. So, if one fails, then the next rule will be run, etc.
 
 ## Try this.
-_mitigate(?count) :- ?count < 4, RestartReplica(), !.
+_mitigate(?count) :- ?count < 4, RestartReplica()
 
 ## Else, try this.
-_mitigate(?count) :- ?count < 4, RestartCodePackage(), !.
+_mitigate(?count) :- ?count < 4, RestartCodePackage()
 
 ## Else, try this.
-_mitigate(?count) :- ?count < 2, RestartFabricNode().
+_mitigate(?count) :- ?count < 2, RestartFabricNode()

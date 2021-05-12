@@ -42,7 +42,7 @@ namespace FabricHealer.Utilities.Telemetry
         /// <summary>
         /// Gets a value indicating whether telemetry is enabled or not.
         /// </summary>
-        public bool IsEnabled => telemetryClient.IsEnabled() && FabricHealerManager.ConfigSettings.TelemetryEnabled;
+        private bool IsEnabled => telemetryClient.IsEnabled() && FabricHealerManager.ConfigSettings.TelemetryEnabled;
 
         /// <summary>
         /// Gets or sets the key.

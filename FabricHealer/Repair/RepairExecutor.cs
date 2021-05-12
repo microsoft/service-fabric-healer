@@ -52,9 +52,9 @@ namespace FabricHealer.Repair
 
                 IsOneNodeCluster = 
                         this.fabricClient.QueryManager.GetNodeListAsync(
-                            null,
-                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                            token).GetAwaiter().GetResult().Count == 1;
+                                                        null,
+                                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                        token).GetAwaiter().GetResult().Count == 1;
             }
             catch (FabricException fe)
             {
@@ -72,10 +72,10 @@ namespace FabricHealer.Repair
 
                 // Verify target replica still exists.
                 var replicaList = await fabricClient.QueryManager.GetReplicaListAsync(
-                                            repairConfiguration.PartitionId,
-                                            replicaId,
-                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                            cancellationToken).ConfigureAwait(false);
+                                                                    repairConfiguration.PartitionId,
+                                                                    replicaId,
+                                                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                    cancellationToken).ConfigureAwait(false);
                 
                 if (replicaList.Any(r => r.ReplicaStatus == ServiceReplicaStatus.Ready))
                 {
@@ -86,18 +86,19 @@ namespace FabricHealer.Repair
                     await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
 
                     replicaList = await fabricClient.QueryManager.GetReplicaListAsync(
-                                            repairConfiguration.PartitionId,
-                                            null,
-                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                            cancellationToken).ConfigureAwait(false);
+                                                                    repairConfiguration.PartitionId,
+                                                                    null,
+                                                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                    cancellationToken).ConfigureAwait(false);
 
                     if (replicaList.Count == 0)
                     {
                         await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                LogLevel.Info,
-                                "RepairExecutor.RestartCodePackageAsync",
-                                $"Execution failure: Replica {repairConfiguration.ReplicaOrInstanceId} not found in partition {repairConfiguration.PartitionId}.",
-                                cancellationToken).ConfigureAwait(false);
+                                                    LogLevel.Info,
+                                                    "RepairExecutor.RestartCodePackageAsync",
+                                                    $"Execution failure: Replica {repairConfiguration.ReplicaOrInstanceId} " +
+                                                    $"not found in partition {repairConfiguration.PartitionId}.",
+                                                    cancellationToken).ConfigureAwait(false);
 
                         return null;
                     }
@@ -118,14 +119,14 @@ namespace FabricHealer.Repair
                 }
 
                 var restartCodePackageResult = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                        () =>
-                                                            fabricClient.FaultManager.RestartDeployedCodePackageAsync(
-                                                                repairConfiguration.AppName,
-                                                                replicaSelector,
-                                                                completionMode, 
-                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                cancellationToken),
-                                                        cancellationToken).ConfigureAwait(true);
+                                                                              () =>
+                                                                                 fabricClient.FaultManager.RestartDeployedCodePackageAsync(
+                                                                                                            repairConfiguration.AppName,
+                                                                                                            replicaSelector,
+                                                                                                            completionMode, 
+                                                                                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                                                            cancellationToken),
+                                                                               cancellationToken).ConfigureAwait(true);
 
                 if (restartCodePackageResult != null)
                 {
@@ -134,13 +135,13 @@ namespace FabricHealer.Repair
 
                 return restartCodePackageResult;
             }
-            catch (Exception e) when (e is FabricException  || e is InvalidOperationException  || e is OperationCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException || e is InvalidOperationException || e is TimeoutException)
             {
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Warning,
-                        "RepairExecutor.RestartCodePackageAsync",
-                        $"Execution failure:{Environment.NewLine}{e}",
-                        cancellationToken).ConfigureAwait(false);
+                                            LogLevel.Warning,
+                                            "RepairExecutor.RestartCodePackageAsync",
+                                            $"Execution failure:{Environment.NewLine}{e}",
+                                            cancellationToken).ConfigureAwait(false);
 
                 return null;
             }
@@ -168,10 +169,10 @@ namespace FabricHealer.Repair
                 string info = "One node cluster detected. Aborting node restart operation.";
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairExecutor.SafeRestartFabricNodeAsync::NodeCount_1",
-                        info,
-                        cancellationToken).ConfigureAwait(false);
+                                            LogLevel.Info,
+                                            "RepairExecutor.SafeRestartFabricNodeAsync::NodeCount_1",
+                                            info,
+                                            cancellationToken).ConfigureAwait(false);
 
                 FabricHealerManager.RepairLogger.LogInfo(info);
 
@@ -186,22 +187,22 @@ namespace FabricHealer.Repair
             }
 
             var nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                   () =>
-                                       fabricClient.QueryManager.GetNodeListAsync(
-                                                                    nodeName,
-                                                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                    cancellationToken), 
-                                    cancellationToken).ConfigureAwait(false);
+                                                       () =>
+                                                           fabricClient.QueryManager.GetNodeListAsync(
+                                                                                        nodeName,
+                                                                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                                        cancellationToken), 
+                                                        cancellationToken).ConfigureAwait(false);
 
             if (nodes.Count == 0)
             {
                 string info = $"Target node not found: {nodeName}. Aborting node restart operation.";
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairExecutor.SafeRestartFabricNodeAsync::NodeCount0",
-                        info,
-                        cancellationToken).ConfigureAwait(false);
+                                            LogLevel.Info,
+                                            "RepairExecutor.SafeRestartFabricNodeAsync::NodeCount0",
+                                            info,
+                                            cancellationToken).ConfigureAwait(false);
 
                 FabricHealerManager.RepairLogger.LogInfo(info);
 
@@ -209,22 +210,22 @@ namespace FabricHealer.Repair
             }
 
             var allnodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                      () =>
-                                          fabricClient.QueryManager.GetNodeListAsync(
-                                                                     null,
-                                                                     FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                     cancellationToken),
-                                       cancellationToken).ConfigureAwait(false);
+                                                          () =>
+                                                              fabricClient.QueryManager.GetNodeListAsync(
+                                                                                         null,
+                                                                                         FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                                         cancellationToken),
+                                                           cancellationToken).ConfigureAwait(false);
    
             if (allnodes.Count < 3)
             {
                 string info = $"Unsupported repair for a {nodes.Count} node cluster. Aborting fabric node restart operation.";
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairExecutor.SafeRestartFabricNodeAsync::NodeCount",
-                        info,
-                        cancellationToken).ConfigureAwait(false);
+                                            LogLevel.Info,
+                                            "RepairExecutor.SafeRestartFabricNodeAsync::NodeCount",
+                                            info,
+                                            cancellationToken).ConfigureAwait(false);
 
                 FabricHealerManager.RepairLogger.LogInfo(info);
 
@@ -240,10 +241,10 @@ namespace FabricHealer.Repair
             FabricHealerManager.RepairLogger.LogInfo(actionMessage);
 
             await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairExecutor.SafeRestartFabricNodeAsyncAttemptingRestart",
-                    actionMessage,
-                    cancellationToken).ConfigureAwait(false);
+                                        LogLevel.Info,
+                                        "RepairExecutor.SafeRestartFabricNodeAsyncAttemptingRestart",
+                                        actionMessage,
+                                        cancellationToken).ConfigureAwait(false);
             try
             {
                 if (!JsonSerializationUtility.TryDeserialize(repairTask.ExecutorData, out RepairExecutorData executorData))
@@ -264,18 +265,18 @@ namespace FabricHealer.Repair
                         actionMessage = "Step = Deactivate => Did not successfully serialize executordata.";
 
                         await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                LogLevel.Info,
-                                "RepairExecutor.SafeRestartFabricNodeAsyncAttemptingRestart::Deactivate",
-                                actionMessage,
-                                cancellationToken).ConfigureAwait(false);
+                                                    LogLevel.Info,
+                                                    "RepairExecutor.SafeRestartFabricNodeAsyncAttemptingRestart::Deactivate",
+                                                    actionMessage,
+                                                    cancellationToken).ConfigureAwait(false);
 
                         return false;
                     }
 
                     await fabricClient.RepairManager.UpdateRepairExecutionStateAsync(
-                            repairTask,
-                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                            cancellationToken).ConfigureAwait(false);
+                                                        repairTask,
+                                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                        cancellationToken).ConfigureAwait(false);
 
                     // Deactivate the node with intent to restart. Several health checks will 
                     // take place to ensure safe deactivation, which includes giving services a
@@ -292,12 +293,12 @@ namespace FabricHealer.Repair
                     while (stopwatch.Elapsed <= maxWaitTimeout)
                     {
                         var nodeList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                  () =>
-                                                      fabricClient.QueryManager.GetNodeListAsync(
-                                                                                 nodeName,
-                                                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                                 cancellationToken),
-                                                  cancellationToken).ConfigureAwait(false);
+                                                                      () =>
+                                                                          fabricClient.QueryManager.GetNodeListAsync(
+                                                                                                     nodeName,
+                                                                                                     FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                                                     cancellationToken),
+                                                                      cancellationToken).ConfigureAwait(false);
 
                         if (nodeList == null || nodeList.Count == 0)
                         {
@@ -340,20 +341,20 @@ namespace FabricHealer.Repair
                     actionMessage = $"In Step Restart Node.{Environment.NewLine}{repairTask.ExecutorData}";
 
                      await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            "RepairExecutor.SafeRestartFabricNodeAsyncAttemptingRestart::RestartStep",
-                            actionMessage,
-                            cancellationToken).ConfigureAwait(false);
+                                                LogLevel.Info,
+                                                "RepairExecutor.SafeRestartFabricNodeAsyncAttemptingRestart::RestartStep",
+                                                actionMessage,
+                                                cancellationToken).ConfigureAwait(false);
 
                     // Now, restart node.
                     _ = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                   () =>
-                                       fabricClient.FaultManager.RestartNodeAsync(
-                                                                   nodeName,
-                                                                   nodes[0].NodeInstanceId,
-                                                                   FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                   cancellationToken),
-                                    cancellationToken).ConfigureAwait(false);
+                                                       () =>
+                                                           fabricClient.FaultManager.RestartNodeAsync(
+                                                                                       nodeName,
+                                                                                       nodes[0].NodeInstanceId,
+                                                                                       FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                                       cancellationToken),
+                                                        cancellationToken).ConfigureAwait(false);
                     
 
                     stopwatch.Start();
@@ -362,12 +363,12 @@ namespace FabricHealer.Repair
                     while (stopwatch.Elapsed <= maxWaitTimeout)
                     {
                         var nodeList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                  () =>
-                                                      fabricClient.QueryManager.GetNodeListAsync(
-                                                                                 nodeName,
-                                                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                                 cancellationToken),
-                                                  cancellationToken).ConfigureAwait(false);
+                                                                      () =>
+                                                                          fabricClient.QueryManager.GetNodeListAsync(
+                                                                                                     nodeName,
+                                                                                                     FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                                                     cancellationToken),
+                                                                      cancellationToken).ConfigureAwait(false);
 
                         Node targetNode = nodeList[0];
 
@@ -411,12 +412,12 @@ namespace FabricHealer.Repair
                     await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken).ConfigureAwait(false);
 
                     var nodeList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                              () =>
-                                                  fabricClient.QueryManager.GetNodeListAsync(
-                                                                             nodeName,
-                                                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                             cancellationToken),
-                                              cancellationToken).ConfigureAwait(false);
+                                                                  () =>
+                                                                      fabricClient.QueryManager.GetNodeListAsync(
+                                                                                                 nodeName,
+                                                                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                                                 cancellationToken),
+                                                                  cancellationToken).ConfigureAwait(false);
 
                     Node targetNode = nodeList[0];
 
@@ -441,10 +442,10 @@ namespace FabricHealer.Repair
                 string err = $"Handled Exception restarting Fabric node {nodeName}, NodeInstanceId {nodeInstanceId}:{e.GetType().Name}";
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairExecutor.SafeRestartFabricNodeAsync::HandledException",
-                        err,
-                        cancellationToken).ConfigureAwait(false);
+                                            LogLevel.Info,
+                                            "RepairExecutor.SafeRestartFabricNodeAsync::HandledException",
+                                            err,
+                                            cancellationToken).ConfigureAwait(false);
 
                 FabricHealerManager.RepairLogger.LogInfo(err);
 
@@ -460,11 +461,11 @@ namespace FabricHealer.Repair
             FabricHealerManager.RepairLogger.LogInfo(actionMessage);
 
             await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairExecutor.RestartCodePackageAsync::Start",
-                    actionMessage,
-                    cancellationToken,
-                    repairConfiguration).ConfigureAwait(false);
+                                        LogLevel.Info,
+                                        "RepairExecutor.RestartCodePackageAsync::Start",
+                                        actionMessage,
+                                        cancellationToken,
+                                        repairConfiguration).ConfigureAwait(false);
 
             RestartReplicaResult replicaResult;
 
@@ -474,13 +475,13 @@ namespace FabricHealer.Repair
                 ReplicaSelector replicaSelector = ReplicaSelector.ReplicaIdOf(partitionSelector, repairConfiguration.ReplicaOrInstanceId);
 
                 replicaResult = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                           () =>
-                                               fabricClient.FaultManager.RestartReplicaAsync(
-                                                                            replicaSelector,
-                                                                            CompletionMode.DoNotVerify,
-                                                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                            cancellationToken),
-                                            cancellationToken).ConfigureAwait(false);
+                                                               () =>
+                                                                   fabricClient.FaultManager.RestartReplicaAsync(
+                                                                                                replicaSelector,
+                                                                                                CompletionMode.DoNotVerify,
+                                                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                                                cancellationToken),
+                                                                cancellationToken).ConfigureAwait(false);
 
                 string statusSuccess =
                     $"Successfully restarted replica {repairConfiguration.ReplicaOrInstanceId} " +
@@ -490,11 +491,11 @@ namespace FabricHealer.Repair
                 FabricHealerManager.RepairLogger.LogInfo(statusSuccess);
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairExecutor.RestartReplicaAsync::Success",
-                        statusSuccess,
-                        cancellationToken,
-                        repairConfiguration).ConfigureAwait(false);
+                                            LogLevel.Info,
+                                            "RepairExecutor.RestartReplicaAsync::Success",
+                                            statusSuccess,
+                                            cancellationToken,
+                                            repairConfiguration).ConfigureAwait(false);
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException || e is OperationCanceledException)
             {
@@ -507,11 +508,11 @@ namespace FabricHealer.Repair
                 FabricHealerManager.RepairLogger.LogWarning(err);
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                       LogLevel.Warning,
-                       "RepairExecutor.RestartReplicaAsync::Exception",
-                       err,
-                       cancellationToken,
-                       repairConfiguration).ConfigureAwait(false);
+                                           LogLevel.Warning,
+                                           "RepairExecutor.RestartReplicaAsync::Exception",
+                                           err,
+                                           cancellationToken,
+                                           repairConfiguration).ConfigureAwait(false);
 
                 return null;
             }
@@ -577,11 +578,11 @@ namespace FabricHealer.Repair
                 FabricHealerManager.RepairLogger.LogWarning(err);
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                       LogLevel.Warning,
-                       "RepairExecutor.RestartSystemServiceProcessAsync",
-                       err,
-                       cancellationToken,
-                       repairConfiguration);
+                                           LogLevel.Warning,
+                                           "RepairExecutor.RestartSystemServiceProcessAsync",
+                                           err,
+                                           cancellationToken,
+                                           repairConfiguration);
 
                 // fix the bug..
                 throw;
@@ -644,27 +645,27 @@ namespace FabricHealer.Repair
             FabricHealerManager.RepairLogger.LogInfo(actionMessage);
 
             await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairExecutor.RemoveReplicaAsync::Start",
-                    actionMessage,
-                    cancellationToken,
-                    repairConfiguration).ConfigureAwait(false);
+                                        LogLevel.Info,
+                                        "RepairExecutor.RemoveReplicaAsync::Start",
+                                        actionMessage,
+                                        cancellationToken,
+                                        repairConfiguration).ConfigureAwait(false);
 
             RemoveReplicaResult replicaResult;
 
             try
             {
                 replicaResult = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                           () =>
-                                               fabricClient.FaultManager.RemoveReplicaAsync(
-                                                                            repairConfiguration.NodeName,
-                                                                            repairConfiguration.PartitionId,
-                                                                            repairConfiguration.ReplicaOrInstanceId,
-                                                                            CompletionMode.DoNotVerify,
-                                                                            false,
-                                                                            FabricHealerManager.ConfigSettings.AsyncTimeout.TotalSeconds,
-                                                                            cancellationToken),
-                                            cancellationToken).ConfigureAwait(false);
+                                                               () =>
+                                                                   fabricClient.FaultManager.RemoveReplicaAsync(
+                                                                                                repairConfiguration.NodeName,
+                                                                                                repairConfiguration.PartitionId,
+                                                                                                repairConfiguration.ReplicaOrInstanceId,
+                                                                                                CompletionMode.DoNotVerify,
+                                                                                                false,
+                                                                                                FabricHealerManager.ConfigSettings.AsyncTimeout.TotalSeconds,
+                                                                                                cancellationToken),
+                                                                cancellationToken).ConfigureAwait(false);
 
                 string statusSuccess =
                     $"Successfully removed replica {repairConfiguration.ReplicaOrInstanceId} " +
@@ -674,11 +675,11 @@ namespace FabricHealer.Repair
                 FabricHealerManager.RepairLogger.LogInfo(statusSuccess);
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairExecutor.RemoveReplicaAsync::Success",
-                        statusSuccess,
-                        cancellationToken,
-                        repairConfiguration).ConfigureAwait(false);
+                                            LogLevel.Info,
+                                            "RepairExecutor.RemoveReplicaAsync::Success",
+                                            statusSuccess,
+                                            cancellationToken,
+                                            repairConfiguration).ConfigureAwait(false);
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException || e is OperationCanceledException)
             {
@@ -691,11 +692,11 @@ namespace FabricHealer.Repair
                 FabricHealerManager.RepairLogger.LogWarning(err);
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                       LogLevel.Warning,
-                       "RepairExecutor.RemoveReplicaAsync::Exception",
-                       err,
-                       cancellationToken,
-                       repairConfiguration).ConfigureAwait(false);
+                                           LogLevel.Warning,
+                                           "RepairExecutor.RemoveReplicaAsync::Exception",
+                                           err,
+                                           cancellationToken,
+                                           repairConfiguration).ConfigureAwait(false);
 
                 return null;
             }
@@ -717,11 +718,11 @@ namespace FabricHealer.Repair
             FabricHealerManager.RepairLogger.LogInfo(actionMessage);
 
             await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairExecutor.DeleteFilesAsync::Start",
-                    actionMessage,
-                    cancellationToken,
-                    repairConfiguration).ConfigureAwait(false);
+                                        LogLevel.Info,
+                                        "RepairExecutor.DeleteFilesAsync::Start",
+                                        actionMessage,
+                                        cancellationToken,
+                                        repairConfiguration).ConfigureAwait(false);
 
             string targetFolderPath = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FolderPath;
 
@@ -732,85 +733,92 @@ namespace FabricHealer.Repair
 
             var dirInfo = new DirectoryInfo(targetFolderPath);
             FileSortOrder direction = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FileAgeSortOrder;
-            List<string> files = null;
+            List<string> files = direction switch
+            {
+                FileSortOrder.Ascending => (from file in dirInfo.EnumerateFiles("*",
+                            new EnumerationOptions
+                            {
+                                RecurseSubdirectories = ((DiskRepairPolicy) repairConfiguration.RepairPolicy).RecurseSubdirectories
+                            })
+                        orderby file.LastWriteTimeUtc ascending
+                        select file.FullName).Distinct().ToList(),
+                FileSortOrder.Descending => (from file in dirInfo.EnumerateFiles("*",
+                            new EnumerationOptions
+                            {
+                                RecurseSubdirectories = ((DiskRepairPolicy) repairConfiguration.RepairPolicy).RecurseSubdirectories
+                            })
+                        orderby file.LastAccessTimeUtc descending
+                        select file.FullName).Distinct().ToList(),
+                _ => null
+            };
 
-            if (direction == FileSortOrder.Ascending)
+            if (files != null)
             {
-                files = (from file in dirInfo.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).RecurseSubdirectories })
-                         orderby file.LastWriteTimeUtc ascending
-                         select file.FullName).Distinct().ToList();
-            }
-            else if (direction == FileSortOrder.Descending)
-            {
-                files = (from file in dirInfo.EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).RecurseSubdirectories })
-                         orderby file.LastAccessTimeUtc descending
-                         select file.FullName).Distinct().ToList();
-            }
-   
-            int initialCount = files.Count;
-            int deletedFiles = 0;
-            long maxFiles = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).MaxNumberOfFilesToDelete;
+                int initialCount = files.Count;
+                int deletedFiles = 0;
+                long maxFiles = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).MaxNumberOfFilesToDelete;
   
-            if (initialCount == 0)
-            {
-                return false;
-            }
-
-            foreach (var file in files)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (maxFiles > 0 && deletedFiles == maxFiles)
+                if (initialCount == 0)
                 {
-                    break;
+                    return false;
                 }
 
-                try
+                foreach (var file in files)
                 {
-                    File.Delete(file);
-                    deletedFiles++;
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (maxFiles > 0 && deletedFiles == maxFiles)
+                    {
+                        break;
+                    }
+
+                    try
+                    {
+                        File.Delete(file);
+                        deletedFiles++;
+                    }
+                    catch (Exception e) when (e is IOException || e is SecurityException)
+                    {
+                        await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                                    LogLevel.Info,
+                                                    "RepairExecutor.DeleteFilesAsync::HandledException",
+                                                    $"Unable to delete {file}:{Environment.NewLine}{e}",
+                                                    cancellationToken,
+                                                    repairConfiguration).ConfigureAwait(false);
+                    }
                 }
-                catch (Exception e) when (e is IOException || e is SecurityException)
+
+                if (maxFiles > 0 && initialCount > maxFiles && deletedFiles < maxFiles)
                 {
                     await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            "RepairExecutor.DeleteFilesAsync::HandledException",
-                            $"Unable to delete {file}:{Environment.NewLine}{e}",
-                            cancellationToken,
-                            repairConfiguration).ConfigureAwait(false);
+                                                LogLevel.Info,
+                                                "RepairExecutor.DeleteFilesAsync::IncompleteOperation",
+                                                $"Unable to delete specified number of files ({maxFiles}).",
+                                                cancellationToken,
+                                                repairConfiguration).ConfigureAwait(false);
+
+                    return false;
                 }
-            }
-
-            if (maxFiles > 0 && initialCount > maxFiles && deletedFiles < maxFiles)
-            {
-                await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairExecutor.DeleteFilesAsync::IncompleteOperation",
-                        $"Unable to delete specified number of files ({maxFiles}).",
-                        cancellationToken,
-                        repairConfiguration).ConfigureAwait(false);
-
-                return false;
-            }
             
-            if (maxFiles == 0 && deletedFiles < initialCount)
-            {
+                if (maxFiles == 0 && deletedFiles < initialCount)
+                {
+                    await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                                LogLevel.Info,
+                                                "RepairExecutor.DeleteFilesAsync::IncompleteOperation",
+                                                "Unable to delete all files.",
+                                                cancellationToken,
+                                                repairConfiguration).ConfigureAwait(false); 
+
+                    return false;
+                }
+
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairExecutor.DeleteFilesAsync::IncompleteOperation",
-                        "Unable to delete all files.",
-                        cancellationToken,
-                        repairConfiguration).ConfigureAwait(false); 
-
-                return false;
+                                            LogLevel.Info,
+                                            "RepairExecutor.DeleteFilesAsync::Success",
+                                            $"Successfully deleted {(maxFiles > 0 ? "up to " + maxFiles : "all")} files in {targetFolderPath}",
+                                            cancellationToken,
+                                            repairConfiguration).ConfigureAwait(false);
             }
-
-            await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairExecutor.DeleteFilesAsync::Success",
-                    $"Successfully deleted {(maxFiles > 0 ? "up to " + maxFiles : "all")} files in {targetFolderPath}",
-                    cancellationToken,
-                        repairConfiguration).ConfigureAwait(false);
 
             await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Node, cancellationToken, "DiskObserver").ConfigureAwait(false);
 
