@@ -33,13 +33,13 @@ TimeScopedRestartVM(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=
 
 ## Percent Memory in Use (of total physical).
 Mitigate(MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 95,
-    	TimeScopedRestartVM(4, TimeWindow=08:00:00).
+    	TimeScopedRestartVM(4, 08:00:00).
 
 ## File Handles/FDs. Linux-only.
 ## Percent Allocated, System-wide.
 Mitigate(MetricName="FileHandlesPercent", MetricValue=?MetricValue, OS="Linux") :- ?MetricValue >= 95,
-    	TimeScopedRestartVM(2, TimeWindow=08:00:00).
+    	TimeScopedRestartVM(2, 08:00:00).
 
 ## Total Allocated, System-wide.
 Mitigate(MetricName="FileHandles", MetricValue=?MetricValue, OS="Linux") :- ?MetricValue >= 1000000,
-    	TimeScopedRestartVM(2, TimeWindow=08:00:00).
+    	TimeScopedRestartVM(2, 08:00:00).

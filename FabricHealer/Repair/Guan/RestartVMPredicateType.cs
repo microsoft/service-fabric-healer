@@ -34,7 +34,7 @@ namespace FabricHealer.Repair.Guan
                     ReplicaOrInstanceId = !string.IsNullOrWhiteSpace(FOHealthData.ReplicaId) ? long.Parse(FOHealthData.ReplicaId) : default,
                     ServiceName = !string.IsNullOrWhiteSpace(FOHealthData.ServiceName) ? new Uri(FOHealthData.ServiceName) : null,
                     FOHealthMetricValue = FOHealthData.Value,
-                    RepairPolicy = new RepairPolicy(),
+                    RepairPolicy = new RepairPolicy()
                 };
             }
 
@@ -54,7 +54,7 @@ namespace FabricHealer.Repair.Guan
                 repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
                 repairConfiguration.RepairPolicy.TargetType = RepairTargetType.VirtualMachine;
 
-                if (count == 1 && Input.Arguments[0].Value.GetValue() is TimeSpan)
+                if (count == 1)
                 {
                     repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
                 }
@@ -78,17 +78,14 @@ namespace FabricHealer.Repair.Guan
                                                             $"RestartVMPredicateType::{FOHealthData.RepairId}",
                                                             message,
                                                             RepairTaskManager.Token).GetAwaiter().GetResult();
-
                     return false;
                 }
 
                 bool success = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                        () =>
-                                                            RepairTaskManager.ExecuteRMInfrastructureRepairTask(
-                                                                                repairConfiguration,
-                                                                                RepairTaskManager.Token),
+                                                        () => RepairTaskManager.ExecuteRMInfrastructureRepairTask(
+                                                                                    repairConfiguration,
+                                                                                    RepairTaskManager.Token),
                                                         RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
-
                 return success;
             }
         }

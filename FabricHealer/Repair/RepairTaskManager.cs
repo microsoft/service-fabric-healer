@@ -80,7 +80,6 @@ namespace FabricHealer.Repair
                                         "SafeRestartFabricNodeAsync",
                                         $"Successfully restarted Fabric node {nodeName}",
                                         cancellationToken).ConfigureAwait(false);
-
             return true;
         }
 
@@ -100,7 +99,6 @@ namespace FabricHealer.Repair
                                             "RepairTaskManager.StartRepairWorkflowAsync",
                                             "Unable to locate target node. Aborting repair.",
                                             cancellationToken).ConfigureAwait(false);
-              
                 return;
             }
 
@@ -123,7 +121,6 @@ namespace FabricHealer.Repair
                                                   "RepairTaskManager.StartRepairWorkflowAsync::OneNodeCluster",
                                                   "Will not attempt VM-level repair in a one node cluster.",
                                                   cancellationToken).ConfigureAwait(false);
-
                         return;
                     }
                 }
@@ -135,7 +132,6 @@ namespace FabricHealer.Repair
                                           "RepairTaskManager.StartRepairWorkflowAsync::NodeCount",
                                           $"Unable to determine node count. Will not attempt VM level repairs:{Environment.NewLine}{e}",
                                           cancellationToken).ConfigureAwait(false);
-
                 return;
             }
 
@@ -199,7 +195,6 @@ namespace FabricHealer.Repair
             term.AddArgument(new Constant(foHealthData.PartitionId), RepairConstants.PartitionId);
             term.AddArgument(new Constant(foHealthData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
             term.AddArgument(new Constant(Convert.ToInt64(foHealthData.Value)), RepairConstants.MetricValue);
-            
             compoundTerms.Add(term);
 
             // Dispatch query
@@ -212,7 +207,6 @@ namespace FabricHealer.Repair
         public async Task<bool> ExecuteRMInfrastructureRepairTask(RepairConfiguration repairConfiguration, CancellationToken cancellationToken)
         {
             var infraServices = await FabricRepairTasks.GetInfrastructureServiceInstancesAsync(FabricClientInstance, cancellationToken).ConfigureAwait(false);
-
             var arrServices = infraServices as Service[] ?? infraServices.ToArray();
 
             if (arrServices.Length == 0)
@@ -223,7 +217,6 @@ namespace FabricHealer.Repair
                                             "Infrastructure Service not found. Will not attemp VM repair.",
                                             cancellationToken,
                                             repairConfiguration).ConfigureAwait(false);
-
                 return false;
             }
 
@@ -258,16 +251,15 @@ namespace FabricHealer.Repair
                                             "Exiting RepairTaskManager.ScheduleFHRepairTaskAsync.",
                                             cancellationToken,
                                             repairConfiguration).ConfigureAwait(false);
-
                 return false;
             }
 
             // Make sure there is not already a repair job executing reboot repair for target node.
             var isRepairAlreadyInProgress =
                     await repairTaskEngine.IsFHRepairTaskRunningAsync(
-                        executorName,
-                        repairConfiguration,
-                        cancellationToken).ConfigureAwait(true);
+                                            executorName,
+                                            repairConfiguration,
+                                            cancellationToken).ConfigureAwait(true);
 
             if (isRepairAlreadyInProgress)
             {
@@ -279,12 +271,11 @@ namespace FabricHealer.Repair
                                             "is already in progress. Will not schedule another VM repair at this time.",
                                             cancellationToken,
                                             repairConfiguration).ConfigureAwait(false);
-
                 return false;
             }
 
             // Create repair task for target node.
-            var repairTask = await FabricRepairTasks.ScheduleRepairTaskAsync(
+            var repairTask = await FabricRepairTasks.ScheduleRepairTask(
                                                         repairConfiguration,
                                                         null,
                                                         executorName,
@@ -299,7 +290,6 @@ namespace FabricHealer.Repair
                                             "Unable to create Repair Task.",
                                             cancellationToken,
                                             repairConfiguration).ConfigureAwait(false);
-
                 return false;
             }
 
@@ -325,7 +315,6 @@ namespace FabricHealer.Repair
                                                 new List<RepairTaskState> { RepairTaskState.Completed }))
                 {
                     await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken).ConfigureAwait(false);
-
                     continue;
                 }
 
@@ -346,7 +335,6 @@ namespace FabricHealer.Repair
             var result = await RepairExec.RestartReplicaAsync(
                                             repairConfiguration ?? throw new ArgumentException("configuration can't be null."),
                                             cancellationToken).ConfigureAwait(false);
-
             return result != null;
         }
 
@@ -355,7 +343,6 @@ namespace FabricHealer.Repair
             var result = await RepairExec.RemoveReplicaAsync(
                                             repairConfiguration ?? throw new ArgumentException("configuration can't be null."),
                                             cancellationToken).ConfigureAwait(false);
-
             return result != null;
         }
 
@@ -440,7 +427,6 @@ namespace FabricHealer.Repair
                                         statusSuccess,
                                         cancellationToken,
                                         repairConfiguration).ConfigureAwait(false);
-
             return true;
         }
 
@@ -449,13 +435,11 @@ namespace FabricHealer.Repair
             try
             {
                 var nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(nodeName, AsyncTimeout, cancellationToken).ConfigureAwait(true);
-
                 return nodes.Count > 0 ? nodes[0] : null;
             }
             catch (FabricException fe)
             {
                 FabricHealerManager.RepairLogger.LogError($"Error getting node {nodeName}:{Environment.NewLine}{fe}");
-
                 return null;
             }
         }
@@ -503,7 +487,6 @@ namespace FabricHealer.Repair
                                                 message,
                                                 cancellationToken,
                                                 repairConfiguration).ConfigureAwait(false);
-
                     return null;
                 }
             }
@@ -523,13 +506,12 @@ namespace FabricHealer.Repair
             };
 
             // Create custom FH repair task for target node.
-            var repairTask = await FabricRepairTasks.ScheduleRepairTaskAsync(
+            var repairTask = await FabricRepairTasks.ScheduleRepairTask(
                                                         repairConfiguration,
                                                         executorData,
                                                         RepairTaskEngine.FabricHealerExecutorName,
                                                         FabricClientInstance,
                                                         cancellationToken).ConfigureAwait(false);
-
             return repairTask;
         }
 
@@ -548,7 +530,6 @@ namespace FabricHealer.Repair
                                             "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
                                             $"Failed to find scheduled repair task {repairTask.TaskId}.",
                                             Token).ConfigureAwait(false);
-
                 return false;
             }
 #if DEBUG
@@ -572,7 +553,6 @@ namespace FabricHealer.Repair
                                                 "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
                                                 $"Repair Task {repairTask.TaskId} was aborted or cancelled.",
                                                 Token).ConfigureAwait(false);
-
                     return false;
                 }
 
@@ -608,7 +588,6 @@ namespace FabricHealer.Repair
                                             cancellationToken).ConfigureAwait(false);
 
                 await FabricRepairTasks.CancelRepairTaskAsync(repairTask, FabricClientInstance);
-
                 return false;
             }
 
@@ -829,7 +808,6 @@ namespace FabricHealer.Repair
                                                 "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
                                                 $"{target} Repair target {repairTarget} successfully healed.",
                                                 cancellationToken).ConfigureAwait(false);
-
                     isHealthStateOk = true;
                 }
                 else
@@ -854,7 +832,6 @@ namespace FabricHealer.Repair
 
                 // Let RM catch up.
                 await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken).ConfigureAwait(false);
-
                 return isHealthStateOk;
             }
 
@@ -866,7 +843,6 @@ namespace FabricHealer.Repair
                                         cancellationToken).ConfigureAwait(false);   
 
             await FabricRepairTasks.CancelRepairTaskAsync(repairTask, FabricClientInstance).ConfigureAwait(false);
-
             return false;
         }
 
@@ -904,7 +880,6 @@ namespace FabricHealer.Repair
             }
 
             stopwatch.Stop();
-
             return false;
         }
 
@@ -925,7 +900,7 @@ namespace FabricHealer.Repair
                                                                                                                 repairConfig.AppName,
                                                                                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                                                                                 token),
-                                                                    token);
+                                                                   token);
 
                     bool isTargetAppHealedOnTargetNode = false;
 
@@ -962,24 +937,20 @@ namespace FabricHealer.Repair
                                                                     token);
 
                     bool isTargetNodeHealed = nodeHealth.HealthEvents.Any(
-                                                h => JsonSerializationUtility.TryDeserialize(h.HealthInformation.Description,
-                                                         out TelemetryData foHealthData)
-                                                     && foHealthData.NodeName == repairConfig.NodeName
-                                                     && foHealthData.HealthState.ToLower() == "ok");
-
+                                                        h => JsonSerializationUtility.TryDeserialize(h.HealthInformation.Description, out TelemetryData foHealthData)
+                                                                && foHealthData.NodeName == repairConfig.NodeName
+                                                                && foHealthData.HealthState.ToLower() == "ok");
                     return isTargetNodeHealed ? HealthState.Ok : nodeHealth.AggregatedHealthState;
                 }
                 case RepairTargetType.Replica:
                 {
                     // Make sure the Partition where the restarted replica was located is now healthy.
                     var partitionHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                                         () => 
-                                                                             FabricClientInstance.HealthManager.GetPartitionHealthAsync(
-                                                                                            repairConfig.PartitionId,
-                                                                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                                            token),
+                                                                         () => FabricClientInstance.HealthManager.GetPartitionHealthAsync(
+                                                                                                                    repairConfig.PartitionId,
+                                                                                                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                                                                    token),
                                                                          token);
-
                     return partitionHealth.AggregatedHealthState;
                 }
                 default:

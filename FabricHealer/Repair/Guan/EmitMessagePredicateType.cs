@@ -65,7 +65,6 @@ namespace FabricHealer.Repair.Guan
                                                         "EmitMessagePredicate",
                                                         output,
                                                         RepairTaskManager.Token).GetAwaiter().GetResult();
-
                 return true;
             }
         }

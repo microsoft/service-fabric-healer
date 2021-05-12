@@ -124,22 +124,22 @@ namespace FabricHealer.Utilities.Telemetry
             if (FabricHealerManager.ConfigSettings.EtwEnabled)
             {
                 Logger.EtwLogger?.Write(
-                    RepairConstants.EventSourceEventName,
-                    new
-                    {
-                        ApplicationName = repairConfig?.AppName?.OriginalString ?? string.Empty,
-                        Description = description,
-                        HealthState = Enum.GetName(typeof(HealthState), healthState),
-                        Metric = repairAction,
-                        PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
-                        ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
-                        Level = level,
-                        NodeName = repairConfig?.NodeName ?? string.Empty,
-                        OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
-                        ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
-                        Source = source,
-                        SystemServiceProcessName = repairConfig?.SystemServiceProcessName ?? string.Empty,
-                    });
+                                    RepairConstants.EventSourceEventName,
+                                    new
+                                    {
+                                        ApplicationName = repairConfig?.AppName?.OriginalString ?? string.Empty,
+                                        Description = description,
+                                        HealthState = Enum.GetName(typeof(HealthState), healthState),
+                                        Metric = repairAction,
+                                        PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
+                                        ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
+                                        Level = level,
+                                        NodeName = repairConfig?.NodeName ?? string.Empty,
+                                        OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                                        ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
+                                        Source = source,
+                                        SystemServiceProcessName = repairConfig?.SystemServiceProcessName ?? string.Empty,
+                                    });
             }
         }
     }

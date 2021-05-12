@@ -50,7 +50,6 @@ namespace FabricHealer.Repair.Guan
                                                             FOHealthData,
                                                             RepairTaskManager.Token).GetAwaiter().GetResult();
                 
-
                 if (!insideRunInterval)
                 {
                     return false;
@@ -64,7 +63,6 @@ namespace FabricHealer.Repair.Guan
                                                         $"CheckInsideRunInterval::{FOHealthData.RepairId}",
                                                         message,
                                                         RepairTaskManager.Token).GetAwaiter().GetResult();
-
                 return true;
             }
         }

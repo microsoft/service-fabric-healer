@@ -106,6 +106,12 @@ namespace FabricHealer.Utilities
             private set;
         }
 
+        public bool EnableDiskRepair
+        {
+            get;
+            private set;
+        }
+
         public bool EnableNodeRepair
         {
             get;
@@ -188,9 +194,7 @@ namespace FabricHealer.Utilities
                         if (telemetryProvider == TelemetryProviderType.AzureLogAnalytics)
                         {
                             LogAnalyticsLogType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsLogTypeParameter);
-
                             LogAnalyticsSharedKey = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsSharedKeyParameter);
-
                             LogAnalyticsWorkspaceId = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsWorkspaceIdParameter);
                         }
                         else
@@ -212,6 +216,11 @@ namespace FabricHealer.Utilities
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.AppRepairPolicySectionName, RepairConstants.Enabled), out bool appRepairEnabled))
             {
                 EnableAppRepair = appRepairEnabled;
+            }
+
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.DiskRepairPolicySectionName, RepairConstants.Enabled), out bool diskRepairEnabled))
+            {
+                EnableDiskRepair = diskRepairEnabled;
             }
 
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.FabricNodeRepairPolicySectionName, RepairConstants.Enabled), out bool nodeRepairEnabled))
