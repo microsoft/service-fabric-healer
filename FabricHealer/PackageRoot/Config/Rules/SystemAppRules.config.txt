@@ -53,25 +53,25 @@ TimeScopedRestartFabricSystemProcess(?count, ?time) :- GetRepairHistory(?repairC
 ## CPU Time - Percent
 
 Mitigate(MetricName="CpuPercent", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
-	TimeScopedRestartFabricSystemProcess(5, 01:00:00), !.
+	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 
 ## Memory Use - Megabytes in use
 
 Mitigate(MetricName="MemoryMB", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
-	TimeScopedRestartFabricSystemProcess(5, 01:00:00), !.
+	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 
 ## Memory Use - Percent in use
 
 Mitigate(MetricName="MemoryPercent", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
-	TimeScopedRestartFabricSystemProcess(5, 01:00:00), !.
+	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 
 ## Ephemeral Ports in Use
 
 Mitigate(MetricName="EphemeralPorts", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
-	TimeScopedRestartFabricSystemProcess(5, 01:00:00), !.
+	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 
 ## Open File Handles - Specific system service process on either Windows or Linux.
@@ -80,18 +80,18 @@ Mitigate(MetricName="EphemeralPorts", SystemServiceProcessName=?SysProcName) :- 
 ## Restart the offending Fabric system process named FabricGateway, regardless of OS.
 
 Mitigate(MetricName="FileHandles", SystemServiceProcessName=?SysProcName) :- StringContains("FabricGateway", ?SysProcName),
-	TimeScopedRestartFabricSystemProcess(15, 01:00:00), !.
+	TimeScopedRestartFabricSystemProcess(15, 01:00:00).
 
 
 ## Open File Handles - Linux-only: Any SF system service besides Fabric or FabricHost.
 ## Restart the offending Fabric system process.
 
 Mitigate(MetricName="FileHandles", OS="Linux", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
-	TimeScopedRestartFabricSystemProcess(5, 01:00:00), !.
+	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 
 ## Open File Handles - Linux, Fabric or FabricHost. In these cases, we want a safe (graceful) restart of the Fabric node; not just kill the process, which will restart the node, but not gracefully.
 ## Restart the Fabric node where the offending instance is running.
 
-Mitigate(MetricName="FileHandles", OS="Linux", SystemServiceProcessName="Fabric") :- TimeScopedRestartFabricNode(2, 08:00:00), !.
+Mitigate(MetricName="FileHandles", OS="Linux", SystemServiceProcessName="Fabric") :- TimeScopedRestartFabricNode(2, 08:00:00).
 Mitigate(MetricName="FileHandles", OS="Linux", SystemServiceProcessName="FabricHost") :- TimeScopedRestartFabricNode(2, 08:00:00).
