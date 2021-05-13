@@ -85,7 +85,7 @@ namespace FabricHealer.Repair.Guan
                 var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
                 var isNodeRepairAlreadyInProgress =
                     repairTaskEngine.IsFHRepairTaskRunningAsync(
-                                        "FabricHealer",
+                                        RepairTaskEngine.FabricHealerExecutorName,
                                         repairConfiguration,
                                         RepairTaskManager.Token).GetAwaiter().GetResult();
 
@@ -107,7 +107,7 @@ namespace FabricHealer.Repair.Guan
                                                       () => RepairTaskManager.ScheduleFabricHealerRmRepairTaskAsync(
                                                                                 repairConfiguration,
                                                                                 RepairTaskManager.Token),
-                                                       RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
+                                                       RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 
                 if (repairTask == null)
                 {

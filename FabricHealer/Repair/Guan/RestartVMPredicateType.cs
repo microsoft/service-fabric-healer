@@ -65,7 +65,7 @@ namespace FabricHealer.Repair.Guan
                 var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
                 var isRepairAlreadyInProgress =
                     repairTaskEngine.IsFHRepairTaskRunningAsync(
-                                        $"fabric:/System/InfrastructureService/{FOHealthData.NodeType}",
+                                        $"{RepairTaskEngine.InfrastructureServiceName}/{FOHealthData.NodeType}",
                                         repairConfiguration,
                                         RepairTaskManager.Token).GetAwaiter().GetResult();
                 

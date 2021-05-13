@@ -124,7 +124,7 @@ namespace FabricHealer
                                       systemAppUri,
                                       serviceNameFabricUri,
                                       ConfigSettings.AsyncTimeout,
-                                      cancellationToken).ConfigureAwait(true);
+                                      cancellationToken).ConfigureAwait(false);
 
             if ((serviceList?.Count ?? 0) == 0)
             {
@@ -336,8 +336,13 @@ namespace FabricHealer
                         continue;
                     }
 
-                    // Cancel existing repair. We may need to create a new one for abandoned fabric node repairs.
-                    await FabricRepairTasks.CancelRepairTaskAsync(repair, fabricClient).ConfigureAwait(false);
+                    // Try and cancel existing repair. We may need to create a new one for abandoned repairs where FH goes down for some reason.
+                    // Note: CancelRepairTaskAsync handles exceptions (IOE) that may be thrown by RM due to state change policy. 
+                    // The repair state could change to Completed after this call is made, for example, and before RM API call.
+                    if (repair.State != RepairTaskState.Completed)
+                    {
+                        await FabricRepairTasks.CancelRepairTaskAsync(repair, fabricClient).ConfigureAwait(false);
+                    }
 
                     /* Resume interrupted Fabric Node restart repairs */
 
@@ -565,11 +570,6 @@ namespace FabricHealer
         private async Task ProcessApplicationHealthAsync(IEnumerable<ApplicationHealthState> appHealthStates)
         {
             var supportedAppHealthStates = appHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
-            var nodeList =
-                await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                               () => fabricClient.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, Token),
-                                               Token).ConfigureAwait(false);
-            int nodeCount = nodeList.Count;
 
             foreach (var app in supportedAppHealthStates)
             {
@@ -615,11 +615,10 @@ namespace FabricHealer
                 {
                     Token.ThrowIfCancellationRequested();
 
-                    // Random wait to limit duplicate job creation from other FH instances.
-                    // This is hacky and will be replaced at some point with a better approach. This is fine for Beta.
+                    // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
                     var random = new Random();
-                    int waitTime = random.Next(2, 42);
-                    await Task.Delay(TimeSpan.FromSeconds(waitTime), Token).ConfigureAwait(false);
+                    int waitTimeMS = random.Next(250, 10000);
+                    await Task.Delay(waitTimeMS, Token).ConfigureAwait(false);
 
                     if (string.IsNullOrWhiteSpace(evt.HealthInformation.Description))
                     {
@@ -635,7 +634,7 @@ namespace FabricHealer
                         || foHealthData.Code == FOErrorWarningCodes.AppErrorNetworkEndpointUnreachable
                         || foHealthData.Code == FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable)
                     {
-                        // Network endpoint test failures have no general mitigation yet.
+                        // Network endpoint test failures have no general mitigation.
                         continue;
                     }
 
@@ -646,17 +645,10 @@ namespace FabricHealer
 
                     if (app.ApplicationName.OriginalString == "fabric:/System")
                     {
-                        // Node-level safe restarts, should that be the specified repair for a system service issue
-                        // (like for a Fabric process issue), must not take place in clusters with less than 3 nodes to guarantee quorum..
-                        if (nodeCount < 3 && foHealthData.SystemServiceProcessName == "Fabric")
-                        {
-                            continue;
-                        }
-
                         // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
                         var fhRepairTasks = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                                                                    RepairTaskEngine.FabricHealerExecutorName,
-                                                                    Token).ConfigureAwait(false);
+                                                                     RepairTaskEngine.FabricHealerExecutorName,
+                                                                     Token).ConfigureAwait(false);
 
                         if (fhRepairTasks.Count > 0)
                         {
@@ -664,13 +656,15 @@ namespace FabricHealer
                             {
                                 var executorData =  JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
-                                if (executorData?.RepairPolicy.RepairAction != RepairActionType.RestartFabricNode &&
-                                    executorData?.RepairPolicy.RepairAction != RepairActionType.RestartProcess)
+                                if (executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartFabricNode &&
+                                    executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartProcess)
                                 {
                                     continue;
                                 }
 
-                                string message = $"A Service Fabric System service repair ({repair.TaskId}) is already in progress in the cluster. Will not attempt repair at this time.";
+                                string message = $"A Service Fabric System service repair ({repair.TaskId}) is already in progress in the cluster. " +
+                                                 $"Will not attempt repair at this time.";
+
                                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                              LogLevel.Info,
                                                              $"ProcessApplicationHealth::System::{repair.TaskId}",
@@ -690,9 +684,11 @@ namespace FabricHealer
                         repairId = $"{foHealthData.NodeName}_{foHealthData.SystemServiceProcessName}_{foHealthData.Code}";
                         system = "System ";
 
-                        var currentRepairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token).ConfigureAwait(false);
+                        var currentRepairs = 
+                            await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token).ConfigureAwait(false);
 
-                        // Is a repair for the target app service instance already happening in the cluster? There can be multiple Warnings emitted by FO for a single app at the same time.
+                        // Is a repair for the target app service instance already happening in the cluster?
+                        // There can be multiple Warnings emitted by FO for a single app at the same time.
                         if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(foHealthData.SystemServiceProcessName)))
                         {
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -726,25 +722,21 @@ namespace FabricHealer
                         }
 
                         string serviceProcessName = $"{foHealthData.ServiceName?.Replace("fabric:/", "").Replace("/", "")}";
-                        var currentRepairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token).ConfigureAwait(false);
+                        var currentRepairs = 
+                            await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token).ConfigureAwait(false);
 
-                        // Is a repair for the target app service instance already happening in the cluster? There can be multiple Warnings emitted by FO for a single app at the same time.
-                        if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(serviceProcessName)))
+                        // This is the way each FH repair is ID'd. This data is stored in the related Repair Task's ExecutorData property.
+                        repairId = $"{foHealthData.NodeName}_{serviceProcessName}_{foHealthData.Metric?.Replace(" ", string.Empty)}";
+
+                        // Is a repair for the target app service instance already happening in the cluster?
+                        // There can be multiple Warnings emitted by FO for a single app at the same time.
+                        if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
                         {
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                          LogLevel.Info,
                                                          $"MonitorRepairableHealthEventsAsync::{foHealthData.ServiceName}",
                                                          $"{appName} already has a repair in progress for service {foHealthData.ServiceName}",
                                                          Token).ConfigureAwait(false);
-                            continue;
-                        }
-
-                        // This is the way each FH repair is ID'd. This data is stored in the related Repair Task's ExecutorData property.
-                        repairId = $"{foHealthData.NodeName}_{serviceProcessName}_{foHealthData.Metric?.Replace(" ", string.Empty)}";
-                        
-                        // Repair already in progress on target node (so, the job has already been taken by another FH instance at this point)?
-                        if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
-                        {
                             continue;
                         }
                     }
@@ -774,8 +766,8 @@ namespace FabricHealer
         }
 
         // As far as FabricObserver(FO) is concerned, a node is a VM, so FO only creates NodeHealthReports when a VM level issue
-        // is detected. So, FO does not monitor Fabric node health, but will put a node in Error or Warning if the underlying 
-        // VM is using too much of some monitored machine resource..).
+        // is detected. FO does not monitor Fabric node health, but will put a Fabric node in Error or Warning if the underlying 
+        // VM is using too much (based on user-supplied threshold value) of some monitored machine resource.
         private async Task ProcessNodeHealthAsync(IEnumerable<NodeHealthState> nodeHealthStates)
         {
             var supportedNodeHealthStates = nodeHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
@@ -783,23 +775,33 @@ namespace FabricHealer
             foreach (var node in supportedNodeHealthStates)
             {
                 Token.ThrowIfCancellationRequested();
+
+                // Get information about target node.
                 var nodeList =
                         await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                        () => fabricClient.QueryManager.GetNodeListAsync(node.NodeName, ConfigSettings.AsyncTimeout, Token),
                                                        Token).ConfigureAwait(false);
+                if (nodeList.Count == 0)
+                {
+                    continue;
+                }
+                
                 Node targetNode = nodeList[0];
 
-                // Check to see if a VM-level repair is already scheduled or in flight for the target node.
+                // Check to see if a VM-level repair is already in flight in the cluster.
                 var currentFHVMRepairTasksInProgress =
                             await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                                                      $"fabric:/System/InfrastructureService/{targetNode.NodeType}",
+                                                      $"{RepairTaskEngine.InfrastructureServiceName}/{targetNode.NodeType}",
                                                       Token).ConfigureAwait(false);
 
-                // FH creates VM repair tasks with custom Description that always contains node name. Of course,
-                // same is true for TaskId. Doesn't matter which one we check here..
-                if (currentFHVMRepairTasksInProgress.Count > 0 
-                    && currentFHVMRepairTasksInProgress.Any(r => r.Description.Contains(targetNode.NodeName) || r.TaskId.Contains(targetNode.NodeName)))
+                // FH is very conservative. If there is already a VM repair in progress in the cluster, then move on.
+                if (currentFHVMRepairTasksInProgress.Count > 0)
                 {
+                    await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                                 LogLevel.Info,
+                                                 "MonitorRepairableHealthEventsAsync::VM_Repair_In_Progress",
+                                                 "There is already a VM-level repair running in the cluster. Will not do any VM repairs at this time.",
+                                                 Token).ConfigureAwait(false);
                     continue;
                 }
             
@@ -813,29 +815,35 @@ namespace FabricHealer
                 {
                     Token.ThrowIfCancellationRequested();
 
-                    // Random wait to limit duplicate job creation from other FH instances.
-                    // This is hacky and will be replaced at some point with a better approach. This is fine for Beta.
+                    // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
                     var random = new Random();
-                    int waitTime = random.Next(2, 42);
-                    await Task.Delay(TimeSpan.FromSeconds(waitTime), Token).ConfigureAwait(false);
+                    int waitTimeMS = random.Next(250, 10000);
+                    await Task.Delay(waitTimeMS, Token).ConfigureAwait(false);
                     
                     if (string.IsNullOrWhiteSpace(evt.HealthInformation.Description))
                     {
                         continue;
                     }
 
+                    // From FabricObserver? FO creates health events with HealthInformation.Description properties
+                    // containing serialized instances of TelemetryData type. FH only works with FO-supplied health data.
                     if (!JsonSerializationUtility.TryDeserialize(evt.HealthInformation.Description, out TelemetryData foHealthData))
                     {
                         continue;
                     }
 
-                    // Supported Error code from FO? If not, then get next event..
+                    // Supported Error code from FO?
                     if (!FOErrorWarningCodes.NodeErrorCodesDictionary.ContainsKey(foHealthData.Code))
                     {
                         continue;
                     }
 
                     string errorWarningName = FOErrorWarningCodes.GetErrorWarningNameFromCode(foHealthData.Code);
+                    
+                    if (string.IsNullOrWhiteSpace(errorWarningName))
+                    {
+                        continue;
+                    }
 
                     // Don't try any VM-level repairs - except for Disk repair - if the target VM is the same one where this instance of FH is running.
                     // Another FH instance on a different VM will run repair.
@@ -854,11 +862,6 @@ namespace FabricHealer
                         {
                             continue;
                         }
-                    }
-
-                    if (string.IsNullOrWhiteSpace(errorWarningName))
-                    {
-                        continue;
                     }
 
                     // Get configuration settings related to supported Node repair.
@@ -904,11 +907,6 @@ namespace FabricHealer
                 return;
             }
 
-            var nodeList =
-                await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                               () => fabricClient.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, Token),
-                                               Token).ConfigureAwait(false); ;
-            int nodeCount = nodeList.Count;
             var repUnhealthyEvaluations = ((ReplicaHealthEvaluation)evaluation).UnhealthyEvaluations;
 
             foreach (var healthEvaluation in repUnhealthyEvaluations)
@@ -918,14 +916,10 @@ namespace FabricHealer
 
                 Token.ThrowIfCancellationRequested();
 
-                // Random wait to limit duplicate job creation from other FH instances.
-                // This is hacky and will be replaced at some point with a better approach. This is fine for Beta.
-                if (nodeCount > 1)
-                {
-                    var random = new Random();
-                    int waitTime = random.Next(1, nodeCount);
-                    await Task.Delay(TimeSpan.FromSeconds(waitTime), Token).ConfigureAwait(false);
-                }
+                // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
+                var random = new Random();
+                int waitTimeMS = random.Next(250, 10000);
+                await Task.Delay(waitTimeMS, Token).ConfigureAwait(false);
 
                 var service = await fabricClient.QueryManager.GetServiceNameAsync(
                                                                 eval.PartitionId,
@@ -1017,13 +1011,13 @@ namespace FabricHealer
                 }
 
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                            LogLevel.Info,
-                                            $"MonitorRepairableHealthEventsAsync:Replica_{eval.ReplicaOrInstanceId}_{errOrWarn}",
-                                            $"Detected Replica {eval.ReplicaOrInstanceId} on Partition " +
-                                            $"{eval.PartitionId} is in {errOrWarn}.{Environment.NewLine}" +
-                                            $"Replica repair policy is enabled. " +
-                                            $"{repairRules.Count} Logic rules found for unhealthy Replica repair.",
-                                            Token).ConfigureAwait(false);
+                                             LogLevel.Info,
+                                             $"MonitorRepairableHealthEventsAsync:Replica_{eval.ReplicaOrInstanceId}_{errOrWarn}",
+                                             $"Detected Replica {eval.ReplicaOrInstanceId} on Partition " +
+                                             $"{eval.PartitionId} is in {errOrWarn}.{Environment.NewLine}" +
+                                             $"Replica repair policy is enabled. " +
+                                             $"{repairRules.Count} Logic rules found for unhealthy Replica repair.",
+                                             Token).ConfigureAwait(false);
 
                 // Start the repair workflow.
                 await repairTaskManager.StartRepairWorkflowAsync(foHealthData, repairRules, Token).ConfigureAwait(false);
@@ -1096,9 +1090,9 @@ namespace FabricHealer
         {
             // Get config filename and read lines from file.
             string logicRulesConfigFileName = GetSettingParameterValue(
-                                                serviceContext,
-                                                repairPolicySectionName,
-                                                RepairConstants.LogicRulesConfigurationFile);
+                                                 serviceContext,
+                                                 repairPolicySectionName,
+                                                 RepairConstants.LogicRulesConfigurationFile);
 
             var configPath = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Path;
             var rulesFolderPath = Path.Combine(configPath, "Rules");
