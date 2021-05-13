@@ -126,7 +126,7 @@ namespace FabricHealer.Repair
                                                                                                             completionMode, 
                                                                                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                                                                             cancellationToken),
-                                                                               cancellationToken).ConfigureAwait(true);
+                                                                               cancellationToken).ConfigureAwait(false);
 
                 if (restartCodePackageResult != null)
                 {
@@ -837,7 +837,7 @@ namespace FabricHealer.Repair
                 var nodes = await fabricClient.QueryManager.GetNodeListAsync(
                                    nodeName,
                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                   cancellationToken).ConfigureAwait(true);
+                                   cancellationToken).ConfigureAwait(false);
 
                 Node targetNode = nodes.Count > 0 ? nodes[0] : null;
 

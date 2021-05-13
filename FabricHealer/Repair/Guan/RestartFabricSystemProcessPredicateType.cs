@@ -74,7 +74,7 @@ namespace FabricHealer.Repair.Guan
                                                           () => RepairTaskManager.ScheduleFabricHealerRmRepairTaskAsync(
                                                                                     repairConfiguration,
                                                                                     RepairTaskManager.Token),
-                                                           RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
+                                                           RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
 
                 if (repairTask == null)
                 {
