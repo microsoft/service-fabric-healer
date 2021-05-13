@@ -28,27 +28,21 @@ namespace FabricHealer.Repair.Guan
 
             protected override Task<Term> GetNextTermAsync()
             {
-                if (Input.Arguments[1].Value.GetEffectiveTerm().GetValue().GetType() != typeof(TimeSpan))
-                {
-                    throw new GuanException(
-                        "GetRepairHistoryPredicate: Input argument must be of type System.TimeSpan " +
-                        "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
-                }
-
                 long repairCount = 0;
                 var timeWindow = (TimeSpan)Input.Arguments[1].Value.GetEffectiveTerm().GetValue();
 
                 if (timeWindow > TimeSpan.MinValue)
                 {
                     repairCount = FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(
-                                                        timeWindow,
-                                                        RepairTaskManager.FabricClientInstance,
-                                                        FOHealthData,
-                                                        RepairTaskManager.Token).GetAwaiter().GetResult();
+                                        timeWindow,
+                                        RepairTaskManager.FabricClientInstance,
+                                        FOHealthData,
+                                        RepairTaskManager.Token).GetAwaiter().GetResult();
                 }
                 else
                 {
                     string message = "You must supply a valid TimeSpan string for TimeWindow argument of GetRepairHistoryPredicate. Default result has been supplied (0).";
+
                     RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                             LogLevel.Info,
                                                             $"GetRepairHistoryPredicate::{FOHealthData.RepairId}",
@@ -60,6 +54,7 @@ namespace FabricHealer.Repair.Guan
 
                 // By using "0" for name here means the rule can pass any name for this named variable arg as long as it is consistently used as such in the corresponding rule.
                 result.AddArgument(new Constant(repairCount), "0");
+
                 return Task.FromResult<Term>(result);
             }
         }

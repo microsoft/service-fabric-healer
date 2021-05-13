@@ -84,18 +84,28 @@ namespace FabricHealer.Repair
                                                                 executorName,
                                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                                 cancellationToken).ConfigureAwait(false);
+
             return repairTasks;
         }
 
         // This allows InfrastructureService to schedule and run reboot im concert with VMSS over MR.
-        public RepairTask CreateVmRebootTask(RepairConfiguration repairConfiguration, string executorName)
+        public async Task<RepairTask> CreateVmRebootTaskAsync(RepairConfiguration repairConfiguration, string executorName, CancellationToken cancellationToken)
         {
-            string taskId = $"{FHTaskIdPrefix}/{HostVMReboot}/{(uint)repairConfiguration.NodeName.GetHashCode()}/{repairConfiguration.NodeType}";
+            // Do not allow this to take place in one-node cluster, like a dev machine.
+            var nodes = await fabricClient.QueryManager.GetNodeListAsync(null, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken).ConfigureAwait(false);
+            int nodeCount = nodes.Count;
+
+            if (nodeCount == 1)
+            {
+                return null;
+            }
+
+            string taskId = $"{FHTaskIdPrefix}/{HostVMReboot}/{repairConfiguration.NodeName.GetHashCode()}/{repairConfiguration.NodeType}";
+            bool doHealthChecks = !FOErrorWarningCodes.GetErrorWarningNameFromCode(repairConfiguration.FOErrorCode).Contains("Error");
 
             // Error health state on target SF entity can block RM from approving the job to repair it (which is the whole point of doing the job).
             // So, do not do health checks if customer configures FO to emit Error health reports.
             // In general, FO should *not* be configured to emit Error events. See FO documentation.
-            bool doHealthChecks = !FOErrorWarningCodes.GetErrorWarningNameFromCode(repairConfiguration.FOErrorCode).Contains("Error");
 
             var repairTask = new ClusterRepairTask(taskId, HostVMReboot)
             {
@@ -123,7 +133,7 @@ namespace FabricHealer.Repair
                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                 token).ConfigureAwait(true);
 
-            if (currentFHRepairTasksInProgress == null ||currentFHRepairTasksInProgress.Count == 0)
+            if (currentFHRepairTasksInProgress == null || currentFHRepairTasksInProgress.Count == 0)
             {
                 return false;
             }

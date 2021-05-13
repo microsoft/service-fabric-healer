@@ -146,9 +146,7 @@ namespace FabricHealer.Utilities
             RetryableFabricErrorCodes = new List<FabricErrorCode>();
             RetrySuccessExceptions = new List<Type>();
             RetrySuccessFabricErrorCodes = new List<FabricErrorCode>();
-
             PublicRetrySuccessFabricErrorCodes = new List<uint>();
-
             PopulateDefaultValues();
         }
 
