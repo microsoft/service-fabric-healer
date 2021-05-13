@@ -6,11 +6,11 @@
     <OutputType>Exe</OutputType>
     <!-- ***NOTE***: 
          If deploying to SF cluster directly from Visual Studio, you must use single target RID:
-         For Windows, use win-x64. For Linux, use linux-x64.
-         <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
+         For Windows, use win-x64. For Linux, use linux-x64.-->
+         <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <!-- For multi-target publish (say, from Azure Pipeline build), you use multi-target RIDs: 
-         linux-x64;win-x64. -->
-    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
+         linux-x64;win-x64.
+    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>-->
     <RootNamespace>FabricHealer</RootNamespace>
     <AssemblyName>FabricHealer</AssemblyName>
     <AssemblyVersion>0.4.2</AssemblyVersion>
@@ -26,12 +26,12 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.17.0" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data" Version="4.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data.Extensions" Version="4.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data.Interfaces" Version="4.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabric.Diagnostics.Internal" Version="4.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="4.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" Version="4.2.452" />
+    <PackageReference Include="Microsoft.ServiceFabric.Data" Version="5.0.516" />
+    <PackageReference Include="Microsoft.ServiceFabric.Data.Extensions" Version="5.0.516" />
+    <PackageReference Include="Microsoft.ServiceFabric.Data.Interfaces" Version="5.0.516" />
+    <PackageReference Include="Microsoft.ServiceFabric.Diagnostics.Internal" Version="5.0.516" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" Version="5.0.516" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Microsoft.ServiceFabricApps.Guan" Version="1.0.0-Preview" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />

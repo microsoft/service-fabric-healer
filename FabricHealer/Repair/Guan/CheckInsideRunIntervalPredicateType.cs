@@ -45,10 +45,10 @@ namespace FabricHealer.Repair.Guan
                 }
                
                 bool insideRunInterval = FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
-                                                            interval,
-                                                            RepairTaskManager.FabricClientInstance,
-                                                            FOHealthData,
-                                                            RepairTaskManager.Token).GetAwaiter().GetResult();
+                                                             interval,
+                                                             RepairTaskManager.FabricClientInstance,
+                                                             FOHealthData,
+                                                             RepairTaskManager.Token).GetAwaiter().GetResult();
                 
                 if (!insideRunInterval)
                 {
@@ -59,10 +59,10 @@ namespace FabricHealer.Repair.Guan
                                  "Will not attempt repair at this time.";
 
                 RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                        LogLevel.Info,
-                                                        $"CheckInsideRunInterval::{FOHealthData.RepairId}",
-                                                        message,
-                                                        RepairTaskManager.Token).GetAwaiter().GetResult();
+                                                         LogLevel.Info,
+                                                         $"CheckInsideRunInterval::{FOHealthData.RepairId}",
+                                                         message,
+                                                         RepairTaskManager.Token).GetAwaiter().GetResult();
                 return true;
             }
         }
