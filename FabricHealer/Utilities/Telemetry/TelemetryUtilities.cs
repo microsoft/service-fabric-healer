@@ -111,13 +111,13 @@ namespace FabricHealer.Utilities.Telemetry
                     Metric = repairAction,
                     NodeName = repairConfig?.NodeName ?? string.Empty,
                     PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
-                    ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
+                    ReplicaId = repairConfig != null ? repairConfig.ReplicaOrInstanceId : 0,
                     ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
                     Source = source,
                     SystemServiceProcessName = repairConfig?.SystemServiceProcessName ?? string.Empty,
                 };
 
-                await telemetryClient.ReportMetricAsync(telemData, token).ConfigureAwait(false);
+                await telemetryClient.ReportMetricAsync(telemData, token).ConfigureAwait(true);
             }
 
             // ETW.

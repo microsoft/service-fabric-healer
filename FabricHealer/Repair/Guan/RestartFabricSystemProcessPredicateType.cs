@@ -33,9 +33,9 @@ namespace FabricHealer.Repair.Guan
                     NodeName = FOHealthData.NodeName,
                     NodeType = FOHealthData.NodeType,
                     PartitionId = !string.IsNullOrWhiteSpace(FOHealthData.PartitionId) ? new Guid(FOHealthData.PartitionId) : default,
-                    ProcessId = !string.IsNullOrWhiteSpace(FOHealthData.ProcessId) && int.TryParse(FOHealthData.ProcessId, out int procId) ? procId : -1,
+                    ProcessId = FOHealthData.ProcessId > 0 ? FOHealthData.ProcessId : -1,
                     SystemServiceProcessName = !string.IsNullOrWhiteSpace(FOHealthData.SystemServiceProcessName) ? FOHealthData.SystemServiceProcessName : string.Empty,
-                    ReplicaOrInstanceId = !string.IsNullOrWhiteSpace(FOHealthData.ReplicaId) ? long.Parse(FOHealthData.ReplicaId) : default,
+                    ReplicaOrInstanceId = FOHealthData.ReplicaId > 0 ? FOHealthData.ReplicaId : 0,
                     ServiceName = !string.IsNullOrWhiteSpace(FOHealthData.ServiceName) ? new Uri(FOHealthData.ServiceName) : null,
                     FOHealthMetricValue = FOHealthData.Value,
                     RepairPolicy = new RepairPolicy()
@@ -74,7 +74,7 @@ namespace FabricHealer.Repair.Guan
                                                           () => RepairTaskManager.ScheduleFabricHealerRmRepairTaskAsync(
                                                                                     repairConfiguration,
                                                                                     RepairTaskManager.Token),
-                                                           RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                                           RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
 
                 if (repairTask == null)
                 {
@@ -87,7 +87,7 @@ namespace FabricHealer.Repair.Guan
                                                                                     repairTask,
                                                                                     repairConfiguration,
                                                                                     RepairTaskManager.Token),
-                                                         RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                                         RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
                 return success;
             }
         }

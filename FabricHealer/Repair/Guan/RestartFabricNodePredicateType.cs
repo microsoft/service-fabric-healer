@@ -34,7 +34,7 @@ namespace FabricHealer.Repair.Guan
                     NodeName = FOHealthData.NodeName,
                     NodeType = FOHealthData.NodeType,
                     PartitionId = !string.IsNullOrWhiteSpace(FOHealthData.PartitionId) ? new Guid(FOHealthData.PartitionId) : default,
-                    ReplicaOrInstanceId = !string.IsNullOrWhiteSpace(FOHealthData.ReplicaId) ? long.Parse(FOHealthData.ReplicaId) : default,
+                    ReplicaOrInstanceId = FOHealthData.ReplicaId > 0 ? FOHealthData.ReplicaId : 0,
                     ServiceName = (!string.IsNullOrWhiteSpace(FOHealthData.ServiceName) && FOHealthData.ServiceName.Contains("fabric:/")) ? new Uri(FOHealthData.ServiceName) : null,
                     FOHealthMetricValue = FOHealthData.Value,
                     RepairPolicy = new RepairPolicy()
@@ -76,7 +76,7 @@ namespace FabricHealer.Repair.Guan
                     success = RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                                                     repairTask,
                                                     repairConfiguration,
-                                                    RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                                    RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
 
                     return success;
                 }
@@ -107,7 +107,7 @@ namespace FabricHealer.Repair.Guan
                                                       () => RepairTaskManager.ScheduleFabricHealerRmRepairTaskAsync(
                                                                                 repairConfiguration,
                                                                                 RepairTaskManager.Token),
-                                                       RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                                       RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
 
                 if (repairTask == null)
                 {
@@ -120,7 +120,7 @@ namespace FabricHealer.Repair.Guan
                                                                             repairTask,
                                                                             repairConfiguration,
                                                                             RepairTaskManager.Token),
-                                                    RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                                    RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
                 return success;
             }
         }

@@ -65,12 +65,12 @@ namespace FabricHealer.Utilities.Telemetry
             get; set;
         }
 
-        public string ProcessId
+        public int ProcessId
         {
             get; set;
         }
 
-        public string ReplicaId
+        public long ReplicaId
         {
             get; set;
         }
@@ -90,7 +90,7 @@ namespace FabricHealer.Utilities.Telemetry
             get; set;
         }
 
-        public object Value
+        public double Value
         {
             get; set;
         }
@@ -108,6 +108,7 @@ namespace FabricHealer.Utilities.Telemetry
         [JsonConstructor]
         public TelemetryData()
         {
+
         }
     }
 }

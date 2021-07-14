@@ -17,7 +17,6 @@ using Newtonsoft.Json;
 
 namespace FabricHealer.Utilities.Telemetry
 {
-    // LogAnalyticsTelemetry class is partially based on public (non-license-protected) sample https://dejanstojanovic.net/aspnet/2018/february/send-data-to-azure-log-analytics-from-c-code/
     public class LogAnalyticsTelemetry : ITelemetryProvider
     {
         private const int MaxRetries = 5;
@@ -68,21 +67,21 @@ namespace FabricHealer.Utilities.Telemetry
                             string instanceName = null)
         {
             string jsonPayload = JsonConvert.SerializeObject(
-                new
-                {
-                    id = $"FH_{Guid.NewGuid()}",
-                    datetime = DateTime.UtcNow,
-                    source = "FabricHealer",
-                    property = propertyName,
-                    healthScope = scope.ToString(),
-                    healthState = state.ToString(),
-                    healthEvaluation = unhealthyEvaluations,
-                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
-                    serviceName = serviceName ?? string.Empty,
-                    instanceName = instanceName ?? string.Empty,
-                });
+                                                new
+                                                {
+                                                    id = $"FH_{Guid.NewGuid()}",
+                                                    datetime = DateTime.UtcNow,
+                                                    source = "FabricHealer",
+                                                    property = propertyName,
+                                                    healthScope = scope.ToString(),
+                                                    healthState = state.ToString(),
+                                                    healthEvaluation = unhealthyEvaluations,
+                                                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                                                    serviceName = serviceName ?? string.Empty,
+                                                    instanceName = instanceName ?? string.Empty,
+                                                });
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
         }
 
         public async Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
@@ -97,7 +96,7 @@ namespace FabricHealer.Utilities.Telemetry
                 return;
             }
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
         }
 
         public async Task<bool> ReportMetricAsync<T>(
@@ -107,19 +106,19 @@ namespace FabricHealer.Utilities.Telemetry
                                     CancellationToken cancellationToken)
         {
             string jsonPayload = JsonConvert.SerializeObject(
-                new
-                {
-                    id = $"FH_{Guid.NewGuid()}",
-                    datetime = DateTime.UtcNow,
-                    source,
-                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
-                    property = name,
-                    value,
-                });
+                                                new
+                                                {
+                                                    id = $"FH_{Guid.NewGuid()}",
+                                                    datetime = DateTime.UtcNow,
+                                                    source,
+                                                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                                                    property = name,
+                                                    value,
+                                                });
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
 
-            return await Task.FromResult(true).ConfigureAwait(false);
+            return await Task.FromResult(true).ConfigureAwait(true);
         }
 
         // Implement functions below as you need.
@@ -186,21 +185,19 @@ namespace FabricHealer.Utilities.Telemetry
         /// Sends telemetry data to Azure LogAnalytics via REST.
         /// </summary>
         /// <param name="payload">Json string containing telemetry data.</param>
-        /// <param name="token">CancellatonToken instance.</param>
         /// <returns>A completed task or task containing exception info.</returns>
         private async Task SendTelemetryAsync(string payload, CancellationToken token)
         {
-            if (string.IsNullOrWhiteSpace(WorkspaceId))
+            if (string.IsNullOrEmpty(WorkspaceId))
             {
                 return;
             }
 
-            var requestUri =
-                new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
+            var requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
             string date = DateTime.UtcNow.ToString("r");
             string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
 
-            var request = (HttpWebRequest) WebRequest.Create(requestUri);
+            var request = (HttpWebRequest)WebRequest.Create(requestUri);
             request.ContentType = "application/json";
             request.Method = "POST";
             request.Headers["Log-Type"] = LogType;
@@ -215,14 +212,14 @@ namespace FabricHealer.Utilities.Telemetry
 
             try
             {
-                await using (var requestStreamAsync = await request.GetRequestStreamAsync())
+                using (var requestStreamAsync = await request.GetRequestStreamAsync())
                 {
                     if (token.IsCancellationRequested)
                     {
                         return;
                     }
 
-                    await requestStreamAsync.WriteAsync(content, 0, content.Length, token);
+                    await requestStreamAsync.WriteAsync(content, 0, content.Length);
                 }
 
                 using var responseAsync = await request.GetResponseAsync() as HttpWebResponse;
@@ -232,23 +229,19 @@ namespace FabricHealer.Utilities.Telemetry
                     return;
                 }
 
-                if (responseAsync != null && (responseAsync.StatusCode == HttpStatusCode.OK ||
-                                              responseAsync.StatusCode == HttpStatusCode.Accepted))
+                if (responseAsync.StatusCode == HttpStatusCode.OK ||responseAsync.StatusCode == HttpStatusCode.Accepted)
                 {
                     retries = 0;
                     return;
                 }
 
-                if (responseAsync != null)
-                {
-                    logger.LogWarning(
-                        $"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}" +
-                        $"{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
-                }
+                logger.LogWarning(
+                    $"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}" +
+                    $"{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
             }
             catch (Exception e)
             {
-                // An Exception during telemetry data submission should never take down FH process. Log it.
+                // An Exception during telemetry data submission should never take down CO process. Log it. Don't throw it. Fix it.
                 logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{e}");
             }
 
@@ -260,8 +253,8 @@ namespace FabricHealer.Utilities.Telemetry
                 }
 
                 retries++;
-                await Task.Delay(1000, token).ConfigureAwait(false);
-                await SendTelemetryAsync(payload, token).ConfigureAwait(false);
+                await Task.Delay(1000).ConfigureAwait(true);
+                await SendTelemetryAsync(payload, token).ConfigureAwait(true);
             }
             else
             {
