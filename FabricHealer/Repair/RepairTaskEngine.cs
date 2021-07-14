@@ -84,7 +84,7 @@ namespace FabricHealer.Repair
                                                                   RepairTaskStateFilter.Executing,
                                                                   executorName,
                                                                   FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                  cancellationToken).ConfigureAwait(false);
+                                                                  cancellationToken).ConfigureAwait(true);
 
             return repairTasks;
         }
@@ -95,7 +95,7 @@ namespace FabricHealer.Repair
             // Do not allow this to take place in 1-node or 3-node clusters, like a dev cluster.
             // TODO: Block this from running in OneBox (dev machine) environment.
             var nodes = 
-                await fabricClient.QueryManager.GetNodeListAsync(null, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken).ConfigureAwait(false);
+                await fabricClient.QueryManager.GetNodeListAsync(null, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken).ConfigureAwait(true);
             int nodeCount = nodes.Count;
 
             if (nodeCount <= 3)
@@ -134,7 +134,7 @@ namespace FabricHealer.Repair
                                                                 RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
                                                                 executorName,
                                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                token).ConfigureAwait(false);
+                                                                token).ConfigureAwait(true);
 
             if (currentFHRepairTasksInProgress == null || currentFHRepairTasksInProgress.Count == 0)
             {

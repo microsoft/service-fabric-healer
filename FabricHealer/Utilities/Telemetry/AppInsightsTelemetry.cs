@@ -172,7 +172,7 @@ namespace FabricHealer.Utilities.Telemetry
 
             telemetryClient?.TrackTrace(tt);
 
-            return await Task.FromResult(true).ConfigureAwait(false);
+            return await Task.FromResult(true).ConfigureAwait(true);
         }
 
         /// <summary>
@@ -191,6 +191,8 @@ namespace FabricHealer.Utilities.Telemetry
             Dictionary<string, string> properties = new Dictionary<string, string>
             {
                 { "Application", telemetryData.ApplicationName ?? string.Empty },
+                { "ServiceName", telemetryData.ServiceName ?? string.Empty },
+                { "SystemServiceName", telemetryData.SystemServiceProcessName ?? string.Empty },
                 { "ClusterId", telemetryData.ClusterId ?? string.Empty },
                 { "ErrorCode", telemetryData.Code ?? string.Empty },
                 { "Description", telemetryData.Description ?? string.Empty },
@@ -199,9 +201,9 @@ namespace FabricHealer.Utilities.Telemetry
                 { "NodeName", telemetryData.NodeName ?? string.Empty },
                 { "ObserverName", telemetryData.ObserverName ?? string.Empty },
                 { "Partition", telemetryData.PartitionId ?? string.Empty },
-                { "Replica", telemetryData.ReplicaId ?? string.Empty },
+                { "Replica", telemetryData.ReplicaId.ToString() },
                 { "Source", telemetryData.Source ?? string.Empty },
-                { "Value", telemetryData.Value?.ToString() ?? string.Empty },
+                { "Value", telemetryData.Value.ToString() },
             };
 
             telemetryClient.TrackEvent(
@@ -270,7 +272,7 @@ namespace FabricHealer.Utilities.Telemetry
                             long value,
                             CancellationToken cancellationToken)
         {
-            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
+            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(true);
         }
 
         /// <summary>

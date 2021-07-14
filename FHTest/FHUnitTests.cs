@@ -81,7 +81,7 @@ namespace FHTest
 
                 try
                 {
-                    Assert.IsTrue(await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData).ConfigureAwait(false));
+                    Assert.IsTrue(await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData).ConfigureAwait(true));
                 }
                 catch (GuanException ge)
                 {
@@ -100,7 +100,7 @@ namespace FHTest
         public async Task TestGuanLogicRule_GoodRule_QueryInitialized()
         {
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed");
-            string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token).ConfigureAwait(false);
+            string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token).ConfigureAwait(true);
             List<string> repairRules = ParseRulesFile(rules.ToList());
             var foHealthData = new TelemetryData
             {
@@ -111,7 +111,7 @@ namespace FHTest
                 Code = FOErrorWarningCodes.AppErrorMemoryMB,
                 ServiceName = "fabric/test0/service0",
                 Value = 42,
-                ReplicaId = default(long).ToString(),
+                ReplicaId = default,
                 PartitionId = default(Guid).ToString(),
             };
 
@@ -120,7 +120,7 @@ namespace FHTest
                 RepairPolicy = new RepairPolicy { RepairAction = RepairActionType.RestartCodePackage },
             };
 
-            Assert.IsTrue(await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData).ConfigureAwait(false));
+            Assert.IsTrue(await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData).ConfigureAwait(true));
         }
 
         // All rules in target rules file are malformed. They should all lead to GuanExceptions.
@@ -128,7 +128,7 @@ namespace FHTest
         [TestMethod]
         public async Task TestGuanLogicRule_BadRule_ShouldThrowGuanException()
         {
-            string[] rules = await File.ReadAllLinesAsync(Path.Combine(Environment.CurrentDirectory, "testrules_malformed"), token).ConfigureAwait(false);
+            string[] rules = await File.ReadAllLinesAsync(Path.Combine(Environment.CurrentDirectory, "testrules_malformed"), token).ConfigureAwait(true);
             List<string> repairAction = ParseRulesFile(rules.ToList());
 
             var foHealthData = new TelemetryData
@@ -140,7 +140,7 @@ namespace FHTest
                 Code = FOErrorWarningCodes.AppErrorMemoryMB,
                 ServiceName = "fabric/test0/service0",
                 Value = 42,
-                ReplicaId = default(long).ToString(),
+                ReplicaId = default,
                 PartitionId = default(Guid).ToString(),
             };
 
