@@ -40,23 +40,30 @@ namespace FabricHealer.Repair.Guan
 
             protected override bool Check()
             {
-                int count = Input.Arguments.Count;
-
-                if (count == 1 && Input.Arguments[0].Value.GetValue().GetType() != typeof(TimeSpan))
-                {
-                    throw new GuanException(
-                                "RestartVMPredicate: One optional argument is supported and it must be a TimeSpan " +
-                                "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
-                }
-
                 // Repair Policy
                 repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartVM;
                 repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
                 repairConfiguration.RepairPolicy.TargetType = RepairTargetType.VirtualMachine;
 
-                if (count == 1)
+                int count = Input.Arguments.Count;
+
+                for (int i = 0; i < count; i++)
                 {
-                    repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
+                    var typeString = Input.Arguments[i].Value.GetValue().GetType().ToString();
+
+                    switch (typeString)
+                    {
+                        case "System.TimeSpan":
+                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
+                            break;
+
+                        case "System.Boolean":
+                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
+                            break;
+
+                        default:
+                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetValue().GetType()}");
+                    }
                 }
 
                 // FH does not execute repairs for VM level mitigation. InfrastructureService (IS) does,
@@ -99,7 +106,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private RestartVMPredicateType(string name)
-                 : base(name, true, 0, 1)
+                 : base(name, true, 0, 2)
         {
 
         }

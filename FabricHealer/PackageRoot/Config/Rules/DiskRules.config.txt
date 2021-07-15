@@ -1,7 +1,7 @@
 ﻿## Logic rules for Disk repair. Only file management is supported (file deletion).
 
 ## First, check if we are inside run interval. If so, then cut (!).
-Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !
+Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
 
 ## The sample rule below checks the folder size of SF logs, fabricobserver logs, E:\temp. If the computed size exceeds a supplied threshold, then try and delete the files in the directory. 
 ## The CheckFolderSize external predicate takes a folder path string argument and either a MaxFolderSizeGB or MaxFolderSizeMB argument.

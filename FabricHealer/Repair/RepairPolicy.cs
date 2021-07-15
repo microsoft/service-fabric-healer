@@ -43,5 +43,14 @@ namespace FabricHealer.Repair
         {
             get; set;
         } = TimeSpan.MinValue;
+
+        /// <summary>
+        /// Whether or not RepairManager should do preparing and restoring health checks before approving the target repair job.
+        /// Setting this to true will increase the time it takes to complete a repair.
+        /// </summary>
+        public bool DoHealthChecks
+        {
+            get; set;
+        }
     }
 }
