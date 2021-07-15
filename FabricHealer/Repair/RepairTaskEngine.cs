@@ -48,6 +48,15 @@ namespace FabricHealer.Repair
             string taskId = $"{FHTaskIdPrefix}/{Guid.NewGuid()}/{repair}/{executorData.NodeName}";
             bool doHealthChecks = impact != NodeImpactLevel.None;
 
+            // Health checks for app level repairs.
+            if (executorData.RepairPolicy.DoHealthChecks && impact == NodeImpactLevel.None && 
+                                                        (repairAction == RepairActionType.RestartCodePackage ||
+                                                         repairAction == RepairActionType.RestartReplica ||
+                                                         repairAction == RepairActionType.RemoveReplica))
+            {
+                doHealthChecks = true;
+            }
+
             // Error health state on target SF entity can block RM from approving the job to repair it (which is the whole point of doing the job).
             // So, do not do health checks if customer configures FO to emit Error health reports.
             // In general, FO should *not* be configured to emit Error events. See FO documentation.

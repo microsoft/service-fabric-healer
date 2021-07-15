@@ -1,7 +1,7 @@
 ﻿## Logic rules for Service Fabric Node repairs.
 
 ## First check if we are inside the run interval. If so, cut (!).
-Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !
+Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
 
 ## This rule means that whatever the warning data from FabricObserver happens to be (related to node level healing repairs, of course), restart the target node if 
 ## the repair hasn't run 4 times in the last 8 hours.

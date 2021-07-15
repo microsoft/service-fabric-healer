@@ -51,7 +51,7 @@ namespace FHTest
 
         // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
         // e.g., if developing on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
-        private const string FHRulesDirectory = @"";
+        private const string FHRulesDirectory = @"C:\Users\ctorre\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
 
         /* GuanLogic Tests */
         // TODO: More of them.
@@ -72,7 +72,7 @@ namespace FHTest
 
             var executorData = new RepairExecutorData
             {
-                RepairPolicy = new RepairPolicy { RepairAction = RepairActionType.RestartCodePackage },
+                RepairPolicy = new RepairPolicy(),
             };
 
             foreach (var file in Directory.GetFiles(FHRulesDirectory))
@@ -166,9 +166,9 @@ namespace FHTest
         /* private Helpers */
 
         private async Task<bool> TestInitializeGuanAndRunQuery(
-            TelemetryData foHealthData,
-            List<string> repairRules,
-            RepairExecutorData executorData)
+                                    TelemetryData foHealthData,
+                                    List<string> repairRules,
+                                    RepairExecutorData executorData)
         {
             var fabricClient = new FabricClient(FabricClientRole.Admin);
             var repairTaskHelper = new RepairTaskManager(fabricClient, context, token);

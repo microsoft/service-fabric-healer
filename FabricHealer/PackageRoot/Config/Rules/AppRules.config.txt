@@ -88,8 +88,8 @@ TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, Ti
 
 
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
-## Note you can add an argument (optional) to RestartCodePackage, name it whatever you want or omit the name, it just has to be a TimeSpan value. 
-## This arg represents how long you want to wait to see if the target app service is healed. Internally, FH will check healthstate of repair target after repair execution (with sleeps)
-## for a default of 10 minutes for app repair, 30 minutes for a FabricNode repair, and 2 hours for a VM repair. All FH external repair predicates support this optional arg.
+## Note you can add up to two optional arguments to RestartCodePackage, name them whatever you want or omit the names, it just has to be either a TimeSpan value for how long to wait 
+## for the repair target to become healthy or a bool for whether or not RM should do health checks before and after the repair executes. 
+## Obviously, you can supply both. See below for an example using both optional arguments (named for clarity..you could also do RestartCodePackage(true, 00:10:00)).
 
-TimeScopedRestartCodePackage() :- RestartCodePackage().
+TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).
