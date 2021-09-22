@@ -8,6 +8,7 @@
     <Parameter Name="MonitorLoopSleepSeconds" DefaultValue="10" />
     <Parameter Name="TelemetryProviderEnabled" DefaultValue="false" />
     <Parameter Name="VerboseLoggingEnabled" DefaultValue="true" />
+    <Parameter Name="OperationalTelemetryEnabled" DefaultValue="true" />
     <!-- Repair Policy Enablement -->
     <Parameter Name="AppRepairEnabled" DefaultValue="true" />
     <Parameter Name="DiskRepairEnabled" DefaultValue="true" />
@@ -31,6 +32,7 @@
             <Parameter Name="EnableEventSourceProvider" Value="[EventSourceProviderEnabled]" />
             <Parameter Name="EnableTelemetryProvider" Value="[TelemetryProviderEnabled]" />
             <Parameter Name="EnableVerboseLogging" Value="[VerboseLoggingEnabled]" />
+            <Parameter Name="EnableOperationalTelemetry" Value="[OperationalTelemetryEnabled]" />
           </Section>
           <!-- Repair policies -->
           <Section Name="AppRepairPolicy">

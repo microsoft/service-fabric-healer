@@ -82,42 +82,46 @@ namespace FabricHealer.Utilities
 
         private void InitializeLoggers()
         {
+            // default log directory.
             string logFolderBase;
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            // Log directory supplied in Settings.xml.
+            if (!string.IsNullOrEmpty(LogFolderBasePath))
             {
-                string windrive = Environment.SystemDirectory[..3];
-                logFolderBase = windrive + "fabrichealer_logs";
-            }
-            else
-            {
-                logFolderBase = "/tmp/fabrichealer_logs";
-            }
+                logFolderBase = LogFolderBasePath;
 
-            // log directory supplied in config. Set in ObserverManager.
-            if (!string.IsNullOrWhiteSpace(LogFolderBasePath))
-            {
-                // Add current drive letter if not supplied for Windows path target.
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    if (!LogFolderBasePath[..3].Contains(":\\"))
+                    // Add current drive letter if not supplied for Windows path target.
+                    if (!LogFolderBasePath.Substring(0, 3).Contains(":\\"))
                     {
-                        string windrive = Environment.SystemDirectory[..3];
+                        string windrive = Environment.SystemDirectory.Substring(0, 3);
                         logFolderBase = windrive + LogFolderBasePath;
                     }
                 }
                 else
                 {
                     // Remove supplied drive letter if Linux is the runtime target.
-                    if (LogFolderBasePath[..3].Contains(":\\"))
+                    if (LogFolderBasePath.Substring(0, 3).Contains(":\\"))
                     {
-                        LogFolderBasePath = LogFolderBasePath.Remove(0, 3);
+                        logFolderBase = LogFolderBasePath.Remove(0, 3).Replace("\\", "/");
                     }
-
-                    logFolderBase = LogFolderBasePath;
+                }
+            }
+            else
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    string windrive = Environment.SystemDirectory.Substring(0, 3);
+                    logFolderBase = windrive + "fabrichealer_logs";
+                }
+                else
+                {
+                    logFolderBase = "/tmp/fabrichealer_logs";
                 }
             }
 
+            LogFolderBasePath = logFolderBase;
             string file = Path.Combine(logFolderBase, "fabrichealer.log");
 
             if (!string.IsNullOrWhiteSpace(FolderName) && !string.IsNullOrWhiteSpace(Filename))

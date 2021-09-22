@@ -51,10 +51,10 @@ namespace FHTest
 
         // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
         // e.g., if developing on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
-        private const string FHRulesDirectory = @"C:\Users\ctorre\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
+        private const string FHRulesDirectory = @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
 
         /* GuanLogic Tests */
-        // TODO: More of them.
+        // TODO: Add more tests.
 
         // This test ensures your actual rule files contain legitimate rules. This will catch bugs in your
         // logic. Of course, you should have caught these flaws in your end-to-end tests. This is just an extra precaution.

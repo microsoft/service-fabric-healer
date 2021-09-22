@@ -17,12 +17,18 @@ using System.Threading.Tasks;
 using HealthReport = FabricHealer.Utilities.HealthReport;
 using System.Fabric.Repair;
 using System.Fabric.Query;
-using System.Fabric.Description;
+using FabricHealer.TelemetryLib;
 
 namespace FabricHealer
 {
     public sealed class FabricHealerManager : IDisposable
     {
+        internal static TelemetryUtilities TelemetryUtilities;
+        internal static RepairData RepairHistory;
+
+        // Folks often use their own version numbers. This is for internal diagnostic telemetry.
+        private const string InternalVersionNumber = "1.0.0-Preview";
+        private static FabricHealerManager singleton;
         private bool disposedValue;
         private readonly StatelessServiceContext serviceContext;
         private readonly FabricClient fabricClient;
@@ -31,8 +37,9 @@ namespace FabricHealer
         private readonly Uri systemAppUri = new Uri("fabric:/System");
         private readonly Uri repairManagerServiceUri = new Uri("fabric:/System/RepairManagerService");
         private readonly FabricHealthReporter healthReporter;
-        private static FabricHealerManager singleton;
-        internal static TelemetryUtilities TelemetryUtilities;
+        private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
+        private int nodeCount;
+        private DateTime StartDateTime;
 
         internal static Logger RepairLogger
         {
@@ -46,10 +53,25 @@ namespace FabricHealer
             private set;
         }
 
+        private bool FabricHealerOperationalTelemetryEnabled
+        {
+            get; set;
+        }
+
         // CancellationToken from FabricHealer.RunAsync. See ctor.
         private CancellationToken Token
         {
             get;
+        }
+
+        private DateTime LastTelemetrySendDate
+        {
+            get; set;
+        }
+
+        private bool EtwEnabled 
+        { 
+            get; set; 
         }
 
         private FabricHealerManager(StatelessServiceContext context, CancellationToken token)
@@ -62,26 +84,12 @@ namespace FabricHealer
             TelemetryUtilities = new TelemetryUtilities(fabricClient, context);
             repairTaskEngine = new RepairTaskEngine(fabricClient);
             repairTaskManager = new RepairTaskManager(fabricClient, serviceContext, Token);
-            RepairLogger = new Logger("FabricHealer")
+            RepairLogger = new Logger("FabricHealer", ConfigSettings.LocalLogPathParameter)
             {
-                EnableVerboseLogging = ConfigSettings.EnableVerboseLogging,
+                EnableVerboseLogging = ConfigSettings.EnableVerboseLogging
             };
 
-            // Local Logger setup.
-            string logFolderBasePath;
-            string localLogPath = ConfigSettings.LocalLogPathParameter;
-
-            if (!string.IsNullOrWhiteSpace(localLogPath))
-            {
-                logFolderBasePath = localLogPath;
-            }
-            else
-            {
-                string logFolderBase = Path.Combine($@"{Environment.CurrentDirectory}", "fabrichealer_logs");
-                logFolderBasePath = logFolderBase;
-            }
-
-            RepairLogger.LogFolderBasePath = logFolderBasePath;
+            RepairHistory = new RepairData();
             healthReporter = new FabricHealthReporter(fabricClient);
         }
 
@@ -141,7 +149,6 @@ namespace FabricHealer
             }
 
             healthReporter.ReportHealthToServiceFabric(healthReport);
-
             return isRmDeployed;
         }
 
@@ -206,6 +213,8 @@ namespace FabricHealer
         // repair actions, scheduling and executing related repair tasks.
         public async Task StartAsync()
         {
+            StartDateTime = DateTime.UtcNow;
+
             if (!ConfigSettings.EnableAutoMitigation || !await CheckRepairManagerDeploymentStatusAsync(repairManagerServiceUri, Token).ConfigureAwait(true))
             {
                 return;
@@ -214,6 +223,12 @@ namespace FabricHealer
             try
             {
                 RepairLogger.LogInfo("Starting FabricHealer Health Detection loop.");
+
+                var nodeList =
+                   await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                  () => fabricClient.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, Token),
+                                                  Token).ConfigureAwait(true);
+                nodeCount = nodeList.Count;
 
                 // First, let's clean up any orphan non-node level FabricHealer repair tasks left pending 
                 // when the FabricHealer process is killed or otherwise ungracefully closed.
@@ -234,8 +249,39 @@ namespace FabricHealer
                         continue;
                     }
 
-                    GC.Collect(2, GCCollectionMode.Forced, true, false);
-                    GC.Collect(2, GCCollectionMode.Forced, true, false);
+                    // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
+                    // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
+                    // than 90 days.
+                    if (ConfigSettings.OperationalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
+                    {
+                        try
+                        {
+                            using var telemetryEvents = new TelemetryEvents(
+                                                                fabricClient,
+                                                                serviceContext,
+                                                                ServiceEventSource.Current,
+                                                                Token,
+                                                                EtwEnabled);
+
+                            var fhData = GetFabricHealerInternalTelemetryData();
+
+                            if (fhData != null)
+                            {
+                                string filepath = Path.Combine(RepairLogger.LogFolderBasePath, $"fh_operational_telemetry.log");
+
+                                if (telemetryEvents.EmitFabricObserverOperationalEvent(fhData, OperationalTelemetryRunInterval, filepath))
+                                {
+                                    LastTelemetrySendDate = DateTime.UtcNow;
+                                    ResetInternalDataCounters();
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // Telemetry is non-critical and should not take down FH.
+                            // TelemetryLib will log exception details to file in top level FH log folder.
+                        }
+                    }
 
                     await Task.Delay(
                         TimeSpan.FromSeconds(
@@ -255,7 +301,7 @@ namespace FabricHealer
                         RepairLogger.LogInfo("Shutdown signaled. Stopping.");
                     }
             }
-            catch (Exception e) when (e is OperationCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
             {
                 // This check is necessary to prevent cancelling outstanding repair tasks if 
                 // one of the handled exceptions originated from another operation unrelated to
@@ -285,10 +331,72 @@ namespace FabricHealer
                         });
                 }
 
+                // Operational telemetry sent to FO developer for use in understanding generic behavior of FO in the real world (no PII)
+                if (ConfigSettings.OperationalTelemetryEnabled)
+                {
+                    try
+                    {
+                        using var telemetryEvents = new TelemetryEvents(
+                                                            fabricClient,
+                                                            serviceContext,
+                                                            ServiceEventSource.Current,
+                                                            Token,
+                                                            EtwEnabled);
+
+                        var fhData = new FabricHealerCriticalErrorEventData
+                        {
+                            Source = nameof(FabricHealerManager),
+                            ErrorMessage = e.Message,
+                            ErrorStack = e.StackTrace,
+                            CrashTime = DateTime.UtcNow.ToString("o"),
+                            Version = InternalVersionNumber
+                        };
+
+                        string filepath = Path.Combine(RepairLogger.LogFolderBasePath, $"fh_critical_error_telemetry.log");
+                        _ = telemetryEvents.EmitFabricObserverCriticalErrorEvent(fhData, filepath);
+                    }
+                    catch
+                    {
+                        // Telemetry is non-critical and should not take down FH.
+                    }
+                }
+
                 // Don't swallow the exception.
-                // Take down FH process. Fix the bugs.
+                // Take down FH process. Fix the bug.
                 throw;
             }
+        }
+
+        private void ResetInternalDataCounters()
+        {
+            RepairHistory.Repairs.Clear();
+            RepairHistory.FailedRepairs = 0;
+            RepairHistory.SuccessfulRepairs = 0;
+            RepairHistory.RepairCount = 0;
+            RepairHistory.EnabledRepairCount = 0;
+        }
+
+        private FabricHealerOperationalEventData GetFabricHealerInternalTelemetryData()
+        {
+            FabricHealerOperationalEventData telemetryData = null;
+
+            try
+            {
+                RepairHistory.EnabledRepairCount = GetEnabledRepairRuleCount();
+
+                telemetryData = new FabricHealerOperationalEventData
+                {
+                    UpTime = DateTime.UtcNow.Subtract(StartDateTime).ToString(),
+                    Version = InternalVersionNumber,
+                    RepairData = RepairHistory
+                };
+            }
+            catch
+            {
+
+            }
+
+            return telemetryData;
         }
 
         /// <summary>
@@ -393,14 +501,9 @@ namespace FabricHealer
             }
         }
 
-        private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
+        private void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
             ConfigSettings.UpdateConfigSettings(e.NewPackage.Settings);
-
-            if (ConfigSettings.EnableAutoMitigation)
-            {
-                await StartAsync().ConfigureAwait(true);
-            }
         }
 
         /* Potential TODOs. This list should grow and external predicates should be written to support related workflow composition in logic rule file(s).
@@ -572,6 +675,7 @@ namespace FabricHealer
         private async Task ProcessApplicationHealthAsync(IEnumerable<ApplicationHealthState> appHealthStates)
         {
             var supportedAppHealthStates = appHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
+            var nodeList = await fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(false);
 
             foreach (var app in supportedAppHealthStates)
             {
@@ -619,7 +723,7 @@ namespace FabricHealer
 
                     // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
                     var random = new Random();
-                    int waitTimeMS = random.Next(250, 10000);
+                    int waitTimeMS = random.Next(random.Next(0, nodeCount * 100), 1000 * nodeCount);
                     await Task.Delay(waitTimeMS, Token).ConfigureAwait(true);
 
                     if (string.IsNullOrWhiteSpace(evt.HealthInformation.Description))
@@ -787,7 +891,7 @@ namespace FabricHealer
                 {
                     continue;
                 }
-                
+
                 Node targetNode = nodeList[0];
 
                 // Check to see if a VM-level repair is already in flight in the cluster.
@@ -819,7 +923,7 @@ namespace FabricHealer
 
                     // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
                     var random = new Random();
-                    int waitTimeMS = random.Next(250, 10000);
+                    int waitTimeMS = random.Next(random.Next(0, nodeCount * 100), 1000 * nodeCount);
                     await Task.Delay(waitTimeMS, Token).ConfigureAwait(true);
                     
                     if (string.IsNullOrWhiteSpace(evt.HealthInformation.Description))
@@ -920,7 +1024,7 @@ namespace FabricHealer
 
                 // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
                 var random = new Random();
-                int waitTimeMS = random.Next(250, 10000);
+                int waitTimeMS = random.Next(random.Next(0, nodeCount * 100), 1000 * nodeCount);
                 await Task.Delay(waitTimeMS, Token).ConfigureAwait(true);
 
                 var service = await fabricClient.QueryManager.GetServiceNameAsync(
@@ -1103,6 +1207,27 @@ namespace FabricHealer
             List<string> repairRules = ParseRulesFile(rules);
 
             return repairRules;
+        }
+
+        private int GetEnabledRepairRuleCount()
+        {
+            var config = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
+            int count = 0;
+
+            foreach (var section in config.Settings.Sections)
+            {
+                if (!section.Name.Contains("RepairPolicy"))
+                {
+                    continue;
+                }
+
+                if (section.Parameters["Enabled"]?.Value?.ToLower() == "true")
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private void Dispose(bool disposing)
