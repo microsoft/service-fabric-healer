@@ -16,7 +16,7 @@ FabricHealer requires that FabricObserver (v 3.1.8+) and RepairManager (RM) serv
 For VM level repair, InfrastructureService (IS) service must be deployed.
 ```
 
-## For Early Adopters while in Private Preview
+## For Early Adopters while in Preview
 
 Please [download the Guan nupkg](https://github.com/microsoft/Guan/releases/download/1.0.0-Preview/Microsoft.Logic.Guan.1.0.0-Preview.nupkg) to your local dev machine and install it into your local FH project in order to build FH successfully. This will be unnecessary when FH ships in Public Preview as Guan will be shipping concurrently and the Guan nupkg will be available in the nuget.org package gallery, as will FH.  
 

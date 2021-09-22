@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <ProjectGuid>{9A19103F-16F7-4668-BE54-9A1E7A4F7556}</ProjectGuid>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <OutputType>Exe</OutputType>
     <!-- ***NOTE***: 
@@ -13,8 +13,8 @@
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>-->
     <RootNamespace>FabricHealer</RootNamespace>
     <AssemblyName>FabricHealer</AssemblyName>
-    <AssemblyVersion>0.4.2</AssemblyVersion>
-    <FileVersion>0.4.2</FileVersion>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <FileVersion>1.0.0</FileVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
     <StartupObject>FabricHealer.Program</StartupObject>
@@ -27,17 +27,16 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.17.0" />
     <PackageReference Include="Microsoft.Logic.Guan" Version="1.0.0-Preview" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data" Version="5.0.516" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data.Extensions" Version="5.0.516" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data.Interfaces" Version="5.0.516" />
-    <PackageReference Include="Microsoft.ServiceFabric.Diagnostics.Internal" Version="5.0.516" />
-    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
-    <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" Version="5.0.516" />
+    <PackageReference Include="Microsoft.ServiceFabric" Version="7.2.452" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="4.2.452" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="NLog" Version="4.7.9" />
     <PackageReference Include="System.Configuration.Abstractions" Version="2.0.2.45" />
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
   </ItemGroup>
 </Project>

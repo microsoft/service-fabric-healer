@@ -130,6 +130,7 @@ namespace FabricHealer.Repair
 
                 if (restartCodePackageResult != null)
                 {
+                    UpdateRepairHistory(repairConfiguration);
                     await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Application, cancellationToken, "AppObserver").ConfigureAwait(true);
                 }
 
@@ -142,9 +143,27 @@ namespace FabricHealer.Repair
                                             "RepairExecutor.RestartCodePackageAsync",
                                             $"Execution failure:{Environment.NewLine}{e}",
                                             cancellationToken).ConfigureAwait(true);
-
+                
+                FabricHealerManager.RepairHistory.FailedRepairs++;
                 return null;
             }
+        }
+
+        private static void UpdateRepairHistory(RepairConfiguration repairConfiguration)
+        {
+            string repairName = Enum.GetName(typeof(RepairActionType), repairConfiguration.RepairPolicy.RepairAction);
+
+            if (!FabricHealerManager.RepairHistory.Repairs.ContainsKey(repairName))
+            {
+                FabricHealerManager.RepairHistory.Repairs.Add(repairName, 1);
+            }
+            else
+            {
+                FabricHealerManager.RepairHistory.Repairs[repairName]++;
+            }
+
+            FabricHealerManager.RepairHistory.RepairCount++;
+            FabricHealerManager.RepairHistory.SuccessfulRepairs++;
         }
 
         /// <summary>
@@ -175,7 +194,6 @@ namespace FabricHealer.Repair
                                             cancellationToken).ConfigureAwait(true);
 
                 FabricHealerManager.RepairLogger.LogInfo(info);
-
                 return false;
             }
 
@@ -496,6 +514,8 @@ namespace FabricHealer.Repair
                                             statusSuccess,
                                             cancellationToken,
                                             repairConfiguration).ConfigureAwait(true);
+
+                UpdateRepairHistory(repairConfiguration);
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException || e is OperationCanceledException)
             {
@@ -514,6 +534,7 @@ namespace FabricHealer.Repair
                                            cancellationToken,
                                            repairConfiguration).ConfigureAwait(true);
 
+                FabricHealerManager.RepairHistory.FailedRepairs++;
                 return null;
             }
 
@@ -560,12 +581,14 @@ namespace FabricHealer.Repair
                 }
 
                 p?.Kill(true);
+                UpdateRepairHistory(repairConfiguration);
 
                 // Clear Warning from FO. If in fact the issue has not been solved, then FO will generate a new health report for the target and the game will be played again.
                 await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Application, cancellationToken, "FabricSystemObserver").ConfigureAwait(true);
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException  || e is NotSupportedException || e is Win32Exception)
             {
+                FabricHealerManager.RepairHistory.FailedRepairs++;
                 return false;
             }
             catch (Exception e)
@@ -583,6 +606,8 @@ namespace FabricHealer.Repair
                                            err,
                                            cancellationToken,
                                            repairConfiguration);
+                
+                FabricHealerManager.RepairHistory.FailedRepairs++;
 
                 // fix the bug..
                 throw;
@@ -680,6 +705,8 @@ namespace FabricHealer.Repair
                                             statusSuccess,
                                             cancellationToken,
                                             repairConfiguration).ConfigureAwait(true);
+
+                UpdateRepairHistory(repairConfiguration);
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException || e is OperationCanceledException)
             {
@@ -697,7 +724,8 @@ namespace FabricHealer.Repair
                                            err,
                                            cancellationToken,
                                            repairConfiguration).ConfigureAwait(true);
-
+                
+                FabricHealerManager.RepairHistory.FailedRepairs++;
                 return null;
             }
 
@@ -796,7 +824,8 @@ namespace FabricHealer.Repair
                                                 $"Unable to delete specified number of files ({maxFiles}).",
                                                 cancellationToken,
                                                 repairConfiguration).ConfigureAwait(true);
-
+                    
+                    FabricHealerManager.RepairHistory.FailedRepairs++;
                     return false;
                 }
             
@@ -807,8 +836,9 @@ namespace FabricHealer.Repair
                                                 "RepairExecutor.DeleteFilesAsync::IncompleteOperation",
                                                 "Unable to delete all files.",
                                                 cancellationToken,
-                                                repairConfiguration).ConfigureAwait(true); 
+                                                repairConfiguration).ConfigureAwait(true);
 
+                    FabricHealerManager.RepairHistory.FailedRepairs++;
                     return false;
                 }
 
@@ -818,10 +848,11 @@ namespace FabricHealer.Repair
                                             $"Successfully deleted {(maxFiles > 0 ? "up to " + maxFiles : "all")} files in {targetFolderPath}",
                                             cancellationToken,
                                             repairConfiguration).ConfigureAwait(true);
+
+                UpdateRepairHistory(repairConfiguration);
             }
 
             await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Node, cancellationToken, "DiskObserver").ConfigureAwait(true);
-
             return true;
         }
 

@@ -30,9 +30,9 @@
 ## *Network-related repair is not supported today.    
 
 ## RunInterval rule: Are we inside the run interval for an app repair? This is optional. It's up to you if you want to employ this type of constraint.
-## This below rule means that if any of the repairs for any of the apps in this rule file has run within the past 5 minutes, cut (!), 
+## This below rule means that if any of the repairs for any of the apps in this rule file has run within the past 10 minutes, cut (!), 
 ## which is a special operator that means, effectively, stop processing rules; do not backtrack.
-## By having this as a top level rule, it means no subsequent rules in this file will run if we are inside the run interval.
+## By having this as a top level rule, it means no subsequent rules in this file will run if we are inside the specified run interval.
 
 Mitigate() :- CheckInsideRunInterval(RunInterval=00:10:00), !.
 
@@ -89,7 +89,7 @@ TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, Ti
 
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
 ## Note you can add up to two optional arguments to RestartCodePackage, name them whatever you want or omit the names, it just has to be either a TimeSpan value for how long to wait 
-## for the repair target to become healthy or a bool for whether or not RM should do health checks before and after the repair executes. 
-## Obviously, you can supply both. See below for an example using both optional arguments (named for clarity..you could also do RestartCodePackage(true, 00:10:00)).
+## for the repair target to become healthy and/or a bool for whether or not RM should do health checks before and after the repair executes. 
+## See below for an example using both optional arguments (arguments are named for clarity (generally a good idea)...you could also supply RestartCodePackage(true, 00:10:00)).
 
 TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).

@@ -26,10 +26,11 @@ namespace FabricHealer.Repair
         public const string AppInsightsTelemetryEnabled = "EnableTelemetryProvider";
         public const string AppInsightsInstrumentationKeyParameter = "AppInsightsInstrumentationKey";
         public const string EnableEventSourceProvider = "EnableEventSourceProvider";
-        public const string EventSourceProviderName = "EventSourceProviderName";
+        public const string EventSourceProviderName = "FabricHealerETWProvider";
         public const string HealthCheckLoopSleepTimeSeconds = "HealthCheckLoopSleepTimeSeconds";
         public const string LocalLogPathParameter = "LocalLogPath";
         public const string AsyncOperationTimeout = "AsyncOperationTimeoutSeconds";
+        public const string EnableFabricHealerOperationalTelemetry = "EnableOperationalTelemetry";
 
         // General Repair Settings Parameters.
         public const string EnableAutoMitigation = "EnableAutoMitigation";

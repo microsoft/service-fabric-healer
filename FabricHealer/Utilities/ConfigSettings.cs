@@ -136,10 +136,14 @@ namespace FabricHealer.Utilities
             private set;
         }
 
+        public bool OperationalTelemetryEnabled 
+        { 
+            get; private set; 
+        }
+
         public ConfigSettings(StatelessServiceContext context)
         {
             this.context = context ?? throw new ArgumentException("Context can't be null.");
-
             UpdateConfigSettings();
         }
 
@@ -171,7 +175,7 @@ namespace FabricHealer.Utilities
                 ExecutionLoopSleepSeconds = execFrequency;
             }
 
-            // (Assuming Diagnostics/Analytics cloud service implemented) Telemetry.
+            // Telemetry.
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AppInsightsTelemetryEnabled), out bool telemEnabled))
             {
                 TelemetryEnabled = telemEnabled;
@@ -210,6 +214,12 @@ namespace FabricHealer.Utilities
             {
                 EtwEnabled = etwEnabled;
                 EtwProviderName = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EventSourceProviderName);
+            }
+
+            // FabricHealer operational telemetry
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableFabricHealerOperationalTelemetry), out bool fhOpTelemEnabled))
+            {
+                OperationalTelemetryEnabled = fhOpTelemEnabled;
             }
 
             // Repair Policies

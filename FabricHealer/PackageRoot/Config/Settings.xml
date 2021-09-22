@@ -28,6 +28,7 @@
     <Parameter Name="EventSourceProviderName" Value="FabricHealerETWProvider" />
     <!-- Big on/off switch. You can be more granular below in the Repair policies sections. -->
     <Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
+    <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
   </Section>
   <!-- Repair policies -->
   <Section Name="AppRepairPolicy">

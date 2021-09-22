@@ -7,36 +7,29 @@ using System;
 using System.Diagnostics.Tracing;
 using System.Fabric;
 using System.Threading.Tasks;
+using FabricHealer.TelemetryLib;
+using FabricHealer.Repair;
 
 namespace FabricHealer
 {
-    [EventSource(Name = "Service-Fabric-FabricHealer", Guid = "344ea295-2ee1-53a6-fc40-4e893e25c60d")]
-    internal sealed class ServiceEventSource : EventSource
+    public sealed class ServiceEventSource : EventSource, ITelemetryEventSource
     {
         public static readonly ServiceEventSource Current = new ServiceEventSource();
 
         static ServiceEventSource()
         {
             // A workaround for the problem where ETW activities do not get tracked until Tasks infrastructure is initialized.
-            // This problem will be fixed in .NET Framework 4.6.2.
-            Task.Run(() => { });
+            // This problem is fixed in .NET Framework 4.6.2. If you are running this version or greater, then delete the below code.
+            _ = Task.Run(() => { });
         }
 
-        // Instance constructor is private to enforce singleton semantics
-        private ServiceEventSource() : base() { }
-
-        #region Keywords
-        // Event keywords can be used to categorize events. 
-        // Each keyword is a bit flag. A single event can be associated with multiple keywords (via EventAttribute.Keywords property).
-        // Keywords must be defined as a public class named 'Keywords' inside EventSource that uses them.
-        public static class Keywords
+        // Instance constructor is private to enforce singleton semantics.
+        // FabricObserver ETW provider name is passed to base.ctor here instead of decorating this class.
+        private ServiceEventSource() : base(RepairConstants.EventSourceProviderName)
         {
-            public const EventKeywords Requests = (EventKeywords)0x1L;
-            public const EventKeywords ServiceInitialization = (EventKeywords)0x2L;
-        }
-        #endregion
 
-        #region Events
+        }
+
         // Define an instance method for each event you want to record and apply an [Event] attribute to it.
         // The method name is the name of the event.
         // Pass any parameters you want to record with the event (only primitive integer types, DateTime, Guid & string are allowed).
@@ -44,18 +37,62 @@ namespace FabricHealer
         // The number and types of arguments passed to every event method must exactly match what is passed to WriteEvent().
         // Put [NonEvent] attribute on all methods that do not define an event.
         // For more information see https://msdn.microsoft.com/en-us/library/system.diagnostics.tracing.eventsource.aspx
-
         [NonEvent]
         public void Message(string message, params object[] args)
         {
-            if (IsEnabled())
+            if (!IsEnabled())
             {
-                string finalMessage = string.Format(message, args);
-                Message(finalMessage);
+                return;
             }
+
+            string finalMessage = string.Format(message, args);
+            Message(finalMessage);
+        }
+
+        [NonEvent]
+        public void DataTypeWriteInfo<T>(string eventName, T data)
+        {
+            var options = new EventSourceOptions
+            {
+                ActivityOptions = EventActivityOptions.None,
+                Keywords = Keywords.ResourceUsage,
+                Opcode = EventOpcode.Info,
+                Level = EventLevel.Verbose,
+            };
+
+            Write(eventName, options, data);
+        }
+
+        [NonEvent]
+        public void DataTypeWriteWarning<T>(string eventName, T data)
+        {
+            var options = new EventSourceOptions
+            {
+                ActivityOptions = EventActivityOptions.None,
+                Keywords = Keywords.ErrorOrWarning,
+                Opcode = EventOpcode.Info,
+                Level = EventLevel.Warning,
+            };
+
+            Write(eventName, options, data);
+        }
+
+        [NonEvent]
+        public void DataTypeWriteError<T>(string eventName, T data)
+        {
+            var options = new EventSourceOptions
+            {
+                ActivityOptions = EventActivityOptions.None,
+                Keywords = Keywords.ErrorOrWarning,
+                Opcode = EventOpcode.Info,
+                Level = EventLevel.Error,
+            };
+
+            Write(eventName, options, data);
         }
 
         private const int MessageEventId = 1;
+
         [Event(MessageEventId, Level = EventLevel.Informational, Message = "{0}")]
         public void Message(string message)
         {
@@ -66,27 +103,37 @@ namespace FabricHealer
         }
 
         [NonEvent]
-        public void ServiceMessage(StatefulServiceContext serviceContext, string message, params object[] args)
+        public void ServiceMessage(StatelessServiceContext serviceContext, string message, params object[] args)
         {
-            if (IsEnabled())
+            if (!IsEnabled())
             {
-                string finalMessage = string.Format(message, args);
-                ServiceMessage(
-                    serviceContext.ServiceName.ToString(),
-                    serviceContext.ServiceTypeName,
-                    serviceContext.ReplicaId,
-                    serviceContext.PartitionId,
-                    serviceContext.CodePackageActivationContext.ApplicationName,
-                    serviceContext.CodePackageActivationContext.ApplicationTypeName,
-                    serviceContext.NodeContext.NodeName,
-                    finalMessage);
+                return;
             }
+
+            string finalMessage = string.Format(message, args);
+            ServiceMessage(
+                serviceContext.ServiceName.ToString(),
+                serviceContext.ServiceTypeName,
+                serviceContext.InstanceId,
+                serviceContext.PartitionId,
+                serviceContext.CodePackageActivationContext.ApplicationName,
+                serviceContext.CodePackageActivationContext.ApplicationTypeName,
+                serviceContext.NodeContext.NodeName,
+                finalMessage);
+        }
+
+        [NonEvent]
+        public void VerboseMessage(string message, params object[] args)
+        {
+            string finalMessage = string.Format(message, args);
+            VerboseMessage(finalMessage);
         }
 
         // For very high-frequency events it might be advantageous to raise events using WriteEventCore API.
         // This results in more efficient parameter handling, but requires explicit allocation of EventData structure and unsafe code.
         // To enable this code path, define UNSAFE conditional compilation symbol and turn on unsafe code support in project properties.
         private const int ServiceMessageEventId = 2;
+
         [Event(ServiceMessageEventId, Level = EventLevel.Informational, Message = "{7}")]
         private
 #if UNSAFE
@@ -124,6 +171,7 @@ namespace FabricHealer
         }
 
         private const int ServiceTypeRegisteredEventId = 3;
+
         [Event(ServiceTypeRegisteredEventId, Level = EventLevel.Informational, Message = "Service host process {0} registered service type {1}", Keywords = Keywords.ServiceInitialization)]
         public void ServiceTypeRegistered(int hostProcessId, string serviceType)
         {
@@ -131,6 +179,7 @@ namespace FabricHealer
         }
 
         private const int ServiceHostInitializationFailedEventId = 4;
+
         [Event(ServiceHostInitializationFailedEventId, Level = EventLevel.Error, Message = "Service host initialization failed", Keywords = Keywords.ServiceInitialization)]
         public void ServiceHostInitializationFailed(string exception)
         {
@@ -141,6 +190,7 @@ namespace FabricHealer
         // These activities can be automatically picked up by debugging and profiling tools, which can compute their execution time, child activities,
         // and other statistics.
         private const int ServiceRequestStartEventId = 5;
+
         [Event(ServiceRequestStartEventId, Level = EventLevel.Informational, Message = "Service request '{0}' started", Keywords = Keywords.Requests)]
         public void ServiceRequestStart(string requestTypeName)
         {
@@ -148,78 +198,17 @@ namespace FabricHealer
         }
 
         private const int ServiceRequestStopEventId = 6;
+
         [Event(ServiceRequestStopEventId, Level = EventLevel.Informational, Message = "Service request '{0}' finished", Keywords = Keywords.Requests)]
         public void ServiceRequestStop(string requestTypeName, string exception = "")
         {
             WriteEvent(ServiceRequestStopEventId, requestTypeName, exception);
         }
 
-        [NonEvent]
-        public void VerboseMessage(string message, params object[] args)
-        {
-            if (IsEnabled())
-            {
-                string finalMessage = string.Format(message, args);
-                VerboseMessage(finalMessage);
-            }
-        }
-
-        [NonEvent]
-        public void InfoMessage(string message, params object[] args)
-        {
-            if (IsEnabled())
-            {
-                string finalMessage = string.Format(message, args);
-                InfoMessage(finalMessage);
-            }
-        }
-
-        [NonEvent]
-        public void ErrorMessage(string message, params object[] args)
-        {
-            if (IsEnabled())
-            {
-                string finalMessage = string.Format(message, args);
-                ErrorMessage(finalMessage);
-            }
-        }
-
-        private const int ErrorMessageEventId = 7;
-        [Event(ErrorMessageEventId, Level = EventLevel.Error, Message = "{0}")]
-        public void ErrorMessage(string message)
-        {
-            if (IsEnabled())
-            {
-                WriteEvent(ErrorMessageEventId, message);
-            }
-        }
-
-        private const int InfoMessageEventId = 8;
-        [Event(InfoMessageEventId, Level = EventLevel.Informational, Message = "{0}")]
-        public void InfoMessage(string message)
-        {
-            if (IsEnabled())
-            {
-                WriteEvent(InfoMessageEventId, message);
-            }
-        }
-
-        private const int PrintRepairTaskEventId = 9;
-        [Event(PrintRepairTaskEventId, Level = EventLevel.Verbose, Message = "TasksID = {0}, State = {1}, Action = {2}, Executor = {3}, Description = {4}, ExecutorData = {5}, Target = {6}")]
-        public void PrintRepairTasks(string taskId, string state, string action, string executor, string description, string executordata, string target)
-        {
-            if (IsEnabled())
-            {
-                WriteEvent(PrintRepairTaskEventId, taskId, state, action, executor, description, executordata, target);
-            }
-        }
-
-        // TelemetryLib impl \\
-
-        private const int VerboseMessageEventId = 10;
+        private const int VerboseMessageEventId = 7;
 
         [Event(VerboseMessageEventId, Level = EventLevel.Verbose, Message = "{0}")]
-        public void VerboseMessage(string message)
+        public void VerboseMessage<T>(T message)
         {
             if (IsEnabled())
             {
@@ -227,37 +216,18 @@ namespace FabricHealer
             }
         }
 
-        private const int FabricHealerTelemetryEventId = 11;
-
-        [Event(FabricHealerTelemetryEventId, Level = EventLevel.Verbose,
-            Message = "FabricHealer Internal Diagnostic Event, " +
-            "eventSourceId = {0}, applicationVersion = {1}, " +
-            "fabricHealerConfiguration = {2}, " +
-            "fabricHealerHealthState = {3}")]
-        public void FabricHealerRuntimeNodeEvent(
-            string clusterId,
-            string applicationVersion,
-            string fhConfigInfo,
-            string fhHealthInfo)
+        [Event(42, Level = EventLevel.Verbose)]
+        public void InternalFHDataEvent<T>(T data)
         {
-            if (IsEnabled())
-            {
-                WriteEvent(
-                    FabricHealerTelemetryEventId,
-                    clusterId,
-                    applicationVersion,
-                    fhConfigInfo,
-                    fhHealthInfo);
-            }
+            Write("FabricHealerOperationalEvent", data);
         }
 
-        public void FabricObserverRuntimeNodeEvent(string clusterId, string applicationVersion, string foConfigInfo, string foHealthInfo)
+        [Event(43, Level = EventLevel.Error)]
+        public void InternalFHCriticalErrorDataEvent<T>(T data)
         {
-            throw new NotImplementedException();
+            Write("FabricHealerCriticalErrorEvent", data);
         }
-        #endregion
 
-        #region Private methods
 #if UNSAFE
         private int SizeInBytes(string s)
         {
@@ -271,6 +241,17 @@ namespace FabricHealer
             }
         }
 #endif
-        #endregion
+
+        // Event keywords can be used to categorize events.
+        // Each keyword is a bit flag. A single event can be associated with multiple keywords (via EventAttribute.Keywords property).
+        // Keywords must be defined as a public class named 'Keywords' inside EventSource that uses them.
+        public static class Keywords
+        {
+            public const EventKeywords Requests = (EventKeywords)0x1L;
+            public const EventKeywords ServiceInitialization = (EventKeywords)0x2L;
+            public const EventKeywords ResourceUsage = (EventKeywords)0x4L;
+            public const EventKeywords ErrorOrWarning = (EventKeywords)0x8L;
+            public const EventKeywords InternalData = (EventKeywords)0x10L;
+        }
     }
 }

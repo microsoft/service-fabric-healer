@@ -19,8 +19,8 @@
 ## | EphemeralPorts            |    
 ## | MemoryMB                  | 
 ## | MemoryPercent             | 
-## | FileHandles               | 
-## | FileHandlesPercent        | 
+## | FileHandles (Linux)       | 
+## | FileHandlesPercent (Linux)| 
 
 ## First, check if we are inside run interval. If so, then cut (!).
 Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
