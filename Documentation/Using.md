@@ -13,7 +13,7 @@ To learn how create your own GuanLogic repair workflows, click [here](LogicWorkf
 Navigate to the PackageRoot/Config/Rules/AppRules.config.txt file and copypaste this repair workflow:
 
 ```
-Mitigate(MetricName=MemoryPercent) :- RestartCodePackage().
+Mitigate(MetricName="MemoryPercent") :- RestartCodePackage().
 ```
 
 **System Application CPU Usage Warning -> Trigger Fabric Node Restart**
@@ -78,7 +78,7 @@ Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
 Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
 	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
-	RestartCodePackage(), !.
+	RestartCodePackage().
 ```
 ***Problem***: I want to check the value for the supplied resource metric (CpuPercent) and ensure that the repair for the target app has not run more than 5 times in the last 1 hour before running the RestartCodePackage repair on any service belonging to the specified app.
 
@@ -88,7 +88,7 @@ Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 2
 Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
 	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
-	RestartCodePackage(), !.
+	RestartCodePackage().
 ```
 
-Note the use of cuts (!) after the external predicate call in the rules above. This is technically the correct thing to do if there are other rules below these in a rules file. This makes it really clear to Guan that there is no need to backtrack. It's work is done and we got our anwser (the repair succeeded, for example). Please look through the [existing rules files](/FabricHealer/PackageRoot/Config/Rules) for real examples that have been tested.
+Please look through the [existing rules files](/FabricHealer/PackageRoot/Config/Rules) for real examples that have been tested. Simply modify the rules to meet your needs (like supplying your target app names, for example, and adjusting the simple logical constraints, if need be).

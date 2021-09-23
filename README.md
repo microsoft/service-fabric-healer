@@ -15,11 +15,6 @@ FabricHealer requires that FabricObserver (v 3.1.8+) and RepairManager (RM) serv
 ```
 For VM level repair, InfrastructureService (IS) service must be deployed.
 ```
-
-## For Early Adopters while in Preview
-
-Please [download the Guan nupkg](https://github.com/microsoft/Guan/releases/download/1.0.0-Preview/Microsoft.Logic.Guan.1.0.0-Preview.nupkg) to your local dev machine and install it into your local FH project in order to build FH successfully. This will be unnecessary when FH ships in Public Preview as Guan will be shipping concurrently and the Guan nupkg will be available in the nuget.org package gallery, as will FH.  
-
 ```
 This is Preview technology and is not meant for production use. Only use in Test environments.
 ```
@@ -28,7 +23,7 @@ will emit an Ok Health Report that will clear FabricObserver's Warning on the ta
 for the health entity with specific details of the problem and FH will treat this as a new repair target. This has been implemented for service healing and system process healing in this release. For node and VM level repairs, FH will wait until FO reports health state
 for the target node before deciding a repair was successful or not.
 
-Also, a reminder that this is beta quality software and there are probably some bugs and the code will churn. That said, it is usable as is today and appropriate for use in **test** enviroments. Please create Issues on this repo if you find bugs. If you are comfortable fixing them, then
+Also, a reminder that this is preview quality software and there are probably some bugs and the code will churn. That said, it is usable as is today and appropriate for use in **test** enviroments. Please create Issues on this repo if you find bugs. If you are comfortable fixing them, then
 pull requests will be evaluated and merged if they meet the quality bar. Thanks in advance for your partnership and for experimenting with FabricHealer.
 ## Quickstart
 
