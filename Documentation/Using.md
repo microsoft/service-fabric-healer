@@ -1,8 +1,6 @@
 # Using FabricHealer - Scenarios
 
-Please [download the Guan nupkg](https://github.com/microsoft/Guan/releases/download/nupkg1.0/Microsoft.ServiceFabricApps.Guan.1.0.0.nupkg) to your local dev machine and install it into your local FH project in order to build FH successfully. This will be unnecessary when FH ships in Public Preview as Guan will be shipping concurrently and the Guan nupkg will be available in the nuget.org package gallery, as will FH.  
-
-To learn how create your own GuanLogic repair workflows, click [here](LogicWorkflows.md).
+FabricHealer ships with [several logic rules](/FabricHealer/PackageRoot/Config/Rules) that form the basis of repair workflow. You just need to modify existing rules to quickly get going. To learn how create your own logic rules, click [here](LogicWorkflows.md).
 
 **Application Memory Usage Warning -> Trigger Code Package Restart**
 
