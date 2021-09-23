@@ -1,33 +1,17 @@
 # Using FabricHealer - Scenarios
 
-FabricHealer ships with [several logic rules](/FabricHealer/PackageRoot/Config/Rules) that form the basis of repair workflow. You just need to modify existing rules to quickly get going. To learn how create your own logic rules, click [here](LogicWorkflows.md).
+FabricHealer ships with [several logic rules](/FabricHealer/PackageRoot/Config/Rules) that form the basis of repair workflow. You just need to modify existing rules to quickly get going. To learn how to create your own logic rules, click [here](LogicWorkflows.md).
 
 **Application Memory Usage Warning -> Trigger Code Package Restart**
 
-***Problem***: I want to perform a code package restart if FabricObserver emits a memory usage warning (as a percentage of total memory) for any application in my cluster.
+***Problem***: I want to perform a code package restart if FabricObserver emits a memory usage warning (as a percentage of total memory) for any user application (not SF system apps) in my cluster.
 
 ***Solution***: We can use the predefined "RestartCodePackage" repair action.
 
-Navigate to the PackageRoot/Config/Rules/AppRules.config.txt file and copypaste this repair workflow:
+In PackageRoot/Config/Rules/AppRules.config.txt, scroll to the Memory section and add:
 
 ```
 Mitigate(MetricName="MemoryPercent") :- RestartCodePackage().
-```
-
-**System Application CPU Usage Warning -> Trigger Fabric Node Restart**
-
-***Problem***: I want to perform a fabric node restart if FabricObserver emits a cpu usage warning for any system application in my cluster.
-
-***Solution***: We can use the predefined "RestartFabricNode" repair action.
-
-Navigate to the PackageRoot/Config/Rules/SystemAppRules.config.txt file and copypaste this repair workflow:
-
-```
-## CPU Time - Percent 
-Mitigate(AppName="fabric:/System", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 90,
-	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
-	?repairCount < 5, 
-	RestartFabricNode().
 ```
 
 **Please note that ## is how comment lines are specified in FabricHealer's logic rules. They are not block comments and apply to single lines only.** 
@@ -36,7 +20,7 @@ Mitigate(AppName="fabric:/System", MetricName="CpuPercent", MetricValue=?MetricV
  ## lines. See? :)
 ```
 
-**GetRepairHistory** is an *external* predicate. That is, it is not a Guan system predicate (implemented in the Guan runtime) or internal predicate (which only exists within and as part of the rule - it has no backing implementation): it is user-implemented; 
+In the repair rules files, you will see GetRepairHistory. This is an *external* predicate. That is, it is not a Guan system predicate (implemented in the Guan runtime) or internal predicate (which only exists within and as part of the rule - it has no backing implementation): it is user-implemented; 
 look in the [FabricHealer/Repair/Guan](/FabricHealer/Repair/Guan) folder to see all external predicate impls.  
 
 GetRepairHistory takes a time span formatted value as the only input, TimeWindow, and has one output variable, ?repairCount, which will hold the value computed by the predicate call. TimeWindow means the span of time in which
@@ -73,7 +57,7 @@ Here, ```RepairApp1()``` and ```RepairApp2()``` are custom rules, the above work
 Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
 
 ## CPU Time - Percent
-Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
+Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80, 
 	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
 	RestartCodePackage().
@@ -83,7 +67,7 @@ Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 2
 ***Solution***:
 ```
 ## CPU Time - Percent
-Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 20, 
+Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80, 
 	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
 	?repairCount < 5,
 	RestartCodePackage().
