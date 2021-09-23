@@ -18,15 +18,24 @@ For VM level repair, InfrastructureService (IS) service must be deployed.
 ```
 This is Preview technology and is not meant for production use. Only use in Test environments.
 ```
-In this release, we are experimenting with a new approach to health validation for repaired targets. FabricHealer will assume success when some repair operation is successful (like restarting a code package or system service process). FH
-will emit an Ok Health Report that will clear FabricObserver's Warning on the target. This is because FH has no understanding of the source Observer's run intervals. If in fact, the repair did not solve the problem, then FO will emit another warning
-for the health entity with specific details of the problem and FH will treat this as a new repair target. This has been implemented for service healing and system process healing in this release. For node and VM level repairs, FH will wait until FO reports health state
-for the target node before deciding a repair was successful or not. 
-
 We are very interested in your feedback with both repair reliability and the Configuration-as-Logic feature. Please let us know what you think. Simply create Issues with your feedback and any bugs run into/enhancements you think are necessary. Thank you.  
 
-Also, a reminder that this is preview quality software and there are probably some bugs and the code will churn. That said, it is usable as is today and appropriate for use in **test** enviroments. Please create Issues on this repo if you find bugs. If you are comfortable fixing them, then
+Also, a reminder that this is preview quality software and there are probably some minor bugs and the code will definitely churn, but it is stable and solid. It is capable as is today and appropriate for use in **test** enviroments. It has been tested in both Linux and Windows deployments. The current set of repair workflows work and should perform correctly in your clusters. Please create Issues on this repo if you find bugs. If you are comfortable fixing them, then
 pull requests will be evaluated and merged if they meet the quality bar. Thanks in advance for your partnership and for experimenting with FabricHealer.
+
+## Build and run  
+
+1. Clone the repo.
+2. Install [.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
+3. Build. 
+
+***Note: FabricHealer must be run under the LocalSystem account (see ApplicationManifest.xml) in order to function correctly. This means on Windows, by default, it will run as System user. On Linux, by default, it will run as root user. You do not have to make any changes to ApplicationManifest.xml for this to be the case.*** 
+
+## Using FabricHealer  
+
+FabricHealer comes with a number of already-implemented/tested target-specific logic rules. You will only need to modify existing rules to get going quickly. FabricHealer is a rule-based repair service and the rules are defined in logic. These rules also form FabricHealer's repair workflow configuration. This is what is meant by Configuration-as-Logic. The only use of XML-based configuration with respect to repair workflow is enabling automitigation (big on/off switch), enabling repair policies, and specifying rule file names. The rest is just the typical Service Fabric application configuration that you know and love. Most of the settings in
+Settings.xml are overridable parameters and you set the values in ApplicationManifest.xml. This enables versionless parameter-only application upgrades, which means you can change Settings.xml-based settings without redeploying FabricHealer.
+
 ## Quickstart
 
 To quickly learn how to use FabricHealer, please see the [simple scenario-based examples.](Documentation/Using.md)
