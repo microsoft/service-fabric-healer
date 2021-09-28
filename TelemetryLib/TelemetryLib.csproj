@@ -3,7 +3,7 @@
     <ProjectGuid>{7BC6991F-C840-413E-B1CD-4025947CF5FA}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>FabricObserver.TelemetryLib</RootNamespace>
+    <RootNamespace>FabricHealer.TelemetryLib</RootNamespace>
     <AssemblyName>TelemetryLib</AssemblyName>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
