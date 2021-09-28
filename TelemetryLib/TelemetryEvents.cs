@@ -125,7 +125,7 @@ namespace FabricHealer.TelemetryLib
             }
             catch (Exception e)
             {
-                // Telemetry is non-critical and should not take down FO.
+                // Telemetry is non-critical and should not take down FH.
                 _ = TryWriteLogFile(logFilePath, $"{e}");
             }
 
@@ -185,7 +185,7 @@ namespace FabricHealer.TelemetryLib
             }
             catch (Exception e)
             {
-                // Telemetry is non-critical and should not take down FO.
+                // Telemetry is non-critical and should not take down FH.
                 _ = TryWriteLogFile(logFilePath, $"{e}");
             }
 
