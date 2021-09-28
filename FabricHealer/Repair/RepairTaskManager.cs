@@ -24,19 +24,18 @@ namespace FabricHealer.Repair
 {
     public class RepairTaskManager : IRepairTasks
     {
-        private readonly RepairTaskEngine repairTaskEngine;
-        private readonly RepairExecutor RepairExec;
+        private static readonly TimeSpan MaxWaitTimeForInfraRepairTaskCompleted = TimeSpan.FromHours(2);
+        internal readonly List<HealthEvent> DetectedHealthEvents = new List<HealthEvent>();
         internal readonly StatelessServiceContext Context;
         internal readonly CancellationToken Token;
         internal readonly TelemetryUtilities TelemetryUtilities;
-        public readonly FabricClient FabricClientInstance;
-
-        private TimeSpan AsyncTimeout
-        {
-            get;
-        } = TimeSpan.FromSeconds(60);
-
-        private static readonly TimeSpan MaxWaitTimeForInfraRepairTaskCompleted = TimeSpan.FromHours(2);
+        internal readonly FabricClient FabricClientInstance;
+        private readonly RepairTaskEngine repairTaskEngine;
+        private readonly RepairExecutor RepairExec;
+        private readonly TimeSpan AsyncTimeout = TimeSpan.FromSeconds(60);
+        private readonly DateTime HealthEventsListCreationTime = DateTime.UtcNow;
+        private readonly TimeSpan MaxLifeTimeHealthEventsData = TimeSpan.FromDays(2);
+        private DateTime LastHealthEventsListClearDateTime;
 
         public RepairTaskManager(FabricClient fabricClient, StatelessServiceContext context, CancellationToken token)
         {
@@ -46,6 +45,7 @@ namespace FabricHealer.Repair
             RepairExec = new RepairExecutor(fabricClient, context, token);
             repairTaskEngine = new RepairTaskEngine(fabricClient);
             TelemetryUtilities = new TelemetryUtilities(fabricClient, context);
+            LastHealthEventsListClearDateTime = HealthEventsListCreationTime;
         }
 
         public async Task RemoveServiceFabricNodeStateAsync(string nodeName, CancellationToken cancellationToken)
@@ -165,6 +165,7 @@ namespace FabricHealer.Repair
             // Add external helper predicates.
             functorTable.Add(CheckFolderSizePredicateType.Singleton(RepairConstants.CheckFolderSize, this, foHealthData));
             functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, this, foHealthData));
+            functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, this, foHealthData));
             functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, this, foHealthData));
             functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage, this));
 
@@ -872,6 +873,36 @@ namespace FabricHealer.Repair
 
             await FabricRepairTasks.CancelRepairTaskAsync(repairTask, FabricClientInstance).ConfigureAwait(true);
             return false;
+        }
+
+        // Support for GetHealthEventHistoryPredicateType, which enables time-scoping logic rules based on health events related to specific SF entities/targets.
+        internal int GetEntityHealthEventCountWithinTimeRange(string property, TimeSpan timeWindow)
+        {
+            int count = 0;
+            var healthEvents = DetectedHealthEvents.Where(evt => evt.HealthInformation.Property == property);
+
+            if (healthEvents == null || !healthEvents.Any())
+            {
+                return count;
+            }
+
+            foreach (HealthEvent healthEvent in healthEvents)
+            {
+                if (DateTime.UtcNow.Subtract(healthEvent.SourceUtcTimestamp) > timeWindow)
+                {
+                    continue;
+                }
+                count++;
+            }
+
+            // Lifetime management of Health Events list data. Data is kept in-memory only for 2 days. If FH process restarts, data is not preserved.
+            if (DateTime.UtcNow.Subtract(LastHealthEventsListClearDateTime) >= MaxLifeTimeHealthEventsData)
+            {
+                DetectedHealthEvents.Clear();
+                LastHealthEventsListClearDateTime = DateTime.UtcNow;
+            }
+
+            return count;
         }
 
         /// <summary>

@@ -36,10 +36,27 @@
 
 Mitigate() :- CheckInsideRunInterval(RunInterval=00:10:00), !.
 
+
 ## Mitigation rules for multiple metrics and targets.
 
-## CPU - Percent In Use - Specific application, any of its service processes.
-Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- TimeScopedRestartCodePackage(5, 01:00:00).
+## CPU - Percent In Use - Constrained on AppName and number of times FabricObserver generates an Error/Warning Health report for CpuPercent metric within a specified timespan.
+## This reads: Try to mitigate an SF Application in Error or Warning named fabric:/CpuStress where one of its services is consuming too much CPU (as a percentage of total CPU) 
+## and where at least 3 health events identifying this problem were produced in the last 15 minutes. This is useful to ensure you don't mitigate a transient (short-lived)
+## problem as they will self-correct.
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00), ?HealthEventCount >= 3,
+	TimeScopedRestartCodePackage(4, 01:00:00).
+
+## CPU - Percent In Use - Constrained on AppName = "fabric:/MyApp42", observed Metric value and health event count within specified time range.
+Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80, 
+	GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00),
+	?HealthEventCount >= 3,
+	TimeScopedRestartCodePackage(4, 01:00:00).
+
+## CPU - Percent In Use - Specific application, any of its service processes. Your FO error/warning threshold alone prompts repair. This doesn't take into account transient misbehavior.
+Mitigate(AppName="fabric:/MyApp", MetricName="CpuPercent") :- TimeScopedRestartCodePackage(5, 01:00:00).
+
+## CPU - Percent In Use - Any application's service that exceeds 90% cpu usage.
+Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 90, TimeScopedRestartCodePackage(5, 01:00:00).
 
 ## File Handles - Total allocated for Any SF Service Process belonging to the specified SF Application.
 ## This is example of how to use the Guan system predicate, Contains. It takes two string args, the first is the substring to look for in the second arg. 

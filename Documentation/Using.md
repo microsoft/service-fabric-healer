@@ -73,4 +73,18 @@ Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?Metric
 	RestartCodePackage().
 ```
 
+***Problem***: I want to check the value for the supplied resource metric (CpuPercent) and ensure that the usage is non-transient - that FabricObserver has generated at least 3 health reports for this issue in a 15 minute time span - before running the RestartCodePackage repair on any service belonging to the specified app.
+
+***Solution***: 
+```
+## Try to mitigate an SF Application in Error or Warning named fabric:/MyApp42 where one of its services is consuming too much CPU (as a percentage of total CPU) 
+## and where at least 3 health events identifying this problem were produced in the last 15 minutes. This is useful to ensure you don't mitigate a transient (short-lived)
+## problem as they will self-correct.
+Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80, 
+	GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00),
+	?HealthEventCount >= 3,
+	TimeScopedRestartCodePackage(4, 01:00:00).
+```  
+
+
 Please look through the [existing rules files](/FabricHealer/PackageRoot/Config/Rules) for real examples that have been tested. Simply modify the rules to meet your needs (like supplying your target app names, for example, and adjusting the simple logical constraints, if need be).
