@@ -7,8 +7,9 @@ namespace FabricHealer.Repair
 {
     public static class RepairConstants
     {
-        // Logic rules file parameter.
+        // Logic rules.
         public const string LogicRulesConfigurationFile = "LogicRulesConfigurationFile";
+        public const string LogicRulesFolderName = "LogicRules";
 
         // Health event sourceId constants.
         public const string InfrastructureServiceType = "InfrastructureServiceType";
@@ -18,6 +19,7 @@ namespace FabricHealer.Repair
         public const string LogAnalyticsLogTypeParameter = "LogAnalyticsLogType";
         public const string LogAnalyticsSharedKeyParameter = "LogAnalyticsSharedKey";
         public const string LogAnalyticsWorkspaceIdParameter = "LogAnalyticsWorkspaceId";
+        public const string EventSourceProviderName = "FabricHealerETWProvider";
         public const string EventSourceEventName = "FabricHealerDataEvent";
 
         // RepairManager Settings Parameters.
@@ -26,7 +28,6 @@ namespace FabricHealer.Repair
         public const string AppInsightsTelemetryEnabled = "EnableTelemetryProvider";
         public const string AppInsightsInstrumentationKeyParameter = "AppInsightsInstrumentationKey";
         public const string EnableEventSourceProvider = "EnableEventSourceProvider";
-        public const string EventSourceProviderName = "FabricHealerETWProvider";
         public const string HealthCheckLoopSleepTimeSeconds = "HealthCheckLoopSleepTimeSeconds";
         public const string LocalLogPathParameter = "LocalLogPath";
         public const string AsyncOperationTimeout = "AsyncOperationTimeoutSeconds";
@@ -46,6 +47,7 @@ namespace FabricHealer.Repair
         // RepairPolicy Settings Parameters.
         public const string Enabled = "Enabled";
 
+        // Mitigate Argument names.
         public const string AppName = "AppName";
         public const string ServiceName = "ServiceName";
         public const string NodeName = "NodeName";
@@ -73,7 +75,7 @@ namespace FabricHealer.Repair
         public const string GetRepairHistory = "GetRepairHistory";
         public const string EmitMessage = "EmitMessage";
 
-        // Resource types.
+        // Metric names.
         public const string ActiveTcpPorts = "ActiveTcpPorts";
         public const string Certificate = "Certificate";
         public const string Cpu = "Cpu";

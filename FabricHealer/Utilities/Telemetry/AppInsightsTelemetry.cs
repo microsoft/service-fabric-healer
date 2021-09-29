@@ -9,6 +9,7 @@ using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Interfaces;
+using FabricHealer.Repair;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -206,10 +207,7 @@ namespace FabricHealer.Utilities.Telemetry
                 { "Value", telemetryData.Value.ToString() },
             };
 
-            telemetryClient.TrackEvent(
-                $"{telemetryData.ObserverName ?? "FabricObserver"}DataEvent",
-                properties);
-
+            telemetryClient.TrackEvent(RepairConstants.EventSourceEventName, properties);
             return Task.CompletedTask;
         }
 

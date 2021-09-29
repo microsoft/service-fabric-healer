@@ -86,13 +86,6 @@ namespace FabricHealer.Utilities
             private set;
         }
 
-        // For EventSource Telemetry
-        public string EtwProviderName
-        {
-            get;
-            private set;
-        }
-
         public string LocalLogPathParameter
         {
             get;
@@ -187,7 +180,6 @@ namespace FabricHealer.Utilities
                     if (string.IsNullOrWhiteSpace(telemetryProviderType))
                     {
                         TelemetryEnabled = false;
-                        
                         return;
                     }
 
@@ -213,7 +205,6 @@ namespace FabricHealer.Utilities
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableEventSourceProvider), out bool etwEnabled))
             {
                 EtwEnabled = etwEnabled;
-                EtwProviderName = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EventSourceProviderName);
             }
 
             // FabricHealer operational telemetry

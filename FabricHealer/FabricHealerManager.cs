@@ -244,11 +244,8 @@ namespace FabricHealer
                         break;
                     }
 
-                    if (!await MonitorRepairableHealthEventsAsync().ConfigureAwait(true))
-                    {
-                        continue;
-                    }
-
+                    _ = await MonitorRepairableHealthEventsAsync().ConfigureAwait(true);
+                    
                     // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
                     // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
                     // than 90 days.
@@ -320,15 +317,15 @@ namespace FabricHealer
                 // ETW.
                 if (ConfigSettings.EtwEnabled)
                 {
-                    Logger.EtwLogger?.Write(
-                        RepairConstants.EventSourceEventName,
-                        new
-                        {
-                            HealthState = "Warning",
-                            Node = serviceContext.NodeContext.NodeName,
-                            Source = "FabricHealer.FabricHealerManager",
-                            Value = message,
-                        });
+                    ServiceEventSource.Current.Write(
+                                        RepairConstants.EventSourceEventName,
+                                        new
+                                        {
+                                            HealthState = "Warning",
+                                            Node = serviceContext.NodeContext.NodeName,
+                                            Source = "FabricHealer.FabricHealerManager",
+                                            Value = message,
+                                        });
                 }
 
                 // Operational telemetry sent to FO developer for use in understanding generic behavior of FO in the real world (no PII)
@@ -678,9 +675,7 @@ namespace FabricHealer
             var nodeList = await fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(false);
 
             // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-            var random = new Random();
-            int waitTimeMS = random.Next(random.Next(0, nodeCount * 100), 1000 * nodeCount);
-            await Task.Delay(waitTimeMS, Token).ConfigureAwait(true);
+            await RandomWait();
 
             foreach (var app in supportedAppHealthStates)
             {
@@ -719,7 +714,7 @@ namespace FabricHealer
 
                 var observerHealthEvents = appHealth.HealthEvents.Where(
                                               s => s.HealthInformation.SourceId.ToLower().Contains("observer")
-                                                   && (s.HealthInformation.HealthState == HealthState.Warning 
+                                                   && (s.HealthInformation.HealthState == HealthState.Warning
                                                        || s.HealthInformation.HealthState == HealthState.Error));
 
                 foreach (var evt in observerHealthEvents)
@@ -882,9 +877,7 @@ namespace FabricHealer
         private async Task ProcessNodeHealthAsync(IEnumerable<NodeHealthState> nodeHealthStates)
         {
             // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-            var random = new Random();
-            int waitTimeMS = random.Next(random.Next(0, nodeCount * 100), 1000 * nodeCount);
-            await Task.Delay(waitTimeMS, Token).ConfigureAwait(true);
+            await RandomWait();
 
             var supportedNodeHealthStates = nodeHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
 
@@ -1023,9 +1016,7 @@ namespace FabricHealer
             }
 
             // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-            var random = new Random();
-            int waitTimeMS = random.Next(random.Next(0, nodeCount * 100), 1000 * nodeCount);
-            await Task.Delay(waitTimeMS, Token).ConfigureAwait(true);
+            await RandomWait();
 
             var repUnhealthyEvaluations = ((ReplicaHealthEvaluation)evaluation).UnhealthyEvaluations;
 
@@ -1209,7 +1200,7 @@ namespace FabricHealer
                                                  RepairConstants.LogicRulesConfigurationFile);
 
             var configPath = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Path;
-            var rulesFolderPath = Path.Combine(configPath, "Rules");
+            var rulesFolderPath = Path.Combine(configPath, RepairConstants.LogicRulesFolderName);
             var rulesFilePath = Path.Combine(rulesFolderPath, logicRulesConfigFileName);
             List<string> rules = File.ReadAllLines(rulesFilePath).ToList();
             List<string> repairRules = ParseRulesFile(rules);
@@ -1301,6 +1292,14 @@ namespace FabricHealer
             }
 
             return repairRules;
+        }
+
+        private async Task RandomWait()
+        {
+            var random = new Random();
+            int waitTimeMS = random.Next(random.Next(0, nodeCount * 100), 1000 * nodeCount);
+
+            await Task.Delay(waitTimeMS, Token).ConfigureAwait(false);
         }
     }
 }

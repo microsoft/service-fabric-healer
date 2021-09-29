@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using FabricHealer.TelemetryLib;
 using FabricHealer.Repair;
 
-namespace FabricHealer
+namespace FabricHealer.Utilities.Telemetry
 {
     public sealed class ServiceEventSource : EventSource, ITelemetryEventSource
     {

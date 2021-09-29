@@ -50,8 +50,8 @@ namespace FHTest
         private readonly CancellationToken token = new CancellationToken();
 
         // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
-        // e.g., if developing on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
-        private const string FHRulesDirectory = @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\Rules\";
+        // e.g., if developing on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\LogicRules\";
+        private const string FHRulesDirectory = @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\LogicRules\";
 
         /* GuanLogic Tests */
         // TODO: Add more tests.

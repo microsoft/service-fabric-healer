@@ -1,11 +1,18 @@
 # FabricHealer Preview
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
 
-FabricHealer is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls, but can also be fully customizable (like Disk repair). All repairs are safely orchestrated through Service Fabric’s RepairManager service. Repair workflow configuration is written as [Prolog](http://www.let.rug.nl/bos/lpn//lpnpage.php?pageid=online)-like [logic](https://github.com/microsoft/service-fabric-healer/tree/main/FabricHealer/PackageRoot/Config/Rules) with supporting external predicates written in C#. This is made possible by a new logic programming library for .NET, [Guan](https://github.com/microsoft/guan). The fun starts when FabricHealer detects supported error or warning states reported by [FabricObserver](https://github.com/microsoft/service-fabric-observer).
+FabricHealer is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric applications
+(including containers), host virtual machines, and logical disks (scoped to space usage problems only).
+These repairs mostly employ a set of Service Fabric API calls, but can also be fully customizable (like Disk repair).
+All repairs are safely orchestrated through Service Fabric’s RepairManager service.
+Repair workflow configuration is written as [Prolog](http://www.let.rug.nl/bos/lpn//lpnpage.php?pageid=online)-like [logic](/FabricHealer/PackageRoot/Config/LogicRules) with supporting external predicates written in C#.
+FabricHealer's Configuration-as-Logic feature is made possible by a new logic programming library for .NET, [Guan](https://github.com/microsoft/guan), also in Preview.
+The fun starts when FabricHealer detects supported error or warning health events reported by [FabricObserver](https://github.com/microsoft/service-fabric-observer).
 
 FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster. It is a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04).  
 
-All warning and error reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) and subsequently repaired by FabricHealer are user-configured - developer control extends from unhealthy event source to related healing operations.
+All warning and error health reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) and subsequently repaired by FabricHealer are user-configured - developer control extends from unhealthy event source to related healing operations.
+FabricObserver and FabricHealer are part of a family of highly configurable Service Fabric observability tools that work together to keep your clusters green.
 
 To learn more about FabricHealer's configuration-as-logic model, [click here.](Documentation/LogicWorkflows.md)  
 
@@ -20,7 +27,9 @@ This is Preview technology and is not meant for production use. Only use in Test
 ```
 We are very interested in your feedback with both repair reliability and the Configuration-as-Logic feature. Please let us know what you think. Simply create Issues with your feedback and any bugs run into/enhancements you think are necessary. Thank you.  
 
-Also, a reminder that this is preview quality software and there are probably some minor bugs and the code will definitely churn, but it is stable and solid. It is capable as is today and appropriate for use in **test** enviroments. It has been tested in both Linux and Windows deployments. The current set of repair workflows work and should perform correctly in your clusters. Please create Issues on this repo if you find bugs. If you are comfortable fixing them, then
+Also, a reminder that this is preview quality software and there are probably some minor bugs and the code will definitely churn, but it is stable and solid.
+It is capable as is today and appropriate for use in **test** enviroments. It has been tested in both Linux and Windows deployments.
+The current set of repair workflows work and should perform correctly in your clusters. Please create Issues on this repo if you find bugs. If you are comfortable fixing them, then
 pull requests will be evaluated and merged if they meet the quality bar. Thanks in advance for your partnership and for experimenting with FabricHealer.
 
 ## Build and run  

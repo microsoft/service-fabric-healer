@@ -180,23 +180,23 @@ namespace FabricHealer.Repair
 
             // Create guan query
             List<CompoundTerm> compoundTerms = new List<CompoundTerm>();
-            CompoundTerm term = new CompoundTerm("Mitigate");
+            CompoundTerm compoundTerm = new CompoundTerm("Mitigate");
 
             /* Pass default arguments in query. */
             // The type of metric that led FO to generate the unhealthy evaluation for the entity (App, Node, VM, Replica, etc).
             foHealthData.Metric = FOErrorWarningCodes.GetMetricNameFromCode(foHealthData.Code);
-            term.AddArgument(new Constant(foHealthData.ApplicationName), RepairConstants.AppName);
-            term.AddArgument(new Constant(foHealthData.Code), RepairConstants.FOErrorCode);
-            term.AddArgument(new Constant(foHealthData.Metric), RepairConstants.MetricName);
-            term.AddArgument(new Constant(foHealthData.NodeName), RepairConstants.NodeName);
-            term.AddArgument(new Constant(foHealthData.NodeType), RepairConstants.NodeType);
-            term.AddArgument(new Constant(foHealthData.OS), RepairConstants.OS);
-            term.AddArgument(new Constant(foHealthData.ServiceName), RepairConstants.ServiceName);
-            term.AddArgument(new Constant(foHealthData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);
-            term.AddArgument(new Constant(foHealthData.PartitionId), RepairConstants.PartitionId);
-            term.AddArgument(new Constant(foHealthData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
-            term.AddArgument(new Constant(Convert.ToInt64(foHealthData.Value)), RepairConstants.MetricValue);
-            compoundTerms.Add(term);
+            compoundTerm.AddArgument(new Constant(foHealthData.ApplicationName), RepairConstants.AppName);
+            compoundTerm.AddArgument(new Constant(foHealthData.Code), RepairConstants.FOErrorCode);
+            compoundTerm.AddArgument(new Constant(foHealthData.Metric), RepairConstants.MetricName);
+            compoundTerm.AddArgument(new Constant(foHealthData.NodeName), RepairConstants.NodeName);
+            compoundTerm.AddArgument(new Constant(foHealthData.NodeType), RepairConstants.NodeType);
+            compoundTerm.AddArgument(new Constant(foHealthData.OS), RepairConstants.OS);
+            compoundTerm.AddArgument(new Constant(foHealthData.ServiceName), RepairConstants.ServiceName);
+            compoundTerm.AddArgument(new Constant(foHealthData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);
+            compoundTerm.AddArgument(new Constant(foHealthData.PartitionId), RepairConstants.PartitionId);
+            compoundTerm.AddArgument(new Constant(foHealthData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
+            compoundTerm.AddArgument(new Constant(Convert.ToInt64(foHealthData.Value)), RepairConstants.MetricValue);
+            compoundTerms.Add(compoundTerm);
 
             // Dispatch query
             return await queryDispatcher.RunQueryAsync(compoundTerms).ConfigureAwait(true);

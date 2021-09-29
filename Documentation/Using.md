@@ -1,6 +1,6 @@
 # Using FabricHealer - Scenarios
 
-FabricHealer ships with [several logic rules](/FabricHealer/PackageRoot/Config/Rules) that form the basis of repair workflow. You just need to modify existing rules to quickly get going. To learn how to create your own logic rules, click [here](LogicWorkflows.md).
+FabricHealer ships with [several logic rules](/FabricHealer/PackageRoot/Config/LogicRules) that form the basis of repair workflow. You just need to modify existing rules to quickly get going. To learn how to create your own logic rules, click [here](LogicWorkflows.md).
 
 **Application Memory Usage Warning -> Trigger Code Package Restart**
 
@@ -8,7 +8,7 @@ FabricHealer ships with [several logic rules](/FabricHealer/PackageRoot/Config/R
 
 ***Solution***: We can use the predefined "RestartCodePackage" repair action.
 
-In PackageRoot/Config/Rules/AppRules.config.txt, scroll to the Memory section and add:
+In PackageRoot/Config/LogicRules/AppRules.config.txt, scroll to the Memory section and add:
 
 ```
 Mitigate(MetricName="MemoryPercent") :- RestartCodePackage().
@@ -25,7 +25,7 @@ look in the [FabricHealer/Repair/Guan](/FabricHealer/Repair/Guan) folder to see 
 
 GetRepairHistory takes a time span formatted value as the only input, TimeWindow, and has one output variable, ?repairCount, which will hold the value computed by the predicate call. TimeWindow means the span of time in which
 Completed repairs have occurred for the repair type (in this case App level repairs for an application named "fabric:/System"). ?repairCount can then be used in subsequent logic within the same rule (not all rules in the file,
-just the rule that it is a part of). You can see a more advanced approach in the [AppRules](/FabricHealer/PackageRoot/Config/Rules/AppRules.config.txt) and [SystemAppRules](/FabricHealer/PackageRoot/Config/Rules/SystemAppRules.config.txt) files where rather than having each rule run the same check, a convenience internal predicate is used that takes arguments.
+just the rule that it is a part of). You can see a more advanced approach in the [AppRules](/FabricHealer/PackageRoot/Config/LogicRules/AppRules.config.txt) and [SystemAppRules](/FabricHealer/PackageRoot/Config/LogicRules/SystemAppRules.config.txt) files where rather than having each rule run the same check, a convenience internal predicate is used that takes arguments.
 
 Repair type is implicitly or explicitly specified in the query. Implicitly, FH already knows the context internally when this rule is run since it gets the related information from FabricObserver's
 health report, passing each metric as a default argument available to the query (Mitigate, in this case). To be clear, in the above example, AppName is one of the default named arguments available to Mitigate and it's corresponding
@@ -87,4 +87,4 @@ Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?Metric
 ```  
 
 
-Please look through the [existing rules files](/FabricHealer/PackageRoot/Config/Rules) for real examples that have been tested. Simply modify the rules to meet your needs (like supplying your target app names, for example, and adjusting the simple logical constraints, if need be).
+Please look through the [existing rules files](/FabricHealer/PackageRoot/Config/LogicRules) for real examples that have been tested. Simply modify the rules to meet your needs (like supplying your target app names, for example, and adjusting the simple logical constraints, if need be).
