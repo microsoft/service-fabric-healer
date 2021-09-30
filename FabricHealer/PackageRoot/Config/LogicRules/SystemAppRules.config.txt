@@ -29,8 +29,9 @@
 
 ## First, check if we are inside the run interval. If inside run interval, then cut (no other rules will be processed).
 ## Note: FO only generates Application (System) level warnings for system services. There will only ever be ApplicationName as "fabric:/System" in the FO health data that FH emits, so this is an optional argument.
+## This is commented out by default. Just uncomment and set the global run interval for System app level repairs to suit your needs.
 
-Mitigate() :- CheckInsideRunInterval(RunInterval=00:10:00), !.
+## Mitigate() :- CheckInsideRunInterval(RunInterval=00:10:00), !.
 
 
 ## TimeScopedRestartFabricNode is an internal predicate to check for the number of times a system service node restart repair has run to completion within a supplied time window. 
