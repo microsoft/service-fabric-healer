@@ -266,7 +266,7 @@ namespace FabricHealer
                             {
                                 string filepath = Path.Combine(RepairLogger.LogFolderBasePath, $"fh_operational_telemetry.log");
 
-                                if (telemetryEvents.EmitFabricObserverOperationalEvent(fhData, OperationalTelemetryRunInterval, filepath))
+                                if (telemetryEvents.EmitFabricHealerOperationalEvent(fhData, OperationalTelemetryRunInterval, filepath))
                                 {
                                     LastTelemetrySendDate = DateTime.UtcNow;
                                     ResetInternalDataCounters();
@@ -350,7 +350,7 @@ namespace FabricHealer
                         };
 
                         string filepath = Path.Combine(RepairLogger.LogFolderBasePath, $"fh_critical_error_telemetry.log");
-                        _ = telemetryEvents.EmitFabricObserverCriticalErrorEvent(fhData, filepath);
+                        _ = telemetryEvents.EmitFabricHealerCriticalErrorEvent(fhData, filepath);
                     }
                     catch
                     {

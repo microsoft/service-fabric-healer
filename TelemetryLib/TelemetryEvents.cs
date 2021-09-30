@@ -51,7 +51,7 @@ namespace FabricHealer.TelemetryLib
             isEtwEnabled = etwEnabled;
         }
 
-        public bool EmitFabricObserverOperationalEvent(FabricHealerOperationalEventData repairData, TimeSpan runInterval, string logFilePath)
+        public bool EmitFabricHealerOperationalEvent(FabricHealerOperationalEventData repairData, TimeSpan runInterval, string logFilePath)
         {
             if (!telemetryClient.IsEnabled())
             {
@@ -132,7 +132,7 @@ namespace FabricHealer.TelemetryLib
             return false;
         }
 
-        public bool EmitFabricObserverCriticalErrorEvent(FabricHealerCriticalErrorEventData fhErrorData, string logFilePath)
+        public bool EmitFabricHealerCriticalErrorEvent(FabricHealerCriticalErrorEventData fhErrorData, string logFilePath)
         {
             if (!telemetryClient.IsEnabled())
             {
@@ -171,7 +171,7 @@ namespace FabricHealer.TelemetryLib
                     { "OS", fhErrorData.OS }
                 };
 
-                telemetryClient?.TrackEvent($"{TaskName}.{OperationalEventName}", eventProperties);
+                telemetryClient?.TrackEvent($"{TaskName}.{CriticalErrorEventName}", eventProperties);
                 telemetryClient?.Flush();
 
                 // allow time for flushing
