@@ -32,6 +32,12 @@ namespace FabricHealer.Utilities
         {
             try
             {
+                if (!serializedObj.StartsWith("{") && !serializedObj.EndsWith("}"))
+                {
+                    obj = default;
+                    return false;
+                }
+
                 obj = JsonConvert.DeserializeObject<T>(serializedObj);
                 return true;
             }
