@@ -40,8 +40,7 @@ namespace FabricHealer.TelemetryLib
         {
             serviceEventSource = eventSource;
             serviceContext = context;
-            string config = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "FHAppInsightsOperational.config"));
-            appInsightsTelemetryConf = TelemetryConfiguration.CreateFromConfiguration(config);
+            appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
             appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AIKey;
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
             var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
