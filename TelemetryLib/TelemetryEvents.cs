@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
