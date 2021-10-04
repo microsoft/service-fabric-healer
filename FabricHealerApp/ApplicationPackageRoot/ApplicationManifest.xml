@@ -2,10 +2,10 @@
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.0.0-Preview" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="FabricHealer_InstanceCount" DefaultValue="-1" />
-    <!-- FabricHealer Enablement, Monitor Loop Timeout -->
+    <!-- FabricHealerManager Settings  -->
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
     <Parameter Name="EventSourceProviderEnabled" DefaultValue="true" />
-    <Parameter Name="MonitorLoopSleepSeconds" DefaultValue="10" />
+    <Parameter Name="MonitorLoopSleepSeconds" DefaultValue="30" />
     <Parameter Name="TelemetryProviderEnabled" DefaultValue="true" />
     <Parameter Name="VerboseLoggingEnabled" DefaultValue="true" />
     <Parameter Name="OperationalTelemetryEnabled" DefaultValue="true" />
