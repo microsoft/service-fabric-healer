@@ -244,11 +244,8 @@ namespace FabricHealer
                         break;
                     }
 
-                    if (!await MonitorRepairableHealthEventsAsync().ConfigureAwait(true))
-                    {
-                        continue;
-                    }
-
+                    _ = await MonitorRepairableHealthEventsAsync().ConfigureAwait(true);
+                    
                     // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
                     // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
                     // than 90 days.
@@ -269,7 +266,7 @@ namespace FabricHealer
                             {
                                 string filepath = Path.Combine(RepairLogger.LogFolderBasePath, $"fh_operational_telemetry.log");
 
-                                if (telemetryEvents.EmitFabricObserverOperationalEvent(fhData, OperationalTelemetryRunInterval, filepath))
+                                if (telemetryEvents.EmitFabricHealerOperationalEvent(fhData, OperationalTelemetryRunInterval, filepath))
                                 {
                                     LastTelemetrySendDate = DateTime.UtcNow;
                                     ResetInternalDataCounters();
@@ -320,15 +317,15 @@ namespace FabricHealer
                 // ETW.
                 if (ConfigSettings.EtwEnabled)
                 {
-                    Logger.EtwLogger?.Write(
-                        RepairConstants.EventSourceEventName,
-                        new
-                        {
-                            HealthState = "Warning",
-                            Node = serviceContext.NodeContext.NodeName,
-                            Source = "FabricHealer.FabricHealerManager",
-                            Value = message,
-                        });
+                    ServiceEventSource.Current.Write(
+                                        RepairConstants.EventSourceEventName,
+                                        new
+                                        {
+                                            HealthState = "Warning",
+                                            Node = serviceContext.NodeContext.NodeName,
+                                            Source = "FabricHealer.FabricHealerManager",
+                                            Value = message,
+                                        });
                 }
 
                 // Operational telemetry sent to FO developer for use in understanding generic behavior of FO in the real world (no PII)
@@ -353,7 +350,7 @@ namespace FabricHealer
                         };
 
                         string filepath = Path.Combine(RepairLogger.LogFolderBasePath, $"fh_critical_error_telemetry.log");
-                        _ = telemetryEvents.EmitFabricObserverCriticalErrorEvent(fhData, filepath);
+                        _ = telemetryEvents.EmitFabricHealerCriticalErrorEvent(fhData, filepath);
                     }
                     catch
                     {
@@ -677,6 +674,9 @@ namespace FabricHealer
             var supportedAppHealthStates = appHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
             var nodeList = await fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(false);
 
+            // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
+            await RandomWait();
+
             foreach (var app in supportedAppHealthStates)
             {
                 Token.ThrowIfCancellationRequested();
@@ -714,23 +714,19 @@ namespace FabricHealer
 
                 var observerHealthEvents = appHealth.HealthEvents.Where(
                                               s => s.HealthInformation.SourceId.ToLower().Contains("observer")
-                                                   && (s.HealthInformation.HealthState == HealthState.Warning 
+                                                   && (s.HealthInformation.HealthState == HealthState.Warning
                                                        || s.HealthInformation.HealthState == HealthState.Error));
 
                 foreach (var evt in observerHealthEvents)
                 {
                     Token.ThrowIfCancellationRequested();
 
-                    // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-                    var random = new Random();
-                    int waitTimeMS = random.Next(random.Next(0, nodeCount * 100), 1000 * nodeCount);
-                    await Task.Delay(waitTimeMS, Token).ConfigureAwait(true);
-
                     if (string.IsNullOrWhiteSpace(evt.HealthInformation.Description))
                     {
                         continue;
-                    }   
+                    }
 
+                    // If source of health data is not FabricObserver, move on.
                     if (!JsonSerializationUtility.TryDeserialize(evt.HealthInformation.Description, out TelemetryData foHealthData))
                     {
                         continue;
@@ -760,7 +756,7 @@ namespace FabricHealer
                         {
                             foreach (var repair in fhRepairTasks)
                             {
-                                var executorData =  JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
+                                var executorData = JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
                                 if (executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartFabricNode &&
                                     executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartProcess)
@@ -781,7 +777,7 @@ namespace FabricHealer
                         }
 
                         repairRules = GetRepairRulesFromFOCode(foHealthData.Code, "fabric:/System");
-                        
+
                         if (repairRules == null || repairRules?.Count == 0)
                         {
                             continue;
@@ -790,7 +786,7 @@ namespace FabricHealer
                         repairId = $"{foHealthData.NodeName}_{foHealthData.SystemServiceProcessName}_{foHealthData.Code}";
                         system = "System ";
 
-                        var currentRepairs = 
+                        var currentRepairs =
                             await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token).ConfigureAwait(true);
 
                         // Is a repair for the target app service instance already happening in the cluster?
@@ -814,7 +810,7 @@ namespace FabricHealer
                     else
                     {
                         repairRules = GetRepairRulesFromFOCode(foHealthData.Code);
-                        
+
                         // Nothing to do here.
                         if (repairRules == null || repairRules?.Count == 0)
                         {
@@ -828,7 +824,7 @@ namespace FabricHealer
                         }
 
                         string serviceProcessName = $"{foHealthData.ServiceName?.Replace("fabric:/", "").Replace("/", "")}";
-                        var currentRepairs = 
+                        var currentRepairs =
                             await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token).ConfigureAwait(true);
 
                         // This is the way each FH repair is ID'd. This data is stored in the related Repair Task's ExecutorData property.
@@ -848,6 +844,7 @@ namespace FabricHealer
                     }
 
                     foHealthData.RepairId = repairId;
+                    foHealthData.HealthEventProperty = evt.HealthInformation.Property;
                     string errOrWarn = "Error";
 
                     if (evt.HealthInformation.HealthState == HealthState.Warning)
@@ -865,6 +862,9 @@ namespace FabricHealer
                                                  $"{repairRules.Count} Logic rules found for {system}Application-level repair.",
                                                  Token).ConfigureAwait(true);
 
+                    // Update the in-memory HealthEvent List.
+                    this.repairTaskManager.DetectedHealthEvents.Add(evt);
+
                     // Start the repair workflow.
                     await repairTaskManager.StartRepairWorkflowAsync(foHealthData, repairRules, Token).ConfigureAwait(true);
                 }
@@ -876,6 +876,9 @@ namespace FabricHealer
         // VM is using too much (based on user-supplied threshold value) of some monitored machine resource.
         private async Task ProcessNodeHealthAsync(IEnumerable<NodeHealthState> nodeHealthStates)
         {
+            // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
+            await RandomWait();
+
             var supportedNodeHealthStates = nodeHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
 
             foreach (var node in supportedNodeHealthStates)
@@ -921,11 +924,6 @@ namespace FabricHealer
                 {
                     Token.ThrowIfCancellationRequested();
 
-                    // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-                    var random = new Random();
-                    int waitTimeMS = random.Next(random.Next(0, nodeCount * 100), 1000 * nodeCount);
-                    await Task.Delay(waitTimeMS, Token).ConfigureAwait(true);
-                    
                     if (string.IsNullOrWhiteSpace(evt.HealthInformation.Description))
                     {
                         continue;
@@ -980,6 +978,7 @@ namespace FabricHealer
 
                     string Id = $"VM_Repair_{foHealthData.Code}{foHealthData.NodeName}";
                     foHealthData.RepairId = Id;
+                    foHealthData.HealthEventProperty = evt.HealthInformation.Property;
                     string errOrWarn = "Error";
 
                     if (evt.HealthInformation.HealthState == HealthState.Warning)
@@ -996,6 +995,9 @@ namespace FabricHealer
                                                  $"{Environment.NewLine}" +
                                                  $"VM repair policy is enabled. {repairRules.Count} Logic rules found for VM-level repair.",
                                                  Token).ConfigureAwait(true);
+                    
+                    // Update the in-memory HealthEvent List.
+                    this.repairTaskManager.DetectedHealthEvents.Add(evt);
 
                     // Start the repair workflow.
                     await repairTaskManager.StartRepairWorkflowAsync(foHealthData, repairRules, Token).ConfigureAwait(true);
@@ -1013,6 +1015,9 @@ namespace FabricHealer
                 return;
             }
 
+            // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
+            await RandomWait();
+
             var repUnhealthyEvaluations = ((ReplicaHealthEvaluation)evaluation).UnhealthyEvaluations;
 
             foreach (var healthEvaluation in repUnhealthyEvaluations)
@@ -1021,11 +1026,6 @@ namespace FabricHealer
                 var healthEvent = eval.UnhealthyEvaluations.Cast<EventHealthEvaluation>().FirstOrDefault();
 
                 Token.ThrowIfCancellationRequested();
-
-                // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-                var random = new Random();
-                int waitTimeMS = random.Next(random.Next(0, nodeCount * 100), 1000 * nodeCount);
-                await Task.Delay(waitTimeMS, Token).ConfigureAwait(true);
 
                 var service = await fabricClient.QueryManager.GetServiceNameAsync(
                                                                 eval.PartitionId,
@@ -1156,7 +1156,6 @@ namespace FabricHealer
                 case FOErrorWarningCodes.AppWarningTooManyActiveTcpPorts:
                 case FOErrorWarningCodes.AppWarningTooManyOpenFileHandles:
 
-
                     repairPolicySectionName = app == "fabric:/System" ? RepairConstants.SystemAppRepairPolicySectionName : RepairConstants.AppRepairPolicySectionName;
                     break;
 
@@ -1201,7 +1200,7 @@ namespace FabricHealer
                                                  RepairConstants.LogicRulesConfigurationFile);
 
             var configPath = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Path;
-            var rulesFolderPath = Path.Combine(configPath, "Rules");
+            var rulesFolderPath = Path.Combine(configPath, RepairConstants.LogicRulesFolderName);
             var rulesFilePath = Path.Combine(rulesFolderPath, logicRulesConfigFileName);
             List<string> rules = File.ReadAllLines(rulesFilePath).ToList();
             List<string> repairRules = ParseRulesFile(rules);
@@ -1293,6 +1292,14 @@ namespace FabricHealer
             }
 
             return repairRules;
+        }
+
+        private async Task RandomWait()
+        {
+            var random = new Random();
+            int waitTimeMS = random.Next(random.Next(0, nodeCount * 100), 1000 * nodeCount);
+
+            await Task.Delay(waitTimeMS, Token).ConfigureAwait(false);
         }
     }
 }

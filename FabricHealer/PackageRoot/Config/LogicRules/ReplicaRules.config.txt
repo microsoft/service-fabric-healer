@@ -5,10 +5,14 @@
 ##		Start Time (UTC): 2020-04-26 19:22:55.492.
 
 ## First, check if we are inside run interval. If so, then cut (!), which effectively means stop processing rules (no backtracking to subsequent rules in the file).
-Mitigate() :- CheckInsideRunInterval(RunInterval=00:15:00), !.
+## This is commented out by default. Just uncomment and set the global run interval for app level repairs to suit your needs.
+
+## Mitigate() :- CheckInsideRunInterval(RunInterval=00:15:00), !.
+
 
 ## Set a repair count variable for use by any rule in this file (NOTE: all rules must have the same TimeWindow value) as an internal predicate, _mitigate(?count),
 ## where ?repairCount and ?count variables are unified when _mitigate(?count) predicate runs. The concept here is sharing a variable value across different rules.
+
 Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=01:00:00), _mitigate(?repairCount).
 
 ## Now, let's say you wanted to only repair specific Apps or Paritions where related repair TimeWindow values are *not* the same, unlike the above "global" variable rule.

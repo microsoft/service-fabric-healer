@@ -2,20 +2,20 @@
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.0.0-Preview" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="FabricHealer_InstanceCount" DefaultValue="-1" />
-    <!-- FabricHealer Enablement, Monitor Loop Timeout -->
+    <!-- FabricHealerManager Settings  -->
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
-    <Parameter Name="EventSourceProviderEnabled" DefaultValue="false" />
-    <Parameter Name="MonitorLoopSleepSeconds" DefaultValue="10" />
-    <Parameter Name="TelemetryProviderEnabled" DefaultValue="false" />
+    <Parameter Name="EventSourceProviderEnabled" DefaultValue="true" />
+    <Parameter Name="MonitorLoopSleepSeconds" DefaultValue="30" />
+    <Parameter Name="TelemetryProviderEnabled" DefaultValue="true" />
     <Parameter Name="VerboseLoggingEnabled" DefaultValue="true" />
     <Parameter Name="OperationalTelemetryEnabled" DefaultValue="true" />
     <!-- Repair Policy Enablement -->
     <Parameter Name="AppRepairEnabled" DefaultValue="true" />
     <Parameter Name="DiskRepairEnabled" DefaultValue="true" />
-    <Parameter Name="NodeRepairEnabled" DefaultValue="true" />
-    <Parameter Name="ReplicaRepairEnabled" DefaultValue="true" />
+    <Parameter Name="NodeRepairEnabled" DefaultValue="false" />
+    <Parameter Name="ReplicaRepairEnabled" DefaultValue="false" />
     <Parameter Name="SystemAppRepairEnabled" DefaultValue="true" />
-    <Parameter Name="VmRepairEnabled" DefaultValue="true" />
+    <Parameter Name="VmRepairEnabled" DefaultValue="false" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 

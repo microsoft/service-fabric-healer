@@ -1,6 +1,6 @@
 ﻿## Logic rules for Service Fabric Application-level repairs.
 
-## Mitigate Named Arguments - Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
+## Mitigate (the goal, Guan.CompoundTerm type) Named Arguments (CompoundTerm Arguments (of type Guan.Constant)) - Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
 ## |---------------------------|----------------------------------------------------------------------------------------------|
 ## | AppName                   | Name of the SF application, format is fabric:/SomeApp                                        |
@@ -29,17 +29,55 @@
 ## | FileHandlesPercent        | 
 ## *Network-related repair is not supported today.    
 
-## RunInterval rule: Are we inside the run interval for an app repair? This is optional. It's up to you if you want to employ this type of constraint.
-## This below rule means that if any of the repairs for any of the apps in this rule file has run within the past 10 minutes, cut (!), 
+## Repair Run Interval - Are we inside the run interval for an app repair? This is optional. It's up to you if you want to employ this type of constraint.
+## This below rule means that if any of the repairs for any of the apps in this rule file has run within the past 30 minutes, cut (!), 
 ## which is a special operator that means, effectively, stop processing rules; do not backtrack.
 ## By having this as a top level rule, it means no subsequent rules in this file will run if we are inside the specified run interval.
+## This is commented out by default. Just uncomment and set the global run interval for app level repairs to suit your needs.
 
-Mitigate() :- CheckInsideRunInterval(RunInterval=00:10:00), !.
+## Mitigate() :- CheckInsideRunInterval(RunInterval=00:30:00), !.
 
-## Mitigation rules for multiple metrics and targets.
+## Repair Lifetime Management - Specify that a repair can only run until some end date. This gives the dev team time to identify and fix the bug in user code that is causing the problem.
+## Meanwhile, FabricHealer will keep the offending service green. Remember: Auto-mitigation is not a fix, it's a stop gap. Fix those bugs!
+## time() and DateTime() are Guan functions (system functions) that can be used in combination for exactly this purpose.
+## time() with no arguments returns DateTime.UtcNow. DateTime will return a DateTime object that represents the supplied datetime string. 
+## *Note*:  you must wrap the date string in quotes to make it explicit to Guan that the arg is a string as it contains mathematical operators (in this case a /).
+## The rule below reads: If any of the specified (set in Mitigate) app's service processes have put it into Warning due to CPU over-consumption and today's date is later than the supplied end date, emit a message, stop processing rules (!).
 
-## CPU - Percent In Use - Specific application, any of its service processes.
-Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- TimeScopedRestartCodePackage(5, 01:00:00).
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("11/30/2021"),
+	EmitMessage("Exceeded specified end date for repair of fabric:/MyApp CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("11/30/2021"), time()), !.
+
+## Alternatively, you could enforce repair end dates inline (as a subgoal) to any rule, e.g.,
+
+Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- time() < DateTime("11/30/2021"),
+	?MetricValue >= 8500,
+	TimeScopedRestartCodePackage(4, 01:00:00).
+
+
+## Logic rules for multiple metrics and targets. The goal is to Mitigate!
+
+## CPU - Percent In Use - Constrained on AppName and number of times FabricObserver generates an Error/Warning Health report for CpuPercent metric within a specified timespan.
+## This reads: Try to mitigate an SF Application in Error or Warning named fabric:/CpuStress where one of its services is consuming too much CPU (as a percentage of total CPU) 
+## and where at least 3 health events identifying this problem were produced in the last 15 minutes. This is useful to ensure you don't mitigate a transient (short-lived)
+## problem as they will self-correct.
+
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 15,
+	GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00),
+	?HealthEventCount >= 3,
+	TimeScopedRestartCodePackage(4, 01:00:00).
+
+
+## CPU - Percent In Use - Constrained on AppName = "fabric:/MyApp42", observed Metric value and health event count within specified time range.
+Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80, 
+	GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00),
+	?HealthEventCount >= 3,
+	TimeScopedRestartCodePackage(4, 01:00:00).
+
+## CPU - Percent In Use - Specific application, any of its service processes. Your FO error/warning threshold alone prompts repair. This doesn't take into account transient misbehavior.
+Mitigate(AppName="fabric:/MyApp", MetricName="CpuPercent") :- TimeScopedRestartCodePackage(5, 01:00:00).
+
+## CPU - Percent In Use - Any application's service that exceeds 90% cpu usage, repair up to 5 times in a one hour window.
+Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 90, TimeScopedRestartCodePackage(5, 01:00:00).
 
 ## File Handles - Total allocated for Any SF Service Process belonging to the specified SF Application.
 ## This is example of how to use the Guan system predicate, Contains. It takes two string args, the first is the substring to look for in the second arg. 
@@ -62,14 +100,15 @@ Mitigate(AppName="fabric:/MyApp", MetricName="FileHandles") :- TimeScopedRestart
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
 	TimeScopedRestartCodePackage(3, 00:10:00).
 
-
 ## Memory - Megabytes In Use for Any SF Service Process belonging to the specified SF Applications. 5 repairs within 5 hour window.
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
+
 ## Local Active TCP Ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Active Ports, then heal. There are no conditional checks (on MetricValue) to take place.
 Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
+
 
 ## Ephemeral Ports - Specific Application: any of its services, constrained on number of local ephemeral ports open. 
 ## 5 repairs within 5 hour window.
@@ -79,13 +118,15 @@ Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?Me
 ## There are no conditional checks.
 Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
+
+## Internal Predicates
+
 ## TimeScopedRestartCodePackage is an internal predicate to check for the number of times a repair has run to completion within a supplied time window. 
 ## If Completed Repair count is less then supplied value, then run RestartCodePackage mitigation. If not, emit a message so developer has event data that describes why
 ## the repair was not attempted at this time. EmitMessage always succeeds.
 
 TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount >= ?count,
 	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt restart code package repair at this time.", ?count, ?time).
-
 
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
 ## Note you can add up to two optional arguments to RestartCodePackage, name them whatever you want or omit the names, it just has to be either a TimeSpan value for how long to wait 

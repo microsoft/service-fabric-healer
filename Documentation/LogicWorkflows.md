@@ -6,19 +6,19 @@ FabricHealer employs configuration-as-logic by leveraging the expressive power o
 Supporting formal logic-based repair workflows gives users more tools and options to express their custom repair workflows. Formal logic gives users the power to express concepts like if/else statements, leverage boolean operators, and even things like recursion! Logic programming allows users to easily and concisely express complex repair workflows that leverage the complete power of a logic programming language. We use GuanLogic for our underlying logic processing, which is a general purpose logic programming API written by Lu Xun (Microsoft) that enables Prolog-like (https://en.wikipedia.org/wiki/Prolog) rule definition and query execution in C#.  
 
 
-While not necessary, reading Chapters 1-3 of the [learnprolognow](http://www.learnprolognow.org/lpnpage.php?pagetype=html&pageid=lpn-htmlch1) book can be quite useful. Note that the documentation here doesn't assume you have any experience with logic programming.
+While not necessary, reading Chapters 1-10 of the [learnprolognow](http://www.learnprolognow.org/lpnpage.php?pagetype=html&pageid=lpn-htmlch1) online (free) book can be quite useful and is highly recommended if you want to create more advanced rules to suit your more complex needs over time. Note that the documentation here doesn't assume you have any experience with logic programming. This is also the case with respect to using FabricHealer: several rules are already in place and you will simply need to change parts of an existing rule (like supplying your app names, for example) to get up and running very quickly.
 
 **Do I need experience with logic programming?**
 
-No, using logic to express repair workflows is easy! One doesn't need a deep knowledge and understanding of logic programming to write their own complex repair workflows! Let's start with an example to help inspire your own logic-based repair workflows!
+No, using logic to express repair workflows is easy! One doesn't need a deep knowledge and understanding of logic programming to write their own repair workflows. However, the more sophisticated/complex you need to be, then the more knowledge you will need to possess. For now, let's start with a very simple example to help inspire your own logic-based repair workflows.
 
 
 ***Problem***: I want to perform a code package restart if FabricObserver emits a memory usage warning for a *specific* application in my cluster (e.g. "fabric:/App1"). 
 
-***Solution***: We can leverage Guan and its built-in equals operator for checking the name of the application that triggered the warning against the name of the application for which we decided we want to perform a code package restart for. For application level health events, the repair workflow is defined inside the PackageRoot/Config/Rules/AppRules.config.txt file. Here is that we would enter:
+***Solution***: We can leverage Guan and its built-in equals operator for checking the name of the application that triggered the warning against the name of the application for which we decided we want to perform a code package restart for. For application level health events, the repair workflow is defined inside the PackageRoot/Config/LogicRules/AppRules.config.txt file. Here is that we would enter:
 
 ```
-Mitigate(AppName="fabric:/App1", MetricName=MemoryPercent) :- RestartCodePackage().
+Mitigate(AppName="fabric:/App1", MetricName="MemoryPercent") :- RestartCodePackage().
 ```
 
 Don't be alarmed if you don't understand how to read that repair action! We will go more in-depth later about the syntax and semantics of Guan. The takeaway is that expressing a Guan repair workflow doesn't require a deep knowledge of Prolog programming to get started. Hopefully this also gives you a general idea about the kinds of repair workflows we can express with GuanLogic.
@@ -100,7 +100,7 @@ A GuanLogic program is expressed in terms of **rule(s)** and a program is execut
 ```RuleHead(*args, ...*) :- PredicateA(), PredicateB(), ...```. 
 
 
-A simple way to understand what a rule is, is to just think of it as a function.
+A simple though imprecise way to understand what a rule is, is to just think of it as a function.
 ```
 RuleHead(*args, ...*) -> Function signature (name + arguments)
 PredicateA(), PredicateB(), ... -> Function body (everything to the right of the ":-" is part of the function body)
@@ -109,7 +109,7 @@ PredicateA(), PredicateB(), ... -> Function body (everything to the right of the
 A query is simply a way to invoke a rule (function). 
 ```RuleHead() -> invokes the rule of name "RuleHead" with the same number of arguments``` 
 
-By default, for logic-based repair workflows, FH will execute a query which calls a rule named ```Mitigate()```. Think of ```Mitigate()``` as the root for executing the repair workflow, similar to the Main() function in most programming languages. By default, ```Mitigate()``` passes arguments that can be passed to predicates part of the repair workflow.
+By default, for logic-based repair workflows, FH will execute a query which calls a rule named ```Mitigate()```. Think of ```Mitigate()``` as the root for executing the repair workflow, similar to the Main() function in most programming languages. By default, ```Mitigate()``` passes arguments that can be passed to predicates used in the repair workflow.
 
 | Argument Name             | Definition                                                                                   |
 |---------------------------|----------------------------------------------------------------------------------------------|
@@ -173,7 +173,7 @@ Let's look at how we can create AND/OR/NOT statements in Guan logic repair workf
 
 **NOT**
 ```
-Mitigate() :- not((condition A T/F)), (true branch B).
+Mitigate() :- not((condition A)), (true branch B).
 Can be read as: if (!A) then goto B
 ```
 
@@ -182,45 +182,20 @@ NOT behaviour is achieved by wrapping any predicate inside ```not()``` which is 
 
 **AND**
 ```
-Mitigate() :- (condition A T/F), (condition B T/F), (true branch C).
+Mitigate() :- (condition A), (condition B), (true branch C).
 Can be read as: if (A and B) then goto C
 ```
 
-AND behaviour is achieved by separating predicates with commas, similar to programming with the ```||``` character.
+AND behavior is achieved by separating predicates with commas, similar to programming with the ```||``` character.
 
 **OR**
 ```
-Mitigate() :- (condition A T/F), (true branch C).
-Mitigate() :- (condition B T/F), (true branch C).
+Mitigate() :- (condition A), (true branch C).
+Mitigate() :- (condition B), (true branch C).
 Can be read as: if (A or B) then goto C
 ```
 
 OR behaviour is achieved by separating predicates by rule. Here is the execution flow for the above workflow: Go to first ```Mitigate()``` rule -> does predicate A succeed? If so, continue with branch C, if it fails look for the next ```Mitigate()``` rule if it exists. We find the second ```Mitigate()``` rule -> does predicate B suceed? If so, continue with branch C, if it fails look for the next ```Mitigate()``` rule if it exists. There are no more ```Mitigate()``` rules so the workflow is over.
-
-**Conditional Branches in Logic Programming**
-
-An if/else conditional branch can be constructed with the following rule pattern:
-```
-Mitigate() :- (condition T/F), !, (true branch). 
-Mitigate() :- (false branch).
-```
-
-Notice the ```!``` symbol, this is called a cut operator in Prolog and it essentially prevents backtracking past where it is defined. Consider the case where the conditional check succeeds, the execution will continue towards the ```(true branch)```. However if the ```(true branch)``` returns false, the first rule will fail and Guan will "backtrack" and execute the second rule, so the execution flow will actually end up in the ```(false branch)``` of the second rule. Clearly this is not how traditional if/else conditionals work, so it is important to understand why we need to use the cut operator. However as long as you understand this concept you may remove the cut operator if that is the type of behaviour you desire.
-
-
-This pattern can also be repeated to construct else if branches:
-```
-Mitigate() :- (condition T/F), !, (true branch). 
-Mitigate() :- (condition T/F), !, (true branch). 
-Mitigate() :- …  
-Mitigate() :- (false branch). 
-```
-
-You can check for multiple conditions aswell:
-```
-Mitigate() :- (condition check_1 T/F), (condition check_2 T/F), …, (condition check_N T/F), (true branch).
-Mitigate() :- (false branch)
-```
 
 **Using internal predicates**
 

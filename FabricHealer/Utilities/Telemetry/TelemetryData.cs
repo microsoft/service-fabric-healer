@@ -105,6 +105,11 @@ namespace FabricHealer.Utilities.Telemetry
             get; set;
         }
 
+        public string HealthEventProperty
+        {
+            get; set;
+        }
+
         [JsonConstructor]
         public TelemetryData()
         {

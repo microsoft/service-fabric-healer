@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Diagnostics.Tracing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -44,21 +43,6 @@ namespace FabricHealer.Utilities
         public string LogFolderBasePath
         {
             get; set;
-        }
-
-        public static EventSource EtwLogger
-        {
-            get;
-        }
-
-        static Logger()
-        {
-            if (!FabricHealerManager.ConfigSettings.EtwEnabled || string.IsNullOrWhiteSpace(FabricHealerManager.ConfigSettings.EtwProviderName))
-            {
-                return;
-            }
-
-            EtwLogger ??= new EventSource(FabricHealerManager.ConfigSettings.EtwProviderName);
         }
 
         /// <summary>

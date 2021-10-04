@@ -25,7 +25,6 @@
     <Parameter Name="LogAnalyticsLogType" Value="FabricHealer" />
     <!-- Optional: EventSource Tracing. -->
     <Parameter Name="EnableEventSourceProvider" Value="" MustOverride="true" />
-    <Parameter Name="EventSourceProviderName" Value="FabricHealerETWProvider" />
     <!-- Big on/off switch. You can be more granular below in the Repair policies sections. -->
     <Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
     <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />

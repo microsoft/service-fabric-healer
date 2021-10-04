@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -40,8 +39,7 @@ namespace FabricHealer.TelemetryLib
         {
             serviceEventSource = eventSource;
             serviceContext = context;
-            string config = File.ReadAllText(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "FHAppInsightsOperational.config"));
-            appInsightsTelemetryConf = TelemetryConfiguration.CreateFromConfiguration(config);
+            appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
             appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AIKey;
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
             var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
@@ -51,7 +49,7 @@ namespace FabricHealer.TelemetryLib
             isEtwEnabled = etwEnabled;
         }
 
-        public bool EmitFabricObserverOperationalEvent(FabricHealerOperationalEventData repairData, TimeSpan runInterval, string logFilePath)
+        public bool EmitFabricHealerOperationalEvent(FabricHealerOperationalEventData repairData, TimeSpan runInterval, string logFilePath)
         {
             if (!telemetryClient.IsEnabled())
             {
@@ -125,14 +123,14 @@ namespace FabricHealer.TelemetryLib
             }
             catch (Exception e)
             {
-                // Telemetry is non-critical and should not take down FO.
+                // Telemetry is non-critical and should not take down FH.
                 _ = TryWriteLogFile(logFilePath, $"{e}");
             }
 
             return false;
         }
 
-        public bool EmitFabricObserverCriticalErrorEvent(FabricHealerCriticalErrorEventData fhErrorData, string logFilePath)
+        public bool EmitFabricHealerCriticalErrorEvent(FabricHealerCriticalErrorEventData fhErrorData, string logFilePath)
         {
             if (!telemetryClient.IsEnabled())
             {
@@ -171,7 +169,7 @@ namespace FabricHealer.TelemetryLib
                     { "OS", fhErrorData.OS }
                 };
 
-                telemetryClient?.TrackEvent($"{TaskName}.{OperationalEventName}", eventProperties);
+                telemetryClient?.TrackEvent($"{TaskName}.{CriticalErrorEventName}", eventProperties);
                 telemetryClient?.Flush();
 
                 // allow time for flushing
@@ -185,7 +183,7 @@ namespace FabricHealer.TelemetryLib
             }
             catch (Exception e)
             {
-                // Telemetry is non-critical and should not take down FO.
+                // Telemetry is non-critical and should not take down FH.
                 _ = TryWriteLogFile(logFilePath, $"{e}");
             }
 

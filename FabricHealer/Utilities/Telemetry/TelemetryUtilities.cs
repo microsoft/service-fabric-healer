@@ -91,17 +91,8 @@ namespace FabricHealer.Utilities.Telemetry
 
             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-            /* Telemetry/ETW */
-
-            // Don't log etw or emit telemetry if the events are Informational (Ok Health State) and Verbose Logging is not enabled.
-            // This limits noise (and cost) for telemetry service usage.
-            if (healthState == HealthState.Ok && !FabricHealerManager.ConfigSettings.EnableVerboseLogging)
-            {
-                return;
-            }
-
             // Telemetry.
-            if (FabricHealerManager.ConfigSettings.TelemetryEnabled && telemetryClient != null)
+            if (FabricHealerManager.ConfigSettings.TelemetryEnabled)
             {
                 var telemData = new TelemetryData()
                 {
@@ -123,7 +114,7 @@ namespace FabricHealer.Utilities.Telemetry
             // ETW.
             if (FabricHealerManager.ConfigSettings.EtwEnabled)
             {
-                Logger.EtwLogger?.Write(
+                ServiceEventSource.Current.Write(
                                     RepairConstants.EventSourceEventName,
                                     new
                                     {
