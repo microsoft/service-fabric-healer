@@ -40,9 +40,9 @@
 ## Repair Lifetime Management - Specify that a repair can only run until some end date. This gives the dev team time to identify and fix the bug in user code that is causing the problem.
 ## Meanwhile, FabricHealer will keep the offending service green. Remember: Auto-mitigation is not a fix, it's a stop gap. Fix those bugs!
 ## time() and DateTime() are Guan functions (system functions) that can be used in combination for exactly this purpose.
-## time() with no arguments returns DateTime.UtcNow. DateTime will return a DateTime object that represents the supplied date. 
+## time() with no arguments returns DateTime.UtcNow. DateTime will return a DateTime object that represents the supplied datetime string. 
 ## *Note*:  you must wrap the date string in quotes to make it explicit to Guan that the arg is a string as it contains mathematical operators (in this case a /).
-## The rule below reads: If any of the specified app's service processes have put it into Warning due to CPU over-consumption and today's date is later than the supplied end date, emit a message, stop processing rules (!).
+## The rule below reads: If any of the specified (set in Mitigate) app's service processes have put it into Warning due to CPU over-consumption and today's date is later than the supplied end date, emit a message, stop processing rules (!).
 
 Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("11/30/2021"),
 	EmitMessage("Exceeded specified end date for repair of fabric:/MyApp CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("11/30/2021"), time()), !.

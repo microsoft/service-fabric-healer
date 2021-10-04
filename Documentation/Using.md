@@ -87,4 +87,29 @@ Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?Metric
 ```  
 
 
-Please look through the [existing rules files](/FabricHealer/PackageRoot/Config/LogicRules) for real examples that have been tested. Simply modify the rules to meet your needs (like supplying your target app names, for example, and adjusting the simple logical constraints, if need be).
+***Problem***: I want to limit how long a specific repair can run (set an end date).
+
+***Solution***: 
+
+time() and DateTime() are Guan functions (system functions) that can be used in combination for exactly this purpose.
+time() with no arguments returns DateTime.UtcNow. DateTime will return a DateTime object that represents the supplied datetime string. 
+***Note***:  you must wrap the date string in quotes to make it explicit to Guan that the arg is a string as it contains mathematical operators (in this case a /).
+
+```
+## The rule below reads: If any of the specified (set in Mitigate) app's service processes have put it into Warning due to CPU
+## over-consumption and today's date is later than the supplied end date, emit a message, stop processing rules (!).
+
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("11/30/2021"),
+	EmitMessage("Exceeded specified end date for repair of fabric:/MyApp CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("11/30/2021"), time()), !.
+
+## Alternatively, you could enforce repair end dates inline (as a subgoal) to any rule, e.g.,
+
+Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- time() < DateTime("11/30/2021"),
+	?MetricValue >= 8500,
+	TimeScopedRestartCodePackage(4, 01:00:00).
+```  
+
+
+Please look through the [existing rules files](/FabricHealer/PackageRoot/Config/LogicRules) for real examples that have been tested. Simply modify the rules to meet your needs (like supplying your target app names, for example, and adjusting the simple logical constraints, if need be). 
+
+
