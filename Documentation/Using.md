@@ -2,7 +2,10 @@
 
 FabricHealer ships with [several logic rules](/FabricHealer/PackageRoot/Config/LogicRules) that form the basis of repair workflow. You just need to modify existing rules to quickly get going. To learn how to create your own logic rules, click [here](LogicWorkflows.md).
 
-**Application Memory Usage Warning -> Trigger Code Package Restart**
+**You can enable/disable repairs for target types (e.g., Application, Node, VM, Disk) by setting values (true or false) in the Repair Policies Enablement section of ApplicationManifest.xml.**
+
+### Scenarios 
+
 
 ***Problem***: I want to perform a code package restart if FabricObserver emits a memory usage warning (as a percentage of total memory) for any user application (not SF system apps) in my cluster.
 
