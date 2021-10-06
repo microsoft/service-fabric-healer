@@ -14,8 +14,7 @@
 ## | MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)               | 
 ## | SystemServiceProcessName  | The name of a Fabric system service process supplied in FO health data                       | 
 ## | OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                   |
-
-        
+ 
 ## Application-related Metric Names.
 ## | Name                      |                                                                                    
 ## |---------------------------|
@@ -53,8 +52,9 @@ Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue
 	?MetricValue >= 8500,
 	TimeScopedRestartCodePackage(4, 01:00:00).
 
-
 ## Logic rules for multiple metrics and targets. The goal is to Mitigate!
+
+## CPU 
 
 ## CPU - Percent In Use - Constrained on AppName and number of times FabricObserver generates an Error/Warning Health report for CpuPercent metric within a specified timespan.
 ## This reads: Try to mitigate an SF Application in Error or Warning named fabric:/CpuStress where one of its services is consuming too much CPU (as a percentage of total CPU) 
@@ -65,7 +65,6 @@ Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?Metr
 	GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartCodePackage(4, 01:00:00).
-
 
 ## CPU - Percent In Use - Constrained on AppName = "fabric:/MyApp42", observed Metric value and health event count within specified time range.
 Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80, 
@@ -79,8 +78,9 @@ Mitigate(AppName="fabric:/MyApp", MetricName="CpuPercent") :- TimeScopedRestartC
 ## CPU - Percent In Use - Any application's service that exceeds 90% cpu usage, repair up to 5 times in a one hour window.
 Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 90, TimeScopedRestartCodePackage(5, 01:00:00).
 
-## File Handles - Total allocated for Any SF Service Process belonging to the specified SF Application.
-## This is example of how to use the Guan system predicate, Contains. It takes two string args, the first is the substring to look for in the second arg. 
+## File Handles
+
+## This is also an example of how to use the Guan system predicate, Contains. It takes two string args, the first is the substring to look for in the second arg. 
 ## So, arg1 is the needle and arg 2 is the haystack.
 ## In practice, for this scenario, you would just pass the target app name string into Mitigate, Mitigate(AppName="fabric:/ClusterObserver", ...), for example. 
 ## Use of the StringContains GuanFunc here is just an example of how to use it. Note that in Prolog, this type of substring matching capability could be expressed as an internal predicate 
@@ -95,6 +95,7 @@ Mitigate(AppName=?AppName, MetricName="FileHandles") :- StringContains("ClusterO
 ## Constrained on AppName, MetricName (FileHandles). 5 repairs within 1 hour window.
 Mitigate(AppName="fabric:/MyApp", MetricName="FileHandles") :- TimeScopedRestartCodePackage(5, 01:00:00).
 
+## Memory
 
 ## Memory - Percent In Use for Any SF Service Process belonging to the specified SF Application. 3 repairs within 10 minute window.
 Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
@@ -105,10 +106,10 @@ Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestar
 Mitigate(AppName="fabric:/ContainerFoo", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
+## Ports 
 
 ## Local Active TCP Ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Active Ports, then heal. There are no conditional checks (on MetricValue) to take place.
 Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
-
 
 ## Ephemeral Ports - Specific Application: any of its services, constrained on number of local ephemeral ports open. 
 ## 5 repairs within 5 hour window.
@@ -117,6 +118,15 @@ Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?Me
 ## Ephemeral TCP Ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Ephemeral ports usage, then heal. 
 ## There are no conditional checks.
 Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
+
+# Threads
+
+## Threads - Specific Application: any of its services, constrained on number of threads in use by the service process. 
+## 5 repairs within 5 hour window.
+Mitigate(AppName="fabric:/MyApp42", MetricName="Threads", MetricValue=?MetricValue) :- ?MetricValue > 500, TimeScopedRestartCodePackage(5, 05:00:00).
+
+## Threads - Any app service. 5 repairs within 5 hour window. This means if FO warns on Thread count, then heal. There are no conditional checks (on MetricValue) to take place.
+Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
 
 ## Internal Predicates

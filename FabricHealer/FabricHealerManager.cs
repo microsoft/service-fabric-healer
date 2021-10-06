@@ -524,8 +524,6 @@ namespace FabricHealer
             {
                 var clusterHealth = await fabricClient.HealthManager.GetClusterHealthAsync(ConfigSettings.AsyncTimeout, Token).ConfigureAwait(true);
 
-                // Node-level safe restarts, should that be the specified repair for a node repair
-                // (like for a Fabric process), must not take place in clusters with less than 3 nodes to guarantee quorum.
                 if (clusterHealth.AggregatedHealthState == HealthState.Ok)
                 {
                     return true;

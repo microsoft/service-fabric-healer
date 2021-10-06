@@ -90,5 +90,6 @@ namespace FabricHealer.Repair
         public const string MemoryPercent = "MemoryPercent";
         public const string FileHandles = "FileHandles";
         public const string FileHandlesPercent = "FileHandlesPercent";
+        public const string Threads = "Threads";
     }
 }
