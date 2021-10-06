@@ -119,14 +119,14 @@ Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?Me
 ## There are no conditional checks.
 Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
-# Threads
+## Threads
 
 ## Threads - Specific Application: any of its services, constrained on number of threads in use by the service process. 
 ## 5 repairs within 5 hour window.
-Mitigate(AppName="fabric:/MyApp42", MetricName="Threads", MetricValue=?MetricValue) :- ?MetricValue > 500, TimeScopedRestartCodePackage(5, 05:00:00).
+Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?AppName != "fabric:/FabricObserver", ?MetricValue > 50, TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Threads - Any app service. 5 repairs within 5 hour window. This means if FO warns on Thread count, then heal. There are no conditional checks (on MetricValue) to take place.
-Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
+## Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
 
 ## Internal Predicates

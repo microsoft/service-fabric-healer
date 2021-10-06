@@ -1147,12 +1147,14 @@ namespace FabricHealer
                 case FOErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts:
                 case FOErrorWarningCodes.AppErrorTooManyActiveTcpPorts:
                 case FOErrorWarningCodes.AppErrorTooManyOpenFileHandles:
+                case FOErrorWarningCodes.AppErrorTooManyThreads:
                 case FOErrorWarningCodes.AppWarningCpuPercent:
                 case FOErrorWarningCodes.AppWarningMemoryMB:
                 case FOErrorWarningCodes.AppWarningMemoryPercent:
                 case FOErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts:
                 case FOErrorWarningCodes.AppWarningTooManyActiveTcpPorts:
                 case FOErrorWarningCodes.AppWarningTooManyOpenFileHandles:
+                case FOErrorWarningCodes.AppWarningTooManyThreads:
 
                     repairPolicySectionName = app == "fabric:/System" ? RepairConstants.SystemAppRepairPolicySectionName : RepairConstants.AppRepairPolicySectionName;
                     break;
