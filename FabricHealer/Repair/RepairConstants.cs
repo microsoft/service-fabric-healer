@@ -91,5 +91,11 @@ namespace FabricHealer.Repair
         public const string FileHandles = "FileHandles";
         public const string FileHandlesPercent = "FileHandlesPercent";
         public const string Threads = "Threads";
+
+        // Supported Observer Names
+        public const string AppObserver = "AppObserver";
+        public const string DiskObserver = "DiskObserver";
+        public const string FabricSystemObserver = "FabricSystemObserver";
+        public const string NodeObserver = "NodeObserver";
     }
 }
