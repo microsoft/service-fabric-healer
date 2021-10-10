@@ -249,9 +249,7 @@ namespace FabricHealer
                     // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
                     // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
                     // than 90 days.
-                    if (ConfigSettings.OperationalTelemetryEnabled
-                        && DateTime.UtcNow.Subtract(StartDateTime) >= OperationalTelemetryRunInterval
-                        && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
+                    if (ConfigSettings.OperationalTelemetryEnabled && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
                     {
                         try
                         {
