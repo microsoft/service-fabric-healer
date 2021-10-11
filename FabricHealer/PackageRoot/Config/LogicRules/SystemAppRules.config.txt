@@ -26,6 +26,7 @@
 ## | MemoryPercent             | 
 ## | FileHandles               | 
 ## | FileHandlesPercent        | 
+## | Threads                   | 
 
 ## First, check if we are inside the run interval. If inside run interval, then cut (no other rules will be processed).
 ## Note: FO only generates Application (System) level warnings for system services. There will only ever be ApplicationName as "fabric:/System" in the FO health data that FH emits, so this is an optional argument.
@@ -48,7 +49,8 @@ TimeScopedRestartFabricSystemProcess(?count, ?time) :- GetRepairHistory(?repairC
 	RestartFabricSystemProcess(MaxPostRepairHealthCheckTime=00:00:30).
 	
 
-## Mitigation queries for multiple metrics and targets.
+## Mitigation queries for multiple metrics and targets. NOTE: Do not restart Fabric or FabricHost processes unless you want to take the node down. For the latter (restart node),
+## use TimeScopedRestartFabricNode (or RestartFabricNode predicate directly), which employs a safe Fabric node restart workflow (with deactivation step), not just a process kill.
 
 
 ## CPU Time - Percent
@@ -74,6 +76,11 @@ Mitigate(MetricName="MemoryPercent", SystemServiceProcessName=?SysProcName) :- n
 Mitigate(MetricName="EphemeralPorts", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
+
+## Threads
+
+Mitigate(MetricName="Threads", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
+	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 ## Open File Handles - Specific system service process on either Windows or Linux.
 ## Note the use of the StringContains GuanFunc here, as Windows and Linux have different process names for some components,

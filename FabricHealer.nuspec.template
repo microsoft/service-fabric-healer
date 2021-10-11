@@ -2,14 +2,15 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.0.0-Preview</version>
+    <version>1.0.1-Preview</version>
+    <releaseNotes>Bug fixes. Added support for Threads metric. Increased diagnostic telemetry interval.</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <title>FabricHealer Service</title>
     <icon>icon.png</icon>
     <language>en-US</language>
-    <description>FabricHealer is a Service Fabric service that schedules and safely executes automatic repairs in Linux and Windows Service Fabric clusters after inspecting unhealthy events created by FabricObserver (FO) instances running in the same cluster. It employs a novel Configuration-as-Logic model to express repair workflows using Prolog-like semantics/syntax in text-based configuration files. This version, 1.0.0-Preview, is meant for Test clusters.</description>
+    <description>FabricHealer is a Service Fabric service that schedules and safely executes automatic repairs in Linux and Windows Service Fabric clusters after inspecting unhealthy events created by FabricObserver (FO) instances running in the same cluster. It employs a novel Configuration-as-Logic model to express repair workflows using Prolog-like semantics/syntax in text-based configuration files. This version, 1.0.1-Preview, is meant for Test clusters.</description>
     <contentFiles>
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>

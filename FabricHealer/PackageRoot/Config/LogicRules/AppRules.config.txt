@@ -26,6 +26,7 @@
 ## | MemoryPercent             | 
 ## | FileHandles               | 
 ## | FileHandlesPercent        | 
+## | Threads                   | 
 ## *Network-related repair is not supported today.    
 
 ## Repair Run Interval - Are we inside the run interval for an app repair? This is optional. It's up to you if you want to employ this type of constraint.
@@ -121,9 +122,9 @@ Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(5, 05:00:0
 
 ## Threads
 
-## Threads - Specific Application: any of its services, constrained on number of threads in use by the service process. 
+## Threads - Ignore specific application (FabricObserver, just for example - it's fine to target FO for repairs, generally), constrained on number of threads in use by the offending service process.
 ## 5 repairs within 5 hour window.
-Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?AppName != "fabric:/FabricObserver", ?MetricValue > 50, TimeScopedRestartCodePackage(5, 05:00:00).
+Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?AppName != "fabric:/FabricObserver", ?MetricValue >= 400, TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Threads - Any app service. 5 repairs within 5 hour window. This means if FO warns on Thread count, then heal. There are no conditional checks (on MetricValue) to take place.
 ## Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
