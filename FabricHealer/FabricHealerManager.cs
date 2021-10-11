@@ -27,7 +27,7 @@ namespace FabricHealer
         internal static RepairData RepairHistory;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.0.0-Preview";
+        private const string InternalVersionNumber = "1.0.1-Preview";
         private static FabricHealerManager singleton;
         private bool disposedValue;
         private readonly StatelessServiceContext serviceContext;
@@ -285,7 +285,6 @@ namespace FabricHealer
                             ConfigSettings.ExecutionLoopSleepSeconds > 0 ? ConfigSettings.ExecutionLoopSleepSeconds : 10), Token).ConfigureAwait(true);      
                 }
 
-                // Clean up, close down.
                 RepairLogger.LogInfo("Shutdown signaled. Stopping.");
             }
             catch (AggregateException)
@@ -524,8 +523,6 @@ namespace FabricHealer
             {
                 var clusterHealth = await fabricClient.HealthManager.GetClusterHealthAsync(ConfigSettings.AsyncTimeout, Token).ConfigureAwait(true);
 
-                // Node-level safe restarts, should that be the specified repair for a node repair
-                // (like for a Fabric process), must not take place in clusters with less than 3 nodes to guarantee quorum.
                 if (clusterHealth.AggregatedHealthState == HealthState.Ok)
                 {
                     return true;
@@ -1149,12 +1146,14 @@ namespace FabricHealer
                 case FOErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts:
                 case FOErrorWarningCodes.AppErrorTooManyActiveTcpPorts:
                 case FOErrorWarningCodes.AppErrorTooManyOpenFileHandles:
+                case FOErrorWarningCodes.AppErrorTooManyThreads:
                 case FOErrorWarningCodes.AppWarningCpuPercent:
                 case FOErrorWarningCodes.AppWarningMemoryMB:
                 case FOErrorWarningCodes.AppWarningMemoryPercent:
                 case FOErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts:
                 case FOErrorWarningCodes.AppWarningTooManyActiveTcpPorts:
                 case FOErrorWarningCodes.AppWarningTooManyOpenFileHandles:
+                case FOErrorWarningCodes.AppWarningTooManyThreads:
 
                     repairPolicySectionName = app == "fabric:/System" ? RepairConstants.SystemAppRepairPolicySectionName : RepairConstants.AppRepairPolicySectionName;
                     break;

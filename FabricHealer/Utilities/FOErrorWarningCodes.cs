@@ -67,6 +67,10 @@ namespace FabricHealer.Utilities
         public const string NodeErrorTooManyOpenFileHandles = "FO037";
         public const string NodeWarningTooManyOpenFileHandles = "FO038";
 
+        // Process Threads (threads running in process)
+        public const string AppErrorTooManyThreads = "FO039";
+        public const string AppWarningTooManyThreads = "FO040";
+
         public static Dictionary<string, string> AppErrorCodesDictionary
         {
             get;
@@ -87,6 +91,8 @@ namespace FabricHealer.Utilities
             { AppWarningTooManyActiveEphemeralPorts, "AppWarningTooManyActiveEphemeralPorts" },
             { AppErrorTooManyOpenFileHandles, "AppErrorTooManyOpenFileHandles" },
             { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" },
+            { AppErrorTooManyThreads, "AppErrorTooManyThreads" },
+            { AppWarningTooManyThreads, "AppWarningTooManyThreads" }
         };
 
         public static Dictionary<string, string> NodeErrorCodesDictionary
@@ -118,7 +124,7 @@ namespace FabricHealer.Utilities
             { NodeErrorTotalOpenFileHandlesPercent, "NodeErrorTotalOpenFileHandlesPercent" },
             { NodeWarningTotalOpenFileHandlesPercent, "NodeWarningTotalOpenFileHandlesPercent" },
             { NodeErrorTooManyOpenFileHandles, "NodeErrorTooManyOpenFileHandles" },
-            { NodeWarningTooManyOpenFileHandles, "NodeWarningTooManyOpenFileHandles" },
+            { NodeWarningTooManyOpenFileHandles, "NodeWarningTooManyOpenFileHandles" }
         };
 
         public static string GetErrorWarningNameFromCode(string id)
@@ -191,6 +197,11 @@ namespace FabricHealer.Utilities
             if (GetIsResourceType(code, RepairConstants.MemoryPercent))
             {
                 return RepairConstants.MemoryPercent;
+            }
+
+            if (GetIsResourceType(code, RepairConstants.Threads))
+            {
+                return RepairConstants.Threads;
             }
 
             if (GetIsResourceType(code, RepairConstants.FileHandles))

@@ -183,8 +183,11 @@ namespace FabricHealer.Repair
             CompoundTerm compoundTerm = new CompoundTerm("Mitigate");
 
             /* Pass default arguments in query. */
+
             // The type of metric that led FO to generate the unhealthy evaluation for the entity (App, Node, VM, Replica, etc).
+            // We rename these for brevity for simplified use in logic rule composition (e;g., MetricName="Threads" instead of MetricName="Total Thread Count")..
             foHealthData.Metric = FOErrorWarningCodes.GetMetricNameFromCode(foHealthData.Code);
+
             compoundTerm.AddArgument(new Constant(foHealthData.ApplicationName), RepairConstants.AppName);
             compoundTerm.AddArgument(new Constant(foHealthData.Code), RepairConstants.FOErrorCode);
             compoundTerm.AddArgument(new Constant(foHealthData.Metric), RepairConstants.MetricName);

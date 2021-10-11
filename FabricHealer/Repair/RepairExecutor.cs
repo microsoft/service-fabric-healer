@@ -131,7 +131,7 @@ namespace FabricHealer.Repair
                 if (restartCodePackageResult != null)
                 {
                     UpdateRepairHistory(repairConfiguration);
-                    await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Application, cancellationToken, "AppObserver").ConfigureAwait(true);
+                    await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Application, cancellationToken, RepairConstants.AppObserver).ConfigureAwait(true);
                 }
 
                 return restartCodePackageResult;
@@ -580,15 +580,16 @@ namespace FabricHealer.Repair
                     p = ps[0];
                 }
 
-                p?.Kill(true);
+                p?.Kill();
                 UpdateRepairHistory(repairConfiguration);
 
                 // Clear Warning from FO. If in fact the issue has not been solved, then FO will generate a new health report for the target and the game will be played again.
-                await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Application, cancellationToken, "FabricSystemObserver").ConfigureAwait(true);
+                await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Application, cancellationToken, RepairConstants.FabricSystemObserver).ConfigureAwait(true);
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException  || e is NotSupportedException || e is Win32Exception)
             {
                 FabricHealerManager.RepairHistory.FailedRepairs++;
+                FabricHealerManager.RepairLogger.LogWarning(e.ToString());
                 return false;
             }
             catch (Exception e)
@@ -764,19 +765,19 @@ namespace FabricHealer.Repair
             List<string> files = direction switch
             {
                 FileSortOrder.Ascending => (from file in dirInfo.EnumerateFiles("*",
-                            new EnumerationOptions
-                            {
-                                RecurseSubdirectories = ((DiskRepairPolicy) repairConfiguration.RepairPolicy).RecurseSubdirectories
-                            })
-                        orderby file.LastWriteTimeUtc ascending
-                        select file.FullName).Distinct().ToList(),
+                        new EnumerationOptions
+                        {
+                            RecurseSubdirectories = ((DiskRepairPolicy) repairConfiguration.RepairPolicy).RecurseSubdirectories
+                        })
+                    orderby file.LastWriteTimeUtc ascending
+                    select file.FullName).Distinct().ToList(),
                 FileSortOrder.Descending => (from file in dirInfo.EnumerateFiles("*",
-                            new EnumerationOptions
-                            {
-                                RecurseSubdirectories = ((DiskRepairPolicy) repairConfiguration.RepairPolicy).RecurseSubdirectories
-                            })
-                        orderby file.LastAccessTimeUtc descending
-                        select file.FullName).Distinct().ToList(),
+                        new EnumerationOptions
+                        {
+                            RecurseSubdirectories = ((DiskRepairPolicy) repairConfiguration.RepairPolicy).RecurseSubdirectories
+                        })
+                    orderby file.LastAccessTimeUtc descending
+                    select file.FullName).Distinct().ToList(),
                 _ => null
             };
 
@@ -852,7 +853,7 @@ namespace FabricHealer.Repair
                 UpdateRepairHistory(repairConfiguration);
             }
 
-            await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Node, cancellationToken, "DiskObserver").ConfigureAwait(true);
+            await ClearHealthWarningsAsync(repairConfiguration, HealthScope.Node, cancellationToken, RepairConstants.DiskObserver).ConfigureAwait(true);
             return true;
         }
 
@@ -916,7 +917,7 @@ namespace FabricHealer.Repair
                                                     && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning)
                                                     && JsonSerializationUtility.TryDeserialize(s.HealthInformation.Description, out TelemetryData foHealthData)
                                                     && foHealthData.ApplicationName == repairConfiguration.AppName.OriginalString
-                                                    && (source is "FabricSystemObserver" ? foHealthData.SystemServiceProcessName == repairConfiguration.SystemServiceProcessName : foHealthData.ServiceName == repairConfiguration.ServiceName.OriginalString));
+                                                    && (source == RepairConstants.FabricSystemObserver ? foHealthData.SystemServiceProcessName == repairConfiguration.SystemServiceProcessName : foHealthData.ServiceName == repairConfiguration.ServiceName.OriginalString));
 
                     var telemetryData = new TelemetryData
                     {
@@ -924,11 +925,11 @@ namespace FabricHealer.Repair
                         ServiceName = repairConfiguration.ServiceName?.OriginalString,
                         Code = "FO000",
                         HealthState = "Ok",
-                        Description = $"{(source is "FabricSystemObserver" ? repairConfiguration.SystemServiceProcessName : repairConfiguration.ServiceName.OriginalString)} has been repaired.",
+                        Description = $"{(source == RepairConstants.FabricSystemObserver ? repairConfiguration.SystemServiceProcessName : repairConfiguration.ServiceName.OriginalString)} has been repaired.",
                         NodeName = repairConfiguration.NodeName,
                         NodeType = repairConfiguration.NodeType,
                         Source = RepairTaskEngine.FabricHealerExecutorName,
-                        SystemServiceProcessName = $"{(source is "FabricSystemObserver" ? repairConfiguration.SystemServiceProcessName : string.Empty)}",
+                        SystemServiceProcessName = $"{(source == RepairConstants.FabricSystemObserver ? repairConfiguration.SystemServiceProcessName : string.Empty)}",
                     };
 
                     if (unhealthyFOAppEvents != null)
@@ -941,7 +942,7 @@ namespace FabricHealer.Repair
                                 {
                                     Description = JsonSerializationUtility.TrySerialize(telemetryData, out string data)
                                         ? data
-                                        : $"{(source is "FabricSystemObserver" ? repairConfiguration.SystemServiceProcessName : repairConfiguration.ServiceName.OriginalString)} has been repaired.",
+                                        : $"{(source == RepairConstants.FabricSystemObserver ? repairConfiguration.SystemServiceProcessName : repairConfiguration.ServiceName.OriginalString)} has been repaired.",
                                     TimeToLive = TimeSpan.FromMinutes(5),
                                     RemoveWhenExpired = true,
                                 };
