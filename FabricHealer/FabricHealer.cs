@@ -31,7 +31,7 @@ namespace FabricHealer
             using var healerManager = FabricHealerManager.Singleton(Context, cancellationToken);
 
             // Blocks until cancellationToken cancellation.
-            await healerManager.StartAsync().ConfigureAwait(true);
+            await healerManager.StartAsync().ConfigureAwait(false);
         }
     }
 }

@@ -107,6 +107,10 @@ Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestar
 Mitigate(AppName="fabric:/ContainerFoo", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
+## Any app that exceeds 1GB private workingset.
+Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 1024, TimeScopedRestartCodePackage(5, 05:00:00).
+
+
 ## Ports 
 
 ## Local Active TCP Ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Active Ports, then heal. There are no conditional checks (on MetricValue) to take place.
