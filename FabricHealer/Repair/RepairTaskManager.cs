@@ -795,18 +795,21 @@ namespace FabricHealer.Repair
             if (success)
             {
                 string target = Enum.GetName(typeof(RepairTargetType), repairConfiguration.RepairPolicy.TargetType);
-                bool isHealthStateOk = false;
-
                 TimeSpan maxWaitForHealthStateOk = TimeSpan.FromMinutes(30);
 
                 switch (repairConfiguration.RepairPolicy.TargetType)
                 {
                     case RepairTargetType.Application when repairConfiguration.AppName.OriginalString != "fabric:/System":
                     case RepairTargetType.Replica:
-                    case RepairTargetType.Application when repairConfiguration.AppName.OriginalString == "fabric:/System" && repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartProcess:
                         maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
                             ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
                             : TimeSpan.FromMinutes(10);
+                        break;
+
+                    case RepairTargetType.Application when repairConfiguration.AppName.OriginalString == "fabric:/System" && repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartProcess:
+                        maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
+                           ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
+                           : TimeSpan.FromMinutes(5);
                         break;
 
                     case RepairTargetType.Application when repairConfiguration.AppName.OriginalString == "fabric:/System" && repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode:
@@ -829,15 +832,15 @@ namespace FabricHealer.Repair
                 }
 
                 // Check healthstate of repair target to see if the repair worked.
-                if (await IsRepairTargetHealthyAfterCompletedRepair(repairConfiguration, maxWaitForHealthStateOk, cancellationToken).ConfigureAwait(false))
+                bool isHealthy = await IsRepairTargetHealthyAfterCompletedRepair(repairConfiguration, maxWaitForHealthStateOk, cancellationToken);
+
+                if (isHealthy)
                 {
                     await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                 LogLevel.Info,
                                                 "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
                                                 $"{target} Repair target {repairTarget} successfully healed.",
                                                 cancellationToken).ConfigureAwait(false);
-
-                    isHealthStateOk = true;
                 }
                 else
                 {
@@ -861,7 +864,7 @@ namespace FabricHealer.Repair
 
                 // Let RM catch up.
                 await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken).ConfigureAwait(false);
-                return isHealthStateOk;
+                return isHealthy;
             }
 
             // Executor failure. Cancel repair task.
@@ -922,7 +925,7 @@ namespace FabricHealer.Repair
 
             var stopwatch = Stopwatch.StartNew();
 
-            while (maxTimeToWait >= stopwatch.Elapsed)
+            while (stopwatch.Elapsed <= maxTimeToWait)
             {
                 if (token.IsCancellationRequested)
                 {

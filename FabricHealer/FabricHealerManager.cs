@@ -704,7 +704,9 @@ namespace FabricHealer
                 }
 
                 var observerHealthEvents = appHealth.HealthEvents.Where(
-                                              s => s.HealthInformation.SourceId.ToLower().Contains("observer")
+                                              s => (s.HealthInformation.SourceId.Contains(RepairConstants.AppObserver)
+                                                       || s.HealthInformation.SourceId.Contains(RepairConstants.ContainerObserver)
+                                                       || s.HealthInformation.SourceId.Contains(RepairConstants.FabricSystemObserver))
                                                    && (s.HealthInformation.HealthState == HealthState.Warning
                                                        || s.HealthInformation.HealthState == HealthState.Error));
 

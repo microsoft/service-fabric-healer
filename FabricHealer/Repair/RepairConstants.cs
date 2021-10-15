@@ -94,6 +94,7 @@ namespace FabricHealer.Repair
 
         // Supported Observer Names
         public const string AppObserver = "AppObserver";
+        public const string ContainerObserver = "ContainerObserver";
         public const string DiskObserver = "DiskObserver";
         public const string FabricSystemObserver = "FabricSystemObserver";
         public const string NodeObserver = "NodeObserver";

@@ -916,8 +916,9 @@ namespace FabricHealer.Repair
                                                   s => s.HealthInformation.SourceId.Contains(source ?? "Observer")
                                                     && (s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning)
                                                     && JsonSerializationUtility.TryDeserialize(s.HealthInformation.Description, out TelemetryData foHealthData)
+                                                    && repairConfiguration.NodeName == foHealthData.NodeName
                                                     && foHealthData.ApplicationName == repairConfiguration.AppName.OriginalString
-                                                    && (source == RepairConstants.FabricSystemObserver ? foHealthData.SystemServiceProcessName == repairConfiguration.SystemServiceProcessName : foHealthData.ServiceName == repairConfiguration.ServiceName.OriginalString));
+                                                    && (!string.IsNullOrWhiteSpace(foHealthData.SystemServiceProcessName) ? repairConfiguration.SystemServiceProcessName == foHealthData.SystemServiceProcessName : foHealthData.ServiceName == repairConfiguration.ServiceName.OriginalString));
 
                     var telemetryData = new TelemetryData
                     {
@@ -936,7 +937,7 @@ namespace FabricHealer.Repair
                     {
                         foreach (var evt in unhealthyFOAppEvents)
                         {
-                            if (repairConfiguration.ServiceName is { })
+                            if (repairConfiguration.ServiceName != null || repairConfiguration.SystemServiceProcessName != null)
                             {
                                 var healthInfo = new HealthInformation(evt.HealthInformation.SourceId, evt.HealthInformation.Property, HealthState.Ok)
                                 {
@@ -948,8 +949,7 @@ namespace FabricHealer.Repair
                                 };
 
                                 var healthReport = new ApplicationHealthReport(repairConfiguration.AppName, healthInfo);
-                                fabricClient.HealthManager.ReportHealth(healthReport,
-                                    new HealthReportSendOptions {Immediate = true});
+                                fabricClient.HealthManager.ReportHealth(healthReport, new HealthReportSendOptions {Immediate = true});
                             }
 
                             await Task.Delay(250, cancellationToken);
