@@ -17,7 +17,7 @@ FabricObserver and FabricHealer are part of a family of highly configurable Serv
 To learn more about FabricHealer's configuration-as-logic model, [click here.](Documentation/LogicWorkflows.md)  
 
 ```
-FabricHealer requires that FabricObserver (v 3.1.8+) and RepairManager (RM) service are deployed. 
+FabricHealer requires that FabricObserver and RepairManager (RM) service are deployed. 
 ```
 ```
 For VM level repair, InfrastructureService (IS) service must be deployed.
