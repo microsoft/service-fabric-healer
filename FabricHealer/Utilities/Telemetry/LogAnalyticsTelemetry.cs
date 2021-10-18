@@ -81,7 +81,7 @@ namespace FabricHealer.Utilities.Telemetry
                                                     instanceName = instanceName ?? string.Empty,
                                                 });
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
@@ -96,7 +96,7 @@ namespace FabricHealer.Utilities.Telemetry
                 return;
             }
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<bool> ReportMetricAsync<T>(
@@ -116,9 +116,9 @@ namespace FabricHealer.Utilities.Telemetry
                                                     value,
                                                 });
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
 
-            return await Task.FromResult(true).ConfigureAwait(true);
+            return await Task.FromResult(true).ConfigureAwait(false);
         }
 
         // Implement functions below as you need.
@@ -253,8 +253,8 @@ namespace FabricHealer.Utilities.Telemetry
                 }
 
                 retries++;
-                await Task.Delay(1000).ConfigureAwait(true);
-                await SendTelemetryAsync(payload, token).ConfigureAwait(true);
+                await Task.Delay(1000).ConfigureAwait(false);
+                await SendTelemetryAsync(payload, token).ConfigureAwait(false);
             }
             else
             {

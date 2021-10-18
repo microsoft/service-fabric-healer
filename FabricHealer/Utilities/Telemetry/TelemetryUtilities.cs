@@ -108,7 +108,7 @@ namespace FabricHealer.Utilities.Telemetry
                     SystemServiceProcessName = repairConfig?.SystemServiceProcessName ?? string.Empty,
                 };
 
-                await telemetryClient.ReportMetricAsync(telemData, token).ConfigureAwait(true);
+                await telemetryClient.ReportMetricAsync(telemData, token).ConfigureAwait(false);
             }
 
             // ETW.

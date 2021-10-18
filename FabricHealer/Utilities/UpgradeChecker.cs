@@ -38,7 +38,7 @@ namespace FabricHealer.Repair
                 var upgradeDomainsInProgress = new List<int>();
 
 
-                var appList = await fabricClient.QueryManager.GetApplicationListAsync(appName, FabricHealerManager.ConfigSettings.AsyncTimeout, token).ConfigureAwait(true);
+                var appList = await fabricClient.QueryManager.GetApplicationListAsync(appName, FabricHealerManager.ConfigSettings.AsyncTimeout, token).ConfigureAwait(false);
 
                 foreach (var application in appList)
                 {
@@ -46,7 +46,7 @@ namespace FabricHealer.Repair
                         await fabricClient.ApplicationManager.GetApplicationUpgradeProgressAsync(
                                                                 application.ApplicationName, 
                                                                 TimeSpan.FromMinutes(1), 
-                                                                token).ConfigureAwait(true);
+                                                                token).ConfigureAwait(false);
 
                     if (!upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingBackInProgress) &&
                         !upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingForwardInProgress) &&
@@ -99,7 +99,7 @@ namespace FabricHealer.Repair
                     await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                     () => fabricClient.ClusterManager.GetFabricUpgradeProgressAsync(
                                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                    token), token).ConfigureAwait(true);
+                                                    token), token).ConfigureAwait(false);
 
                 if (!fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingBackInProgress) &&
                     !fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingForwardInProgress) &&
@@ -130,7 +130,7 @@ namespace FabricHealer.Repair
                                                                 System.Fabric.Repair.RepairTaskStateFilter.Active | System.Fabric.Repair.RepairTaskStateFilter.Executing,
                                                                 $"fabric:/System/InfrastructureService/{nodeType}",
                                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                token).ConfigureAwait(true);
+                                                                token).ConfigureAwait(false);
 
             bool isAzureTenantRepairInProgress = repairTasks.Count > 0;
 
@@ -145,7 +145,7 @@ namespace FabricHealer.Repair
                                                             LogLevel.Info,
                                                             "AzureTenantUpdateInProgress",
                                                             message,
-                                                            token).ConfigureAwait(true);
+                                                            token).ConfigureAwait(false);
             return true;
         }
     }

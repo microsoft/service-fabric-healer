@@ -107,6 +107,10 @@ Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestar
 Mitigate(AppName="fabric:/ContainerFoo", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
+## Any app that exceeds 1GB private workingset.
+Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 1024, TimeScopedRestartCodePackage(5, 05:00:00).
+
+
 ## Ports 
 
 ## Local Active TCP Ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Active Ports, then heal. There are no conditional checks (on MetricValue) to take place.
@@ -142,6 +146,6 @@ TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, Ti
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
 ## Note you can add up to two optional arguments to RestartCodePackage, name them whatever you want or omit the names, it just has to be either a TimeSpan value for how long to wait 
 ## for the repair target to become healthy and/or a bool for whether or not RM should do health checks before and after the repair executes. 
-## See below for an example using both optional arguments (arguments are named for clarity (generally a good idea)...you could also supply RestartCodePackage(true, 00:10:00)).
+## See below for an example using both optional arguments (arguments are named for clarity (generally a good idea)...you could also specify RestartCodePackage(true, 00:10:00)).
 
 TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).

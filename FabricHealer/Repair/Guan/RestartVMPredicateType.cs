@@ -92,7 +92,7 @@ namespace FabricHealer.Repair.Guan
                                                         () => RepairTaskManager.ExecuteRMInfrastructureRepairTask(
                                                                                     repairConfiguration,
                                                                                     RepairTaskManager.Token),
-                                                        RepairTaskManager.Token).ConfigureAwait(true).GetAwaiter().GetResult();
+                                                        RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
                 return success;
             }
         }

@@ -32,7 +32,7 @@ namespace FabricHealer.Utilities
                             function, 
                             new FabricClientRetryErrors(), 
                             DefaultOperationTimeout, 
-                            cancellationToken).ConfigureAwait(true);
+                            cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -59,12 +59,12 @@ namespace FabricHealer.Utilities
 
                 if (needToWait)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(true);
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
                 }
 
                 try
                 {
-                    return await function().ConfigureAwait(true);
+                    return await function().ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
