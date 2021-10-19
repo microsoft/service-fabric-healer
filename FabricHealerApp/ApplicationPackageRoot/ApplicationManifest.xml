@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.0.2-Preview" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.0.3-Preview" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="FabricHealer_InstanceCount" DefaultValue="-1" />
     <!-- FabricHealerManager Settings  -->
@@ -11,17 +11,17 @@
     <Parameter Name="OperationalTelemetryEnabled" DefaultValue="true" />
     <!-- Repair Policy Enablement -->
     <Parameter Name="AppRepairEnabled" DefaultValue="true" />
-    <Parameter Name="DiskRepairEnabled" DefaultValue="true" />
+    <Parameter Name="DiskRepairEnabled" DefaultValue="false" />
     <Parameter Name="NodeRepairEnabled" DefaultValue="false" />
     <Parameter Name="ReplicaRepairEnabled" DefaultValue="false" />
-    <Parameter Name="SystemAppRepairEnabled" DefaultValue="true" />
+    <Parameter Name="SystemAppRepairEnabled" DefaultValue="false" />
     <Parameter Name="VmRepairEnabled" DefaultValue="false" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.0.2-Preview" />
+    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.0.3-Preview" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

@@ -34,7 +34,7 @@ namespace FabricHealer
         private readonly FabricClient fabricClient;
         private readonly RepairTaskManager repairTaskManager;
         private readonly RepairTaskEngine repairTaskEngine;
-        private readonly Uri systemAppUri = new Uri("fabric:/System");
+        private readonly Uri systemAppUri = new Uri(RepairConstants.SystemAppName);
         private readonly Uri repairManagerServiceUri = new Uri("fabric:/System/RepairManagerService");
         private readonly FabricHealthReporter healthReporter;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
@@ -675,7 +675,19 @@ namespace FabricHealer
                 var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(app.ApplicationName).ConfigureAwait(false);
                 var appName = app.ApplicationName;
 
-                if (appName.OriginalString != "fabric:/System")
+                // System app target? Do not proceed if system app repair is not enabled.
+                if (appName.OriginalString == RepairConstants.SystemAppName && !ConfigSettings.EnableSystemAppRepair)
+                {
+                    continue;
+                }
+
+                // User app target? Do not proceed if App repair is not enabled.
+                if (!ConfigSettings.EnableAppRepair)
+                {
+                    continue;
+                }
+
+                if (appName.OriginalString != RepairConstants.SystemAppName)
                 {
                     var appUpgradeStatus = await fabricClient.ApplicationManager.GetApplicationUpgradeProgressAsync(appName).ConfigureAwait(false);
 
@@ -738,8 +750,13 @@ namespace FabricHealer
                     string repairId;
                     string system = string.Empty;
 
-                    if (app.ApplicationName.OriginalString == "fabric:/System")
+                    if (app.ApplicationName.OriginalString == RepairConstants.SystemAppName)
                     {
+                        if (!ConfigSettings.EnableSystemAppRepair)
+                        {
+                            continue;
+                        }
+
                         // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
                         var fhRepairTasks = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
                                                                      RepairTaskEngine.FabricHealerExecutorName,
@@ -768,7 +785,7 @@ namespace FabricHealer
                             }
                         }
 
-                        repairRules = GetRepairRulesFromFOCode(foHealthData.Code, "fabric:/System");
+                        repairRules = GetRepairRulesFromFOCode(foHealthData.Code, RepairConstants.SystemAppName);
 
                         if (repairRules == null || repairRules?.Count == 0)
                         {
@@ -924,6 +941,18 @@ namespace FabricHealer
                     // From FabricObserver? FO creates health events with HealthInformation.Description properties
                     // containing serialized instances of TelemetryData type. FH only works with FO-supplied health data.
                     if (!JsonSerializationUtility.TryDeserialize(evt.HealthInformation.Description, out TelemetryData foHealthData))
+                    {
+                        continue;
+                    }
+
+                    // Do not proceed is Disk Repair is not enabled.
+                    if (foHealthData.ObserverName == RepairConstants.DiskObserver && !ConfigSettings.EnableDiskRepair)
+                    {
+                        continue;
+                    }
+
+                    // Do not proceed is VM Repair is not enabled.
+                    if (!ConfigSettings.EnableVmRepair)
                     {
                         continue;
                     }
@@ -1150,7 +1179,7 @@ namespace FabricHealer
                 case FOErrorWarningCodes.AppWarningTooManyOpenFileHandles:
                 case FOErrorWarningCodes.AppWarningTooManyThreads:
 
-                    repairPolicySectionName = app == "fabric:/System" ? RepairConstants.SystemAppRepairPolicySectionName : RepairConstants.AppRepairPolicySectionName;
+                    repairPolicySectionName = app == RepairConstants.SystemAppName ? RepairConstants.SystemAppRepairPolicySectionName : RepairConstants.AppRepairPolicySectionName;
                     break;
 
                 // Node level. (node = VM, not Fabric node)

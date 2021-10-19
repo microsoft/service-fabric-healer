@@ -247,7 +247,7 @@ namespace FabricHealer.Repair
             var allSystemServices =
                 await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                () => fabricClient.QueryManager.GetServiceListAsync(
-                                                                                  new Uri("fabric:/System"),
+                                                                                  new Uri(RepairConstants.SystemAppName),
                                                                                   null,
                                                                                   FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                                                   cancellationToken),
