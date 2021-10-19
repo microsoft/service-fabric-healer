@@ -4,7 +4,7 @@ FabricHealer ships with [several logic rules](/FabricHealer/PackageRoot/Config/L
 
 **You can enable/disable repairs for target types (e.g., Application, Node, VM, Disk) by setting values (true or false) in the Repair Policies Enablement section of ApplicationManifest.xml.**  
 
-**Note:** For local testing on your dev machine, you can add RepairManager service to your local SF dev environment by running a node configuration update that points to a Cluster Manifest file, say a file named clusterManifestRM.xml, that contains the RepairManager setting node:  
+**Note:** For local testing on your dev machine, you can add RepairManager service to your local SF dev environment by running a node configuration update that points to a Cluster Manifest file, say a file named clusterManifestRM.xml, that contains the RepairManager setting node (you could also just update your existing clusterManifest.xml file with the new node and point to that file):  
 
 ```XML
     <Section Name="RepairManager">
