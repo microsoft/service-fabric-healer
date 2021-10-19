@@ -2,7 +2,23 @@
 
 FabricHealer ships with [several logic rules](/FabricHealer/PackageRoot/Config/LogicRules) that form the basis of repair workflow. You just need to modify existing rules to quickly get going. To learn how to create your own logic rules, click [here](LogicWorkflows.md).
 
-**You can enable/disable repairs for target types (e.g., Application, Node, VM, Disk) by setting values (true or false) in the Repair Policies Enablement section of ApplicationManifest.xml.**
+**You can enable/disable repairs for target types (e.g., Application, Node, VM, Disk) by setting values (true or false) in the Repair Policies Enablement section of ApplicationManifest.xml.**  
+
+**Note:** For local testing on your dev machine, you can add RepairManager service to your local SF dev environment by running a node configuration update that points to a Cluster Manifest file, say a file named clusterManifestRM.xml, that contains the RepairManager setting node (you could also just update your existing clusterManifest.xml file with the new node and point to that file):  
+
+```XML
+    <Section Name="RepairManager">
+      <Parameter Name="MinReplicaSetSize" Value="1" />
+      <Parameter Name="TargetReplicaSetSize" Value="1" />
+    </Section>
+```
+
+Run  
+
+```PowerShell
+Update-ServiceFabricNodeConfiguration -ClusterManifestPath C:\temp\clusterManifestRM.xml
+```
+The cluster will be rebuilt and the RepairManager service will be added to the System services. Then, you can experiment with FH locally in the way that it will work on an actual cluster in the cloud.  
 
 ### Scenarios 
 
