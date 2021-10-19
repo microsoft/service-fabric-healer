@@ -766,7 +766,7 @@ namespace FabricHealer.Repair
                     {
                         repairTarget = $"{repairConfiguration.AppName.OriginalString} on Node {repairConfiguration.NodeName}";
 
-                        if (repairConfiguration.AppName.OriginalString == "fabric:/System" && !string.IsNullOrWhiteSpace(repairConfiguration.SystemServiceProcessName))
+                        if (repairConfiguration.AppName.OriginalString == RepairConstants.SystemAppName && !string.IsNullOrWhiteSpace(repairConfiguration.SystemServiceProcessName))
                         {
                             repairTarget = $"{repairConfiguration.SystemServiceProcessName} on Node {repairConfiguration.NodeName}";
                         }
@@ -799,20 +799,20 @@ namespace FabricHealer.Repair
 
                 switch (repairConfiguration.RepairPolicy.TargetType)
                 {
-                    case RepairTargetType.Application when repairConfiguration.AppName.OriginalString != "fabric:/System":
+                    case RepairTargetType.Application when repairConfiguration.AppName.OriginalString != RepairConstants.SystemAppName:
                     case RepairTargetType.Replica:
                         maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
                             ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
                             : TimeSpan.FromMinutes(10);
                         break;
 
-                    case RepairTargetType.Application when repairConfiguration.AppName.OriginalString == "fabric:/System" && repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartProcess:
+                    case RepairTargetType.Application when repairConfiguration.AppName.OriginalString == RepairConstants.SystemAppName && repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartProcess:
                         maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
                            ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
                            : TimeSpan.FromMinutes(5);
                         break;
 
-                    case RepairTargetType.Application when repairConfiguration.AppName.OriginalString == "fabric:/System" && repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode:
+                    case RepairTargetType.Application when repairConfiguration.AppName.OriginalString == RepairConstants.SystemAppName && repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode:
                         maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
                             ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
                             : TimeSpan.FromMinutes(30);
@@ -967,7 +967,7 @@ namespace FabricHealer.Repair
                     bool isTargetAppHealedOnTargetNode = false;
                     
                     // System Service repairs (process restarts)
-                    if (repairConfig.AppName.OriginalString == "fabric:/System")
+                    if (repairConfig.AppName.OriginalString == RepairConstants.SystemAppName)
                     {
                         isTargetAppHealedOnTargetNode = appHealth.HealthEvents.Any(
                             h => JsonSerializationUtility.TryDeserialize(

@@ -3,6 +3,8 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
+
 namespace FabricHealer.Repair
 {
     public static class RepairConstants
@@ -98,5 +100,8 @@ namespace FabricHealer.Repair
         public const string DiskObserver = "DiskObserver";
         public const string FabricSystemObserver = "FabricSystemObserver";
         public const string NodeObserver = "NodeObserver";
+
+        // General
+        public const string SystemAppName = "fabric:/System";
     }
 }

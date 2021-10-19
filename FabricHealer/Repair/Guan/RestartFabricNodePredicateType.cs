@@ -46,7 +46,7 @@ namespace FabricHealer.Repair.Guan
                 // Repair Policy
                 repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartFabricNode;
                 repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
-                repairConfiguration.RepairPolicy.TargetType = FOHealthData.ApplicationName == "fabric:/System" ? RepairTargetType.Application : RepairTargetType.Node;
+                repairConfiguration.RepairPolicy.TargetType = FOHealthData.ApplicationName == RepairConstants.SystemAppName ? RepairTargetType.Application : RepairTargetType.Node;
 
                 int count = Input.Arguments.Count;
 
