@@ -665,12 +665,12 @@ namespace FabricHealer
             var supportedAppHealthStates = appHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
             var nodeList = await fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(false);
 
-            // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-            await RandomWaitAsync();
-
             foreach (var app in supportedAppHealthStates)
             {
                 Token.ThrowIfCancellationRequested();
+
+                // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
+                await RandomWaitAsync();
 
                 var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(app.ApplicationName).ConfigureAwait(false);
                 var appName = app.ApplicationName;
@@ -725,6 +725,9 @@ namespace FabricHealer
                 foreach (var evt in observerHealthEvents)
                 {
                     Token.ThrowIfCancellationRequested();
+
+                    // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
+                    await RandomWaitAsync();
 
                     if (string.IsNullOrWhiteSpace(evt.HealthInformation.Description))
                     {
@@ -885,14 +888,14 @@ namespace FabricHealer
         // VM is using too much (based on user-supplied threshold value) of some monitored machine resource.
         private async Task ProcessNodeHealthAsync(IEnumerable<NodeHealthState> nodeHealthStates)
         {
-            // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-            await RandomWaitAsync();
-
             var supportedNodeHealthStates = nodeHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
 
             foreach (var node in supportedNodeHealthStates)
             {
                 Token.ThrowIfCancellationRequested();
+
+                // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
+                await RandomWaitAsync();
 
                 // Get information about target node.
                 var nodeList =
@@ -932,6 +935,9 @@ namespace FabricHealer
                 foreach (var evt in observerHealthEvents)
                 {
                     Token.ThrowIfCancellationRequested();
+
+                    // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
+                    await RandomWaitAsync();
 
                     if (string.IsNullOrWhiteSpace(evt.HealthInformation.Description))
                     {
@@ -1043,7 +1049,9 @@ namespace FabricHealer
 
             foreach (var healthEvaluation in repUnhealthyEvaluations)
             {
-                var eval = (ReplicaHealthEvaluation)healthEvaluation;
+                // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
+                await RandomWaitAsync(); var eval = (ReplicaHealthEvaluation)healthEvaluation;
+
                 var healthEvent = eval.UnhealthyEvaluations.Cast<EventHealthEvaluation>().FirstOrDefault();
 
                 Token.ThrowIfCancellationRequested();
