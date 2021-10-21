@@ -18,7 +18,7 @@ namespace FabricHealer.Interfaces
 
         Task<bool> DeleteFilesAsyncAsync(RepairConfiguration repairConfiguration, CancellationToken cancellationToken);
 
-        Task RemoveServiceFabricNodeStateAsync(string nodeName, CancellationToken cancellationToken);
+        Task<bool> RemoveServiceFabricNodeStateAsync(string nodeName, CancellationToken cancellationToken);
 
         Task<bool> RestartDeployedCodePackageAsync(RepairConfiguration repairConfiguration, CancellationToken cancellationToken);
         
@@ -26,7 +26,7 @@ namespace FabricHealer.Interfaces
 
         Task<bool> RemoveReplicaAsync(RepairConfiguration repairConfiguration, CancellationToken cancellationToken);
 
-        Task<bool> SafeRestartServiceFabricNodeAsync(string nodeName, RepairTask repairTask, CancellationToken cancellationToken);
+        Task<bool> SafeRestartServiceFabricNodeAsync(RepairConfiguration repairConfiguration, RepairTask repairTask, CancellationToken cancellationToken);
 
         Task StartRepairWorkflowAsync(TelemetryData foHealthData, List<string> repairRules, CancellationToken cancellationToken);
     }

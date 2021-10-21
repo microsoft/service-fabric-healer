@@ -27,7 +27,13 @@
 ## | FileHandles               | 
 ## | FileHandlesPercent        | 
 ## | Threads                   | 
-## *Network-related repair is not supported today.    
+## *Network-related repair is not supported today.
+
+## Currently implemented external predicates - Application service level repair actions.
+## RestartCodePackage -  Ends the code package process, which restarts all of the user service replicas hosted in that process.
+## RestartReplica - Restarts the offending service replica. Note that there are no safety checks for this repair action, unlike RestartCodePackage.
+## Note that in general, restarting a code package is considered a more aggressive mitigation than restarting a replica (internally, FabricHealer knows what to do when the replica is stateful or stateless).
+## However, RestartCodePackage is generally a safer operation. It just depends on the target service, which you will understand well (since you wrote the service).
 
 ## Repair Run Interval - Are we inside the run interval for an app repair? This is optional. It's up to you if you want to employ this type of constraint.
 ## This below rule means that if any of the repairs for any of the apps in this rule file has run within the past 30 minutes, cut (!), 
@@ -107,8 +113,8 @@ Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestar
 Mitigate(AppName="fabric:/ContainerFoo", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
-## Any app that exceeds 1GB private workingset.
-Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 1024, TimeScopedRestartCodePackage(5, 05:00:00).
+## Any app service that exceeds 1GB private workingset, restart the offending replica. 1 repair per hour.
+Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 1024, TimeScopedRestartCodePackage(1, 01:00:00).
 
 
 ## Ports 
@@ -136,16 +142,21 @@ Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?A
 
 ## Internal Predicates
 
-## TimeScopedRestartCodePackage is an internal predicate to check for the number of times a repair has run to completion within a supplied time window. 
-## If Completed Repair count is less then supplied value, then run RestartCodePackage mitigation. If not, emit a message so developer has event data that describes why
+## TimeScopedRestartCodePackage/TimeScopedRestartReplica are internal predicates to check for the number of times a repair has run to completion within a supplied time window. 
+## If Completed Repair count is less then supplied value, then run RestartCodePackage/RestartReplica mitigation. If not, emit a message so developer has event data that describes why
 ## the repair was not attempted at this time. EmitMessage always succeeds.
 
 TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount >= ?count,
-	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt restart code package repair at this time.", ?count, ?time).
+	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartCodePackage repair at this time.", ?count, ?time).
+
+TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount >= ?count,
+	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartReplica repair at this time.", ?count, ?time).
 
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
-## Note you can add up to two optional arguments to RestartCodePackage, name them whatever you want or omit the names, it just has to be either a TimeSpan value for how long to wait 
+## Note you can add up to two optional arguments to RestartCodePackage/RestartReplica, name them whatever you want or omit the names, it just has to be either a TimeSpan value for how long to wait 
 ## for the repair target to become healthy and/or a bool for whether or not RM should do health checks before and after the repair executes. 
-## See below for an example using both optional arguments (arguments are named for clarity (generally a good idea)...you could also specify RestartCodePackage(true, 00:10:00)).
+## See below for an example using both optional arguments (named arguments are used here for clarity (generally a good idea). 
+## You could also just specify RestartCodePackage(true, 00:10:00), for example).
 
 TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).
+TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).

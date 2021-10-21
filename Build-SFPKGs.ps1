@@ -23,11 +23,11 @@ function Build-SFPkg {
 try {
     Push-Location $scriptPath
 
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Linux.SelfContained.1.0.4-Preview" "$scriptPath\bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Linux.FrameworkDependent.1.0.4-Preview" "$scriptPath\bin\release\FabricHealer\linux-x64\framework-dependent\FabricHealerType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Linux.SelfContained.1.0.5-Preview" "$scriptPath\bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Linux.FrameworkDependent.1.0.5-Preview" "$scriptPath\bin\release\FabricHealer\linux-x64\framework-dependent\FabricHealerType"
 
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.1.0.4-Preview" "$scriptPath\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent.1.0.4-Preview" "$scriptPath\bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.1.0.5-Preview" "$scriptPath\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent.1.0.5-Preview" "$scriptPath\bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType"
 }
 finally {
     Pop-Location

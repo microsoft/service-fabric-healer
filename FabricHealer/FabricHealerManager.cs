@@ -669,9 +669,6 @@ namespace FabricHealer
             {
                 Token.ThrowIfCancellationRequested();
 
-                // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-                await RandomWaitAsync();
-
                 var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(app.ApplicationName).ConfigureAwait(false);
                 var appName = app.ApplicationName;
 
@@ -682,7 +679,7 @@ namespace FabricHealer
                 }
 
                 // User app target? Do not proceed if App repair is not enabled.
-                if (!ConfigSettings.EnableAppRepair)
+                if (appName.OriginalString != RepairConstants.SystemAppName && !ConfigSettings.EnableAppRepair)
                 {
                     continue;
                 }
@@ -726,9 +723,6 @@ namespace FabricHealer
                 {
                     Token.ThrowIfCancellationRequested();
 
-                    // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-                    await RandomWaitAsync();
-
                     if (string.IsNullOrWhiteSpace(evt.HealthInformation.Description))
                     {
                         continue;
@@ -740,9 +734,17 @@ namespace FabricHealer
                         continue;
                     }
 
+                    // Since FH runs on each node, have FH only try to repair app services that are also running on the same node.
+                    // This removes the need to try and orchestrate repairs across nodes. The node that is running the target service will also be 
+                    // running FH.
+                    if (foHealthData.NodeName != serviceContext.NodeContext.NodeName)
+                    {
+                        continue;
+                    }
+
                     if (!FOErrorWarningCodes.AppErrorCodesDictionary.ContainsKey(foHealthData.Code)
-                        || foHealthData.Code == FOErrorWarningCodes.AppErrorNetworkEndpointUnreachable
-                        || foHealthData.Code == FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable)
+                    || foHealthData.Code == FOErrorWarningCodes.AppErrorNetworkEndpointUnreachable
+                    || foHealthData.Code == FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable)
                     {
                         // Network endpoint test failures have no general mitigation.
                         continue;
@@ -894,9 +896,6 @@ namespace FabricHealer
             {
                 Token.ThrowIfCancellationRequested();
 
-                // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-                await RandomWaitAsync();
-
                 // Get information about target node.
                 var nodeList =
                         await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -921,7 +920,8 @@ namespace FabricHealer
                     await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                  LogLevel.Info,
                                                  "MonitorRepairableHealthEventsAsync::VM_Repair_In_Progress",
-                                                 "There is already a VM-level repair running in the cluster. Will not do any VM repairs at this time.",
+                                                 $"There is already a VM-level repair running in the cluster for node type {targetNode.NodeType}. " +
+                                                 "Will not do any other VM repairs at this time.",
                                                  Token).ConfigureAwait(false);
                     continue;
                 }
@@ -958,7 +958,7 @@ namespace FabricHealer
                     }
 
                     // Do not proceed is VM Repair is not enabled.
-                    if (!ConfigSettings.EnableVmRepair)
+                    if (foHealthData.ObserverName == RepairConstants.NodeObserver && !ConfigSettings.EnableVmRepair)
                     {
                         continue;
                     }
@@ -1042,20 +1042,17 @@ namespace FabricHealer
                 return;
             }
 
-            // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-            await RandomWaitAsync();
-
             var repUnhealthyEvaluations = ((ReplicaHealthEvaluation)evaluation).UnhealthyEvaluations;
 
             foreach (var healthEvaluation in repUnhealthyEvaluations)
             {
-                // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-                await RandomWaitAsync(); var eval = (ReplicaHealthEvaluation)healthEvaluation;
-
-                var healthEvent = eval.UnhealthyEvaluations.Cast<EventHealthEvaluation>().FirstOrDefault();
-
                 Token.ThrowIfCancellationRequested();
 
+                // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
+                await RandomWaitAsync(); 
+
+                var eval = (ReplicaHealthEvaluation)healthEvaluation;
+                var healthEvent = eval.UnhealthyEvaluations.Cast<EventHealthEvaluation>().FirstOrDefault();
                 var service = await fabricClient.QueryManager.GetServiceNameAsync(
                                                                 eval.PartitionId,
                                                                 ConfigSettings.AsyncTimeout,
@@ -1100,7 +1097,7 @@ namespace FabricHealer
                                                                     eval.ReplicaOrInstanceId,
                                                                     ConfigSettings.AsyncTimeout,
                                                                     Token).ConfigureAwait(false);
-                // Replica still exist?
+                // Replica still exists?
                 if (replicaList.Count == 0)
                 {
                     continue;
@@ -1109,6 +1106,14 @@ namespace FabricHealer
                 var appName = app?.ApplicationName?.OriginalString;
                 var replica = replicaList[0];
                 var nodeName = replica?.NodeName;
+
+                // Since FH runs on each node, have FH only try to repair services that are also running on the same node.
+                // This removes the need to try and orchestrate repairs across nodes. The node that is running the target service will also be 
+                // running FH.
+                if (nodeName != serviceContext.NodeContext.NodeName)
+                {
+                    continue;
+                }
 
                 // Get configuration settings related to Replica repair. 
                 var repairRules = GetRepairRulesFromConfiguration(RepairConstants.ReplicaRepairPolicySectionName);
@@ -1328,7 +1333,7 @@ namespace FabricHealer
         private async Task RandomWaitAsync()
         {
             var random = new Random();
-            int waitTimeMS = random.Next(random.Next(0, nodeCount * 100), 1000 * nodeCount);
+            int waitTimeMS = random.Next(random.Next(100, nodeCount * 100), 1000 * nodeCount);
 
             await Task.Delay(waitTimeMS, Token).ConfigureAwait(false);
         }

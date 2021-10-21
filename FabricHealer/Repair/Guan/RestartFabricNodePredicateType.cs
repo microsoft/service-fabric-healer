@@ -77,13 +77,11 @@ namespace FabricHealer.Repair.Guan
                 {
                     // Historical info, like what step the healer was in when the node went down, is contained in the
                     // executordata instance.
-                    repairTask = RepairTaskEngine.CreateFabricHealerRmRepairTask(RepairExecutorData);
-
+                    repairTask = RepairTaskEngine.CreateFabricHealerRepairTask(RepairExecutorData, RepairTaskManager.Token).GetAwaiter().GetResult();
                     success = RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                                                     repairTask,
                                                     repairConfiguration,
                                                     RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
-
                     return success;
                 }
 
@@ -110,7 +108,7 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to schedule repair with RM.
                 repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                      () => RepairTaskManager.ScheduleFabricHealerRmRepairTaskAsync(
+                                                      () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
                                                                                 repairConfiguration,
                                                                                 RepairTaskManager.Token),
                                                        RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
