@@ -147,10 +147,10 @@ Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?A
 ## the repair was not attempted at this time. EmitMessage always succeeds.
 
 TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount >= ?count,
-	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt restart code package repair at this time.", ?count, ?time).
+	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartCodePackage repair at this time.", ?count, ?time).
 
 TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount >= ?count,
-	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt restart code package repair at this time.", ?count, ?time).
+	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartReplica repair at this time.", ?count, ?time).
 
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
 ## Note you can add up to two optional arguments to RestartCodePackage/RestartReplica, name them whatever you want or omit the names, it just has to be either a TimeSpan value for how long to wait 
