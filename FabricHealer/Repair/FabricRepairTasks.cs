@@ -146,17 +146,24 @@ namespace FabricHealer.Repair
                                                      CancellationToken token)
         {
             var repairTaskEngine = new RepairTaskEngine(fabricClient);
-
+            RepairActionType repairAction = repairConfiguration.RepairPolicy.RepairAction;
             RepairTask repairTask;
 
-            var repairAction = repairConfiguration.RepairPolicy.RepairAction;
+            await Task.Delay(new Random().Next(100, 1500));
+
+            var isRepairAlreadyInProgress =
+                    await repairTaskEngine.IsFHRepairTaskRunningAsync(executorName, repairConfiguration, token).ConfigureAwait(false);
+
+            if (isRepairAlreadyInProgress)
+            {
+                return null;
+            }
 
             switch (repairAction)
             {
                 case RepairActionType.RestartVM:
 
-                    repairTask = await repairTaskEngine.CreateVmRebootTaskAsync(repairConfiguration, executorName, token);
-
+                    repairTask = await repairTaskEngine.CreateVmRebootISRepairTaskAsync(repairConfiguration, executorName, token);
                     break;
 
                 case RepairActionType.DeleteFiles:
@@ -165,8 +172,7 @@ namespace FabricHealer.Repair
                 case RepairActionType.RestartProcess:
                 case RepairActionType.RestartReplica:
 
-                    repairTask = RepairTaskEngine.CreateFabricHealerRmRepairTask(executorData);
-
+                    repairTask = await repairTaskEngine.CreateFabricHealerRepairTask(executorData, token);
                     break;
 
                 default:
@@ -179,20 +185,17 @@ namespace FabricHealer.Repair
                                     fabricClient,
                                     repairTask,
                                     repairConfiguration,
+                                    repairTaskEngine,
                                     token).ConfigureAwait(false);
 
-            if (success)
-            {
-                return repairTask;
-            }
-
-            return null;
+            return success ? repairTask : null;
         }
 
         private static async Task<bool> TryCreateRepairTaskAsync(
                                             FabricClient fabricClient,
                                             RepairTask repairTask,
                                             RepairConfiguration repairConfiguration,
+                                            RepairTaskEngine repairTaskEngine,
                                             CancellationToken token)
         {
             if (repairTask == null)
@@ -200,9 +203,10 @@ namespace FabricHealer.Repair
                 return false;
             }
 
+            await Task.Delay(new Random().Next(100, 1500));
+
             try
             {
-                var repairTaskEngine = new RepairTaskEngine(fabricClient);
                 var isRepairAlreadyInProgress =
                     await repairTaskEngine.IsFHRepairTaskRunningAsync(repairTask.Executor, repairConfiguration, token).ConfigureAwait(false);
 

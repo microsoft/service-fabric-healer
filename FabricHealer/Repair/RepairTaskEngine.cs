@@ -6,6 +6,7 @@
 using System;
 using System.Fabric;
 using System.Fabric.Repair;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities;
@@ -26,11 +27,21 @@ namespace FabricHealer.Repair
             this.fabricClient = fabricClient;
         }
 
-        public static RepairTask CreateFabricHealerRmRepairTask(RepairExecutorData executorData)
+        public async Task<RepairTask> CreateFabricHealerRepairTask(RepairExecutorData executorData, CancellationToken token)
         {
             if (executorData == null)
             {
                 return null;
+            }
+
+            var repairs = await GetFHRepairTasksCurrentlyProcessingAsync(FabricHealerExecutorName, token);
+            
+            if (repairs?.Count > 0)
+            {
+                if (repairs.Any(r => r.ExecutorData.Contains(executorData.RepairPolicy.RepairId)))
+                {
+                    return null;
+                }
             }
 
             var impact = executorData.RepairPolicy.RepairAction switch
@@ -99,7 +110,7 @@ namespace FabricHealer.Repair
         }
 
         // This allows InfrastructureService to schedule and run reboot im concert with VMSS over MR.
-        public async Task<RepairTask> CreateVmRebootTaskAsync(RepairConfiguration repairConfiguration, string executorName, CancellationToken cancellationToken)
+        public async Task<RepairTask> CreateVmRebootISRepairTaskAsync(RepairConfiguration repairConfiguration, string executorName, CancellationToken cancellationToken)
         {
             // Do not allow this to take place in 1-node or 3-node clusters, like a dev cluster.
             // TODO: Block this from running in OneBox (dev machine) environment.
@@ -155,9 +166,12 @@ namespace FabricHealer.Repair
                 // This check is to see if there are any FH-as-executor repairs in flight.
                 if (executorName == FabricHealerExecutorName)
                 {
-                    var exData = JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData executorData) ? executorData : null;
+                    if (!JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData executorData))
+                    {
+                        continue;
+                    }
                     
-                    if (exData.RepairPolicy == null)
+                    if (executorData.RepairPolicy == null)
                     {
                         return false;
                     }

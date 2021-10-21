@@ -48,10 +48,10 @@ namespace FabricHealer.Repair
             LastHealthEventsListClearDateTime = HealthEventsListCreationTime;
         }
 
-        public async Task RemoveServiceFabricNodeStateAsync(string nodeName, CancellationToken cancellationToken)
+        // TODO.
+        public Task<bool> RemoveServiceFabricNodeStateAsync(string nodeName, CancellationToken cancellationToken)
         {
-            // TODO...
-            await Task.CompletedTask.ConfigureAwait(false);
+            return Task.FromResult(false);
         }
 
         public async Task ActivateServiceFabricNodeAsync(string nodeName, CancellationToken cancellationToken)
@@ -59,17 +59,17 @@ namespace FabricHealer.Repair
             await FabricClientInstance.ClusterManager.ActivateNodeAsync(nodeName, AsyncTimeout, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<bool> SafeRestartServiceFabricNodeAsync(string nodeName, RepairTask repairTask, CancellationToken cancellationToken)
+        public async Task<bool> SafeRestartServiceFabricNodeAsync(RepairConfiguration repairConfiguration, RepairTask repairTask, CancellationToken cancellationToken)
         {
             if (!await RepairExec.SafeRestartFabricNodeAsync(
-                                    nodeName,
+                                    repairConfiguration,
                                     repairTask,
                                     cancellationToken).ConfigureAwait(false))
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                             LogLevel.Info,
                                             "SafeRestartFabricNodeAsync",
-                                            $"Did not restart Fabric node {nodeName}",
+                                            $"Did not restart Fabric node {repairConfiguration.NodeName}",
                                             cancellationToken).ConfigureAwait(false);
 
                 return false;
@@ -78,9 +78,8 @@ namespace FabricHealer.Repair
             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                         LogLevel.Info,
                                         "SafeRestartFabricNodeAsync",
-                                        $"Successfully restarted Fabric node {nodeName}",
+                                        $"Successfully restarted Fabric node {repairConfiguration.NodeName}",
                                         cancellationToken).ConfigureAwait(false);
-
             return true;
         }
 
@@ -475,8 +474,10 @@ namespace FabricHealer.Repair
             }
         }
 
-        public async Task<RepairTask> ScheduleFabricHealerRmRepairTaskAsync(RepairConfiguration repairConfiguration, CancellationToken cancellationToken)
+        public async Task<RepairTask> ScheduleFabricHealerRepairTaskAsync(RepairConfiguration repairConfiguration, CancellationToken cancellationToken)
         {
+            await Task.Delay(new Random().Next(100, 1500));
+
             // Has the repair already been scheduled by a different FH instance?
             if (await repairTaskEngine.IsFHRepairTaskRunningAsync(RepairTaskEngine.FHTaskIdPrefix, repairConfiguration, cancellationToken))
             {
@@ -649,8 +650,7 @@ namespace FabricHealer.Repair
                 {
                     if (string.IsNullOrWhiteSpace(repairConfiguration.ContainerId))
                     {
-                        success = await RestartDeployedCodePackageAsync(repairConfiguration, cancellationToken)
-                            .ConfigureAwait(false);
+                        success = await RestartDeployedCodePackageAsync(repairConfiguration, cancellationToken).ConfigureAwait(false);
                     }
                     else
                     {
@@ -696,10 +696,10 @@ namespace FabricHealer.Repair
                 case RepairActionType.RestartReplica:
                 {
                     var replicaList = await FabricClientInstance.QueryManager.GetReplicaListAsync(
-                        repairConfiguration.PartitionId,
-                        repairConfiguration.ReplicaOrInstanceId,
-                        FabricHealerManager.ConfigSettings.AsyncTimeout,
-                        cancellationToken).ConfigureAwait(false);
+                                                    repairConfiguration.PartitionId,
+                                                    repairConfiguration.ReplicaOrInstanceId,
+                                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                    cancellationToken).ConfigureAwait(false);
 
                     if (replicaList.Count == 0)
                     {
@@ -748,7 +748,7 @@ namespace FabricHealer.Repair
                     }
                     else
                     {
-                        success = await SafeRestartServiceFabricNodeAsync(repairConfiguration.NodeName, repairTask, cancellationToken).ConfigureAwait(false);
+                        success = await SafeRestartServiceFabricNodeAsync(repairConfiguration, repairTask, cancellationToken).ConfigureAwait(false);
                     }
 
                     break;
