@@ -1,19 +1,23 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Section Name="RepairManagerConfiguration">
-    <!-- Optional: This service makes async SF Api calls that are cluster-wide operations 
-         and can take time in large clusters. -->
-    <Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
+    <!-- ***Overridable Parameters***
+         These must be set in ApplicationManifest.xml -->
     <Parameter Name="HealthCheckLoopSleepTimeSeconds" Value="" MustOverride="true" />
-    <!-- Required: Location on disk to store observer data, including ObserverManager. 
-         Each observer will write to their own directory on this path.
-         **NOTE: For Linux targets, do not supply a drive prefix. Just supply a folder name.** -->
-    <Parameter Name="LocalLogPath" Value="fabrichealer_logs" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-    <!-- Optional: Diagnostic Telemetry. Azure ApplicationInsights and LogAnalytics support is already implemented, 
-         but you can implement whatever provider you want. See IObserverTelemetry interface. -->
     <Parameter Name="EnableTelemetryProvider" Value="" MustOverride="true" />
-    <!-- Required: Values can be either AzureApplicationInsights or AzureLogAnalytics -->
+    <Parameter Name="EnableEventSourceProvider" Value="" MustOverride="true" />
+    <Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
+    <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
+    
+    <!-- ***Non-Overridable Parameters***
+         These must be set in this file. -->
+    <!-- Folder name for local log output. You can use a full path or just a folder name. -->
+    <Parameter Name="LocalLogPath" Value="fabrichealer_logs" />
+    <!-- Default timeout for async SF API calls. -->
+    <Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
+    <!-- Telemetry.
+         Required: Values can be either AzureApplicationInsights or AzureLogAnalytics -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
@@ -23,13 +27,9 @@
     <Parameter Name="LogAnalyticsSharedKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
     <Parameter Name="LogAnalyticsLogType" Value="FabricHealer" />
-    <!-- Optional: EventSource Tracing. -->
-    <Parameter Name="EnableEventSourceProvider" Value="" MustOverride="true" />
-    <!-- Big on/off switch. You can be more granular below in the Repair policies sections. -->
-    <Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
-    <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
   </Section>
-  <!-- Repair policies -->
+  <!-- Repair Policies.
+       Overridable Parameters (Enabled) must be set in ApplicationManifest.xml. -->
   <Section Name="AppRepairPolicy">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="LogicRulesConfigurationFile" Value="AppRules.config.txt" />

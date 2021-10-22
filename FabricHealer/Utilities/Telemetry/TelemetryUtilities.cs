@@ -25,7 +25,7 @@ namespace FabricHealer.Utilities.Telemetry
             this.fabricClient = fabricClient;
             this.serviceContext = serviceContext;
 
-            if (!(FabricHealerManager.ConfigSettings is {TelemetryEnabled: true}))
+            if (!FabricHealerManager.ConfigSettings.TelemetryEnabled)
             {
                 return;
             }
@@ -52,15 +52,15 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="repairConfig">RepairConfiguration instance.</param>
         /// <returns></returns>
         public async Task EmitTelemetryEtwHealthEventAsync(
-                            LogLevel level,
-                            string source,
-                            string description,
-                            CancellationToken token,
-                            RepairConfiguration repairConfig = null)
+                                LogLevel level,
+                                string source,
+                                string description,
+                                CancellationToken token,
+                                RepairConfiguration repairConfig = null,
+                                bool verboseLogging = true)
         {
             bool hasRepairInfo = repairConfig != null;
             string repairAction = string.Empty;
-
             source = source?.Insert(0, "FabricHealer.");
 
             if (hasRepairInfo)
@@ -75,7 +75,15 @@ namespace FabricHealer.Utilities.Telemetry
                 _ => HealthState.Ok
             };
 
-            // Service Fabric HM - Health Events (local to cluster).
+            // Do not write ETW/send Telemetry if the data is informational-only and verbose logging is not enabled.
+            // This means only Warning and Error messages will be transmitted. In general, it is best to enable Verbose Logging (default)
+            // in FabricHealer as it will not generate noisy local logs and you will have a complete record of mitigation steps in your AI or LA workspace.
+            if (!verboseLogging && level == LogLevel.Info)
+            {
+                return;
+            }
+
+            // Service Fabric health report generation.
             var healthReporter = new FabricHealthReporter(fabricClient);
             var healthReport = new HealthReport
             {
@@ -108,7 +116,7 @@ namespace FabricHealer.Utilities.Telemetry
                     SystemServiceProcessName = repairConfig?.SystemServiceProcessName ?? string.Empty,
                 };
 
-                await telemetryClient.ReportMetricAsync(telemData, token).ConfigureAwait(false);
+                await telemetryClient?.ReportMetricAsync(telemData, token);
             }
 
             // ETW.
