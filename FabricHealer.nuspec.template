@@ -3,7 +3,12 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>1.0.6-Preview</version>
-    <releaseNotes>Updated telemetry/logging impl. Updated repair logic rules. Bug fixes/code improvements.</releaseNotes>
+    <releaseNotes>
+- Updated telemetry/logging impl.
+- Updated repair logic rules.
+- Minor bug fixes/code improvements.
+- FabricHealerManager Local Log folder path setting (LocalLogPath) is now MustOverride and upgradable without application redeployment.
+    </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
