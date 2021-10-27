@@ -810,7 +810,7 @@ namespace FabricHealer
                         // There can be multiple Warnings emitted by FO for a single app at the same time.
                         if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(foHealthData.SystemServiceProcessName)))
                         {
-                            var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(repairId));
+                            var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(foHealthData.SystemServiceProcessName));
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                          LogLevel.Info,
                                                          $"MonitorRepairableHealthEventsAsync::{foHealthData.SystemServiceProcessName}",
@@ -1171,7 +1171,7 @@ namespace FabricHealer
                                              $"Detected Replica {eval.ReplicaOrInstanceId} on Partition " +
                                              $"{eval.PartitionId} is in {errOrWarn}.{Environment.NewLine}" +
                                              $"Replica repair policy is enabled. " +
-                                             $"{repairRules.Count} Logic rules found for unhealthy Replica repair.",
+                                             $"{repairRules.Count} Logic rules found for Replica repair.",
                                              Token,
                                              null,
                                              ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
