@@ -19,11 +19,16 @@ namespace FabricHealer.Utilities.Telemetry
         private readonly FabricClient fabricClient;
         private readonly StatelessServiceContext serviceContext;
         private readonly ITelemetryProvider telemetryClient;
+        private readonly Logger logger;
 
         public TelemetryUtilities(FabricClient fabricClient, StatelessServiceContext serviceContext)
         {
             this.fabricClient = fabricClient;
             this.serviceContext = serviceContext;
+            logger = new Logger(RepairConstants.RepairData)
+            {
+                EnableVerboseLogging = true,
+            };
 
             if (!FabricHealerManager.ConfigSettings.TelemetryEnabled)
             {
@@ -82,6 +87,9 @@ namespace FabricHealer.Utilities.Telemetry
             {
                 return;
             }
+
+            // Local Logging
+            logger.LogInfo(description);
 
             // Service Fabric health report generation.
             var healthReporter = new FabricHealthReporter(fabricClient);

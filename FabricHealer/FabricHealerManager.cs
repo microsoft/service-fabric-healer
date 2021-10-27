@@ -779,7 +779,7 @@ namespace FabricHealer
                                     continue;
                                 }
 
-                                string message = $"A Service Fabric System service repair ({repair.TaskId}) is already in progress in the cluster. " +
+                                string message = $"A Service Fabric System service repair ({repair.TaskId}) is already in progress in the cluster(state: {repair.State}). " +
                                                  $"Will not attempt repair at this time.";
 
                                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -810,10 +810,11 @@ namespace FabricHealer
                         // There can be multiple Warnings emitted by FO for a single app at the same time.
                         if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(foHealthData.SystemServiceProcessName)))
                         {
+                            var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(repairId));
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                          LogLevel.Info,
                                                          $"MonitorRepairableHealthEventsAsync::{foHealthData.SystemServiceProcessName}",
-                                                         $"There is already a repair in progress for Fabric system service {foHealthData.SystemServiceProcessName}",
+                                                         $"There is already a repair in progress for Fabric system service {foHealthData.SystemServiceProcessName}(state: {repair.State})",
                                                          Token,
                                                          null,
                                                          ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
@@ -853,10 +854,11 @@ namespace FabricHealer
                         // There can be multiple Warnings emitted by FO for a single app at the same time.
                         if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
                         {
+                            var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(repairId));
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                          LogLevel.Info,
                                                          $"MonitorRepairableHealthEventsAsync::{foHealthData.ServiceName}",
-                                                         $"{appName} already has a repair in progress for service {foHealthData.ServiceName}",
+                                                         $"{appName} already has a repair in progress for service {foHealthData.ServiceName}(state: {repair.State})",
                                                          Token,
                                                          null,
                                                          ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);

@@ -9,11 +9,11 @@
     <Parameter Name="EnableEventSourceProvider" Value="" MustOverride="true" />
     <Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
     <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
+    <!-- Folder name for local log output. You can use a full path or just a folder name. -->
+    <Parameter Name="LocalLogPath" Value="" MustOverride="true" />
     
     <!-- ***Non-Overridable Parameters***
          These must be set in this file. -->
-    <!-- Folder name for local log output. You can use a full path or just a folder name. -->
-    <Parameter Name="LocalLogPath" Value="fabrichealer_logs" />
     <!-- Default timeout for async SF API calls. -->
     <Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
     <!-- Telemetry.

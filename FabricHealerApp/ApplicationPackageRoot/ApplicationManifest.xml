@@ -7,10 +7,12 @@
     <Parameter Name="EventSourceProviderEnabled" DefaultValue="true" />
     <Parameter Name="MonitorLoopSleepSeconds" DefaultValue="30" />
     <Parameter Name="TelemetryProviderEnabled" DefaultValue="true" />
-    <!-- Set VerboseLoggingEnabled to true if you want detailed telemetry including repair steps.
-         Default is true. This will not generate noisy local log files. -->
+    <!-- Set VerboseLoggingEnabled to true if you want detailed local logging and telemetry/ETW with repair data. 
+         This data will live in a folder named RepairData, which will be created in your LocalLogPath directory.
+         Default is true. This is useful for debugging. -->
     <Parameter Name="VerboseLoggingEnabled" DefaultValue="true" />
     <Parameter Name="OperationalTelemetryEnabled" DefaultValue="true" />
+    <Parameter Name="LocalLogPath" DefaultValue="fabrichealer_logs" />
     <!-- Repair Policy Enablement -->
     <Parameter Name="AppRepairEnabled" DefaultValue="true" />
     <Parameter Name="DiskRepairEnabled" DefaultValue="false" />
@@ -35,6 +37,7 @@
             <Parameter Name="EnableTelemetryProvider" Value="[TelemetryProviderEnabled]" />
             <Parameter Name="EnableVerboseLogging" Value="[VerboseLoggingEnabled]" />
             <Parameter Name="EnableOperationalTelemetry" Value="[OperationalTelemetryEnabled]" />
+            <Parameter Name="LocalLogPath" Value="[LocalLogPath]" />
           </Section>
           <!-- Repair policies -->
           <Section Name="AppRepairPolicy">
