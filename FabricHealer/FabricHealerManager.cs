@@ -27,7 +27,7 @@ namespace FabricHealer
         internal static RepairData RepairHistory;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.0.2-Preview";
+        private const string InternalVersionNumber = "1.0.6-Preview";
         private static FabricHealerManager singleton;
         private bool disposedValue;
         private readonly StatelessServiceContext serviceContext;
@@ -311,21 +311,13 @@ namespace FabricHealer
             {
                 var message = $"Unhandeld Exception in FabricHealerManager:{Environment.NewLine}{e}";
                 RepairLogger.LogError(message);
-                await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(LogLevel.Warning, "FabricHealer", message, Token).ConfigureAwait(false);
-
-                // ETW.
-                if (ConfigSettings.EtwEnabled)
-                {
-                    ServiceEventSource.Current.Write(
-                                        RepairConstants.EventSourceEventName,
-                                        new
-                                        {
-                                            HealthState = "Warning",
-                                            Node = serviceContext.NodeContext.NodeName,
-                                            Source = "FabricHealer.FabricHealerManager",
-                                            Value = message,
-                                        });
-                }
+                await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                            LogLevel.Warning,
+                                            "FabricHealer",
+                                            message,
+                                            Token,
+                                            null,
+                                            ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
 
                 // FH Critical Error telemetry (no PII, no user stack) sent to SF team (FabricHealer dev). This information is helpful in understanding what went
                 // wrong that lead to the FH process going down (assuming it went down with an exception that can be caught).
@@ -493,7 +485,9 @@ namespace FabricHealer
                                              LogLevel.Info,
                                              "CancelOrResumeAllRunningFHRepairsAsync",
                                              $"Could not cancel or resume repair tasks. Failed with:{Environment.NewLine}{e}",
-                                             Token).ConfigureAwait(false);
+                                             Token,
+                                             null,
+                                             ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
             }
         }
 
@@ -539,7 +533,9 @@ namespace FabricHealer
                                                  LogLevel.Info,
                                                  "MonitorRepairableHealthEventsAsync::ClusterUpgradeDetected",
                                                  telemetryDescription,
-                                                 Token).ConfigureAwait(false);
+                                                 Token,
+                                                 null,
+                                                 ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
                     return;
                 }
 
@@ -577,13 +573,14 @@ namespace FabricHealer
                                 e is TaskCanceledException ||
                                 e is TimeoutException)
                         {
-#if DEBUG
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                          LogLevel.Info,
                                                          "MonitorRepairableHealthEventsAsync::HandledException",
                                                          $"Failure in MonitorRepairableHealthEventAsync::Node:{Environment.NewLine}{e}",
-                                                         Token);
-#endif
+                                                         Token,
+                                                         null,
+                                                         ConfigSettings.EnableVerboseLogging);
+
                         }
                     }
                     else if (kind != null && kind.Contains("Application"))
@@ -603,13 +600,13 @@ namespace FabricHealer
                                 e is TaskCanceledException ||
                                 e is TimeoutException)
                         {
-#if DEBUG
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                          LogLevel.Info,
                                                          "MonitorRepairableHealthEventsAsync::HandledException",
                                                          $"Failure in MonitorRepairableHealthEventAsync::Application:{Environment.NewLine}{e}",
-                                                         Token);
-#endif
+                                                         Token,
+                                                         null,
+                                                         ConfigSettings.EnableVerboseLogging);
                         }
                     }
                     // FYI: FH currently only supports the case where a replica is stuck. FO does not generate Replica Health Reports.
@@ -630,13 +627,13 @@ namespace FabricHealer
                                 e is TaskCanceledException ||
                                 e is OperationCanceledException)
                         {
-#if DEBUG
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                          LogLevel.Info,
                                                          "MonitorRepairableHealthEventsAsync::HandledException",
                                                          $"Failure in MonitorRepairableHealthEventAsync::Replica:{Environment.NewLine}{e}",
-                                                         Token);
-#endif
+                                                         Token,
+                                                         null,
+                                                         ConfigSettings.EnableVerboseLogging);
                         }
                     }
                 }
@@ -651,7 +648,9 @@ namespace FabricHealer
                                              LogLevel.Error,
                                              "MonitorRepairableHealthEventsAsync::UnhandledException",
                                              $"Failure in MonitorRepairableHealthEventAsync:{Environment.NewLine}{e}",
-                                             Token);
+                                             Token,
+                                             null,
+                                             ConfigSettings.EnableVerboseLogging);
 
                 RepairLogger.LogWarning($"Unhandled exception in MonitorRepairableHealthEventsAsync:{Environment.NewLine}{e}");
 
@@ -707,7 +706,9 @@ namespace FabricHealer
                                                      LogLevel.Info,
                                                      "MonitorRepairableHealthEventsAsync::AppUpgradeDetected",
                                                      telemetryDescription,
-                                                     Token).ConfigureAwait(false);
+                                                     Token,
+                                                     null,
+                                                     ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
                         continue;
                     }
                 }
@@ -778,14 +779,16 @@ namespace FabricHealer
                                     continue;
                                 }
 
-                                string message = $"A Service Fabric System service repair ({repair.TaskId}) is already in progress in the cluster. " +
+                                string message = $"A Service Fabric System service repair ({repair.TaskId}) is already in progress in the cluster(state: {repair.State}). " +
                                                  $"Will not attempt repair at this time.";
 
                                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                              LogLevel.Info,
                                                              $"ProcessApplicationHealth::System::{repair.TaskId}",
                                                              message,
-                                                             Token).ConfigureAwait(false);
+                                                             Token,
+                                                             null,
+                                                             ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
                                 return;
                             }
                         }
@@ -807,11 +810,14 @@ namespace FabricHealer
                         // There can be multiple Warnings emitted by FO for a single app at the same time.
                         if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(foHealthData.SystemServiceProcessName)))
                         {
+                            var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(foHealthData.SystemServiceProcessName));
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                          LogLevel.Info,
                                                          $"MonitorRepairableHealthEventsAsync::{foHealthData.SystemServiceProcessName}",
-                                                         $"There is already a repair in progress for Fabric system service {foHealthData.SystemServiceProcessName}",
-                                                         Token).ConfigureAwait(false);
+                                                         $"There is already a repair in progress for Fabric system service {foHealthData.SystemServiceProcessName}(state: {repair.State})",
+                                                         Token,
+                                                         null,
+                                                         ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
                             continue;
                         }
 
@@ -848,11 +854,14 @@ namespace FabricHealer
                         // There can be multiple Warnings emitted by FO for a single app at the same time.
                         if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
                         {
+                            var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(repairId));
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                          LogLevel.Info,
                                                          $"MonitorRepairableHealthEventsAsync::{foHealthData.ServiceName}",
-                                                         $"{appName} already has a repair in progress for service {foHealthData.ServiceName}",
-                                                         Token).ConfigureAwait(false);
+                                                         $"{appName} already has a repair in progress for service {foHealthData.ServiceName}(state: {repair.State})",
+                                                         Token,
+                                                         null,
+                                                         ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
                             continue;
                         }
                     }
@@ -874,7 +883,9 @@ namespace FabricHealer
                                                  $"Property: {evt.HealthInformation.Property}{Environment.NewLine}" +
                                                  $"{system}Application repair policy is enabled. " +
                                                  $"{repairRules.Count} Logic rules found for {system}Application-level repair.",
-                                                 Token).ConfigureAwait(false);
+                                                 Token,
+                                                 null,
+                                                 ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
 
                     // Update the in-memory HealthEvent List.
                     this.repairTaskManager.DetectedHealthEvents.Add(evt);
@@ -922,7 +933,9 @@ namespace FabricHealer
                                                  "MonitorRepairableHealthEventsAsync::VM_Repair_In_Progress",
                                                  $"There is already a VM-level repair running in the cluster for node type {targetNode.NodeType}. " +
                                                  "Will not do any other VM repairs at this time.",
-                                                 Token).ConfigureAwait(false);
+                                                 Token,
+                                                 null,
+                                                 ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
                     continue;
                 }
             
@@ -1021,10 +1034,12 @@ namespace FabricHealer
                                                  $"({FOErrorWarningCodes.GetErrorWarningNameFromCode(foHealthData.Code)})" +
                                                  $"{Environment.NewLine}" +
                                                  $"VM repair policy is enabled. {repairRules.Count} Logic rules found for VM-level repair.",
-                                                 Token).ConfigureAwait(false);
+                                                 Token,
+                                                 null,
+                                                 ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
                     
                     // Update the in-memory HealthEvent List.
-                    this.repairTaskManager.DetectedHealthEvents.Add(evt);
+                    repairTaskManager.DetectedHealthEvents.Add(evt);
 
                     // Start the repair workflow.
                     await repairTaskManager.StartRepairWorkflowAsync(foHealthData, repairRules, Token).ConfigureAwait(false);
@@ -1156,8 +1171,10 @@ namespace FabricHealer
                                              $"Detected Replica {eval.ReplicaOrInstanceId} on Partition " +
                                              $"{eval.PartitionId} is in {errOrWarn}.{Environment.NewLine}" +
                                              $"Replica repair policy is enabled. " +
-                                             $"{repairRules.Count} Logic rules found for unhealthy Replica repair.",
-                                             Token).ConfigureAwait(false);
+                                             $"{repairRules.Count} Logic rules found for Replica repair.",
+                                             Token,
+                                             null,
+                                             ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
 
                 // Start the repair workflow.
                 await repairTaskManager.StartRepairWorkflowAsync(foHealthData, repairRules, Token).ConfigureAwait(false);

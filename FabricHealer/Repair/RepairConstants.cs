@@ -3,8 +3,6 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using System;
-
 namespace FabricHealer.Repair
 {
     public static class RepairConstants
@@ -103,5 +101,6 @@ namespace FabricHealer.Repair
 
         // General
         public const string SystemAppName = "fabric:/System";
+        public const string RepairData = "RepairData";
     }
 }

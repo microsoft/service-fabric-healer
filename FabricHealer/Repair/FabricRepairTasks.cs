@@ -224,7 +224,9 @@ namespace FabricHealer.Repair
                                                                  LogLevel.Warning,
                                                                  "FabricRepairTasks::TryCreateRepairTaskAsync",
                                                                  message,
-                                                                 token).ConfigureAwait(false);
+                                                                 token,
+                                                                 repairConfiguration,
+                                                                 FabricHealerManager.ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
             }
 
             return false;

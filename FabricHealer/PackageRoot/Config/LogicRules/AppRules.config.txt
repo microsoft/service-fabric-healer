@@ -29,11 +29,17 @@
 ## | Threads                   | 
 ## *Network-related repair is not supported today.
 
-## Currently implemented external predicates - Application service level repair actions.
-## RestartCodePackage -  Ends the code package process, which restarts all of the user service replicas hosted in that process.
-## RestartReplica - Restarts the offending service replica. Note that there are no safety checks for this repair action, unlike RestartCodePackage.
-## Note that in general, restarting a code package is considered a more aggressive mitigation than restarting a replica (internally, FabricHealer knows what to do when the replica is stateful or stateless).
-## However, RestartCodePackage is generally a safer operation. It just depends on the target service, which you will understand well (since you wrote the service).
+## Currently implemented external predicates for Application service level repair.
+## | Name                      | Definition                                                                               
+## |---------------------------|---------------------------------------------------------------------------------------------------------------|
+## | RestartCodePackage        | Safely ends the code package process, which restarts all of the user service replicas hosted in that process. |
+## | RestartReplica            | Restarts the offending stateful/stateless service replica without safety checks.                              |
+
+## Note that restarting a code package is considered a more aggressive mitigation than restarting/removing a single replica.
+## However, RestartCodePackage is generally a safer operation. It just depends on the target service, which you will understand well (since you wrote the service). 
+## If the target service is stateless, then restarting the replica (aka instance) should be fine without safety checks. 
+## The RestartReplica predicate applies to both stateful and stateless service replicas since FH will do the right thing: 
+## Remove the stateless instance or Restart the stateful replica.
 
 ## Repair Run Interval - Are we inside the run interval for an app repair? This is optional. It's up to you if you want to employ this type of constraint.
 ## This below rule means that if any of the repairs for any of the apps in this rule file has run within the past 30 minutes, cut (!), 
@@ -71,7 +77,7 @@ Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue
 Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 15,
 	GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00),
 	?HealthEventCount >= 3,
-	TimeScopedRestartCodePackage(4, 01:00:00).
+	TimeScopedRestartReplica(1, 00:15:00).
 
 ## CPU - Percent In Use - Constrained on AppName = "fabric:/MyApp42", observed Metric value and health event count within specified time range.
 Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80, 
@@ -113,8 +119,11 @@ Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestar
 Mitigate(AppName="fabric:/ContainerFoo", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
-## Any app service that exceeds 1GB private workingset, restart the offending replica. 1 repair per hour.
-Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 1024, TimeScopedRestartCodePackage(1, 01:00:00).
+## Any app service that exceeds 1GB private workingset, restart code package if warning data is provided at least 3 times within 15 minute window. 1 repair per hour.
+Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 1024,
+	GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00),
+	?HealthEventCount >= 3,
+	TimeScopedRestartCodePackage(1, 01:00:00).
 
 
 ## Ports 
