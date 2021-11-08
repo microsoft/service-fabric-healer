@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.0.6-Preview</version>
+    <version>1.0.7-Preview</version>
     <releaseNotes>
 - Updated telemetry/logging impl.
 - Updated repair logic rules.

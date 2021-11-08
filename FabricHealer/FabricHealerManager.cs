@@ -27,7 +27,7 @@ namespace FabricHealer
         internal static RepairData RepairHistory;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.0.6-Preview";
+        private const string InternalVersionNumber = "1.0.7-Preview";
         private static FabricHealerManager singleton;
         private bool disposedValue;
         private readonly StatelessServiceContext serviceContext;
@@ -829,16 +829,21 @@ namespace FabricHealer
                     }
                     else
                     {
-                        repairRules = GetRepairRulesFromFOCode(foHealthData.Code);
-
-                        // Nothing to do here.
-                        if (repairRules == null || repairRules?.Count == 0)
+                        if (!ConfigSettings.EnableAppRepair)
                         {
                             continue;
                         }
 
                         // Don't restart thyself.
                         if (foHealthData.ServiceName == serviceContext.ServiceName.OriginalString && foHealthData.NodeName == serviceContext.NodeContext.NodeName)
+                        {
+                            continue;
+                        }
+
+                        repairRules = GetRepairRulesFromFOCode(foHealthData.Code);
+
+                        // Nothing to do here.
+                        if (repairRules == null || repairRules?.Count == 0)
                         {
                             continue;
                         }
@@ -865,6 +870,8 @@ namespace FabricHealer
                             continue;
                         }
                     }
+
+                    /* Start repair workflow */
 
                     foHealthData.RepairId = repairId;
                     foHealthData.HealthEventProperty = evt.HealthInformation.Property;
@@ -1016,6 +1023,8 @@ namespace FabricHealer
                         continue;
                     }
 
+                    /* Start repair workflow */
+
                     string Id = $"VM_Repair_{foHealthData.Code}{foHealthData.NodeName}";
                     foHealthData.RepairId = Id;
                     foHealthData.HealthEventProperty = evt.HealthInformation.Property;
@@ -1164,6 +1173,8 @@ namespace FabricHealer
                 {
                     continue;
                 }
+
+                /* Start repair workflow */
 
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                              LogLevel.Info,
