@@ -4,10 +4,10 @@
 // ------------------------------------------------------------
 
 using System;
-using Guan.Common;
 using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using System.Threading.Tasks;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -38,7 +38,7 @@ namespace FabricHealer.Repair.Guan
                 };
             }
 
-            protected override bool Check()
+            protected override async Task<bool> CheckAsync()
             {
                 repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
                 repairConfiguration.RepairPolicy.TargetType = RepairTargetType.Application;
@@ -48,29 +48,28 @@ namespace FabricHealer.Repair.Guan
 
                 for (int i = 0; i < count; i++)
                 {
-                    var typeString = Input.Arguments[i].Value.GetValue().GetType().ToString();
-
+                    var typeString = Input.Arguments[i].Value.GetObjectValue().GetType().Name;
                     switch (typeString)
                     {
                         case "System.TimeSpan":
-                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
+                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         case "System.Boolean":
-                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
+                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         default:
-                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetValue().GetType()}");
+                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetObjectValue().GetType()}");
                     }
                 }
 
                 // Try to schedule repair with RM.
-                var repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                           () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
                                                                                     repairConfiguration,
                                                                                     RepairTaskManager.Token),
-                                                          RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                                          RepairTaskManager.Token).ConfigureAwait(false);
 
                 if (repairTask == null)
                 {
@@ -78,12 +77,12 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 // Try to execute custom repair (FH executor).
-                bool success = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                         () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                                                                                     repairTask,
                                                                                     repairConfiguration,
                                                                                     RepairTaskManager.Token),
-                                                        RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                                        RepairTaskManager.Token).ConfigureAwait(false);
                 return success;
             }
         }

@@ -87,7 +87,7 @@ Mitigate(MetricName="Threads", SystemServiceProcessName=?SysProcName) :- not(?Sy
 ## that is, different file extensions (.dll, .exe or none, for Linux, for example, and *always* none for Windows (because FO emits just the name, not including the extension, for Windows procs)).
 ## Restart the offending Fabric system process named FabricGateway, regardless of OS.
 
-Mitigate(MetricName="FileHandles", SystemServiceProcessName=?SysProcName) :- StringContains("FabricGateway", ?SysProcName),
+Mitigate(MetricName="FileHandles", SystemServiceProcessName=?SysProcName) :- Contains("FabricGateway", ?SysProcName),
 	TimeScopedRestartFabricSystemProcess(15, 01:00:00).
 
 

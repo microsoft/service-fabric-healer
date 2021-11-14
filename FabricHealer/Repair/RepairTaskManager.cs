@@ -15,10 +15,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities.Telemetry;
 using FabricHealer.Interfaces;
+using Guan;
 using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
-using Guan.Common;
 
 namespace FabricHealer.Repair
 {

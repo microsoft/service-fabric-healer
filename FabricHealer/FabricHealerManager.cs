@@ -47,12 +47,6 @@ namespace FabricHealer
             private set;
         }
 
-        internal static ConfigSettings ConfigSettings
-        {
-            get;
-            private set;
-        }
-
         private bool FabricHealerOperationalTelemetryEnabled
         {
             get; set;
@@ -72,6 +66,11 @@ namespace FabricHealer
         private bool EtwEnabled 
         { 
             get; set; 
+        }
+
+        public static ConfigSettings ConfigSettings
+        {
+            get; set;
         }
 
         private FabricHealerManager(StatelessServiceContext context, CancellationToken token)

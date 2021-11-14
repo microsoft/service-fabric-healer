@@ -5,7 +5,6 @@
 
 using System;
 using System.Threading.Tasks;
-using Guan.Common;
 using Guan.Logic;
 using FabricHealer.Utilities.Telemetry;
 using FabricHealer.Utilities;
@@ -29,7 +28,7 @@ namespace FabricHealer.Repair.Guan
             protected override Task<Term> GetNextTermAsync()
             {
                 long eventCount = 0;
-                var timeRange = (TimeSpan)Input.Arguments[1].Value.GetEffectiveTerm().GetValue();
+                var timeRange = (TimeSpan)Input.Arguments[1].Value.GetEffectiveTerm().GetObjectValue();
 
                 if (timeRange > TimeSpan.MinValue)
                 {
@@ -46,7 +45,7 @@ namespace FabricHealer.Repair.Guan
                                                             RepairTaskManager.Token).GetAwaiter().GetResult();
                 }
 
-                var result = new CompoundTerm(Instance, null);
+                var result = new CompoundTerm();
 
                 // By using "0" for name here means the rule can pass any name for this named variable arg as long as it is consistently used as such in the corresponding rule.
                 result.AddArgument(new Constant(eventCount), "0");
@@ -75,9 +74,9 @@ namespace FabricHealer.Repair.Guan
 
         public override void AdjustTerm(CompoundTerm term, Rule rule)
         {
-            if (!(term.Arguments[0].Value is IndexedVariable))
+            if (term.Arguments[0].Value.IsGround())
             {
-                throw new GuanException("The first argument of GetHealthEventHistoryPredicateType must be a variable: {0}", term);
+                throw new GuanException("The first argument of GetHealthEventHistory must be a variable: {0}", term);
             }
         }
     }

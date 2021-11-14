@@ -4,10 +4,10 @@
 // ------------------------------------------------------------
 
 using System;
-using Guan.Common;
 using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using System.Threading.Tasks;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -38,7 +38,7 @@ namespace FabricHealer.Repair.Guan
                 };
             }
 
-            protected override bool Check()
+            protected override async Task<bool> CheckAsync()
             {
                 // Can only delete files on the same VM where the FH instance that took the job is running.
                 if (repairConfiguration.NodeName != RepairTaskManager.Context.NodeContext.NodeName)
@@ -59,19 +59,19 @@ namespace FabricHealer.Repair.Guan
                     switch (Input.Arguments[i].Name.ToLower())
                     {
                         case "sortorder":
-                            direction = (FileSortOrder)Enum.Parse(typeof(FileSortOrder), (string)Input.Arguments[i].Value.GetEffectiveTerm().GetValue());
+                            direction = (FileSortOrder)Enum.Parse(typeof(FileSortOrder), (string)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue());
                             break;
 
                         case "folderpath":
-                            path = (string)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
+                            path = Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue();
                             break;
 
                         case "maxfilestodelete":
-                            maxFilesToDelete = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
+                            maxFilesToDelete = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         case "recursesubdirectories":
-                            recurseSubDirectories = bool.Parse((string)Input.Arguments[i].Value.GetEffectiveTerm().GetValue());
+                            recurseSubDirectories = bool.Parse((string)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue());
                             break;
 
                         default:
@@ -94,11 +94,11 @@ namespace FabricHealer.Repair.Guan
                 ((DiskRepairPolicy)repairConfiguration.RepairPolicy).RecurseSubdirectories = recurseSubDirectories;
 
                 // Try to schedule repair with RM.
-                var repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                           () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
                                                                                     repairConfiguration,
                                                                                     RepairTaskManager.Token),
-                                                           RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                                           RepairTaskManager.Token).ConfigureAwait(false);
 
                 if (repairTask == null)
                 {

@@ -4,9 +4,9 @@
 // ------------------------------------------------------------
 
 using System.Globalization;
-using Guan.Common;
 using Guan.Logic;
 using FabricHealer.Utilities;
+using System.Threading.Tasks;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -26,7 +26,7 @@ namespace FabricHealer.Repair.Guan
 
             }
 
-            protected override bool Check()
+            protected override async Task<bool> CheckAsync()
             {
                 int count = Input.Arguments.Count;
                 string output;
@@ -60,11 +60,11 @@ namespace FabricHealer.Repair.Guan
                     output = format;
                 }
 
-                RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                         LogLevel.Info,
                                                         "EmitMessagePredicate",
                                                         output,
-                                                        RepairTaskManager.Token).GetAwaiter().GetResult();
+                                                        RepairTaskManager.Token).ConfigureAwait(false);
                 return true;
             }
         }

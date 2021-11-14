@@ -4,10 +4,10 @@
 // ------------------------------------------------------------
 
 using System;
-using Guan.Common;
 using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using System.Threading.Tasks;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -25,30 +25,30 @@ namespace FabricHealer.Repair.Guan
 
             }
 
-            protected override bool Check()
+            protected override async Task<bool> CheckAsync()
             {
                 TimeSpan runInterval = TimeSpan.MinValue;
                 int count = Input.Arguments.Count;
 
-                if (count == 0 || Input.Arguments[0].Value.GetValue().GetType() != typeof(TimeSpan))
+                if (count == 0 || Input.Arguments[0].Value.GetObjectValue().GetType() != typeof(TimeSpan))
                 {
                     throw new GuanException(
                                 "CheckInsideRunInterval: One argument is required and it must be a TimeSpan " +
                                 "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
                 }
 
-                var interval = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
+                var interval = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
 
                 if (interval == TimeSpan.MinValue)
                 {
                     return false;
                 }
-               
-                bool insideRunInterval = FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
+
+                bool insideRunInterval = await FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
                                                              interval,
                                                              RepairTaskManager.FabricClientInstance,
                                                              FOHealthData,
-                                                             RepairTaskManager.Token).GetAwaiter().GetResult();
+                                                             RepairTaskManager.Token).ConfigureAwait(false);
                 
                 if (!insideRunInterval)
                 {

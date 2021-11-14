@@ -4,10 +4,10 @@
 // ------------------------------------------------------------
 
 using System;
-using Guan.Common;
 using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using System.Threading.Tasks;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -38,7 +38,7 @@ namespace FabricHealer.Repair.Guan
                 };
             }
 
-            protected override bool Check()
+            protected override async Task<bool> CheckAsync()
             {
                 // Repair Policy
                 repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartVM;
@@ -49,20 +49,19 @@ namespace FabricHealer.Repair.Guan
 
                 for (int i = 0; i < count; i++)
                 {
-                    var typeString = Input.Arguments[i].Value.GetValue().GetType().ToString();
-
+                    var typeString = Input.Arguments[i].Value.GetObjectValue().GetType().Name;
                     switch (typeString)
                     {
                         case "System.TimeSpan":
-                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
+                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         case "System.Boolean":
-                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
+                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         default:
-                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetValue().GetType()}");
+                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetObjectValue().GetType()}");
                     }
                 }
 
@@ -80,11 +79,11 @@ namespace FabricHealer.Repair.Guan
                 {
                     string message = $"VM Repair {FOHealthData.RepairId} is already in progress. Will not attempt repair at this time.";
 
-                    RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                    await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                             LogLevel.Info,
                                                             $"RestartVMPredicateType::{FOHealthData.RepairId}",
                                                             message,
-                                                            RepairTaskManager.Token).GetAwaiter().GetResult();
+                                                            RepairTaskManager.Token).ConfigureAwait(false);
                     return false;
                 }
 
