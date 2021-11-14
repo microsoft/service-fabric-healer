@@ -35,7 +35,7 @@
 	<PackageReference Include="System.Text.Json" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\guan\Guan\Guan.csproj" />
+    <ProjectReference Include="..\guan\Guan\Guan.csproj" />
     <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
   </ItemGroup>
 </Project>

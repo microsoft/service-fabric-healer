@@ -142,7 +142,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private CheckFolderSizePredicateType(string name)
-                : base(name, true, 2, 2)
+                : base(name, true, 1, 2)
         {
 
         }

@@ -37,7 +37,7 @@ namespace FabricHealer.Repair.Guan
                                 "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
                 }
 
-                var interval = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
+                var interval = (TimeSpan)Input.Arguments[0].Value.GetObjectValue();
 
                 if (interval == TimeSpan.MinValue)
                 {

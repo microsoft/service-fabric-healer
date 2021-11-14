@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29411.108
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FabricHealer", "FabricHealer\FabricHealer.csproj", "{9A19103F-16F7-4668-BE54-9A1E7A4F7556}"
 EndProject
@@ -24,6 +24,8 @@ EndProject
 Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "FabricHealerApp", "FabricHealerApp\FabricHealerApp.sfproj", "{A977C8E0-2183-4845-95EA-7F3C3E795310}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TelemetryLib", "TelemetryLib\TelemetryLib.csproj", "{7BC6991F-C840-413E-B1CD-4025947CF5FA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Guan", "guan\Guan\Guan.csproj", "{A55170F5-2ED3-4B52-BF0B-0937009E70F2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -69,6 +71,14 @@ Global
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|x64.ActiveCfg = Release|x64
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|x64.Build.0 = Release|x64
+		{A55170F5-2ED3-4B52-BF0B-0937009E70F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A55170F5-2ED3-4B52-BF0B-0937009E70F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A55170F5-2ED3-4B52-BF0B-0937009E70F2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A55170F5-2ED3-4B52-BF0B-0937009E70F2}.Debug|x64.Build.0 = Debug|Any CPU
+		{A55170F5-2ED3-4B52-BF0B-0937009E70F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A55170F5-2ED3-4B52-BF0B-0937009E70F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A55170F5-2ED3-4B52-BF0B-0937009E70F2}.Release|x64.ActiveCfg = Release|Any CPU
+		{A55170F5-2ED3-4B52-BF0B-0937009E70F2}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -25,10 +25,10 @@ namespace FabricHealer.Repair.Guan
 
             }
 
-            protected override Task<Term> GetNextTermAsync()
+            protected override async Task<Term> GetNextTermAsync()
             {
                 long eventCount = 0;
-                var timeRange = (TimeSpan)Input.Arguments[1].Value.GetEffectiveTerm().GetObjectValue();
+                var timeRange = (TimeSpan)Input.Arguments[1].Value.GetObjectValue();
 
                 if (timeRange > TimeSpan.MinValue)
                 {
@@ -36,20 +36,21 @@ namespace FabricHealer.Repair.Guan
                 }
                 else
                 {
-                    string message = "You must supply a valid TimeSpan argument for GetHealthEventHistoryPredicateType. Default result has been supplied (0).";
+                    string message = "You must supply a valid TimeSpan argument for GetHealthEventHistoryPredicateType. " +
+                                     "Default result has been supplied (0).";
 
-                    RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                    await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                             LogLevel.Info,
                                                             $"GetHealthEventHistoryPredicateType::{FOHealthData.HealthEventProperty}",
                                                             message,
-                                                            RepairTaskManager.Token).GetAwaiter().GetResult();
+                                                            RepairTaskManager.Token).ConfigureAwait(false);
                 }
 
                 var result = new CompoundTerm();
 
                 // By using "0" for name here means the rule can pass any name for this named variable arg as long as it is consistently used as such in the corresponding rule.
                 result.AddArgument(new Constant(eventCount), "0");
-                return Task.FromResult<Term>(result);
+                return result;
             }
         }
 
@@ -62,7 +63,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private GetHealthEventHistoryPredicateType(string name)
-                 : base(name, true, 2, 2)
+                 : base(name, true, 0, 2)
         {
 
         }

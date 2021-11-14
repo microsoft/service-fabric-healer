@@ -50,7 +50,7 @@ namespace FabricHealer.Repair.Guan
 
                     for (int i = 1; i < Input.Arguments.Count; i++)
                     {
-                        args[i - 1] = Input.Arguments[i].Value.GetEffectiveTerm();
+                        args[i - 1] = Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                     }
 
                     output = string.Format(CultureInfo.InvariantCulture, format, args);

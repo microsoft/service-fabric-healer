@@ -208,38 +208,28 @@ namespace FHTest
 
             // Parse rules
             Module module = Module.Parse("Module", repairRules, functorTable);
+            _ = new GuanQueryDispatcher(module);
 
             // Create guan query
-            var queryDispatcher = new GuanQueryDispatcher(module);
+            _ = new List<CompoundTerm>();
+            CompoundTerm term = new CompoundTerm("Mitigate");
 
-            /* Bind default arguments to goal (Mitigate). */
-
-            List<CompoundTerm> compoundTerms = new List<CompoundTerm>();
-
-            // Mitigate is the head of the rules used in FH. It's the Goal that Guan will try to accomplish based on the logical expressions (or subgoals) that form a given rule.
-            CompoundTerm compoundTerm = new CompoundTerm("Mitigate");
-
+            /* Pass default arguments in query. */
             // The type of metric that led FO to generate the unhealthy evaluation for the entity (App, Node, VM, Replica, etc).
-            // We rename these for brevity for simplified use in logic rule composition (e;g., MetricName="Threads" instead of MetricName="Total Thread Count").
             foHealthData.Metric = FOErrorWarningCodes.GetMetricNameFromCode(foHealthData.Code);
 
-            // These args hold the related values supplied by FO and are available anywhere Mitigate is used as a rule head.
-            compoundTerm.AddArgument(new Constant(foHealthData.ApplicationName), RepairConstants.AppName);
-            compoundTerm.AddArgument(new Constant(foHealthData.Code), RepairConstants.FOErrorCode);
-            compoundTerm.AddArgument(new Constant(foHealthData.Metric), RepairConstants.MetricName);
-            compoundTerm.AddArgument(new Constant(foHealthData.NodeName), RepairConstants.NodeName);
-            compoundTerm.AddArgument(new Constant(foHealthData.NodeType), RepairConstants.NodeType);
-            compoundTerm.AddArgument(new Constant(foHealthData.OS), RepairConstants.OS);
-            compoundTerm.AddArgument(new Constant(foHealthData.ServiceName), RepairConstants.ServiceName);
-            compoundTerm.AddArgument(new Constant(foHealthData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);
-            compoundTerm.AddArgument(new Constant(foHealthData.PartitionId), RepairConstants.PartitionId);
-            compoundTerm.AddArgument(new Constant(foHealthData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
-            compoundTerm.AddArgument(new Constant(Convert.ToInt64(foHealthData.Value)), RepairConstants.MetricValue);
-            compoundTerms.Add(compoundTerm);
+            term.AddArgument(new Constant(foHealthData.ApplicationName), RepairConstants.AppName);
+            term.AddArgument(new Constant(foHealthData.Code), RepairConstants.FOErrorCode);
+            term.AddArgument(new Constant(foHealthData.Metric), RepairConstants.MetricName);
+            term.AddArgument(new Constant(foHealthData.NodeName), RepairConstants.NodeName);
+            term.AddArgument(new Constant(foHealthData.NodeType), RepairConstants.NodeType);
+            term.AddArgument(new Constant(foHealthData.OS), RepairConstants.OS);
+            term.AddArgument(new Constant(foHealthData.ServiceName), RepairConstants.ServiceName);
+            term.AddArgument(new Constant(foHealthData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);
+            term.AddArgument(new Constant(foHealthData.PartitionId), RepairConstants.PartitionId);
+            term.AddArgument(new Constant(foHealthData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
 
-            // Run Guan query.
-            // This is where the supplied rules are run with FO data that may or may not lead to mitigation of some supported SF entity in trouble (or a VM/Disk).
-            return await queryDispatcher.RunQueryAsync(compoundTerms).ConfigureAwait(false);
+            return true;
         }
 
         private List<string> ParseRulesFile(List<string> rules)

@@ -66,7 +66,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private GetRepairHistoryPredicateType(string name)
-                 : base(name, true, 2, 2)
+                 : base(name, true, 1, 2)
         {
 
         }
