@@ -3,9 +3,9 @@
 ## First check if we are inside the run interval. If so, cut (!).
 ## This is commented out by default. Just uncomment and set the global run interval for app Fabric node level repairs to suit your needs.
 
-## Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
+## Mitigate() :- CheckInsideRunInterval(02:00:00), !.
 
 ## This rule means that whatever the warning data from FabricObserver happens to be (related to node level healing repairs, of course), restart the target node if 
 ## the repair hasn't run 4 times in the last 8 hours.
 
-Mitigate() :- GetRepairHistory(?repairCount, TimeWindow=8:00:00), ?repairCount < 4, RestartFabricNode().
+Mitigate() :- GetRepairHistory(?repairCount, 8:00:00), ?repairCount < 4, RestartFabricNode().

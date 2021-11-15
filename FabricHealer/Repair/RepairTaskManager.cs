@@ -193,7 +193,7 @@ namespace FabricHealer.Repair
             functorTable.Add(RestartVMPredicateType.Singleton(RepairConstants.RestartVM, this, foHealthData));
 
             // Parse rules
-            Module module = Module.Parse("Module", repairRules, functorTable);
+            Module module = Module.Parse("external", repairRules, functorTable);
 
             // Create guan query
             var queryDispatcher = new GuanQueryDispatcher(module);

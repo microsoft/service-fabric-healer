@@ -28,19 +28,15 @@ namespace FabricHealer.Repair.Guan
 
             protected override async Task<bool> CheckAsync()
             {
-                string folderPath = null;
+                string folderPath = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue();
                 long maxFolderSizeGB = 0;
                 long maxFolderSizeMB = 0;
                 int count = Input.Arguments.Count;
 
-                for (int i = 0; i < count; i++)
+                for (int i = 1; i < count; i++)
                 {
                     switch (Input.Arguments[i].Name.ToLower())
                     {
-                        case "folderpath":
-                            folderPath = (string)Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue();
-                            break;
-
                         case "maxfoldersizemb":
                             maxFolderSizeMB = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
@@ -142,7 +138,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private CheckFolderSizePredicateType(string name)
-                : base(name, true, 1, 2)
+                : base(name, true, 1)
         {
 
         }

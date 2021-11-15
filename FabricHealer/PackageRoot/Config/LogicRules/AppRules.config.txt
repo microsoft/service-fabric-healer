@@ -47,7 +47,7 @@
 ## By having this as a top level rule, it means no subsequent rules in this file will run if we are inside the specified run interval.
 ## This is commented out by default. Just uncomment and set the global run interval for app level repairs to suit your needs.
 
-## Mitigate() :- CheckInsideRunInterval(RunInterval=00:30:00), !.
+## Mitigate() :- CheckInsideRunInterval(00:30:00), !.
 
 ## Repair Lifetime Management - Specify that a repair can only run until some end date. This gives the dev team time to identify and fix the bug in user code that is causing the problem.
 ## Meanwhile, FabricHealer will keep the offending service green. Remember: Auto-mitigation is not a fix, it's a stop gap. Fix those bugs!
@@ -76,7 +76,6 @@ Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue
 
 Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 15,
 	GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00),
-	EmitMessage("event count: {0}", ?HealthEventCount),
 	?HealthEventCount >= 3,
 	TimeScopedRestartReplica(1, 00:15:00).
 
@@ -156,10 +155,10 @@ Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?A
 ## If Completed Repair count is less then supplied value, then run RestartCodePackage/RestartReplica mitigation. If not, emit a message so developer has event data that describes why
 ## the repair was not attempted at this time. EmitMessage always succeeds.
 
-TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount >= ?count,
+TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount >= ?count,
 	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartCodePackage repair at this time.", ?count, ?time).
 
-TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount >= ?count,
+TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount >= ?count,
 	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartReplica repair at this time.", ?count, ?time).
 
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.

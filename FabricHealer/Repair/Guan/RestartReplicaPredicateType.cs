@@ -48,14 +48,14 @@ namespace FabricHealer.Repair.Guan
 
                 for (int i = 0; i < count; i++)
                 {
-                    var typeString = Input.Arguments[i].Value.GetObjectValue().GetType().Name;
+                    var typeString = Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name;
                     switch (typeString)
                     {
-                        case "System.TimeSpan":
+                        case "TimeSpan":
                             repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
-                        case "System.Boolean":
+                        case "Boolean":
                             repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[0].Value.GetObjectValue();
                             break;
 
@@ -96,7 +96,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private RestartReplicaPredicateType(string name)
-                 : base(name, true, 0, 2)
+                 : base(name, true, 0)
         {
 
         }

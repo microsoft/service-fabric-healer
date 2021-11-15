@@ -25,12 +25,12 @@
 ## First, check if we are inside run interval. If so, then cut (!).
 ## This is commented out by default. Just uncomment and set the global run interval for VM level repairs to suit your needs.
 
-## Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
+## Mitigate() :- CheckInsideRunInterval(02:00:00), !.
 
 ## TimeScopedRestartVM is an internal predicate to check for the number of times a VM reboot repair has run to completion within a supplied time window. 
 ## If Completed VM Repair count is less then supplied value, then run RestartVM mitigation.
 
-TimeScopedRestartVM(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time),
+TimeScopedRestartVM(?count, ?time) :- GetRepairHistory(?repairCount, ?time),
     ?repairCount < ?count, 
     RestartVM().
 

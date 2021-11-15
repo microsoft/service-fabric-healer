@@ -32,11 +32,11 @@ namespace FabricHealer.Repair.Guan
 
                 if (timeWindow > TimeSpan.MinValue)
                 {
-                    repairCount = FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(
+                    repairCount = await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(
                                         timeWindow,
                                         RepairTaskManager.FabricClientInstance,
                                         FOHealthData,
-                                        RepairTaskManager.Token).GetAwaiter().GetResult();
+                                        RepairTaskManager.Token).ConfigureAwait(false);
                 }
                 else
                 {
@@ -49,7 +49,7 @@ namespace FabricHealer.Repair.Guan
                                                             RepairTaskManager.Token).ConfigureAwait(false);
                 }
 
-                var result = new CompoundTerm();
+                var result = new CompoundTerm(this.Input.Functor);
 
                 // By using "0" for name here means the rule can pass any name for this named variable arg as long as it is consistently used as such in the corresponding rule.
                 result.AddArgument(new Constant(repairCount), "0");
@@ -66,7 +66,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private GetRepairHistoryPredicateType(string name)
-                 : base(name, true, 1, 2)
+                 : base(name, true, 1)
         {
 
         }

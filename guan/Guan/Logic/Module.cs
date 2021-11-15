@@ -20,7 +20,7 @@ namespace Guan.Logic
         private bool dynamic;
         private Dictionary<string, PredicateType> types;
 
-        internal Module(string name)
+        public Module(string name)
         {
             this.name = name;
             this.types = new Dictionary<string, PredicateType>();

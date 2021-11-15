@@ -77,7 +77,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private EmitMessagePredicateType(string name)
-                 : base(name, true, 1, 30)
+                 : base(name, true, 1)
         {
 
         }

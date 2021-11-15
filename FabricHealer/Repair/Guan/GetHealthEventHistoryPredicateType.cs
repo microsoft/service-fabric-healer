@@ -46,7 +46,7 @@ namespace FabricHealer.Repair.Guan
                                                             RepairTaskManager.Token).ConfigureAwait(false);
                 }
 
-                var result = new CompoundTerm();
+                var result = new CompoundTerm(this.Input.Functor);
 
                 // By using "0" for name here means the rule can pass any name for this named variable arg as long as it is consistently used as such in the corresponding rule.
                 result.AddArgument(new Constant(eventCount), "0");
@@ -63,7 +63,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private GetHealthEventHistoryPredicateType(string name)
-                 : base(name, true, 0, 2)
+                 : base(name, true, 0)
         {
 
         }

@@ -4,8 +4,8 @@
     <id>%PACKAGE_ID%</id>
     <version>1.0.7-Preview</version>
     <releaseNotes>
+- Changes (code and rules) to support latest Guan release (1.0.1-Preview), which includes bug fixes and code improvements.
 - Updated telemetry/logging impl.
-- Updated repair logic rules.
 - Minor bug fixes/code improvements.
 - FabricHealerManager Local Log folder path setting (LocalLogPath) is now MustOverride and upgradable without application redeployment.
     </releaseNotes>

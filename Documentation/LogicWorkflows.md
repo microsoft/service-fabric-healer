@@ -220,7 +220,7 @@ IntervalForRepairTarget(AppName="fabric:/CpuStress", RunInterval=00:15:00).
 IntervalForRepairTarget(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
 IntervalForRepairTarget(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
 
-Mitigate() :- IntervalForRepairTarget(Target=?target, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
+Mitigate() :- IntervalForRepairTarget(?target, ?runinterval), CheckInsideRunInterval(?runinterval), !.
 
 ```
 IMPORTANT: the state machine holding the data that the CheckInsideRunInterval predicate compares your specified RunInterval TimeSpan value against is our friendly neighborhood RepairManagerService(RM), a stateful Service Fabric System Service that orchestrates repairs

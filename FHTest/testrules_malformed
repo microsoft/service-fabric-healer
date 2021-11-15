@@ -1,2 +1,3 @@
 ﻿Whatever() :- IDontExistPredicate()
-Mitigation(AppName="fabric:/TestApp0") :- RestartCodePackage().
+## The rule below with throw due to uncommented string including special mathematical character /
+Mitigation(AppName=fabric:/TestApp0) :- RestartCodePackage().

@@ -33,8 +33,7 @@ namespace Guan.Logic
         {
             lock (functors_)
             {
-                Functor result;
-                if (!functors_.TryGetValue(name, out result) && provider_ != null)
+                if (!functors_.TryGetValue(name, out Functor result) && provider_ != null)
                 {
                     result = provider_.FindFunctor(name, from);
                 }

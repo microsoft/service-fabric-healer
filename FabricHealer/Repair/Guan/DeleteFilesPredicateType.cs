@@ -47,23 +47,19 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 bool recurseSubDirectories = false;
-                string path = null;
+                string path = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue(); ;
 
                 // default as 0 means delete all files.
                 long maxFilesToDelete = 0;
                 FileSortOrder direction = FileSortOrder.Ascending;
                 int count = Input.Arguments.Count;
 
-                for (int i = 0; i < count; i++)
+                for (int i = 1; i < count; i++)
                 {
                     switch (Input.Arguments[i].Name.ToLower())
                     {
                         case "sortorder":
-                            direction = (FileSortOrder)Enum.Parse(typeof(FileSortOrder), (string)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue());
-                            break;
-
-                        case "folderpath":
-                            path = Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue();
+                            direction = (FileSortOrder)Enum.Parse(typeof(FileSortOrder), Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue());
                             break;
 
                         case "maxfilestodelete":
@@ -71,7 +67,7 @@ namespace FabricHealer.Repair.Guan
                             break;
 
                         case "recursesubdirectories":
-                            recurseSubDirectories = bool.Parse((string)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue());
+                            _ = bool.TryParse(Input.Arguments[i].Value.GetStringValue(), out recurseSubDirectories);
                             break;
 
                         default:
@@ -106,12 +102,12 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 // Try to execute repair (FH executor does this work and manages repair state through RM, as always).
-                bool success = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                        () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
-                                                                                    repairTask,
-                                                                                    repairConfiguration,
-                                                                                    RepairTaskManager.Token),
-                                                         RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                            () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                                                                                        repairTask,
+                                                                                        repairConfiguration,
+                                                                                        RepairTaskManager.Token),
+                                                             RepairTaskManager.Token).ConfigureAwait(false);
                 return success;
             }
         }
@@ -125,7 +121,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private DeleteFilesPredicateType(string name)
-                 : base(name, true, 1, 4)
+                 : base(name, true, 1)
         {
            
         }
