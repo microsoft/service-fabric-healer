@@ -42,7 +42,7 @@ Mitigate(MetricName="MemoryPercent") :- RestartCodePackage().
 In the repair rules files, you will see GetRepairHistory. This is an *external* predicate. That is, it is not a Guan system predicate (implemented in the Guan runtime) or internal predicate (which only exists within and as part of the rule - it has no backing implementation): it is user-implemented; 
 look in the [FabricHealer/Repair/Guan](/FabricHealer/Repair/Guan) folder to see all external predicate impls.  
 
-GetRepairHistory takes a time span formatted value as the only input, TimeWindow, and has one output variable, ?repairCount, which will hold the value computed by the predicate call. TimeWindow means the span of time in which
+GetRepairHistory takes a TimeSpan formatted value (e.g., xx:xx:xx) as the only input, and has one output variable, ?repairCount, which will hold the value computed by the predicate. The TimeSpan argument represents the span of time in which
 Completed repairs have occurred for the repair type (in this case App level repairs for an application named "fabric:/System"). ?repairCount can then be used in subsequent logic within the same rule (not all rules in the file,
 just the rule that it is a part of). You can see a more advanced approach in the [AppRules](/FabricHealer/PackageRoot/Config/LogicRules/AppRules.config.txt) and [SystemAppRules](/FabricHealer/PackageRoot/Config/LogicRules/SystemAppRules.config.txt) files where rather than having each rule run the same check, a convenience internal predicate is used that takes arguments.
 
@@ -73,11 +73,11 @@ Here, ```RepairApp1()``` and ```RepairApp2()``` are custom rules, the above work
 ***Solution***:
 ```
 ## First, check if we are inside run interval. If so, then cut (!).
-Mitigate() :- CheckInsideRunInterval(RunInterval=02:00:00), !.
+Mitigate() :- CheckInsideRunInterval(02:00:00), !.
 
 ## CPU Time - Percent
 Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80, 
-	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
+	GetRepairHistory(?repairCount, 01:00:00), 
 	?repairCount < 5,
 	RestartCodePackage().
 ```
@@ -87,7 +87,7 @@ Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 8
 ```
 ## CPU Time - Percent
 Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80, 
-	GetRepairHistory(?repairCount, TimeWindow=01:00:00), 
+	GetRepairHistory(?repairCount, 01:00:00), 
 	?repairCount < 5,
 	RestartCodePackage().
 ```
@@ -100,7 +100,7 @@ Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?Metric
 ## and where at least 3 health events identifying this problem were produced in the last 15 minutes. This is useful to ensure you don't mitigate a transient (short-lived)
 ## problem as they will self-correct.
 Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80, 
-	GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00),
+	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartCodePackage(4, 01:00:00).
 ```  

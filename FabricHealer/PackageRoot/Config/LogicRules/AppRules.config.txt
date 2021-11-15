@@ -164,8 +164,7 @@ TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, ?time)
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
 ## Note you can add up to two optional arguments to RestartCodePackage/RestartReplica, name them whatever you want or omit the names, it just has to be either a TimeSpan value for how long to wait 
 ## for the repair target to become healthy and/or a bool for whether or not RM should do health checks before and after the repair executes. 
-## See below for an example using both optional arguments (named arguments are used here for clarity (generally a good idea). 
-## You could also just specify RestartCodePackage(true, 00:10:00), for example).
+## See below for an example using both optional arguments (named arguments are just used for clarity; you could also just specify RestartCodePackage(true, 00:10:00), for example).
 
 TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).
 TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).

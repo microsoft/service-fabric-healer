@@ -51,7 +51,7 @@ namespace FHTest
 
         // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
         // e.g., if developing on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\LogicRules\";
-        private const string FHRulesDirectory = @"C:\Users\ctorre\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\LogicRules\";
+        private const string FHRulesDirectory = @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\LogicRules\";
 
         /* GuanLogic Tests */
         // TODO: Add more tests.
@@ -209,8 +209,8 @@ namespace FHTest
             // Parse rules
             Module module = Module.Parse("external", repairRules, functorTable);
 
-            // Create guan query
-            var queryDispatcher = new GuanQueryDispatcher(module);
+            // Create guan query dispatcher.
+            _ = new GuanQueryDispatcher(module);
 
             /* Bind default arguments to goal (Mitigate). */
 
