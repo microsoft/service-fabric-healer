@@ -70,10 +70,10 @@ namespace FabricHealer.Repair.Guan
                 // Block attempts to create duplicate repair tasks.
                 var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
                 var isRepairAlreadyInProgress =
-                    repairTaskEngine.IsFHRepairTaskRunningAsync(
-                                        $"{RepairTaskEngine.InfrastructureServiceName}/{FOHealthData.NodeType}",
-                                        repairConfiguration,
-                                        RepairTaskManager.Token).GetAwaiter().GetResult();
+                    await repairTaskEngine.IsFHRepairTaskRunningAsync(
+                                            $"{RepairTaskEngine.InfrastructureServiceName}/{FOHealthData.NodeType}",
+                                            repairConfiguration,
+                                            RepairTaskManager.Token).ConfigureAwait(false);
                 
                 if (isRepairAlreadyInProgress)
                 {
@@ -87,11 +87,11 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                bool success = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                        () => RepairTaskManager.ExecuteRMInfrastructureRepairTask(
-                                                                                    repairConfiguration,
-                                                                                    RepairTaskManager.Token),
-                                                        RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                            () => RepairTaskManager.ExecuteRMInfrastructureRepairTask(
+                                                                                        repairConfiguration,
+                                                                                        RepairTaskManager.Token),
+                                                            RepairTaskManager.Token).ConfigureAwait(false);
                 return success;
             }
         }
