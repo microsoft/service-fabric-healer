@@ -47,7 +47,7 @@
 ## By having this as a top level rule, it means no subsequent rules in this file will run if we are inside the specified run interval.
 ## This is commented out by default. Just uncomment and set the global run interval for app level repairs to suit your needs.
 
-## Mitigate() :- CheckInsideRunInterval(RunInterval=00:30:00), !.
+## Mitigate() :- CheckInsideRunInterval(00:30:00), !.
 
 ## Repair Lifetime Management - Specify that a repair can only run until some end date. This gives the dev team time to identify and fix the bug in user code that is causing the problem.
 ## Meanwhile, FabricHealer will keep the offending service green. Remember: Auto-mitigation is not a fix, it's a stop gap. Fix those bugs!
@@ -93,16 +93,16 @@ Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 9
 
 ## File Handles
 
-## This is also an example of how to use the Guan system predicate, Contains. It takes two string args, the first is the substring to look for in the second arg. 
-## So, arg1 is the needle and arg 2 is the haystack.
+## This is also an example of how to use the Guan system predicate, match (and notmatch). It takes two args, the first is the source, the second is a regular expression, 
+## in this case, just a string of characters (no special regex characters). 
 ## In practice, for this scenario, you would just pass the target app name string into Mitigate, Mitigate(AppName="fabric:/ClusterObserver", ...), for example. 
-## Use of the StringContains GuanFunc here is just an example of how to use it. Note that in Prolog, this type of substring matching capability could be expressed as an internal predicate 
+## Use of the match function here is just an example of how to use it. Note that in Prolog, this type of substring matching capability could be expressed as an internal predicate 
 ## in a much more complex format, in terms of human readability: substring(X,S) :-append(_,T,S), append(X,_,T), X \= []. 
-## This is because in Prolog a string is a list of characters. In Guan, a string is just a built-in .NET object, System.String, which already defines a Contains() function. 
+## This is because in Prolog a string is a list of characters. In Guan, a string is just a built-in .NET object, System.String. 
 ## This is one of the great things about Guan: It's .NET all the way down.
 
 ## Constrained on AppName, MetricName (FileHandles). 5 repairs within 1 hour window.
-Mitigate(AppName=?AppName, MetricName="FileHandles") :- StringContains("ClusterObserver", ?AppName), 
+Mitigate(AppName=?AppName, MetricName="FileHandles") :- match(?AppName, "ClusterObserver"), 
 	TimeScopedRestartCodePackage(5, 01:00:00).
 
 ## Constrained on AppName, MetricName (FileHandles). 5 repairs within 1 hour window.
@@ -155,17 +155,16 @@ Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?A
 ## If Completed Repair count is less then supplied value, then run RestartCodePackage/RestartReplica mitigation. If not, emit a message so developer has event data that describes why
 ## the repair was not attempted at this time. EmitMessage always succeeds.
 
-TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount >= ?count,
+TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount >= ?count,
 	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartCodePackage repair at this time.", ?count, ?time).
 
-TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount >= ?count,
+TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount >= ?count,
 	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartReplica repair at this time.", ?count, ?time).
 
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
 ## Note you can add up to two optional arguments to RestartCodePackage/RestartReplica, name them whatever you want or omit the names, it just has to be either a TimeSpan value for how long to wait 
 ## for the repair target to become healthy and/or a bool for whether or not RM should do health checks before and after the repair executes. 
-## See below for an example using both optional arguments (named arguments are used here for clarity (generally a good idea). 
-## You could also just specify RestartCodePackage(true, 00:10:00), for example).
+## See below for an example using both optional arguments (named arguments are just used for clarity; you could also just specify RestartCodePackage(true, 00:10:00), for example).
 
 TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).
 TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).

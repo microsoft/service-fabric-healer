@@ -4,9 +4,9 @@
 // ------------------------------------------------------------
 
 using System.Globalization;
-using Guan.Common;
 using Guan.Logic;
 using FabricHealer.Utilities;
+using System.Threading.Tasks;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -26,7 +26,7 @@ namespace FabricHealer.Repair.Guan
 
             }
 
-            protected override bool Check()
+            protected override async Task<bool> CheckAsync()
             {
                 int count = Input.Arguments.Count;
                 string output;
@@ -50,7 +50,7 @@ namespace FabricHealer.Repair.Guan
 
                     for (int i = 1; i < Input.Arguments.Count; i++)
                     {
-                        args[i - 1] = Input.Arguments[i].Value.GetEffectiveTerm();
+                        args[i - 1] = Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                     }
 
                     output = string.Format(CultureInfo.InvariantCulture, format, args);
@@ -60,11 +60,11 @@ namespace FabricHealer.Repair.Guan
                     output = format;
                 }
 
-                RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                         LogLevel.Info,
                                                         "EmitMessagePredicate",
                                                         output,
-                                                        RepairTaskManager.Token).GetAwaiter().GetResult();
+                                                        RepairTaskManager.Token).ConfigureAwait(false);
                 return true;
             }
         }
@@ -77,7 +77,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private EmitMessagePredicateType(string name)
-                 : base(name, true, 1, 30)
+                 : base(name, true, 1)
         {
 
         }

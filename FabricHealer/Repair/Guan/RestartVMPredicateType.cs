@@ -4,10 +4,10 @@
 // ------------------------------------------------------------
 
 using System;
-using Guan.Common;
 using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using System.Threading.Tasks;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -38,7 +38,7 @@ namespace FabricHealer.Repair.Guan
                 };
             }
 
-            protected override bool Check()
+            protected override async Task<bool> CheckAsync()
             {
                 // Repair Policy
                 repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartVM;
@@ -49,20 +49,19 @@ namespace FabricHealer.Repair.Guan
 
                 for (int i = 0; i < count; i++)
                 {
-                    var typeString = Input.Arguments[i].Value.GetValue().GetType().ToString();
-
+                    var typeString = Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name;
                     switch (typeString)
                     {
-                        case "System.TimeSpan":
-                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
+                        case "TimeSpan":
+                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
-                        case "System.Boolean":
-                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
+                        case "Boolean":
+                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[0].Value.GetObjectValue();
                             break;
 
                         default:
-                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetValue().GetType()}");
+                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetObjectValue().GetType()}");
                     }
                 }
 
@@ -71,28 +70,28 @@ namespace FabricHealer.Repair.Guan
                 // Block attempts to create duplicate repair tasks.
                 var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
                 var isRepairAlreadyInProgress =
-                    repairTaskEngine.IsFHRepairTaskRunningAsync(
-                                        $"{RepairTaskEngine.InfrastructureServiceName}/{FOHealthData.NodeType}",
-                                        repairConfiguration,
-                                        RepairTaskManager.Token).GetAwaiter().GetResult();
+                    await repairTaskEngine.IsFHRepairTaskRunningAsync(
+                                            $"{RepairTaskEngine.InfrastructureServiceName}/{FOHealthData.NodeType}",
+                                            repairConfiguration,
+                                            RepairTaskManager.Token).ConfigureAwait(false);
                 
                 if (isRepairAlreadyInProgress)
                 {
                     string message = $"VM Repair {FOHealthData.RepairId} is already in progress. Will not attempt repair at this time.";
 
-                    RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                    await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                             LogLevel.Info,
                                                             $"RestartVMPredicateType::{FOHealthData.RepairId}",
                                                             message,
-                                                            RepairTaskManager.Token).GetAwaiter().GetResult();
+                                                            RepairTaskManager.Token).ConfigureAwait(false);
                     return false;
                 }
 
-                bool success = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                        () => RepairTaskManager.ExecuteRMInfrastructureRepairTask(
-                                                                                    repairConfiguration,
-                                                                                    RepairTaskManager.Token),
-                                                        RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                            () => RepairTaskManager.ExecuteRMInfrastructureRepairTask(
+                                                                                        repairConfiguration,
+                                                                                        RepairTaskManager.Token),
+                                                            RepairTaskManager.Token).ConfigureAwait(false);
                 return success;
             }
         }
@@ -106,7 +105,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private RestartVMPredicateType(string name)
-                 : base(name, true, 0, 2)
+                 : base(name, true, 0)
         {
 
         }

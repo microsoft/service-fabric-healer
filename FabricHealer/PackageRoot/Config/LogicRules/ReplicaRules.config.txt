@@ -7,7 +7,7 @@
 ## First, check if we are inside run interval. If so, then cut (!), which effectively means stop processing rules (no backtracking to subsequent rules in the file).
 ## This is commented out by default. Just uncomment and set the global run interval for app level repairs to suit your needs.
 
-## Mitigate() :- CheckInsideRunInterval(RunInterval=00:15:00), !.
+## Mitigate() :- CheckInsideRunInterval(00:15:00), !.
 
 
 ## Set a repair count variable for use by any rule in this file (NOTE: all rules must have the same TimeWindow value) as an internal predicate, _mitigate(?count),

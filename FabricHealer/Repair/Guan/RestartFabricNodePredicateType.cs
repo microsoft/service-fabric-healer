@@ -5,10 +5,10 @@
 
 using System;
 using System.Fabric.Repair;
-using Guan.Common;
 using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using System.Threading.Tasks;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -41,7 +41,7 @@ namespace FabricHealer.Repair.Guan
                 };
             }
 
-            protected override bool Check()
+            protected override async Task<bool> CheckAsync()
             {
                 // Repair Policy
                 repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartFabricNode;
@@ -52,20 +52,19 @@ namespace FabricHealer.Repair.Guan
 
                 for (int i = 0; i < count; i++)
                 {
-                    var typeString = Input.Arguments[i].Value.GetValue().GetType().ToString();
-
+                    var typeString = Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name;
                     switch (typeString)
                     {
-                        case "System.TimeSpan":
-                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetValue();
+                        case "TimeSpan":
+                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
-                        case "System.Boolean":
-                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[0].Value.GetEffectiveTerm().GetValue();
+                        case "Boolean":
+                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[0].Value.GetObjectValue();
                             break;
 
                         default:
-                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetValue().GetType()}");
+                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetObjectValue().GetType()}");
                     }
                 }
 
@@ -77,41 +76,41 @@ namespace FabricHealer.Repair.Guan
                 {
                     // Historical info, like what step the healer was in when the node went down, is contained in the
                     // executordata instance.
-                    repairTask = RepairTaskEngine.CreateFabricHealerRepairTask(RepairExecutorData, RepairTaskManager.Token).GetAwaiter().GetResult();
-                    success = RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                    repairTask = await RepairTaskEngine.CreateFabricHealerRepairTask(RepairExecutorData, RepairTaskManager.Token);
+                    success = await RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                                                     repairTask,
                                                     repairConfiguration,
-                                                    RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                                                    RepairTaskManager.Token).ConfigureAwait(false);
                     return success;
                 }
 
                 // Block attempts to create node-level repair tasks if one is already running in the cluster.
                 var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
                 var isNodeRepairAlreadyInProgress =
-                    repairTaskEngine.IsFHRepairTaskRunningAsync(
-                                        RepairTaskEngine.FabricHealerExecutorName,
-                                        repairConfiguration,
-                                        RepairTaskManager.Token).GetAwaiter().GetResult();
+                    await repairTaskEngine.IsFHRepairTaskRunningAsync(
+                                            RepairTaskEngine.FabricHealerExecutorName,
+                                            repairConfiguration,
+                                            RepairTaskManager.Token).ConfigureAwait(false);
 
                 if (isNodeRepairAlreadyInProgress)
                 {
                     string message =
                     $"A Fabric Node repair, {FOHealthData.RepairId}, is already in progress in the cluster. Will not attempt repair at this time.";
 
-                    RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                            LogLevel.Info,
-                                                            $"RestartFabricNodePredicateType::{FOHealthData.RepairId}",
-                                                            message,
-                                                            RepairTaskManager.Token).GetAwaiter().GetResult();
+                    await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                                                LogLevel.Info,
+                                                                $"RestartFabricNodePredicateType::{FOHealthData.RepairId}",
+                                                                message,
+                                                                RepairTaskManager.Token).ConfigureAwait(false);
                     return false;
                 }
 
                 // Try to schedule repair with RM.
-                repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                      () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                                                                repairConfiguration,
-                                                                                RepairTaskManager.Token),
-                                                       RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                          () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
+                                                                                    repairConfiguration,
+                                                                                    RepairTaskManager.Token),
+                                                           RepairTaskManager.Token).ConfigureAwait(false);
 
                 if (repairTask == null)
                 {
@@ -119,12 +118,12 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 // Try to execute custom repair (FH executor).
-                success = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                   () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
-                                                                            repairTask,
-                                                                            repairConfiguration,
-                                                                            RepairTaskManager.Token),
-                                                    RepairTaskManager.Token).ConfigureAwait(false).GetAwaiter().GetResult();
+                success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                       () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                                                                                repairTask,
+                                                                                repairConfiguration,
+                                                                                RepairTaskManager.Token),
+                                                        RepairTaskManager.Token).ConfigureAwait(false);
                 return success;
             }
         }
@@ -145,7 +144,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private RestartFabricNodePredicateType(string name)
-                 : base(name, true, 0, 2)
+                 : base(name, true, 0)
         {
 
         }

@@ -37,8 +37,7 @@ namespace FabricHealer.Utilities
 
         public bool TelemetryEnabled
         {
-            get;
-            private set;
+            get; set;
         }
 
         public TelemetryProviderType TelemetryProvider

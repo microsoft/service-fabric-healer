@@ -37,7 +37,7 @@ Each repair policy has its own corresponding configuration file:
 
 Now let's look at *how* to actually define a Guan logic repair workflow, so that you will have the knowledge necessary to express your own.
 
-## Writing Logic Repair Workflows
+## Writing Logic Rules
 
 This [site](https://www.metalevel.at/prolog/concepts) gives a good, fast overview of basic prolog concepts which you may find useful.
 
@@ -97,17 +97,17 @@ Now that we know what predicates are, let's learn how to form a logic repair wor
 
 A GuanLogic program is expressed in terms of **rule(s)** and a program is executed by running a **query** over these rule(s). A rule is of the form: 
 
-```RuleHead(*args, ...*) :- PredicateA(), PredicateB(), ...```. 
+```goal(*args, ...*) :- PredicateA(), PredicateB(), ...```. 
 
 
 A simple though imprecise way to understand what a rule is, is to just think of it as a function.
 ```
-RuleHead(*args, ...*) -> Function signature (name + arguments)
+goal(*args, ...*) -> Function signature (name + arguments)
 PredicateA(), PredicateB(), ... -> Function body (everything to the right of the ":-" is part of the function body)
 ```
 
 A query is simply a way to invoke a rule (function). 
-```RuleHead() -> invokes the rule of name "RuleHead" with the same number of arguments``` 
+```goal() -> invokes the rule of name "goal" with the same number of arguments``` 
 
 By default, for logic-based repair workflows, FH will execute a query which calls a rule named ```Mitigate()```. Think of ```Mitigate()``` as the root for executing the repair workflow, similar to the Main() function in most programming languages. By default, ```Mitigate()``` passes arguments that can be passed to predicates used in the repair workflow.
 
@@ -220,17 +220,40 @@ IntervalForRepairTarget(AppName="fabric:/CpuStress", RunInterval=00:15:00).
 IntervalForRepairTarget(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
 IntervalForRepairTarget(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
 
-Mitigate() :- IntervalForRepairTarget(Target=?target, RunInterval=?timespan), CheckInsideRunInterval(RunInterval=?timespan), !.
+Mitigate() :- IntervalForRepairTarget(?target, ?runinterval), CheckInsideRunInterval(?runinterval), !.
+```
+
+IMPORTANT: the state machine holding the data that the CheckInsideRunInterval predicate compares your specified RunInterval TimeSpan value against is our friendly neighborhood RepairManagerService(RM), a stateful Service Fabric System Service that orchestrates repairs
+and manages repair state. ***FH requires the presence of RM in order to function***.
+
+### A note on named arguments in sub-rules
+
+In Guan, a named argument is used to express an argument that is optional. It is also useful to add names that describe the meaning of what the argument represents. However, be careful here. Named arguments are not positional arguments. In fact, they are optional and should
+be treated as such in predicate implementations. ***In a nutshell, do not name required (positional) arguments in rules***.
+If you write your own external predicates, then please keep this in mind: required arguments are positional, named arguments are not. Let's take a quick trip to a small and important piece of an external predicate implementation for RestartCodePackage. 
+
+```C#
+        private RestartCodePackagePredicateType(string name)
+                 : base(name, true, 0)
+        {
+
+        }
+```
+
+The base type for all predicates in Guan is PredicateType. It's constructor takes a required string pararmeter (the name of the predicate as it is used in a rule) and optional parameters of public visibility (bool) and minimum/maximum positional arguments. Note that for RestartCodePackagePredicateType the min 
+positional argument is set to 0, which means there are no required arguments. That said, look how it is called as the definition of an internal predicate, TimeScopedRestartCodePackage in the App rules file:
 
 ```
-IMPORTANT: the state machine holding the data that the CheckInsideRunInterval predicate compares your specified RunInterval TimeSpan value against is our friendly neighborhood RepairManagerService(RM), a stateful Service Fabric System Service that orchestrates repairs
-and manages repair state. ***FH requires the presence of RM in order to function***.  
+TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).
+```
+This means that the RestartCodePackage predicate takes two optinal args (see RestartCodePackagePredicateType.cs to see how handling optional arguments is implemented) and, again, 0 required arguments. This is important to remember as you build rules for existing predicates and when you write your own.
+
 
 Let's look at another example of an internal predicate that is used in FH's SystemAppRules rules file, TimeScopedRestartFabricNode, whixh is a simple convenience internal predicate used to check for the number of times a repair has run to completion within a supplied time window.
 If completed repair count is less then supplied value, then run RestartFabricNode mitigation. Here, you can see it removes the need to have to write the same logic in multiple places. 
 
 ```
-TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, TimeWindow=?time), ?repairCount < ?count, 
+TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount < ?count, 
 	RestartFabricNode().
 
 ## CPU Time - Percent

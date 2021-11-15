@@ -15,10 +15,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities.Telemetry;
 using FabricHealer.Interfaces;
+using Guan;
 using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
-using Guan.Common;
 
 namespace FabricHealer.Repair
 {
@@ -193,7 +193,7 @@ namespace FabricHealer.Repair
             functorTable.Add(RestartVMPredicateType.Singleton(RepairConstants.RestartVM, this, foHealthData));
 
             // Parse rules
-            Module module = Module.Parse("Module", repairRules, functorTable);
+            Module module = Module.Parse("external", repairRules, functorTable);
 
             // Create guan query
             var queryDispatcher = new GuanQueryDispatcher(module);

@@ -5,7 +5,6 @@
 
 using System;
 using System.Threading.Tasks;
-using Guan.Common;
 using Guan.Logic;
 using FabricHealer.Utilities.Telemetry;
 using FabricHealer.Utilities;
@@ -26,36 +25,35 @@ namespace FabricHealer.Repair.Guan
 
             }
 
-            protected override Task<Term> GetNextTermAsync()
+            protected override async Task<Term> GetNextTermAsync()
             {
                 long repairCount = 0;
-                var timeWindow = (TimeSpan)Input.Arguments[1].Value.GetEffectiveTerm().GetValue();
+                var timeWindow = (TimeSpan)Input.Arguments[1].Value.GetEffectiveTerm().GetObjectValue();
 
                 if (timeWindow > TimeSpan.MinValue)
                 {
-                    repairCount = FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(
+                    repairCount = await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(
                                         timeWindow,
                                         RepairTaskManager.FabricClientInstance,
                                         FOHealthData,
-                                        RepairTaskManager.Token).GetAwaiter().GetResult();
+                                        RepairTaskManager.Token).ConfigureAwait(false);
                 }
                 else
                 {
                     string message = "You must supply a valid TimeSpan string for TimeWindow argument of GetRepairHistoryPredicate. Default result has been supplied (0).";
 
-                    RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                   await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                             LogLevel.Info,
                                                             $"GetRepairHistoryPredicate::{FOHealthData.RepairId}",
                                                             message,
-                                                            RepairTaskManager.Token).GetAwaiter().GetResult();
+                                                            RepairTaskManager.Token).ConfigureAwait(false);
                 }
 
-                var result = new CompoundTerm(Instance, null);
+                var result = new CompoundTerm(this.Input.Functor);
 
                 // By using "0" for name here means the rule can pass any name for this named variable arg as long as it is consistently used as such in the corresponding rule.
                 result.AddArgument(new Constant(repairCount), "0");
-
-                return Task.FromResult<Term>(result);
+                return result;
             }
         }
 
@@ -68,7 +66,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private GetRepairHistoryPredicateType(string name)
-                 : base(name, true, 2, 2)
+                 : base(name, true, 1)
         {
 
         }
@@ -80,7 +78,7 @@ namespace FabricHealer.Repair.Guan
 
         public override void AdjustTerm(CompoundTerm term, Rule rule)
         {
-            if (!(term.Arguments[0].Value is IndexedVariable))
+            if (term.Arguments[0].Value.IsGround())
             {
                 throw new GuanException("The first argument, ?repairCount, of GetRepairHistoryPredicateType must be a variable: {0}", term);
             }
