@@ -5,20 +5,30 @@
 
 ## Mitigate() :- CheckInsideRunInterval(02:00:00), !.
 
-## The sample rule below checks the folder size of SF logs, fabricobserver logs, E:\temp. If the computed size exceeds a supplied threshold, then try and delete the files in the directory. 
+## The sample rule below checks the folder size of SF query trace logs, fabricobserver logs, E:\temp. If the computed size exceeds a supplied threshold, then try and delete the files in the directory. 
 ## The CheckFolderSize external predicate takes a folder path string argument and either a MaxFolderSizeGB or MaxFolderSizeMB argument.
 ## Either size arg must be supplied as a positive whole number. If the specified folder is larger than the supplied unsigned integer value for size, then the DeleteFiles external predicate will run.
-## NOTE: You can supply "optional" arguments to the DeleteFiles external predicate. 
-## "Optional" arguments for DeleteFiles: 
+## NOTE: You can supply optional arguments (named, non-positional) to the DeleteFiles external predicate. 
+## Optional (named, non-positional) arguments for DeleteFiles: 
 ##		SortOrder - File sort order, Ascending or Descending. Defaults to Ascending (oldest to newest)).
 ##		MaxFilesToDelete - The maximum number of files to delete. If not specified (or 0) it will be interpreted to mean delete all files.
 ##		RecurseSubdirectories - Delete files in child folders of specified directory. Defaults to false if not specified.
 
-## Iterate over a list of folders with a system predicate, member (defined and implemented in Guan) and an internal predicate, config (an internal predicate needs no backing impl, it only exists in this logic).
-## You can just write a rule for each folder should you need to have MB max size values for some folders and GB max size values for others. In the case below, all values are GB so it makes sense to use enumeration for convenience.
+## Required (positional) arguments for CheckFolderSize external predicate:
+##		0 (first argument): The full path to the folder to be cleaned.
+
+## Optional (named, non-positional) arguments for CheckFolderSize external predicate:
+##		MaxFolderSizezGB (default if not supplied): max size of folder in gigabytes.
+##      MaxFolderSizezMB: max size of folder in megabytes.
+
+## Iterate over a list of folders with a system predicate, member (defined and implemented in Guan) and an internal predicate, 
+## config (an internal predicate needs no backing impl, it only exists in this logic).
+## You can just write a rule for each folder should you need to have MB max size values for some folders and GB max size values for others. 
+## In the case below, all values are GB so it makes sense to use enumeration for convenience.
 ## The only supported disk repair is file deletion and this is related explicitly to DiskSpace* metrics. There are no repairs for queue length issues, for example.
-Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, TimeWindow=08:00:00), 
+## Note the use of the match system predicate to ensure the metric name supplied by FabricObserver contains "DiskSpace".
+Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, 08:00:00), 
 	?repairCount < 4,
 	member(config(?X,?Y), [config("C:\SFDevCluster\Log\QueryTraces", 50), config("C:\observer_logs", 1), config("E:\temp", 40)]), 
-	CheckFolderSize(?X, MaxFolderSizeMB=?Y),
+	CheckFolderSize(?X, MaxFolderSizezGB=?Y),
 	DeleteFiles(?X, SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true).

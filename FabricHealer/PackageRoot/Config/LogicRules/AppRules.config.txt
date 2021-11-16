@@ -75,13 +75,13 @@ Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue
 ## problem as they will self-correct.
 
 Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 15,
-	GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00),
+	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartReplica(1, 00:15:00).
 
 ## CPU - Percent In Use - Constrained on AppName = "fabric:/MyApp42", observed Metric value and health event count within specified time range.
 Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80, 
-	GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00),
+	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartCodePackage(4, 01:00:00).
 

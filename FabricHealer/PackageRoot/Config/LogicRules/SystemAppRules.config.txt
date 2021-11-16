@@ -55,31 +55,41 @@ TimeScopedRestartFabricSystemProcess(?count, ?time) :- GetRepairHistory(?repairC
 
 ## CPU Time - Percent
 
-Mitigate(MetricName="CpuPercent", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
+Mitigate(MetricName="CpuPercent", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
+	GetHealthEventHistory(?HealthEventCount, 00:15:00),
+	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 
 ## Memory Use - Megabytes in use
 
-Mitigate(MetricName="MemoryMB", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
+Mitigate(MetricName="MemoryMB", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
+	GetHealthEventHistory(?HealthEventCount, 00:15:00),
+	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 
 ## Memory Use - Percent in use
 
-Mitigate(MetricName="MemoryPercent", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
+Mitigate(MetricName="MemoryPercent", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
+	GetHealthEventHistory(?HealthEventCount, 00:15:00),
+	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 
 ## Ephemeral Ports in Use
 
-Mitigate(MetricName="EphemeralPorts", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
+Mitigate(MetricName="EphemeralPorts", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
+	GetHealthEventHistory(?HealthEventCount, 00:15:00),
+	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 
 ## Threads
 
-Mitigate(MetricName="Threads", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
+Mitigate(MetricName="Threads", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
+	GetHealthEventHistory(?HealthEventCount, 00:15:00),
+	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 ## Open File Handles - Specific system service process on either Windows or Linux.
@@ -88,13 +98,17 @@ Mitigate(MetricName="Threads", SystemServiceProcessName=?SysProcName) :- not(?Sy
 ## Restart the offending Fabric system process named FabricGateway, regardless of OS.
 
 Mitigate(MetricName="FileHandles", SystemServiceProcessName=?SysProcName) :- match(?SysProcName, "FabricGateway"),
+	GetHealthEventHistory(?HealthEventCount, 00:15:00),
+	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(15, 01:00:00).
 
 
 ## Open File Handles - Linux-only: Any SF system service besides Fabric or FabricHost.
 ## Restart the offending Fabric system process.
 
-Mitigate(MetricName="FileHandles", OS="Linux", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), 
+Mitigate(MetricName="FileHandles", OS="Linux", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
+	GetHealthEventHistory(?HealthEventCount, 00:15:00),
+	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 
