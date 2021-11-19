@@ -18,6 +18,7 @@ using HealthReport = FabricHealer.Utilities.HealthReport;
 using System.Fabric.Repair;
 using System.Fabric.Query;
 using FabricHealer.TelemetryLib;
+using Octokit;
 
 namespace FabricHealer
 {
@@ -27,7 +28,7 @@ namespace FabricHealer
         internal static RepairData RepairHistory;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.0.8-Preview";
+        private const string InternalVersionNumber = "1.0.9-Preview";
         private static FabricHealerManager singleton;
         private bool disposedValue;
         private readonly StatelessServiceContext serviceContext;
@@ -218,6 +219,8 @@ namespace FabricHealer
             {
                 return;
             }
+
+            await CheckGithubForNewVersionAsync();
 
             try
             {
@@ -1363,6 +1366,47 @@ namespace FabricHealer
             int waitTimeMS = random.Next(random.Next(100, nodeCount * 100), 1000 * nodeCount);
 
             await Task.Delay(waitTimeMS, Token).ConfigureAwait(false);
+        }
+
+        // https://stackoverflow.com/questions/25678690/how-can-i-check-github-releases-in-c
+        private async Task CheckGithubForNewVersionAsync(bool isPreview = true)
+        {
+            try
+            {
+                var githubClient = new GitHubClient(new ProductHeaderValue("FabricHealer"));
+                IReadOnlyList<Release> releases = await githubClient.Repository.Release.GetAll("microsoft", "service-fabric-healer");
+                string preview = isPreview ? "-Preview" : string.Empty;
+
+                if (releases.Count == 0)
+                {
+                    return;
+                }
+
+                string releaseAssetName = releases[0].Name;
+                string latestVersion = releaseAssetName.Split(" ")[1].Split("-")[0];
+                Version latestGitHubVersion = new Version(latestVersion);
+                Version localVersion = new Version(InternalVersionNumber.Split("-")[0]);
+                int versionComparison = localVersion.CompareTo(latestGitHubVersion);
+
+                if (versionComparison < 0)
+                {
+                    string message = $"A newer version of FabricHealer is available: <a href='https://github.com/microsoft/service-fabric-healer/releases' target='_blank'>{latestVersion}{preview}</a>";
+                    await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                                    LogLevel.Info,
+                                                    "FabricHealer",
+                                                    message,
+                                                    Token,
+                                                    null,
+                                                    true, 
+                                                    -1, // -1 means infinite TTL
+                                                    "NewVersionAvailable",
+                                                    HealthReportType.Application); 
+                }
+            }
+            catch
+            {
+                // Don't take down FO due to error in version check...
+            }
         }
     }
 }

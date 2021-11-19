@@ -2,12 +2,10 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.0.8-Preview</version>
+    <version>1.0.9-Preview</version>
     <releaseNotes>
-- Updated logic rules.
-- Updated comments in logic rules.
-- Updated parameter handling (throw GuanException when required (positonal) args are missing in a predicate expression).
-- New hashing impl for node name for internal diagnostic telemetry.
+- FabricHealer will let you know if a new version is available (Informational event).
+- Changes to telemetry to support the version check feature.
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
