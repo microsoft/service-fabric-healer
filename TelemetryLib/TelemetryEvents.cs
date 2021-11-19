@@ -60,12 +60,6 @@ namespace FabricHealer.TelemetryLib
 
             try
             {
-                // ETW
-                if (isEtwEnabled)
-                {
-                    serviceEventSource.InternalFHDataEvent(new { FOInternalTelemtryData = JsonConvert.SerializeObject(repairData) });
-                }
-
                 _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out string nodeHashString);
 
                 IDictionary<string, string> eventProperties = new Dictionary<string, string>
@@ -135,19 +129,7 @@ namespace FabricHealer.TelemetryLib
 
             try
             {
-                // ETW
-                if (isEtwEnabled)
-                {
-                    serviceEventSource.InternalFHCriticalErrorDataEvent(new { FOCriticalErrorData = JsonConvert.SerializeObject(fhErrorData) });
-                }
-
-                string nodeHashString = string.Empty;
-                int nodeNameHash = serviceContext?.NodeContext.NodeName.GetHashCode() ?? -1;
-
-                if (nodeNameHash != -1)
-                {
-                    nodeHashString = ((uint)nodeNameHash).ToString();
-                }
+                _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out string nodeHashString);
 
                 IDictionary<string, string> eventProperties = new Dictionary<string, string>
                 {
@@ -156,7 +138,7 @@ namespace FabricHealer.TelemetryLib
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
                     { "TenantId", tenantId },
-                    { "NodeNameHash",  nodeHashString },
+                    { "NodeNameHash",  nodeHashString ?? string.Empty },
                     { "FHVersion", fhErrorData.Version },
                     { "CrashTime", fhErrorData.CrashTime },
                     { "ErrorMessage", fhErrorData.ErrorMessage },
