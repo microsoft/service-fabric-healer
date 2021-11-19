@@ -50,8 +50,6 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 var result = new CompoundTerm(this.Input.Functor);
-
-                // By using "0" for name here means the rule can pass any name for this named variable arg as long as it is consistently used as such in the corresponding rule.
                 result.AddArgument(new Constant(repairCount), "0");
                 return result;
             }

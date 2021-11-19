@@ -28,11 +28,17 @@ namespace FabricHealer.Repair.Guan
 
             protected override async Task<bool> CheckAsync()
             {
+                int count = Input.Arguments.Count;
+
+                if (count == 0)
+                {
+                    throw new GuanException("Must supply at least one argument (full path to folder).");
+                }
+
                 string folderPath = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue();
                 long maxFolderSizeGB = 0;
                 long maxFolderSizeMB = 0;
-                int count = Input.Arguments.Count;
-
+                
                 for (int i = 1; i < count; i++)
                 {
                     switch (Input.Arguments[i].Name.ToLower())
@@ -46,7 +52,8 @@ namespace FabricHealer.Repair.Guan
                             break;
 
                         default:
-                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Name}");
+                            maxFolderSizeGB = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
+                            break;
                     }
                 }
 
