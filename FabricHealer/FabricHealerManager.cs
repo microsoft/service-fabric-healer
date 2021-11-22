@@ -64,6 +64,11 @@ namespace FabricHealer
             get; set;
         }
 
+        private DateTime LastVersionCheckDateTime
+        {
+            get; set;
+        }
+
         private bool EtwEnabled 
         { 
             get; set; 
@@ -220,8 +225,6 @@ namespace FabricHealer
                 return;
             }
 
-            await CheckGithubForNewVersionAsync();
-
             try
             {
                 RepairLogger.LogInfo("Starting FabricHealer Health Detection loop.");
@@ -280,6 +283,13 @@ namespace FabricHealer
                             // Telemetry is non-critical and should not take down FH.
                             // TelemetryLib will log exception details to file in top level FH log folder.
                         }
+                    }
+
+                    // Check for new version once a day.
+                    if (DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
+                    {
+                        await CheckGithubForNewVersionAsync();
+                        LastVersionCheckDateTime = DateTime.UtcNow;
                     }
 
                     await Task.Delay(
