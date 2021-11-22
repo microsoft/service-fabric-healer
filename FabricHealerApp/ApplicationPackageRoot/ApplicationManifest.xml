@@ -12,7 +12,7 @@
          Default is true. This is not noisy. Keep this enabled if you want a record of repair workflow steps. -->
     <Parameter Name="VerboseLoggingEnabled" DefaultValue="true" />
     <Parameter Name="OperationalTelemetryEnabled" DefaultValue="true" />
-    <Parameter Name="LocalLogPath" DefaultValue="fabrichealer_logs" />
+    <Parameter Name="LocalLogPath" DefaultValue="fabric_healer_logs" />
     <!-- Repair Policy Enablement -->
     <Parameter Name="AppRepairEnabled" DefaultValue="true" />
     <Parameter Name="DiskRepairEnabled" DefaultValue="true" />
