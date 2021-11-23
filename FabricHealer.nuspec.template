@@ -6,6 +6,8 @@
     <releaseNotes>
 - FabricHealer will let you know if a new version is available (Informational event).
 - Changes to telemetry to support the version check feature.
+- Application Parameters Renaming (breaking change).
+- More string consts to limit mispelling bugs.
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
