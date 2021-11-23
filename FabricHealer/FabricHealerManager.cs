@@ -1408,7 +1408,7 @@ namespace FabricHealer
                                                     Token,
                                                     null,
                                                     true, 
-                                                    -1, // -1 means infinite TTL
+                                                    TimeSpan.FromDays(1),
                                                     "NewVersionAvailable",
                                                     HealthReportType.Application); 
                 }

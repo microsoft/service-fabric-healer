@@ -63,7 +63,7 @@ namespace FabricHealer.Utilities.Telemetry
                                 CancellationToken token,
                                 RepairConfiguration repairConfig = null,
                                 bool verboseLogging = true,
-                                int ttlMinutes = 5,
+                                TimeSpan ttl = default(TimeSpan),
                                 string property = "RepairStateInformation",
                                 HealthReportType reportType = HealthReportType.Node)
         {
@@ -104,7 +104,7 @@ namespace FabricHealer.Utilities.Telemetry
                 NodeName = serviceContext.NodeContext.NodeName,
                 ReportType = reportType,
                 State = healthState,
-                HealthReportTimeToLive = ttlMinutes > -1 ? TimeSpan.FromMinutes(5) : TimeSpan.MaxValue,
+                HealthReportTimeToLive = ttl == default(TimeSpan) ? TimeSpan.FromMinutes(5) : ttl,
                 Property = property,
                 Source = source,
             };
