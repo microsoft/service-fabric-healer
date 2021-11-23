@@ -101,6 +101,10 @@ namespace FabricHealer.Repair
 
         // General
         public const string SystemAppName = "fabric:/System";
+        public const string FabricHealerAppName = "fabric:/FabricHealer";
+        public const string RepairManagerAppName = "fabric:/System/RepairManagerService";
         public const string RepairData = "RepairData";
+        public const string RepairPolicy = "RepairPolicy";
+        public const string FabricHealer = "FabricHealer";
     }
 }

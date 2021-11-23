@@ -45,7 +45,7 @@ namespace FabricHealer.Utilities
             get; set;
         }
 
-        public string Source
+        public string SourceId
         {
             get; set;
         }

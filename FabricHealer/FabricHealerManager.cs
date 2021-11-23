@@ -36,7 +36,7 @@ namespace FabricHealer
         private readonly RepairTaskManager repairTaskManager;
         private readonly RepairTaskEngine repairTaskEngine;
         private readonly Uri systemAppUri = new Uri(RepairConstants.SystemAppName);
-        private readonly Uri repairManagerServiceUri = new Uri("fabric:/System/RepairManagerService");
+        private readonly Uri repairManagerServiceUri = new Uri(RepairConstants.RepairManagerAppName);
         private readonly FabricHealthReporter healthReporter;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private int nodeCount;
@@ -89,7 +89,7 @@ namespace FabricHealer
             TelemetryUtilities = new TelemetryUtilities(fabricClient, context);
             repairTaskEngine = new RepairTaskEngine(fabricClient);
             repairTaskManager = new RepairTaskManager(fabricClient, serviceContext, Token);
-            RepairLogger = new Logger("FabricHealer", ConfigSettings.LocalLogPathParameter)
+            RepairLogger = new Logger(RepairConstants.FabricHealer, ConfigSettings.LocalLogPathParameter)
             {
                 EnableVerboseLogging = ConfigSettings.EnableVerboseLogging
             };
@@ -124,13 +124,13 @@ namespace FabricHealer
             var healthReport = new HealthReport
             {
                 NodeName = serviceContext.NodeContext.NodeName,
-                AppName = new Uri(serviceContext.CodePackageActivationContext.ApplicationName),
+                AppName = new Uri(RepairConstants.FabricHealerAppName),
                 ReportType = HealthReportType.Application,
                 HealthMessage = okMessage,
                 State = HealthState.Ok,
                 Property = "RequirementCheck::RMDeployed",
                 HealthReportTimeToLive = TimeSpan.FromMinutes(5),
-                Source = "FabricHealer",
+                SourceId = RepairConstants.FabricHealer,
             };
 
             var serviceList = await fabricClient.QueryManager.GetServiceListAsync(
@@ -149,7 +149,7 @@ namespace FabricHealer
                 healthReport.State = HealthState.Warning;
                 healthReport.Code = FOErrorWarningCodes.Ok;
                 healthReport.HealthReportTimeToLive = TimeSpan.MaxValue;
-                healthReport.Source = "CheckRepairManagerDeploymentStatusAsync";
+                healthReport.SourceId = "CheckRepairManagerDeploymentStatusAsync";
                 isRmDeployed = false;
             }
 
@@ -298,16 +298,18 @@ namespace FabricHealer
                 }
 
                 RepairLogger.LogInfo("Shutdown signaled. Stopping.");
+                await ClearExistingHealthReportsAsync().ConfigureAwait(false);
             }
             catch (AggregateException)
             {
-                    // This check is necessary to prevent cancelling outstanding repair tasks if 
-                    // one of the handled exceptions originated from another operation unrelated to
-                    // shutdown (like an async operation that timed out).
-                    if (Token.IsCancellationRequested)
-                    {
-                        RepairLogger.LogInfo("Shutdown signaled. Stopping.");
-                    }
+                // This check is necessary to prevent cancelling outstanding repair tasks if 
+                // one of the handled exceptions originated from another operation unrelated to
+                // shutdown (like an async operation that timed out).
+                if (Token.IsCancellationRequested)
+                {
+                    RepairLogger.LogInfo("Shutdown signaled. Stopping.");
+                    await ClearExistingHealthReportsAsync().ConfigureAwait(false);
+                }
             }
             catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
             {
@@ -317,6 +319,7 @@ namespace FabricHealer
                 if (Token.IsCancellationRequested)
                 {
                     RepairLogger.LogInfo("Shutdown signaled. Stopping.");
+                    await ClearExistingHealthReportsAsync().ConfigureAwait(false);
                 }
             }
             catch (Exception e)
@@ -325,7 +328,7 @@ namespace FabricHealer
                 RepairLogger.LogError(message);
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                             LogLevel.Warning,
-                                            "FabricHealer",
+                                            RepairConstants.FabricHealer,
                                             message,
                                             Token,
                                             null,
@@ -503,8 +506,9 @@ namespace FabricHealer
             }
         }
 
-        private void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
+        private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
+            await ClearExistingHealthReportsAsync().ConfigureAwait(false);
             ConfigSettings.UpdateConfigSettings(e.NewPackage.Settings);
         }
 
@@ -1291,12 +1295,12 @@ namespace FabricHealer
 
             foreach (var section in config.Settings.Sections)
             {
-                if (!section.Name.Contains("RepairPolicy"))
+                if (!section.Name.Contains(RepairConstants.RepairPolicy))
                 {
                     continue;
                 }
 
-                if (section.Parameters["Enabled"]?.Value?.ToLower() == "true")
+                if (section.Parameters[RepairConstants.Enabled]?.Value?.ToLower() == "true")
                 {
                     count++;
                 }
@@ -1383,7 +1387,7 @@ namespace FabricHealer
         {
             try
             {
-                var githubClient = new GitHubClient(new ProductHeaderValue("FabricHealer"));
+                var githubClient = new GitHubClient(new ProductHeaderValue(RepairConstants.FabricHealer));
                 IReadOnlyList<Release> releases = await githubClient.Repository.Release.GetAll("microsoft", "service-fabric-healer");
                 string preview = isPreview ? "-Preview" : string.Empty;
 
@@ -1403,7 +1407,7 @@ namespace FabricHealer
                     string message = $"A newer version of FabricHealer is available: <a href='https://github.com/microsoft/service-fabric-healer/releases' target='_blank'>{latestVersion}{preview}</a>";
                     await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                     LogLevel.Info,
-                                                    "FabricHealer",
+                                                    RepairConstants.FabricHealer,
                                                     message,
                                                     Token,
                                                     null,
@@ -1416,6 +1420,53 @@ namespace FabricHealer
             catch
             {
                 // Don't take down FO due to error in version check...
+            }
+        }
+
+        private async Task ClearExistingHealthReportsAsync()
+        {
+            try
+            {
+                var healthReporter = new FabricHealthReporter(fabricClient);
+                var healthReport = new HealthReport
+                {
+                    HealthMessage = "Clearing existing health reports as FabricHealer is stopping or updating.",
+                    NodeName = serviceContext.NodeContext.NodeName,
+                    State = HealthState.Ok,
+                    HealthReportTimeToLive = TimeSpan.FromMinutes(5),
+                };
+
+                var appName = new Uri(RepairConstants.FabricHealerAppName);
+                var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(false);
+                var FHAppEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(RepairConstants.FabricHealer));
+
+                foreach (HealthEvent evt in FHAppEvents)
+                {
+                    healthReport.AppName = appName;
+                    healthReport.Property = evt.HealthInformation.Property;
+                    healthReport.SourceId = evt.HealthInformation.SourceId;
+                    healthReport.ReportType = HealthReportType.Application;
+
+                    healthReporter.ReportHealthToServiceFabric(healthReport);
+                    Thread.Sleep(50);
+                }
+
+                var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(serviceContext.NodeContext.NodeName).ConfigureAwait(false);
+                var FHNodeEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(RepairConstants.FabricHealer));
+
+                foreach (HealthEvent evt in FHNodeEvents)
+                {
+                    healthReport.Property = evt.HealthInformation.Property;
+                    healthReport.SourceId = evt.HealthInformation.SourceId;
+                    healthReport.ReportType = HealthReportType.Node;
+
+                    healthReporter.ReportHealthToServiceFabric(healthReport);
+                    Thread.Sleep(50);
+                }
+            }
+            catch (FabricException)
+            {
+
             }
         }
     }

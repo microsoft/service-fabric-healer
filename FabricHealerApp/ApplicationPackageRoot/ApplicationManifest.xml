@@ -14,12 +14,12 @@
     <Parameter Name="OperationalTelemetryEnabled" DefaultValue="true" />
     <Parameter Name="LocalLogPath" DefaultValue="fabric_healer_logs" />
     <!-- Repair Policy Enablement -->
-    <Parameter Name="AppRepairEnabled" DefaultValue="true" />
-    <Parameter Name="DiskRepairEnabled" DefaultValue="false" />
-    <Parameter Name="NodeRepairEnabled" DefaultValue="false" />
-    <Parameter Name="ReplicaRepairEnabled" DefaultValue="false" />
-    <Parameter Name="SystemAppRepairEnabled" DefaultValue="false" />
-    <Parameter Name="VmRepairEnabled" DefaultValue="false" />
+    <Parameter Name="EnableAppRepair" DefaultValue="true" />
+    <Parameter Name="EnableDiskRepair" DefaultValue="false" />
+    <Parameter Name="EnableNodeRepair" DefaultValue="false" />
+    <Parameter Name="EnableReplicaRepair" DefaultValue="false" />
+    <Parameter Name="EnableSystemAppRepair" DefaultValue="false" />
+    <Parameter Name="EnableVMRepair" DefaultValue="false" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
@@ -41,22 +41,22 @@
           </Section>
           <!-- Repair policies -->
           <Section Name="AppRepairPolicy">
-            <Parameter Name="Enabled" Value="[AppRepairEnabled]" />
+            <Parameter Name="Enabled" Value="[EnableAppRepair]" />
           </Section>
           <Section Name="DiskRepairPolicy">
-            <Parameter Name="Enabled" Value="[DiskRepairEnabled]" />
+            <Parameter Name="Enabled" Value="[EnableDiskRepair]" />
           </Section>
           <Section Name="FabricNodeRepairPolicy">
-            <Parameter Name="Enabled" Value="[NodeRepairEnabled]" />
+            <Parameter Name="Enabled" Value="[EnableNodeRepair]" />
           </Section>
           <Section Name="ReplicaRepairPolicy">
-            <Parameter Name="Enabled" Value="[ReplicaRepairEnabled]" />
+            <Parameter Name="Enabled" Value="[EnableReplicaRepair]" />
           </Section>
           <Section Name="SystemAppRepairPolicy">
-            <Parameter Name="Enabled" Value="[SystemAppRepairEnabled]" />
+            <Parameter Name="Enabled" Value="[EnableSystemAppRepair]" />
           </Section>
           <Section Name="VMRepairPolicy">
-            <Parameter Name="Enabled" Value="[VmRepairEnabled]" />
+            <Parameter Name="Enabled" Value="[EnableVMRepair]" />
           </Section>
         </Settings>
       </ConfigOverride>

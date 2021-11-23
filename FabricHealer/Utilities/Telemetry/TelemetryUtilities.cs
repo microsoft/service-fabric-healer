@@ -106,7 +106,7 @@ namespace FabricHealer.Utilities.Telemetry
                 State = healthState,
                 HealthReportTimeToLive = ttl == default(TimeSpan) ? TimeSpan.FromMinutes(5) : ttl,
                 Property = property,
-                Source = source,
+                SourceId = source,
             };
 
             healthReporter.ReportHealthToServiceFabric(healthReport);
