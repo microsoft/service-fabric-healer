@@ -62,11 +62,14 @@ namespace FabricHealer.Utilities.Telemetry
                                 string description,
                                 CancellationToken token,
                                 RepairConfiguration repairConfig = null,
-                                bool verboseLogging = true)
+                                bool verboseLogging = true,
+                                TimeSpan ttl = default(TimeSpan),
+                                string property = "RepairStateInformation",
+                                HealthReportType reportType = HealthReportType.Node)
         {
             bool hasRepairInfo = repairConfig != null;
             string repairAction = string.Empty;
-            source = source?.Insert(0, "FabricHealer.");
+            source = source != "FabricHealer" ? source?.Insert(0, "FabricHealer.") : "FabricHealer";
 
             if (hasRepairInfo)
             {
@@ -81,7 +84,7 @@ namespace FabricHealer.Utilities.Telemetry
             };
 
             // Do not write ETW/send Telemetry if the data is informational-only and verbose logging is not enabled.
-            // This means only Warning and Error messages will be transmitted. In general, it is best to enable Verbose Logging (default)
+            // This means only Warning and Error messages will be transmitted. In general, however, it is best to enable Verbose Logging (default)
             // in FabricHealer as it will not generate noisy local logs and you will have a complete record of mitigation steps in your AI or LA workspace.
             if (!verboseLogging && level == LogLevel.Info)
             {
@@ -95,14 +98,15 @@ namespace FabricHealer.Utilities.Telemetry
             var healthReporter = new FabricHealthReporter(fabricClient);
             var healthReport = new HealthReport
             {
+                AppName = reportType == HealthReportType.Application ? new Uri("fabric:/FabricHealer") : null,
                 Code = repairConfig?.RepairPolicy.RepairId,
                 HealthMessage = description,
                 NodeName = serviceContext.NodeContext.NodeName,
-                ReportType = HealthReportType.Node,
+                ReportType = reportType,
                 State = healthState,
-                HealthReportTimeToLive = TimeSpan.FromMinutes(5),
-                Property = "RepairStateInformation",
-                Source = source,
+                HealthReportTimeToLive = ttl == default(TimeSpan) ? TimeSpan.FromMinutes(5) : ttl,
+                Property = property,
+                SourceId = source,
             };
 
             healthReporter.ReportHealthToServiceFabric(healthReport);

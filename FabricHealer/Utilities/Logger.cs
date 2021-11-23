@@ -77,16 +77,16 @@ namespace FabricHealer.Utilities
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     // Add current drive letter if not supplied for Windows path target.
-                    if (!LogFolderBasePath.Substring(0, 3).Contains(":\\"))
+                    if (!LogFolderBasePath[..3].Contains(":\\"))
                     {
-                        string windrive = Environment.SystemDirectory.Substring(0, 3);
+                        string windrive = Environment.SystemDirectory[..3];
                         logFolderBase = windrive + LogFolderBasePath;
                     }
                 }
                 else
                 {
                     // Remove supplied drive letter if Linux is the runtime target.
-                    if (LogFolderBasePath.Substring(0, 3).Contains(":\\"))
+                    if (LogFolderBasePath[..3].Contains(":\\"))
                     {
                         logFolderBase = LogFolderBasePath.Remove(0, 3).Replace("\\", "/");
                     }
@@ -97,16 +97,16 @@ namespace FabricHealer.Utilities
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     string windrive = Environment.SystemDirectory.Substring(0, 3);
-                    logFolderBase = windrive + "fabrichealer_logs";
+                    logFolderBase = windrive + "fabric_healer_logs";
                 }
                 else
                 {
-                    logFolderBase = "/tmp/fabrichealer_logs";
+                    logFolderBase = "/tmp/fabric_healer_logs";
                 }
             }
 
             LogFolderBasePath = logFolderBase;
-            string file = Path.Combine(logFolderBase, "fabrichealer.log");
+            string file = Path.Combine(logFolderBase, "fabric_healer.log");
 
             if (!string.IsNullOrWhiteSpace(FolderName) && !string.IsNullOrWhiteSpace(Filename))
             {

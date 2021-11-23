@@ -59,25 +59,21 @@ namespace FabricHealer.Repair.Guan
 
                 if (!Directory.Exists(folderPath))
                 {
-#if DEBUG
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                             LogLevel.Info,
                                                             "CheckFolderSizePredicate::DirectoryNotFound",
                                                             $"Directory {folderPath} does not exist.",
                                                             RepairTaskManager.Token).ConfigureAwait(false);
-#endif
                     return false;
                 }
 
                 if (Directory.GetFiles(folderPath, "*", new EnumerationOptions { RecurseSubdirectories = true }).Length == 0)
                 {
-#if DEBUG
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                             LogLevel.Info,
                                                             "CheckFolderSizePredicate::NoFilesFound",
                                                             $"Directory {folderPath} does not contain any files.",
                                                             RepairTaskManager.Token).ConfigureAwait(false);
-#endif
                     return false;
                 }
 
@@ -85,7 +81,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (maxFolderSizeGB > 0)
                 {
-                    size = await GetFolderSize(folderPath, SizeUnit.GB);
+                    size = await GetFolderSizeAsync(folderPath, SizeUnit.GB);
 
                     if (size >= maxFolderSizeGB)
                     {
@@ -94,39 +90,37 @@ namespace FabricHealer.Repair.Guan
                 }
                 else if (maxFolderSizeMB > 0)
                 {
-                    size = await GetFolderSize(folderPath, SizeUnit.MB);
+                    size = await GetFolderSizeAsync(folderPath, SizeUnit.MB);
 
                     if (size >= maxFolderSizeMB)
                     {
                         return true;
                     }
                 }
-#if DEBUG
+
                 string message =
                 $"Repair {FOHealthData.RepairId}: Supplied Maximum folder size value ({(maxFolderSizeGB > 0 ? maxFolderSizeGB + "GB" : maxFolderSizeMB + "MB")}) " +
                 $"for path {folderPath} is less than computed folder size ({size}{(maxFolderSizeGB > 0 ? "GB" : "MB")}). " +
                 "Will not attempt repair.";
 
-                RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                         LogLevel.Info,
                                                         "CheckFolderSizePredicate",
                                                         message,
-                                                        RepairTaskManager.Token).GetAwaiter().GetResult();
-#endif
+                                                        RepairTaskManager.Token).ConfigureAwait(false);
                 return false;
             }
             
-            private static async Task<long> GetFolderSize(string path, SizeUnit unit)
+            private static async Task<long> GetFolderSizeAsync(string path, SizeUnit unit)
             {
                 var dir = new DirectoryInfo(path);
                 var folderSizeInBytes = dir.EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length);
-#if DEBUG
+
                 await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                         LogLevel.Info,
                                                         "CheckFolderSizePredicate::Size",
                                                         $"Directory {path} size: {folderSizeInBytes} bytes.",
                                                         RepairTaskManager.Token).ConfigureAwait(false);
-#endif
                 if (unit == SizeUnit.GB)
                 {
                     return folderSizeInBytes / 1024 / 1024 / 1024;
