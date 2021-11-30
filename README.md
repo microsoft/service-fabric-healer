@@ -5,7 +5,7 @@ FabricHealer is a Service Fabric application that attempts to automatically fix 
 (including containers), host virtual machines, and logical disks (scoped to space usage problems only).
 These repairs mostly employ a set of Service Fabric API calls, but can also be fully customizable (like Disk repair).
 All repairs are safely orchestrated through Service Fabric’s RepairManager service.
-Repair workflow configuration is written as [Prolog](http://www.let.rug.nl/bos/lpn//lpnpage.php?pageid=online)-like [logic](/FabricHealer/PackageRoot/Config/LogicRules) with supporting external predicates written in C#.
+Repair workflow configuration is written as [Prolog](http://www.let.rug.nl/bos/lpn//lpnpage.php?pageid=online)-like [logic](https://github.com/microsoft/service-fabric-healer/tree/main/FabricHealer/PackageRoot/Config/LogicRules) with supporting external predicates written in C#.
 FabricHealer's Configuration-as-Logic feature is made possible by a new logic programming library for .NET, [Guan](https://github.com/microsoft/guan), also in Preview.
 The fun starts when FabricHealer detects supported error or warning health events reported by [FabricObserver](https://github.com/microsoft/service-fabric-observer).
 
@@ -15,7 +15,7 @@ All warning and error health reports created by [FabricObserver](https://github.
 FabricObserver and FabricHealer are part of a family of highly configurable Service Fabric observability tools that work together to keep your clusters green.
 
 
-To learn more about FabricHealer's configuration-as-logic model, [click here.](Documentation/LogicWorkflows.md)  
+To learn more about FabricHealer's configuration-as-logic model, [click here.](https://github.com/microsoft/service-fabric-healer/tree/main/Documentation/LogicWorkflows.md)  
 
 ```
 FabricHealer requires that FabricObserver and RepairManager (RM) service are deployed. 
@@ -70,7 +70,7 @@ Mitigate(AppName="fabric:/ILikeMemory", MetricName="MemoryPercent", MetricValue=
 
 ## Quickstart
 
-To quickly learn how to use FabricHealer, please see the [simple scenario-based examples.](Documentation/Using.md)
+To quickly learn how to use FabricHealer, please see the [simple scenario-based examples.](https://github.com/microsoft/service-fabric-healer/tree/main/Documentation/Using.md)
 
 # Contributing
 
