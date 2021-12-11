@@ -28,8 +28,8 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -App
 
 -	Health of FH 
        -	If FH crashes with an unhandled exception that can be caught, related error information will be sent to us (this will include the offending FH stack). This will help us improve quality. 
--	Enabled Observers 
-    -	Helps us focus effort on the most useful observers.
+-	Enabled Repairs 
+    -	Helps us focus effort on the most useful repairs.
 -	Is FH successfully repairing issues? This data is represented in the total number of SuccessfulRepairs FH conducts in a 24 hour window.
 -	This telemetry is sent once every 24 hours and internal error/warning counters are reset after each telemetry transmission.
 
