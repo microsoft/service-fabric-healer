@@ -31,7 +31,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -App
 -	Enabled Repairs 
     -	Helps us focus effort on the most useful repairs.
 -	Is FH successfully repairing issues? This data is represented in the total number of SuccessfulRepairs FH conducts in a 24 hour window.
--	This telemetry is sent once every 24 hours and internal error/warning counters are reset after each telemetry transmission.
+-	This telemetry is sent once every 24 hours and internal data counters are reset after each telemetry transmission.
 
 #### Operational data details: 
 
