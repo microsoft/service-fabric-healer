@@ -18,7 +18,7 @@ As with most of FabricHealer's application settings, you can also do this with a
 Connect-ServiceFabricCluster ...
 
 $appParams = @{ "EnableOperationalTelemetry" = "false"; }
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationParameter $appParams -ApplicationTypeVersion 1.0.0 -UnMonitoredAuto
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationParameter $appParams -ApplicationTypeVersion 1.0.10 -UnMonitoredAuto
  
 ```
 
