@@ -46,9 +46,9 @@ namespace FabricHealer.Repair.Guan
                 // formatted args string?
                 if (count > 1)
                 {
-                    object[] args = new object[Input.Arguments.Count - 1];
+                    object[] args = new object[count - 1];
 
-                    for (int i = 1; i < Input.Arguments.Count; i++)
+                    for (int i = 1; i < count; i++)
                     {
                         args[i - 1] = Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                     }
@@ -61,10 +61,10 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                        LogLevel.Info,
-                                                        "EmitMessagePredicate",
-                                                        output,
-                                                        RepairTaskManager.Token).ConfigureAwait(false);
+                                                            LogLevel.Info,
+                                                            "EmitMessagePredicate",
+                                                            output,
+                                                            RepairTaskManager.Token).ConfigureAwait(false);
                 return true;
             }
         }

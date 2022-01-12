@@ -2,20 +2,21 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.0.9-Preview</version>
+    <version>1.0.10</version>
     <releaseNotes>
-- FabricHealer will let you know if a new version is available (Informational event).
-- Changes to telemetry to support the version check feature.
-- Application Parameters Renaming (breaking change).
-- More string consts to limit mispelling bugs.
-    </releaseNotes>
+- V1 Release!
+- Updated documentation.
+- Added Readme to nupkg.
+- Code enhancements.
+	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <title>FabricHealer Service</title>
     <icon>icon.png</icon>
+	<readme>fhnuget.md</readme>
     <language>en-US</language>
-    <description>FabricHealer is a Service Fabric service that schedules and safely executes automatic repairs in Linux and Windows Service Fabric clusters after inspecting unhealthy events created by FabricObserver (FO) instances running in the same cluster. It employs a novel Configuration-as-Logic model to express repair workflows using Prolog-like semantics/syntax in text-based configuration files. This version, 1.0.2-Preview, is meant for Test clusters.</description>
+    <description>FabricHealer is a Service Fabric service that schedules and safely executes automatic repairs in Linux and Windows Service Fabric clusters after inspecting unhealthy events created by FabricObserver (FO) instances running in the same cluster. It employs a novel Configuration-as-Logic model to express repair workflows using Prolog-like semantics/syntax in text-based configuration files.</description>
     <contentFiles>
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>
@@ -30,5 +31,6 @@
     <file src="**" target="contentFiles\any\any" />
     <file src="FabricHealerPkg\Code\FabricHealer.dll" target="lib\netstandard2.0" />
     <file src="%ROOT_PATH%\icon.png" target="" />
+	<file src="%ROOT_PATH%\fhnuget.md" target="" />
   </files>
 </package>
