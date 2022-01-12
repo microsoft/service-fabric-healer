@@ -61,6 +61,7 @@ Mitigate(AppName="fabric:/ILikeMemory", MetricName="MemoryPercent", MetricValue=
 
 ## Quickstart
 
+
 To quickly learn how to use FabricHealer, please see the [simple scenario-based examples.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/Using.md) 
 
 # Operational Telemetry 
