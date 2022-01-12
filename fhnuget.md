@@ -36,20 +36,22 @@ FabricHealer comes with a number of already-implemented/tested target-specific l
 ### Repair ephemeral port usage issue for application service process
 
 ```Prolog
-## Ephemeral Ports - Number of ports in use for any SF Service Process belonging to the specified SF Application. 
-## 5 repairs within 5 hour window.
-Mitigate(AppName="fabric:/IlikePorts", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue > 7000, 
+## Ephemeral Ports - Number of ports in use for any SF service process belonging to the specified SF Application. 
+## Attempt the restart code package mitigation for the offending service if the number of ephemeral ports it has opened is greater than 5000.
+## Maximum of 5 repairs within a 5 hour window.
+Mitigate(AppName="fabric:/IlikePorts", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue > 5000, 
     TimeScopedRestartCodePackage(5, 05:00:00).
 ```
 
 ### Repair memory usage issue for application service process
 
 ```Prolog
-## Memory - Percent In Use for any SF Service Process belonging to the specified SF Application. 
-## 3 repairs within 30 minute window.
+## Memory - Percent In Use for any SF service process belonging to the specified SF Application. 
+## Attempt the restart code package mitigation for the offending service if the percentage (of total) physical memory it is consuming is at or exceeding 70.
+## Maximum of 3 repairs within a 30 minute window.
 Mitigate(AppName="fabric:/ILikeMemory", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 70, 
     TimeScopedRestartCodePackage(3, 00:30:00).
-```
+```  
 
 ## Quickstart
 
