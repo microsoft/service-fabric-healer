@@ -20,7 +20,7 @@ As with most of FabricHealer's application settings, you can also do this with a
 Connect-ServiceFabricCluster ...
 
 $appParams = @{ "EnableOperationalTelemetry" = "false"; }
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationParameter $appParams -ApplicationTypeVersion 1.1.0-Preview -UnMonitoredAuto
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationParameter $appParams -ApplicationTypeVersion 1.0.0 -UnMonitoredAuto
  
 ```
 
@@ -45,7 +45,7 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "ClusterId": "00000000-1111-1111-0000-00f00d000d",
     "ClusterType": "SFRP",
     "NodeNameHash": "3e83569d4c6aad78083cd081215dafc81e5218556b6a46cb8dd2b183ed0095ad",
-    "FHVersion": "1.1.0-Preview",
+    "FHVersion": "1.0.0",
     "UpTime": "00:00:00.1956784",
     "Timestamp": "2021-12-11T03:12:47.0410613Z",
     "OS": "Windows",

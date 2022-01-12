@@ -28,7 +28,7 @@ namespace FabricHealer
         internal static RepairData RepairHistory;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.1.0-Preview";
+        private const string InternalVersionNumber = "1.0.0";
         private static FabricHealerManager singleton;
         private bool disposedValue;
         private readonly StatelessServiceContext serviceContext;
@@ -241,7 +241,7 @@ namespace FabricHealer
                 // no outstanding repair tasks left orphaned.
                 await CancelOrResumeAllRunningFHRepairsAsync().ConfigureAwait(false);
 
-                // Run until RunAsync token is canceled.
+                // Run until RunAsync token is cancelled.
                 while (!Token.IsCancellationRequested)
                 {
                     if (!ConfigSettings.EnableAutoMitigation)
@@ -675,6 +675,11 @@ namespace FabricHealer
             }
         }
 
+        /// <summary>
+        /// Processes SF Application health events, including System Application events (which could have Fabric Node impact repairs).
+        /// </summary>
+        /// <param name="appHealthStates">Collection of ApplicationHealthState objects.</param>
+        /// <returns>A task.</returns>
         private async Task ProcessApplicationHealthAsync(IEnumerable<ApplicationHealthState> appHealthStates)
         {
             var supportedAppHealthStates = appHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
@@ -1383,13 +1388,12 @@ namespace FabricHealer
         }
 
         // https://stackoverflow.com/questions/25678690/how-can-i-check-github-releases-in-c
-        private async Task CheckGithubForNewVersionAsync(bool isPreview = true)
+        private async Task CheckGithubForNewVersionAsync()
         {
             try
             {
                 var githubClient = new GitHubClient(new ProductHeaderValue(RepairConstants.FabricHealer));
                 IReadOnlyList<Release> releases = await githubClient.Repository.Release.GetAll("microsoft", "service-fabric-healer");
-                string preview = isPreview ? "-Preview" : string.Empty;
 
                 if (releases.Count == 0)
                 {
@@ -1397,29 +1401,30 @@ namespace FabricHealer
                 }
 
                 string releaseAssetName = releases[0].Name;
-                string latestVersion = releaseAssetName.Split(" ")[1].Split("-")[0];
+                string latestVersion = releaseAssetName.Split(" ")[1];
                 Version latestGitHubVersion = new Version(latestVersion);
-                Version localVersion = new Version(InternalVersionNumber.Split("-")[0]);
+                Version localVersion = new Version(InternalVersionNumber);
                 int versionComparison = localVersion.CompareTo(latestGitHubVersion);
 
                 if (versionComparison < 0)
                 {
-                    string message = $"A newer version of FabricHealer is available: <a href='https://github.com/microsoft/service-fabric-healer/releases' target='_blank'>{latestVersion}{preview}</a>";
+                    string message = $"A newer version of FabricHealer is available: <a href='https://github.com/microsoft/service-fabric-healer/releases' target='_blank'>{latestVersion}</a>";
                     await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                    LogLevel.Info,
-                                                    RepairConstants.FabricHealer,
-                                                    message,
-                                                    Token,
-                                                    null,
-                                                    true, 
-                                                    TimeSpan.FromDays(1),
-                                                    "NewVersionAvailable",
-                                                    HealthReportType.Application); 
+                                                LogLevel.Info,
+                                                RepairConstants.FabricHealer,
+                                                message,
+                                                Token,
+                                                null,
+                                                true, 
+                                                TimeSpan.FromDays(1),
+                                                "NewVersionAvailable",
+                                                HealthReportType.Application); 
                 }
             }
-            catch
+            catch (Exception e)
             {
-                // Don't take down FO due to error in version check...
+                // Don't take down FO due to error in version check.
+                RepairLogger.LogWarning($"Failure in CheckGithubForNewVersionAsync:{Environment.NewLine}{e}");
             }
         }
 
