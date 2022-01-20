@@ -13,7 +13,6 @@ using System.Text;
 using System.Threading;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
-using Newtonsoft.Json;
 
 namespace FabricHealer.TelemetryLib
 {

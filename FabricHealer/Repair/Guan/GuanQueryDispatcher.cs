@@ -10,7 +10,7 @@ namespace Guan.Logic
 {
     public class GuanQueryDispatcher
     {
-        private Module module_;
+        private readonly Module module_;
 
         public GuanQueryDispatcher(Module module)
         {
@@ -25,17 +25,13 @@ namespace Guan.Logic
             ModuleProvider moduleProvider = new ModuleProvider();
             moduleProvider.Add(module_);
 
-            Query query = Query.Create(
-                queryExpression,
-                queryContext,
-                moduleProvider);
+            Query query = Query.Create(queryExpression, queryContext, moduleProvider);
 
             await query.GetNextAsync().ConfigureAwait(false);
-
             return true;
         }
 
-        public async Task<bool> RunQueryAsync(List<CompoundTerm> queryExpression)
+        public async Task<bool> RunQueryAsync(List<CompoundTerm> queryExpressions)
         {
             ResolveOrder order = ResolveOrder.None;
             QueryContext queryContext = new QueryContext();
@@ -43,9 +39,9 @@ namespace Guan.Logic
             ModuleProvider moduleProvider = new ModuleProvider();
             moduleProvider.Add(module_);
 
-            Query query = Query.Create(queryExpression, queryContext, moduleProvider);
+            Query query = Query.Create(queryExpressions, queryContext, moduleProvider);
+            
             await query.GetNextAsync().ConfigureAwait(false);
-
             return true;
         }
     }

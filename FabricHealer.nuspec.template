@@ -2,12 +2,10 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.0.10</version>
+    <version>1.0.11</version>
     <releaseNotes>
-- V1 Release!
-- Updated documentation.
-- Added Readme to nupkg.
 - Code enhancements.
+- Test improvements.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
