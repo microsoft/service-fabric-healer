@@ -6,6 +6,7 @@
     <releaseNotes>
 - Code enhancements.
 - Test improvements.
+- Tested with latest version of Guan (1.0.3).
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
