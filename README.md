@@ -61,11 +61,12 @@ Mitigate(AppName="fabric:/ILikeMemory", MetricName="MemoryPercent", MetricValue=
 
 ## Quickstart
 
+
 To quickly learn how to use FabricHealer, please see the [simple scenario-based examples.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/Using.md) 
 
 # Operational Telemetry 
 Please see [FabricHealer Operational Telemetry](/Documentation/OperationalTelemetry.md) for detailed information on the user agnostic (Non-PII) data FabricHealer sends to Microsoft (opt out with a simple configuration parameter change).
-Please consider leaving this enabled so your friendly neighborhood FabricObserver devs can understand how FO is doing in the real world. We would really appreciate it!
+Please consider leaving this enabled so your friendly neighborhood Service Fabric devs can understand how FabricHealer is doing in the real world. We would really appreciate it!
 
 
 ## Contributing
