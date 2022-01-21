@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Fabric.Query;
 
 namespace FabricHealer.Repair
 {

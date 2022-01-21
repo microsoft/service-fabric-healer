@@ -2,12 +2,12 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.0.10</version>
+    <version>1.0.11</version>
     <releaseNotes>
-- V1 Release!
-- Updated documentation.
-- Added Readme to nupkg.
 - Code enhancements.
+- Test improvements.
+- Tested with latest version of Guan (1.0.3).
+- Removed unnecessary package reference (System.Text.Json).
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
