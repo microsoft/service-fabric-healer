@@ -2,12 +2,10 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.0.11</version>
+    <version>1.0.12</version>
     <releaseNotes>
-- Code enhancements.
-- Test improvements.
-- Tested with latest version of Guan (1.0.3).
-- Removed unnecessary package reference (System.Text.Json).
+- Bug fix in Disk Repair feature.
+- Added new named argument to DeleteFiles external predicate: SearchPattern, for use in searching specified folders for files with names matching specified pattern.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

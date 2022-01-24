@@ -26,6 +26,11 @@ namespace FabricHealer.Repair
         {
             get; set;
         }
+
+        public string FileSearchPattern
+        {
+            get; set;
+        }
     }
 
     public enum FileSortOrder

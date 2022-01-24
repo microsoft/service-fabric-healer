@@ -780,7 +780,7 @@ namespace FabricHealer.Repair
         internal async Task<bool> DeleteFilesAsync(RepairConfiguration repairConfiguration, CancellationToken cancellationToken)
         {
            string actionMessage =
-                $"Attempting to delete files in folder {((DiskRepairPolicy)repairConfiguration.RepairPolicy).FolderPath} " +
+                $"Attempting to delete files in folder {(repairConfiguration.RepairPolicy as DiskRepairPolicy).FolderPath} " +
                 $"on node {repairConfiguration.NodeName}.";
 
             await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -791,28 +791,36 @@ namespace FabricHealer.Repair
                                         repairConfiguration,
                                         FabricHealerManager.ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
 
-            string targetFolderPath = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FolderPath;
+            string targetFolderPath = (repairConfiguration.RepairPolicy as DiskRepairPolicy).FolderPath;
 
             if (!Directory.Exists(targetFolderPath))
             {
+                await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                        LogLevel.Info,
+                                        "RepairExecutor.DeleteFilesAsync::DirectoryDoesNotExist",
+                                        $"The specified directory, {targetFolderPath}, does not exist.",
+                                        cancellationToken,
+                                        repairConfiguration,
+                                        FabricHealerManager.ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
                 return false;
             }
 
             var dirInfo = new DirectoryInfo(targetFolderPath);
-            FileSortOrder direction = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FileAgeSortOrder;
+            FileSortOrder direction = (repairConfiguration.RepairPolicy as DiskRepairPolicy).FileAgeSortOrder;
+            string searchPattern = (repairConfiguration.RepairPolicy as DiskRepairPolicy).FileSearchPattern;
             List<string> files = direction switch
             {
-                FileSortOrder.Ascending => (from file in dirInfo.EnumerateFiles("*",
+                FileSortOrder.Ascending => (from file in dirInfo.EnumerateFiles(searchPattern,
                         new EnumerationOptions
                         {
-                            RecurseSubdirectories = ((DiskRepairPolicy) repairConfiguration.RepairPolicy).RecurseSubdirectories
+                            RecurseSubdirectories = (repairConfiguration.RepairPolicy as DiskRepairPolicy).RecurseSubdirectories
                         })
                     orderby file.LastWriteTimeUtc ascending
                     select file.FullName).Distinct().ToList(),
-                FileSortOrder.Descending => (from file in dirInfo.EnumerateFiles("*",
+                FileSortOrder.Descending => (from file in dirInfo.EnumerateFiles(searchPattern,
                         new EnumerationOptions
                         {
-                            RecurseSubdirectories = ((DiskRepairPolicy) repairConfiguration.RepairPolicy).RecurseSubdirectories
+                            RecurseSubdirectories = (repairConfiguration.RepairPolicy as DiskRepairPolicy).RecurseSubdirectories
                         })
                     orderby file.LastAccessTimeUtc descending
                     select file.FullName).Distinct().ToList(),
@@ -823,10 +831,17 @@ namespace FabricHealer.Repair
             {
                 int initialCount = files.Count;
                 int deletedFiles = 0;
-                long maxFiles = ((DiskRepairPolicy)repairConfiguration.RepairPolicy).MaxNumberOfFilesToDelete;
+                long maxFiles = (repairConfiguration.RepairPolicy as DiskRepairPolicy).MaxNumberOfFilesToDelete;
   
                 if (initialCount == 0)
                 {
+                    await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                                LogLevel.Info,
+                                                "RepairExecutor.DeleteFilesAsync::NoFilesMatchSearchPattern",
+                                                $"No files match specified search pattern, {searchPattern}, in {targetFolderPath}. Nothing to do here.",
+                                                cancellationToken,
+                                                repairConfiguration,
+                                                FabricHealerManager.ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
                     return false;
                 }
 
@@ -844,7 +859,7 @@ namespace FabricHealer.Repair
                         File.Delete(file);
                         deletedFiles++;
                     }
-                    catch (Exception e) when (e is IOException || e is SecurityException)
+                    catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
                     {
                         await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                     LogLevel.Info,

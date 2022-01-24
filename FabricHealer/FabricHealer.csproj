@@ -11,8 +11,8 @@
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
     <RootNamespace>FabricHealer</RootNamespace>
     <AssemblyName>FabricHealer</AssemblyName>
-    <AssemblyVersion>1.0.11</AssemblyVersion>
-    <FileVersion>1.0.11</FileVersion>
+    <AssemblyVersion>1.0.12</AssemblyVersion>
+    <FileVersion>1.0.12</FileVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
     <StartupObject>FabricHealer.Program</StartupObject>

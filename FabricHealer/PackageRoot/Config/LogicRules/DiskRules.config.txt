@@ -5,30 +5,38 @@
 
 ## Mitigate() :- CheckInsideRunInterval(02:00:00), !.
 
-## The sample rule below checks the folder size of SF query trace logs, fabricobserver logs, E:\temp. If the computed size exceeds a supplied threshold, then try and delete the files in the directory. 
-## The CheckFolderSize external predicate takes a folder path string argument and either a MaxFolderSizeGB or MaxFolderSizeMB argument.
-## Either size arg must be supplied as a positive whole number. If the specified folder is larger than the supplied unsigned integer value for size, then the DeleteFiles external predicate will run.
-## NOTE: You can supply optional arguments (named, non-positional) to the DeleteFiles external predicate. 
-## Optional (named, non-positional) arguments for DeleteFiles: 
+## DeleteFiles external predicate takes 1 required positional argument (position 0), which is the full path to the directory to be cleaned, and 4 optional named arguments.
+## Optional (named, position 1 to n in argument list, first arg (0) is reserved for folder path) arguments for DeleteFiles: 
 ##		SortOrder - File sort order, Ascending or Descending. Defaults to Ascending (oldest to newest)).
 ##		MaxFilesToDelete - The maximum number of files to delete. If not specified (or 0) it will be interpreted to mean delete all files.
 ##		RecurseSubdirectories - Delete files in child folders of specified directory. Defaults to false if not specified.
+##		SearchPattern - Delete only files with file names that match the specified search pattern. Default is "*" (all files).
 
-## Required (positional) arguments for CheckFolderSize external predicate:
-##		0 (first argument): The full path to the folder to be cleaned.
+## The CheckFolderSize external predicate takes a folder path string argument and either a MaxFolderSizeGB or MaxFolderSizeMB argument.
+## Required positional arguments for CheckFolderSize external predicate:
+##		First argument (0 position in argument list): The full path to the folder to be cleaned.
 
-## Optional (named, non-positional) arguments for CheckFolderSize external predicate:
-##		MaxFolderSizezGB (default if not supplied): max size of folder in gigabytes.
+## Required named arguments (1 through n position in argument list) for CheckFolderSize external predicate:
+##		MaxFolderSizezGB: max size of folder in gigabytes.
 ##      MaxFolderSizezMB: max size of folder in megabytes.
 
+## If CheckFolderSize is true, then the next sub-goal will run, which in the rules below is the DeleteFiles external predicate.
+
+## Single rule for different directories and size constraints, but where DeleteFiles takes the same optional arguments (and values). 
 ## Iterate over a list of folders with a system predicate, member (defined and implemented in Guan) and an internal predicate, 
-## config (an internal predicate needs no backing impl, it only exists in this logic).
-## You can just write a rule for each folder should you need to have MB max size values for some folders and GB max size values for others. 
-## In the case below, all values are GB so it makes sense to use enumeration for convenience.
-## The only supported disk repair is file deletion and this is related explicitly to DiskSpace* metrics. There are no repairs for queue length issues, for example.
-## Note the use of the match system predicate to ensure the metric name supplied by FabricObserver contains "DiskSpace".
+## config (an internal predicate needs no backing impl, it only exists in this logic). This is useful if all folder targets share enough
+## of the same argument values (less rules to write..).
 Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, 08:00:00), 
 	?repairCount < 4,
-	member(config(?X,?Y), [config("C:\SFDevCluster\Log\QueryTraces", 50), config("C:\observer_logs", 1), config("E:\temp", 40)]), 
-	CheckFolderSize(?X, MaxFolderSizezGB=?Y),
+	member(config(?X,?Y), [config("C:\SFDevCluster\Log\QueryTraces", 50), config("C:\fabric_observer_logs", 1), config("E:\temp", 10)]), 
+	CheckFolderSize(?X, MaxFolderSizeGB=?Y),
 	DeleteFiles(?X, SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true).
+
+## Single rule for one directory with all optional args supplied, including a search pattern for target file name matching. 
+## Please note: when specifying search pattern string, you must enclose it in quotes since the special characters used can also be interpreted as mathematical operators (like / or *) by Guan
+## if they are not quoted strings. This is true for Guan across the board. Keep this in mind when you pass arguments in rules that contain special characters
+## that are also mathematical operators (*,+,/,-,%, etc...).
+Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, 08:00:00),
+	?repairCount < 4,
+	CheckFolderSize("C:\SFDevCluster\Log\Traces", MaxFolderSizeGB=20),
+	DeleteFiles("C:\SFDevCluster\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true, SearchPattern="lease_traces*").

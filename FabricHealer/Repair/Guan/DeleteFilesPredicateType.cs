@@ -8,6 +8,7 @@ using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -47,10 +48,21 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 bool recurseSubDirectories = false;
-                string path = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue(); ;
+                string path = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue();
+                
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    throw new GuanException("You must specify a full folder path as the first argument of DeleteFiles predicate.");
+                }
+
+                if (!Directory.Exists(path))
+                {
+                    throw new GuanException($"{path} does not exist.");
+                }
 
                 // default as 0 means delete all files.
                 long maxFilesToDelete = 0;
+                string searchPattern = null;
                 FileSortOrder direction = FileSortOrder.Ascending;
                 int count = Input.Arguments.Count;
 
@@ -70,31 +82,46 @@ namespace FabricHealer.Repair.Guan
                             _ = bool.TryParse(Input.Arguments[i].Value.GetStringValue(), out recurseSubDirectories);
                             break;
 
+                        case "searchpattern":
+                            searchPattern = Input.Arguments[i].Value.GetStringValue();
+                            break;
+
                         default:
                             throw new GuanException($"Unsupported input: {Input.Arguments[i].Name}");
                     }
                 }
 
-                if (string.IsNullOrWhiteSpace(path))
+                if (searchPattern != null)
                 {
-                    throw new GuanException("Your DiskRepair logic rule must specify a FolderPath argument.");
+                    if (!ValidateFileSearchPattern(searchPattern, path))
+                    {
+                        await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                                        LogLevel.Info,
+                                                        "DeleteFilesPredicateType::NoFilesMatchSearchPattern",
+                                                        $"Specified search pattern, {searchPattern}, does not match any files in {path}.",
+                                                        RepairTaskManager.Token).ConfigureAwait(false);
+                        return false;
+                    }
                 }
 
-                // RepairPolicy
+                // RepairPolicy (base)
                 repairConfiguration.RepairPolicy.RepairAction = RepairActionType.DeleteFiles;
-                ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FolderPath = path;
-                repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
-                ((DiskRepairPolicy)repairConfiguration.RepairPolicy).MaxNumberOfFilesToDelete = maxFilesToDelete;
-                ((DiskRepairPolicy)repairConfiguration.RepairPolicy).FileAgeSortOrder = direction;
                 repairConfiguration.RepairPolicy.TargetType = RepairTargetType.VirtualMachine;
-                ((DiskRepairPolicy)repairConfiguration.RepairPolicy).RecurseSubdirectories = recurseSubDirectories;
+                repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
+                
+                // DiskRepairPolicy (derives from RepairPolicy)
+                (repairConfiguration.RepairPolicy as DiskRepairPolicy).FolderPath = path;
+                (repairConfiguration.RepairPolicy as DiskRepairPolicy).MaxNumberOfFilesToDelete = maxFilesToDelete;
+                (repairConfiguration.RepairPolicy as DiskRepairPolicy).FileAgeSortOrder = direction;
+                (repairConfiguration.RepairPolicy as DiskRepairPolicy).RecurseSubdirectories = recurseSubDirectories;
+                (repairConfiguration.RepairPolicy as DiskRepairPolicy).FileSearchPattern = !string.IsNullOrWhiteSpace(searchPattern) ? searchPattern : "*";
 
                 // Try to schedule repair with RM.
                 var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                          () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                                                                    repairConfiguration,
-                                                                                    RepairTaskManager.Token),
-                                                           RepairTaskManager.Token).ConfigureAwait(false);
+                                                              () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
+                                                                                        repairConfiguration,
+                                                                                        RepairTaskManager.Token),
+                                                               RepairTaskManager.Token).ConfigureAwait(false);
 
                 if (repairTask == null)
                 {
@@ -120,15 +147,30 @@ namespace FabricHealer.Repair.Guan
             return Instance ??= new DeleteFilesPredicateType(name);
         }
 
-        private DeleteFilesPredicateType(string name)
-                 : base(name, true, 1)
-        {
-           
-        }
-
         public override PredicateResolver CreateResolver(CompoundTerm input, Constraint constraint, QueryContext context)
         {
             return new Resolver(input, constraint, context);
+        }
+
+        private DeleteFilesPredicateType(string name)
+                 : base(name, true, 1, 5)
+        {
+
+        }
+
+        private static bool ValidateFileSearchPattern(string searchPattern, string path)
+        {
+            if (string.IsNullOrWhiteSpace(searchPattern) || string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            {
+                return false;
+            }
+
+            if (Directory.GetFiles(path, searchPattern).Length > 0)
+            {
+                return true;
+            }
+
+            return false;
         }
     }
 }

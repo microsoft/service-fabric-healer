@@ -49,7 +49,7 @@ TimeScopedRestartFabricSystemProcess(?count, ?time) :- GetRepairHistory(?repairC
 	RestartFabricSystemProcess(MaxWaitTimeForHealthStateOk=00:00:30).
 	
 
-## Mitigation rules for multiple metrics and targets. NOTE: Do not restart Fabric or FabricHost processes unless you want to take the node down. For the latter (restart node),
+## Mitigation rules for multiple metrics and targets. NOTE: Do not restart Fabric or FabricHost processes unless you want to take the Fabric node down. For the latter (restart node),
 ## use TimeScopedRestartFabricNode (or RestartFabricNode predicate directly), which employs a safe Fabric node restart workflow (with deactivation step), not just a process kill.
 
 
