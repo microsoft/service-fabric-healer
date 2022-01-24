@@ -116,13 +116,12 @@ namespace FabricHealer.Repair.Guan
             {
                 var dir = new DirectoryInfo(path);
                 double folderSizeInBytes = Convert.ToDouble(dir.EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length));
-#if DEBUG
+
                 await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                             LogLevel.Info,
                                                             "CheckFolderSizePredicate::Size",
                                                             $"Directory {path} size: {folderSizeInBytes} bytes.",
                                                             RepairTaskManager.Token).ConfigureAwait(false);
-#endif
                 if (unit == SizeUnit.GB)
                 {
                     return folderSizeInBytes / 1024 / 1024 / 1024;
