@@ -20,13 +20,11 @@ namespace Guan.Logic
         public async Task<bool> RunQueryAsync(string queryExpression)
         {
             ResolveOrder order = ResolveOrder.None;
-            QueryContext queryContext = new QueryContext();
-            queryContext.SetDirection(null, order);
             ModuleProvider moduleProvider = new ModuleProvider();
             moduleProvider.Add(module_);
-
-            Query query = Query.Create(queryExpression, queryContext, moduleProvider);
-
+            QueryContext queryContext = new QueryContext(moduleProvider);
+            queryContext.SetDirection(null, order);
+            Query query = Query.Create(queryExpression, queryContext);
             await query.GetNextAsync().ConfigureAwait(false);
             return true;
         }
@@ -34,13 +32,11 @@ namespace Guan.Logic
         public async Task<bool> RunQueryAsync(List<CompoundTerm> queryExpressions)
         {
             ResolveOrder order = ResolveOrder.None;
-            QueryContext queryContext = new QueryContext();
-            queryContext.SetDirection(null, order);
             ModuleProvider moduleProvider = new ModuleProvider();
             moduleProvider.Add(module_);
-
+            QueryContext queryContext = new QueryContext(moduleProvider);
+            queryContext.SetDirection(null, order);
             Query query = Query.Create(queryExpressions, queryContext, moduleProvider);
-            
             await query.GetNextAsync().ConfigureAwait(false);
             return true;
         }
