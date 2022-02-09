@@ -39,4 +39,4 @@ Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHi
 Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, 08:00:00),
 	?repairCount < 4,
 	CheckFolderSize("C:\SFDevCluster\Log\Traces", MaxFolderSizeGB=20),
-	DeleteFiles("C:\SFDevCluster\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true, SearchPattern="lease_traces*").
+	DeleteFiles("C:\SFDevCluster\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true, SearchPattern="SFBDMiniport_traces*").

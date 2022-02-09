@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <ProjectGuid>{9A19103F-16F7-4668-BE54-9A1E7A4F7556}</ProjectGuid>
+	<RootNamespace>FabricHealer</RootNamespace>
+	<AssemblyName>FabricHealer</AssemblyName>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <OutputType>Exe</OutputType>
@@ -9,10 +11,9 @@
          For Windows, use win-x64. For Linux, use linux-x64:
          <RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
-    <RootNamespace>FabricHealer</RootNamespace>
-    <AssemblyName>FabricHealer</AssemblyName>
-    <AssemblyVersion>1.0.12</AssemblyVersion>
-    <FileVersion>1.0.12</FileVersion>
+	<Product>FabricHealer</Product>
+	<Version>1.0.13</Version>
+    <FileVersion>1.0.13</FileVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
     <StartupObject>FabricHealer.Program</StartupObject>
@@ -24,7 +25,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.17.0" />
-    <PackageReference Include="Microsoft.Logic.Guan" Version="1.0.3" />
+    <PackageReference Include="Microsoft.Logic.Guan" Version="1.0.4" />
     <PackageReference Include="Microsoft.ServiceFabric" Version="7.2.452" />
     <PackageReference Include="Microsoft.ServiceFabric.Services" Version="4.2.452" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
