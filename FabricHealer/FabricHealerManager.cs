@@ -28,7 +28,7 @@ namespace FabricHealer
         internal static RepairData RepairHistory;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.0.13";
+        private const string InternalVersionNumber = "1.0.14";
         private static FabricHealerManager singleton;
         private bool disposedValue;
         private readonly StatelessServiceContext serviceContext;
@@ -1225,7 +1225,7 @@ namespace FabricHealer
 
             switch (foErrorCode)
             {
-                // App level.
+                // App repair (user and system).
                 case FOErrorWarningCodes.AppErrorCpuPercent:
                 case FOErrorWarningCodes.AppErrorMemoryMB:
                 case FOErrorWarningCodes.AppErrorMemoryPercent:
@@ -1244,7 +1244,7 @@ namespace FabricHealer
                     repairPolicySectionName = app == RepairConstants.SystemAppName ? RepairConstants.SystemAppRepairPolicySectionName : RepairConstants.AppRepairPolicySectionName;
                     break;
 
-                // Node level. (node = VM, not Fabric node)
+                // VM repair.
                 case FOErrorWarningCodes.NodeErrorCpuPercent:
                 case FOErrorWarningCodes.NodeErrorMemoryMB:
                 case FOErrorWarningCodes.NodeErrorMemoryPercent:
@@ -1261,12 +1261,50 @@ namespace FabricHealer
                     repairPolicySectionName = RepairConstants.VmRepairPolicySectionName;
                     break;
 
+                // Disk repair.
                 case FOErrorWarningCodes.NodeWarningDiskSpaceMB:
                 case FOErrorWarningCodes.NodeErrorDiskSpaceMB:
                 case FOErrorWarningCodes.NodeWarningDiskSpacePercent:
                 case FOErrorWarningCodes.NodeErrorDiskSpacePercent:
+                case FOErrorWarningCodes.NodeWarningFolderSizeMB:
+                case FOErrorWarningCodes.NodeErrorFolderSizeMB:
 
                     repairPolicySectionName = RepairConstants.DiskRepairPolicySectionName;
+                    break;
+
+                default:
+                    return null;
+            }
+
+            return GetRepairRulesFromConfiguration(repairPolicySectionName);
+        }
+
+        private List<string> GetRepairRulesForSupportedObserver(string observerName)
+        {
+            string repairPolicySectionName;
+
+            switch (observerName)
+            {
+                // App repair (user).
+                case RepairConstants.AppObserver:
+
+                    repairPolicySectionName =  RepairConstants.AppRepairPolicySectionName;
+                    break;
+
+                // System service repair.
+                case RepairConstants.FabricSystemObserver:
+                    repairPolicySectionName = RepairConstants.SystemAppRepairPolicySectionName;
+                    break;
+
+                // Disk repair
+                case RepairConstants.DiskObserver:
+                    repairPolicySectionName = RepairConstants.DiskRepairPolicySectionName;
+                    break;
+
+                // VM repair.
+                case RepairConstants.NodeObserver:
+
+                    repairPolicySectionName = RepairConstants.VmRepairPolicySectionName;
                     break;
 
                 default:

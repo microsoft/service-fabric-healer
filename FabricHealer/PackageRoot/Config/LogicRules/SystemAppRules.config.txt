@@ -1,29 +1,24 @@
 ﻿## Logic rules for Service Fabric System Service repairs.
 
-## Mitigate Named Arguments - Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
-## | Argument Name             | Definition                                                                                   |
-## |---------------------------|----------------------------------------------------------------------------------------------|
-## | AppName                   | Name of the SF application, format is fabric:/SomeApp                                        |
-## | ServiceName               | Name of the SF service, format is fabric:/SomeApp/SomeService                                |
-## | NodeName                  | Name of the node                                                                             | 
-## | NodeType                  | Type of node                                                                                 |  
-## | PartitionId               | Id of the partition                                                                          |
-## | ReplicaOrInstanceId       | Id of the replica or instance                                                                |
-## | FOErrorCode               | Error Code emitted by FO (e.g. "FO002")                                                      | 
-## | MetricName                | Name of the resource supplied by FO (e.g., CpuPercent or MemoryMB, etc.)                     |   
-## | MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)               | 
-## | SystemServiceProcessName  | The name of a Fabric system service process supplied in FO health data                       | 
-## | OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                   |
+## Applicable Named Arguments for System Service Repair - Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
+## | Argument Name             | Definition                                                                                                   |
+## |---------------------------|--------------------------------------------------------------------------------------------------------------|
+## | AppName*                  | Name of the SF System Application. *This is always fabric:/System (FO monitors SF system service processes). |
+## | NodeName                  | Name of the node                                                                                             | 
+## | NodeType                  | Type of node                                                                                                 |  
+## | FOErrorCode               | Error Code emitted by FO (e.g. "FO002")                                                                      | 
+## | MetricName                | Name of the resource supplied by FO (e.g., CpuPercent or MemoryMB, etc.)                                     |   
+## | MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)                               | 
+## | SystemServiceProcessName  | The name of a Fabric system service process supplied in FO health data                                       | 
+## | OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                                   |
 
-        
-## Application-related Metric Names.
+## System Service-related Metric Names.
 ## | Name                      |                                                                                    
 ## |---------------------------|
 ## | ActiveTcpPorts            |                                         
 ## | CpuPercent                |    
 ## | EphemeralPorts            |     
 ## | MemoryMB                  | 
-## | MemoryPercent             | 
 ## | FileHandles               | 
 ## | FileHandlesPercent        | 
 ## | Threads                   | 
@@ -116,4 +111,3 @@ Mitigate(MetricName="FileHandles", OS="Linux", SystemServiceProcessName=?SysProc
 ## Restart the Fabric node where the offending instance is running.
 
 Mitigate(MetricName="FileHandles", OS="Linux", SystemServiceProcessName="Fabric") :- TimeScopedRestartFabricNode(2, 08:00:00).
-Mitigate(MetricName="FileHandles", OS="Linux", SystemServiceProcessName="FabricHost") :- TimeScopedRestartFabricNode(2, 08:00:00).

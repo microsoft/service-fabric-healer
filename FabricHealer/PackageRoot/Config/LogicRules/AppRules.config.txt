@@ -1,18 +1,18 @@
 ﻿## Logic rules for Service Fabric Application-level repairs.
 
-## Mitigate (the goal, Guan.CompoundTerm type) Named Arguments (CompoundTerm Arguments (of type Guan.Constant)) - Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
+## Applicable Named Arguments for user App service repair - Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
 ## |---------------------------|----------------------------------------------------------------------------------------------|
 ## | AppName                   | Name of the SF application, format is fabric:/SomeApp                                        |
 ## | ServiceName               | Name of the SF service, format is fabric:/SomeApp/SomeService                                |
 ## | NodeName                  | Name of the node                                                                             | 
 ## | NodeType                  | Type of node                                                                                 |  
+## | ObserverName              | Name of Observer that generated the event.                                                   |
 ## | PartitionId               | Id of the partition                                                                          |
 ## | ReplicaOrInstanceId       | Id of the replica or instance                                                                |
 ## | FOErrorCode               | Error Code emitted by FO (e.g. "FO002")                                                      | 
 ## | MetricName                | Name of the resource supplied by FO (e.g., CpuPercent or MemoryMB, etc.)                     |   
 ## | MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)               | 
-## | SystemServiceProcessName  | The name of a Fabric system service process supplied in FO health data                       | 
 ## | OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                   |
  
 ## Application-related Metric Names.

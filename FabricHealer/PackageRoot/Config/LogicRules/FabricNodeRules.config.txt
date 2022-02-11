@@ -1,4 +1,6 @@
-﻿## Logic rules for Service Fabric Node repairs.
+﻿## Logic rules for Service Fabric Node repairs. These are not used today. FabricObserver does not monitor Fabric nodes. 
+## Fabric nodes are only put into Warning or Error health state by FO, as configured by user, if the underlying VM is having issues.
+## See SystemAppRules.config.txt for logic rules related to system service process issues detected by FabricObserver.
 
 ## First check if we are inside the run interval. If so, cut (!).
 ## This is commented out by default. Just uncomment and set the global run interval for app Fabric node level repairs to suit your needs.

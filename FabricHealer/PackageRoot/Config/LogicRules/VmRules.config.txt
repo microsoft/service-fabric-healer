@@ -1,6 +1,6 @@
 ﻿## Logic rules for Virtual Machine level repairs in the cluster. Only OS reboot is supported today.
 
-## Mitigate Named Arguments related to VM repair - Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
+## Applicable Named Arguments related to VM repair - Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
 ## |---------------------------|----------------------------------------------------------------------------------------------|
 ## | NodeName                  | Name of the node                                                                             | 
@@ -9,8 +9,7 @@
 ## | MetricName                | Name of the resource supplied by FO (e.g., CpuPercent or MemoryMB, etc.)                     |   
 ## | MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)               | 
 ## | OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                   |
-
-        
+    
 ## VM-related Metric Names.
 ## | Name                      |                                                                                    
 ## |---------------------------|

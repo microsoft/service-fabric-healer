@@ -214,6 +214,7 @@ namespace FabricHealer.Repair
             compoundTerm.AddArgument(new Constant(foHealthData.Metric), RepairConstants.MetricName);
             compoundTerm.AddArgument(new Constant(foHealthData.NodeName), RepairConstants.NodeName);
             compoundTerm.AddArgument(new Constant(foHealthData.NodeType), RepairConstants.NodeType);
+            compoundTerm.AddArgument(new Constant(foHealthData.ObserverName), RepairConstants.ObserverName);
             compoundTerm.AddArgument(new Constant(foHealthData.OS), RepairConstants.OS);
             compoundTerm.AddArgument(new Constant(foHealthData.ServiceName), RepairConstants.ServiceName);
             compoundTerm.AddArgument(new Constant(foHealthData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);

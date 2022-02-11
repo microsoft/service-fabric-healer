@@ -1,5 +1,29 @@
 ﻿## Logic rules for Disk repair. Only file management is supported (file deletion).
 
+## Applicable Named Arguments for Disk repair - Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
+## | Argument Name             | Definition                                                                                   |
+## |---------------------------|----------------------------------------------------------------------------------------------|
+## | NodeName                  | Name of the node                                                                             | 
+## | NodeType                  | Type of node                                                                                 |  
+## | ObserverName              | Name of Observer that generated the event                                                    |
+## | FOErrorCode               | Error Code emitted by FO (Disk codes are FO007-FO010, FO042, F0043)                          | 
+## | MetricName                | Name of the metric supplied by FO                                                            |   
+## | MetricValue               | Corresponding value for supplied metric name                                                 | 
+## | OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                   |
+
+## Disk-related Metric Names.
+## | Name                      |                                                                                    
+## |---------------------------|
+## | DiskSpacePercent          |                                         
+## | DiskSpaceMB               |    
+## | FolderSizeMB              |  
+
+## Currently implemented external predicates for use in Disk repair rules.
+## | Name                      | Definition                                                                               
+## |---------------------------|---------------------------------------------------------------------------------------------------------------|
+## | CheckFolderSize           | Returns true if supplied folder is equal to or larger than specified value.                                   |
+## | DeleteFiles               | Deletes files in a specified directory (full path) with optional arguments.                                   |
+
 ## First, check if we are inside run interval. If so, then cut (!).
 ## This is commented out by default. Just uncomment and set the global run interval for disk level repairs to suit your needs.
 
@@ -40,3 +64,11 @@ Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHi
 	?repairCount < 4,
 	CheckFolderSize("C:\SFDevCluster\Log\Traces", MaxFolderSizeGB=20),
 	DeleteFiles("C:\SFDevCluster\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true, SearchPattern="SFBDMiniport_traces*").
+
+## Folder size Warning, check ErrorCode from FO (you could also check MetricName -> MetricName=FolderSizeMB, but we already do that in several places). 
+## See FOErrorWarningCodes.cs for list of codes and renaming function (GetMetricNameFromCode).
+## Note: FH renames FO MetricNames to make is easier to use them in rules (often this means making them smaller in length without losing meaning).
+Mitigate(FOErrorCode=FO043) :- GetRepairHistory(?repairCount, 08:00:00),
+	?repairCount < 4,
+	CheckFolderSize("C:\SFDevCluster\Log\Traces", MaxFolderSizeMB=500),
+	DeleteFiles("C:\SFDevCluster\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=5, RecurseSubdirectories=false).
