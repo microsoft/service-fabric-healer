@@ -341,12 +341,8 @@ namespace FabricHealer
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(
-                                                            fabricClient,
-                                                            serviceContext,
-                                                            ServiceEventSource.Current,
-                                                            Token,
-                                                            EtwEnabled);
+                        using var telemetryEvents =
+                            new TelemetryEvents(fabricClient, serviceContext, ServiceEventSource.Current, Token, EtwEnabled);
 
                         var fhData = new FabricHealerCriticalErrorEventData
                         {
@@ -556,10 +552,7 @@ namespace FabricHealer
                 }
 
                 // Check to see if an Azure tenant update is in progress. Do not conduct repairs if so.
-                if (await UpgradeChecker.IsAzureTenantUpdateInProgress(
-                                            fabricClient,
-                                            serviceContext.NodeContext.NodeType,
-                                            Token).ConfigureAwait(false))
+                if (await UpgradeChecker.IsAzureTenantUpdateInProgress(fabricClient, serviceContext.NodeContext.NodeType, Token).ConfigureAwait(false))
                 {
                     return;
                 }
@@ -583,11 +576,7 @@ namespace FabricHealer
                         {
                             await ProcessNodeHealthAsync(clusterHealth.NodeHealthStates).ConfigureAwait(false);
                         }
-                        catch (Exception e) when (
-                                e is FabricException ||
-                                e is OperationCanceledException ||
-                                e is TaskCanceledException ||
-                                e is TimeoutException)
+                        catch (Exception e) when (e is FabricException || e is TimeoutException)
                         {
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                          LogLevel.Info,
@@ -596,7 +585,6 @@ namespace FabricHealer
                                                          Token,
                                                          null,
                                                          ConfigSettings.EnableVerboseLogging);
-
                         }
                     }
                     else if (kind != null && kind.Contains("Application"))
@@ -610,11 +598,7 @@ namespace FabricHealer
                         {
                             await ProcessApplicationHealthAsync(clusterHealth.ApplicationHealthStates).ConfigureAwait(false);
                         }
-                        catch (Exception e) when (
-                                e is FabricException ||
-                                e is OperationCanceledException ||
-                                e is TaskCanceledException ||
-                                e is TimeoutException)
+                        catch (Exception e) when (e is FabricException || e is TimeoutException)
                         {
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                          LogLevel.Info,
@@ -637,11 +621,7 @@ namespace FabricHealer
                         {
                             await ProcessReplicaHealthAsync(evaluation).ConfigureAwait(false);
                         }
-                        catch (Exception e) when (
-                                e is FabricException ||
-                                e is TimeoutException ||
-                                e is TaskCanceledException ||
-                                e is OperationCanceledException)
+                        catch (Exception e) when (e is FabricException || e is TimeoutException)
                         {
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                          LogLevel.Info,
@@ -654,11 +634,7 @@ namespace FabricHealer
                     }
                 }
             }
-            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TimeoutException)
-            {
-                return;
-            }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                              LogLevel.Error,
@@ -814,7 +790,7 @@ namespace FabricHealer
                             }
                         }
 
-                        repairRules = GetRepairRulesFromFOCode(foHealthData.Code, RepairConstants.SystemAppName);
+                        repairRules = GetRepairRulesForSupportedObserver(RepairConstants.FabricSystemObserver);
 
                         if (repairRules == null || repairRules?.Count == 0)
                         {
@@ -861,7 +837,7 @@ namespace FabricHealer
                             continue;
                         }
 
-                        repairRules = GetRepairRulesFromFOCode(foHealthData.Code);
+                        repairRules = GetRepairRulesForSupportedObserver(RepairConstants.AppObserver);
 
                         // Nothing to do here.
                         if (repairRules == null || repairRules?.Count == 0)
@@ -1036,8 +1012,8 @@ namespace FabricHealer
                         }
                     }
 
-                    // Get configuration settings related to supported Node repair.
-                    var repairRules = GetRepairRulesFromFOCode(foHealthData.Code);
+                    // Get repair rules related to supported Node repair.
+                    var repairRules = GetRepairRulesForSupportedObserver(foHealthData.ObserverName);
 
                     if (repairRules == null || repairRules.Count == 0)
                     {
@@ -1316,19 +1292,36 @@ namespace FabricHealer
 
         private List<string> GetRepairRulesFromConfiguration(string repairPolicySectionName)
         {
-            // Get config filename and read lines from file.
-            string logicRulesConfigFileName = GetSettingParameterValue(
-                                                 serviceContext,
-                                                 repairPolicySectionName,
-                                                 RepairConstants.LogicRulesConfigurationFile);
+            try
+            {
+                string logicRulesConfigFileName = GetSettingParameterValue(
+                                                     serviceContext,
+                                                     repairPolicySectionName,
+                                                     RepairConstants.LogicRulesConfigurationFile);
 
-            var configPath = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Path;
-            var rulesFolderPath = Path.Combine(configPath, RepairConstants.LogicRulesFolderName);
-            var rulesFilePath = Path.Combine(rulesFolderPath, logicRulesConfigFileName);
-            List<string> rules = File.ReadAllLines(rulesFilePath).ToList();
-            List<string> repairRules = ParseRulesFile(rules);
+                var configPath = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Path;
+                var rulesFolderPath = Path.Combine(configPath, RepairConstants.LogicRulesFolderName);
+                var rulesFilePath = Path.Combine(rulesFolderPath, logicRulesConfigFileName);
 
-            return repairRules;
+                if (!File.Exists(rulesFilePath))
+                {
+                    return null;
+                }
+
+                string[] rules = File.ReadAllLines(rulesFilePath);
+
+                if (rules.Length == 0)
+                {
+                    return null;
+                }
+
+                List<string> repairRules = ParseRulesFile(rules);
+                return repairRules;
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is IOException)
+            {
+                return null;
+            }
         }
 
         private int GetEnabledRepairRuleCount()
@@ -1372,13 +1365,13 @@ namespace FabricHealer
             Dispose(true);
         }
 
-        private static List<string> ParseRulesFile(List<string> rules)
+        private static List<string> ParseRulesFile(string[] rules)
         {
             var repairRules = new List<string>();
             int ptr1 = 0, ptr2 = 0;
-            rules = rules.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+            rules = rules.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
 
-            while (ptr1 < rules.Count && ptr2 < rules.Count)
+            while (ptr1 < rules.Length && ptr2 < rules.Length)
             {
                 // Single line comments removal.
                 if (rules[ptr2].TrimStart().StartsWith("##"))

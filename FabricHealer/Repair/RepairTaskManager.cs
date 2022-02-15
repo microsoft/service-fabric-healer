@@ -505,7 +505,7 @@ namespace FabricHealer.Repair
                 return null;
             }
 
-            // Don't attempt a node level repair on a node where there is already an active node-level repair.
+            // Don't attempt a node-level repair on a node where there is already an active node-level repair.
             var currentlyExecutingRepairs =
                 await FabricClientInstance.RepairManager.GetRepairTaskListAsync(
                                                             RepairTaskEngine.FHTaskIdPrefix,

@@ -52,7 +52,7 @@
 ## of the same argument values (less rules to write..).
 Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, 08:00:00), 
 	?repairCount < 4,
-	member(config(?X,?Y), [config("C:\SFDevCluster\Log\QueryTraces", 50), config("C:\fabric_observer_logs", 1), config("E:\temp", 10)]), 
+	member(config(?X,?Y), [config("D:\SvcFab\Log\Traces", 50), config("C:\fabric_observer_logs", 1), config("E:\temp", 10)]), 
 	CheckFolderSize(?X, MaxFolderSizeGB=?Y),
 	DeleteFiles(?X, SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true).
 
@@ -62,13 +62,18 @@ Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHi
 ## that are also mathematical operators (*,+,/,-,%, etc...).
 Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, 08:00:00),
 	?repairCount < 4,
-	CheckFolderSize("C:\SFDevCluster\Log\Traces", MaxFolderSizeGB=20),
-	DeleteFiles("C:\SFDevCluster\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true, SearchPattern="SFBDMiniport_traces*").
+	CheckFolderSize("E:\SvcFab\Log\QueryTraces", MaxFolderSizeGB=20),
+	DeleteFiles("E:\SvcFab\Log\QueryTraces", SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true, SearchPattern="SFBDMiniport_traces*").
 
 ## Folder size Warning, check ErrorCode from FO (you could also check MetricName -> MetricName=FolderSizeMB, but we already do that in several places). 
 ## See FOErrorWarningCodes.cs for list of codes and renaming function (GetMetricNameFromCode).
-## Note: FH renames FO MetricNames to make is easier to use them in rules (often this means making them smaller in length without losing meaning).
 Mitigate(FOErrorCode=FO043) :- GetRepairHistory(?repairCount, 08:00:00),
 	?repairCount < 4,
-	CheckFolderSize("C:\SFDevCluster\Log\Traces", MaxFolderSizeMB=500),
-	DeleteFiles("C:\SFDevCluster\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=5, RecurseSubdirectories=false).
+	CheckFolderSize("E:\SvcFab\Log\Traces", MaxFolderSizeGB=50),
+	DeleteFiles("E:\SvcFab\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=25, RecurseSubdirectories=false).
+
+## Constrain on folder size Error or Warning code.
+Mitigate(FOErrorCode=?FOErrorCode) :- ?FOErrorCode == "FO042" || ?FOErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),
+	?repairCount < 4,
+	CheckFolderSize("E:\SvcFab\Log\Traces", MaxFolderSizeGB=50),
+	DeleteFiles("E:\SvcFab\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=25, RecurseSubdirectories=false).

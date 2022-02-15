@@ -39,4 +39,24 @@
   <ItemGroup>
     <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="PackageRoot\Config\LogicRules\AppRules.guan">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\LogicRules\DiskRules.guan">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\LogicRules\FabricNodeRules.guan">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\LogicRules\ReplicaRules.guan">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\LogicRules\SystemAppRules.guan">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="PackageRoot\Config\LogicRules\VmRules.guan">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>
