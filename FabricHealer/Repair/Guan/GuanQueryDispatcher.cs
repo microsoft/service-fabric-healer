@@ -17,7 +17,7 @@ namespace Guan.Logic
             module_ = module;
         }
 
-        public async Task<bool> RunQueryAsync(string queryExpression)
+        public async Task RunQueryAsync(string queryExpression)
         {
             ResolveOrder order = ResolveOrder.None;
             ModuleProvider moduleProvider = new ModuleProvider();
@@ -26,10 +26,9 @@ namespace Guan.Logic
             queryContext.SetDirection(null, order);
             Query query = Query.Create(queryExpression, queryContext);
             await query.GetNextAsync().ConfigureAwait(false);
-            return true;
         }
 
-        public async Task<bool> RunQueryAsync(List<CompoundTerm> queryExpressions)
+        public async Task RunQueryAsync(List<CompoundTerm> queryExpressions)
         {
             ResolveOrder order = ResolveOrder.None;
             ModuleProvider moduleProvider = new ModuleProvider();
@@ -38,7 +37,6 @@ namespace Guan.Logic
             queryContext.SetDirection(null, order);
             Query query = Query.Create(queryExpressions, queryContext, moduleProvider);
             await query.GetNextAsync().ConfigureAwait(false);
-            return true;
         }
     }
 }

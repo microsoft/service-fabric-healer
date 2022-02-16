@@ -148,7 +148,7 @@ namespace FabricHealer.Repair
 
             try
             {
-                _ = await RunGuanQueryAsync(foHealthData, repairRules);
+                await RunGuanQueryAsync(foHealthData, repairRules);
             }
             catch (GuanException ge)
             {
@@ -170,7 +170,7 @@ namespace FabricHealer.Repair
         /// <param name="repairRules">Repair rules that are related to target SF entity</param>
         /// <param name="repairExecutorData">Optional Repair data that is used primarily when some repair is being restarted (after an FH restart, for example)</param>
         /// <returns></returns>
-        public async Task<bool> RunGuanQueryAsync(TelemetryData foHealthData, List<string> repairRules, RepairExecutorData repairExecutorData = null)
+        public async Task RunGuanQueryAsync(TelemetryData foHealthData, List<string> repairRules, RepairExecutorData repairExecutorData = null)
         {
             // Add predicate types to functor table. Note that all health information data from FO are automatically passed to all predicates.
             FunctorTable functorTable = new FunctorTable();
@@ -225,7 +225,7 @@ namespace FabricHealer.Repair
 
             // Run Guan query.
             // This is where the supplied rules are run with FO data that may or may not lead to mitigation of some supported SF entity in trouble (or a VM/Disk).
-            return await queryDispatcher.RunQueryAsync(compoundTerms).ConfigureAwait(false);
+            await queryDispatcher.RunQueryAsync(compoundTerms).ConfigureAwait(false);
         }
 
         // The repair will be executed by SF Infrastructure service, not FH. This is the case for all

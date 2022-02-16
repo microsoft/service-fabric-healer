@@ -9,6 +9,7 @@ using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using System.Threading.Tasks;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -50,6 +51,15 @@ namespace FabricHealer.Repair.Guan
                 bool recurseSubDirectories = false;
                 string path = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue();
                 
+                // Contains env variable(s)?
+                if (path.Contains('%'))
+                {
+                    if (Regex.Match(path, @"^%[a-zA-Z0-9_]+%").Success)
+                    {
+                        path = Environment.ExpandEnvironmentVariables(path);
+                    }
+                }
+
                 if (string.IsNullOrWhiteSpace(path))
                 {
                     throw new GuanException("You must specify a full folder path as the first argument of DeleteFiles predicate.");

@@ -487,7 +487,7 @@ namespace FabricHealer
                         Code = errorCode,
                     };
 
-                    _ = await repairTaskManager.RunGuanQueryAsync(foHealthData, repairRules, repairExecutorData).ConfigureAwait(false);
+                    await repairTaskManager.RunGuanQueryAsync(foHealthData, repairRules, repairExecutorData).ConfigureAwait(false);
                 }
             }
             catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException)

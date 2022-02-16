@@ -77,3 +77,9 @@ Mitigate(FOErrorCode=?FOErrorCode) :- ?FOErrorCode == "FO042" || ?FOErrorCode ==
 	?repairCount < 4,
 	CheckFolderSize("E:\SvcFab\Log\Traces", MaxFolderSizeGB=50),
 	DeleteFiles("E:\SvcFab\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=25, RecurseSubdirectories=false).
+
+## Constrain on folder size Error or Warning code; use environment variable for/in supplied path. Note: Environment variable string must be enclosed in quotes.
+Mitigate(FOErrorCode=?FOErrorCode) :- ?FOErrorCode == "FO042" || ?FOErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),
+	?repairCount < 4,
+	CheckFolderSize("%SOMEPATHVAR%", MaxFolderSizeGB=50),
+	DeleteFiles("%SOMEPATHVAR%", SortOrder=Ascending, MaxFilesToDelete=25, RecurseSubdirectories=false).

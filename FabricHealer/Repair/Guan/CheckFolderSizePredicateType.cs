@@ -10,6 +10,7 @@ using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using System.Threading.Tasks;
 using System;
+using System.Text.RegularExpressions;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -55,6 +56,15 @@ namespace FabricHealer.Repair.Guan
 
                         default:
                             throw new GuanException($"Unrecognized argument supplied: {Input.Arguments[i].Name}");
+                    }
+                }
+
+                // Contains env variable(s)?
+                if (folderPath.Contains('%'))
+                {
+                    if (Regex.Match(folderPath, @"^%[a-zA-Z0-9_]+%").Success)
+                    {
+                        folderPath = Environment.ExpandEnvironmentVariables(folderPath);
                     }
                 }
 

@@ -15,7 +15,7 @@
     <Parameter Name="LocalLogPath" DefaultValue="fabric_healer_logs" />
     <!-- Repair Policy Enablement -->
     <Parameter Name="EnableAppRepair" DefaultValue="true" />
-    <Parameter Name="EnableDiskRepair" DefaultValue="false" />
+    <Parameter Name="EnableDiskRepair" DefaultValue="true" />
     <Parameter Name="EnableNodeRepair" DefaultValue="false" />
     <Parameter Name="EnableReplicaRepair" DefaultValue="false" />
     <Parameter Name="EnableSystemAppRepair" DefaultValue="false" />
