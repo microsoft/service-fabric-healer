@@ -659,14 +659,28 @@ namespace FabricHealer
         private async Task ProcessApplicationHealthAsync(IEnumerable<ApplicationHealthState> appHealthStates)
         {
             var supportedAppHealthStates = appHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
-            var nodeList = await fabricClient.QueryManager.GetNodeListAsync().ConfigureAwait(false);
+            var nodeList = await fabricClient.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, Token).ConfigureAwait(false);
 
             foreach (var app in supportedAppHealthStates)
             {
                 Token.ThrowIfCancellationRequested();
+                
+                ApplicationHealth appHealth = null;
+                Uri appName = null;
 
-                var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(app.ApplicationName).ConfigureAwait(false);
-                var appName = app.ApplicationName;
+                try
+                {
+                    appHealth = 
+                        await fabricClient.HealthManager.GetApplicationHealthAsync(
+                                app.ApplicationName, ConfigSettings.AsyncTimeout, Token).ConfigureAwait(false);
+                    
+                    appName = app.ApplicationName;
+                }
+                catch (Exception e) when (e is FabricException || e is TimeoutException)
+                {
+                    // Application does not exist or health data retrieval fails/times out for some internal reason. Move to next app.
+                    continue;
+                }
 
                 // System app target? Do not proceed if system app repair is not enabled.
                 if (appName.OriginalString == RepairConstants.SystemAppName && !ConfigSettings.EnableSystemAppRepair)
@@ -682,31 +696,38 @@ namespace FabricHealer
 
                 if (appName.OriginalString != RepairConstants.SystemAppName)
                 {
-                    var appUpgradeStatus = await fabricClient.ApplicationManager.GetApplicationUpgradeProgressAsync(appName).ConfigureAwait(false);
-
-                    if (appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingBackInProgress
-                        || appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingForwardInProgress
-                        || appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingForwardPending)
+                    try
                     {
-                        List<int> udInAppUpgrade = await UpgradeChecker.GetUdsWhereApplicationUpgradeInProgressAsync(fabricClient, appName, Token).ConfigureAwait(false);
-                        string udText = string.Empty;
+                        var appUpgradeStatus = await fabricClient.ApplicationManager.GetApplicationUpgradeProgressAsync(appName).ConfigureAwait(false);
 
-                        // -1 means no upgrade in progress for application.
-                        if (udInAppUpgrade.Any(ud => ud > -1))
+                        if (appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingBackInProgress
+                            || appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingForwardInProgress
+                            || appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingForwardPending)
                         {
-                            udText = $"in UD {udInAppUpgrade.First(ud => ud > -1)}";
+                            List<int> udInAppUpgrade = await UpgradeChecker.GetUdsWhereApplicationUpgradeInProgressAsync(fabricClient, appName, Token).ConfigureAwait(false);
+                            string udText = string.Empty;
+
+                            // -1 means no upgrade in progress for application.
+                            if (udInAppUpgrade.Any(ud => ud > -1))
+                            {
+                                udText = $"in UD {udInAppUpgrade.First(ud => ud > -1)}";
+                            }
+
+                            string telemetryDescription = $"{appName} is upgrading {udText}. Will not attempt application repair at this time.";
+
+                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                                         LogLevel.Info,
+                                                         "MonitorRepairableHealthEventsAsync::AppUpgradeDetected",
+                                                         telemetryDescription,
+                                                         Token,
+                                                         null,
+                                                         ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
+                            continue;
                         }
-
-                        string telemetryDescription = $"{appName} is upgrading {udText}. Will not attempt application repair at this time.";
-
-                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                     LogLevel.Info,
-                                                     "MonitorRepairableHealthEventsAsync::AppUpgradeDetected",
-                                                     telemetryDescription,
-                                                     Token,
-                                                     null,
-                                                     ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
-                        continue;
+                    }
+                    catch (FabricException)
+                    {
+                        // This upgrade check should not prevent moving forward if the fabric client call fails with an FE.
                     }
                 }
 
