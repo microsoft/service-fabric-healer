@@ -1,6 +1,6 @@
 ﻿## Logic rules for Service Fabric System Service repairs.
 
-## Applicable Named Arguments for System Service Repair - Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
+## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                                   |
 ## |---------------------------|--------------------------------------------------------------------------------------------------------------|
 ## | AppName*                  | Name of the SF System Application. *This is always fabric:/System (FO monitors SF system service processes). |

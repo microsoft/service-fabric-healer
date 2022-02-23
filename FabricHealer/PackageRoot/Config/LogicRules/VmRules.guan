@@ -1,6 +1,6 @@
 ﻿## Logic rules for Virtual Machine level repairs in the cluster. Only OS reboot is supported today.
 
-## Applicable Named Arguments related to VM repair - Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
+## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
 ## |---------------------------|----------------------------------------------------------------------------------------------|
 ## | NodeName                  | Name of the node                                                                             | 

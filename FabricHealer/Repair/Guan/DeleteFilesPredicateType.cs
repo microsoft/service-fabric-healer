@@ -89,7 +89,7 @@ namespace FabricHealer.Repair.Guan
                             break;
 
                         case "recursesubdirectories":
-                            _ = bool.TryParse(Input.Arguments[i].Value.GetStringValue(), out recurseSubDirectories);
+                            recurseSubDirectories = (bool)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         case "searchpattern":
@@ -103,7 +103,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (searchPattern != null)
                 {
-                    if (!ValidateFileSearchPattern(searchPattern, path))
+                    if (!ValidateFileSearchPattern(searchPattern, path, recurseSubDirectories))
                     {
                         await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                         LogLevel.Info,
@@ -168,16 +168,23 @@ namespace FabricHealer.Repair.Guan
 
         }
 
-        private static bool ValidateFileSearchPattern(string searchPattern, string path)
+        private static bool ValidateFileSearchPattern(string searchPattern, string path, bool recurse)
         {
             if (string.IsNullOrWhiteSpace(searchPattern) || string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
             {
                 return false;
             }
 
-            if (Directory.GetFiles(path, searchPattern).Length > 0)
+            try
             {
-                return true;
+                if (Directory.GetFiles(path, searchPattern, recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly).Length > 0)
+                {
+                    return true;
+                }
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+
             }
 
             return false;

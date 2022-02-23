@@ -1,6 +1,6 @@
 ﻿## Logic rules for Disk repair. Only file management is supported (file deletion).
 
-## Applicable Named Arguments for Disk repair - Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
+## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
 ## |---------------------------|----------------------------------------------------------------------------------------------|
 ## | NodeName                  | Name of the node                                                                             | 
@@ -52,7 +52,7 @@
 ## of the same argument values (less rules to write..).
 Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, 08:00:00), 
 	?repairCount < 4,
-	member(config(?X,?Y), [config("D:\SvcFab\Log\Traces", 50), config("C:\fabric_observer_logs", 1), config("E:\temp", 10)]), 
+	member(config(?X,?Y), [config("D:\SvcFab\Log\Traces", 50), config("E:\fabric_observer_logs", 1), config("E:\temp", 10)]), 
 	CheckFolderSize(?X, MaxFolderSizeGB=?Y),
 	DeleteFiles(?X, SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true).
 
@@ -75,8 +75,8 @@ Mitigate(FOErrorCode=FO043) :- GetRepairHistory(?repairCount, 08:00:00),
 ## Constrain on folder size Error or Warning code.
 Mitigate(FOErrorCode=?FOErrorCode) :- ?FOErrorCode == "FO042" || ?FOErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),
 	?repairCount < 4,
-	CheckFolderSize("E:\SvcFab\Log\Traces", MaxFolderSizeGB=50),
-	DeleteFiles("E:\SvcFab\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=25, RecurseSubdirectories=false).
+	CheckFolderSize("C:\fabric_observer_logs", MaxFolderSizeMB=250),
+	DeleteFiles("C:\fabric_observer_logs", SortOrder=Ascending, MaxFilesToDelete=5, RecurseSubdirectories=true, SearchPattern="*.dmp").
 
 ## Constrain on folder size Error or Warning code; use environment variable for/in supplied path. Note: Environment variable string must be enclosed in quotes.
 Mitigate(FOErrorCode=?FOErrorCode) :- ?FOErrorCode == "FO042" || ?FOErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),

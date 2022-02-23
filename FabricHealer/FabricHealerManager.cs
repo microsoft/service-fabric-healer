@@ -1033,7 +1033,7 @@ namespace FabricHealer
                         }
                     }
 
-                    // Get repair rules related to supported Node repair.
+                    // Get repair rules for supported source Observer.
                     var repairRules = GetRepairRulesForSupportedObserver(foHealthData.ObserverName);
 
                     if (repairRules == null || repairRules.Count == 0)

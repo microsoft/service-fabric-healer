@@ -1,6 +1,6 @@
 ﻿## Logic rules for Service Fabric Application-level repairs.
 
-## Applicable Named Arguments for user App service repair - Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
+## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
 ## |---------------------------|----------------------------------------------------------------------------------------------|
 ## | AppName                   | Name of the SF application, format is fabric:/SomeApp                                        |
@@ -125,19 +125,19 @@ Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 102
 	?HealthEventCount >= 3,
 	TimeScopedRestartCodePackage(1, 01:00:00).
 
-
 ## Ports 
 
-## Local Active TCP Ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Active Ports, then heal. There are no conditional checks (on MetricValue) to take place.
+## Local Active TCP Ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Active Ports, then heal. 
+## There are no conditional checks.
 Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
-
-## Ephemeral Ports - Specific Application: any of its services, constrained on number of local ephemeral ports open. 
-## 5 repairs within 5 hour window.
-Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue > 5000, TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Ephemeral TCP Ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Ephemeral ports usage, then heal. 
 ## There are no conditional checks.
 Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
+
+## Ephemeral Ports - Specific Application: any of its services, constrained on number of local ephemeral ports open. 
+## 5 repairs within 5 hour window.
+Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue > 5000, TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Threads
 
