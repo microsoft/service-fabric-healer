@@ -85,6 +85,7 @@ namespace FabricHealer.Repair
         public const string FolderSizeMB = "FolderSizeMB";
         public const string DiskSpacePercent = "DiskSpacePercent";
         public const string EphemeralPorts = "EphemeralPorts";
+        public const string EphemeralPortsPercent = "EphemeralPortsPercent";
         public const string EndpointUnreachable = "EndpointUnreachable";
         public const string FirewallRules = "FirewallRules";
         public const string MemoryMB = "MemoryMB";

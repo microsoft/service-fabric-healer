@@ -4,13 +4,14 @@
     <id>%PACKAGE_ID%</id>
     <version>1.0.14</version>
     <releaseNotes>
-- Updated Disk logic rules with Folder Size Warning repair workflow.
-- Added more descriptions to all rules files to help clarify how to compose successful related logic.
-- Added ObserverName named argument to Mitigate CompoundTerm (e.g., Mitigate(ObserverName=DiskObserver) :- ...).
-- Added GetRepairRulesForSupportedObserver function to add more flexibility to getting related rules Lists. This will help limit required FH code changes to support new FO capabilities.
-- Renamed rules text files to '[repair type].guan'. Ex: AppRules.guan, DiskRules.guan, etc.
-- EnableTelemetryProvider is now an Application Parameter.
-- Code improvements.
+Added support for new FabricObserver ephemeral ports metric (Percentage).
+Updated Disk logic rules with Folder Size Warning repair workflow.
+Added more descriptions to all rules files to help clarify how to compose successful related logic.
+Added ObserverName named argument to Mitigate CompoundTerm (e.g., Mitigate(ObserverName=DiskObserver) :- ...).
+Added GetRepairRulesForSupportedObserver function to add more flexibility to getting related rules Lists. This will help limit required FH code changes to support new FO capabilities.
+Renamed rules text files to '[repair type].guan'. Ex: AppRules.guan, DiskRules.guan, etc.
+EnableTelemetryProvider is now an Application Parameter.
+Code improvements.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

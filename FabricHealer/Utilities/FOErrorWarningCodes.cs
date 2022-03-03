@@ -58,6 +58,10 @@ namespace FabricHealer.Utilities
         public const string AppWarningTooManyActiveEphemeralPorts = "FO030";
         public const string NodeErrorTooManyActiveEphemeralPorts = "FO031";
         public const string NodeWarningTooManyActiveEphemeralPorts = "FO032";
+        public const string AppErrorActiveEphemeralPortsPercent = "FO044";
+        public const string AppWarningActiveEphemeralPortsPercent = "FO045";
+        public const string NodeErrorActiveEphemeralPortsPercent = "FO046";
+        public const string NodeWarningActiveEphemeralPortsPercent = "FO047";
 
         // Process owned File Handles / File Descriptors - Linux (File Descriptors) and Windows (File Handles)
         public const string AppErrorTooManyOpenFileHandles = "FO033";
@@ -94,6 +98,8 @@ namespace FabricHealer.Utilities
             { AppWarningTooManyActiveTcpPorts, "AppWarningTooManyActiveTcpPorts" },
             { AppErrorTooManyActiveEphemeralPorts, "AppErrorTooManyActiveEphemeralPorts" },
             { AppWarningTooManyActiveEphemeralPorts, "AppWarningTooManyActiveEphemeralPorts" },
+            { AppErrorActiveEphemeralPortsPercent, "AppErrorActiveEphemeralPortsPercent" },
+            { AppWarningActiveEphemeralPortsPercent, "AppWarningActiveEphemeralPortsPercent" },
             { AppErrorTooManyOpenFileHandles, "AppErrorTooManyOpenFileHandles" },
             { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" },
             { AppErrorTooManyThreads, "AppErrorTooManyThreads" },
@@ -129,6 +135,8 @@ namespace FabricHealer.Utilities
             { WarningTooManyFirewallRules, "NodeWarningTooManyFirewallRules" },
             { NodeErrorTooManyActiveEphemeralPorts, "NodeErrorTooManyActiveEphemeralPorts" },
             { NodeWarningTooManyActiveEphemeralPorts, "NodeWarningTooManyActiveEphemeralPorts" },
+            { NodeErrorActiveEphemeralPortsPercent, "NodeErrorActiveEphemeralPortsPercent" },
+            { NodeWarningActiveEphemeralPortsPercent, "NodeWarningActiveEphemeralPortsPercent" },
             { NodeErrorTotalOpenFileHandlesPercent, "NodeErrorTotalOpenFileHandlesPercent" },
             { NodeWarningTotalOpenFileHandlesPercent, "NodeWarningTotalOpenFileHandlesPercent" },
             { NodeErrorTooManyOpenFileHandles, "NodeErrorTooManyOpenFileHandles" },
@@ -190,6 +198,11 @@ namespace FabricHealer.Utilities
             if (GetIsResourceType(code, RepairConstants.EndpointUnreachable))
             {
                 return RepairConstants.EndpointUnreachable;
+            }
+
+            if (GetIsResourceType(code, RepairConstants.EphemeralPortsPercent))
+            {
+                return RepairConstants.EphemeralPortsPercent;
             }
 
             if (GetIsResourceType(code, RepairConstants.EphemeralPorts))
