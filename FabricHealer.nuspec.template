@@ -4,7 +4,7 @@
     <id>%PACKAGE_ID%</id>
     <version>1.0.14</version>
     <releaseNotes>
-Added support for new FabricObserver ephemeral ports metric (Percentage).
+Added support for new FabricObserver 3.1.25 - new ephemeral ports metric (Percentage in use of total dynamic ports configured for machine).
 Updated Disk logic rules with Folder Size Warning repair workflow.
 Added more descriptions to all rules files to help clarify how to compose successful related logic.
 Added ObserverName named argument to Mitigate CompoundTerm (e.g., Mitigate(ObserverName=DiskObserver) :- ...).
