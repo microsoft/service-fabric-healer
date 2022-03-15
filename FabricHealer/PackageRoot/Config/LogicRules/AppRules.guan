@@ -1,18 +1,18 @@
 ﻿## Logic rules for Service Fabric Application-level repairs.
 
-## Mitigate (the goal, Guan.CompoundTerm type) Named Arguments (CompoundTerm Arguments (of type Guan.Constant)) - Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
+## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
 ## |---------------------------|----------------------------------------------------------------------------------------------|
 ## | AppName                   | Name of the SF application, format is fabric:/SomeApp                                        |
 ## | ServiceName               | Name of the SF service, format is fabric:/SomeApp/SomeService                                |
 ## | NodeName                  | Name of the node                                                                             | 
 ## | NodeType                  | Type of node                                                                                 |  
+## | ObserverName              | Name of Observer that generated the event.                                                   |
 ## | PartitionId               | Id of the partition                                                                          |
 ## | ReplicaOrInstanceId       | Id of the replica or instance                                                                |
 ## | FOErrorCode               | Error Code emitted by FO (e.g. "FO002")                                                      | 
 ## | MetricName                | Name of the resource supplied by FO (e.g., CpuPercent or MemoryMB, etc.)                     |   
 ## | MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)               | 
-## | SystemServiceProcessName  | The name of a Fabric system service process supplied in FO health data                       | 
 ## | OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                   |
  
 ## Application-related Metric Names.
@@ -20,7 +20,8 @@
 ## |---------------------------|
 ## | ActiveTcpPorts            |                                         
 ## | CpuPercent                |    
-## | EphemeralPorts            |  
+## | EphemeralPorts            |
+## | EphemeralPortsPercent     |
 ## | EndpointUnreachable*      |    
 ## | MemoryMB                  | 
 ## | MemoryPercent             | 
@@ -125,19 +126,23 @@ Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 102
 	?HealthEventCount >= 3,
 	TimeScopedRestartCodePackage(1, 01:00:00).
 
-
 ## Ports 
 
-## Local Active TCP Ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Active Ports, then heal. There are no conditional checks (on MetricValue) to take place.
+## Local Active TCP Ports.
+## Any app service. 5 repairs within 5 hour window. This means if FO warns on Active Ports, then heal. 
 Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
-## Ephemeral Ports - Specific Application: any of its services, constrained on number of local ephemeral ports open. 
-## 5 repairs within 5 hour window.
-Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue > 5000, TimeScopedRestartCodePackage(5, 05:00:00).
+## Local Ports in Dynamic Range (aka Ephemeral Ports)
+## Percentage in use or Total Ephemeral ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Ephemeral ports usage, then heal.
+Mitigate(MetricName=?MetricName) :- match(?MetricName, "EphemeralPorts"), TimeScopedRestartCodePackage(5, 05:00:00).
 
-## Ephemeral TCP Ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Ephemeral ports usage, then heal. 
-## There are no conditional checks.
-Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
+## Total Ephemeral Ports - Specific Application: any of its services, constrained on number of local ephemeral ports open. 
+## 5 repairs within 5 hour window.
+Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- ?MetricValue > 7000, TimeScopedRestartCodePackage(5, 05:00:00).
+
+## Percentage Ephemeral Ports - Specific Application: any of its services, constrained on ephemeral ports percent (of total) usage. 
+## 5 repairs within 5 hour window.
+Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPortsPercent", MetricValue=?MetricValue) :- ?MetricValue > 20, TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Threads
 

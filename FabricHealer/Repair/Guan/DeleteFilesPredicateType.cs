@@ -9,6 +9,7 @@ using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using System.Threading.Tasks;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -50,6 +51,15 @@ namespace FabricHealer.Repair.Guan
                 bool recurseSubDirectories = false;
                 string path = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue();
                 
+                // Contains env variable(s)?
+                if (path.Contains('%'))
+                {
+                    if (Regex.Match(path, @"^%[a-zA-Z0-9_]+%").Success)
+                    {
+                        path = Environment.ExpandEnvironmentVariables(path);
+                    }
+                }
+
                 if (string.IsNullOrWhiteSpace(path))
                 {
                     throw new GuanException("You must specify a full folder path as the first argument of DeleteFiles predicate.");
@@ -79,7 +89,7 @@ namespace FabricHealer.Repair.Guan
                             break;
 
                         case "recursesubdirectories":
-                            _ = bool.TryParse(Input.Arguments[i].Value.GetStringValue(), out recurseSubDirectories);
+                            recurseSubDirectories = (bool)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         case "searchpattern":
@@ -93,7 +103,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (searchPattern != null)
                 {
-                    if (!ValidateFileSearchPattern(searchPattern, path))
+                    if (!ValidateFileSearchPattern(searchPattern, path, recurseSubDirectories))
                     {
                         await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                         LogLevel.Info,
@@ -158,16 +168,23 @@ namespace FabricHealer.Repair.Guan
 
         }
 
-        private static bool ValidateFileSearchPattern(string searchPattern, string path)
+        private static bool ValidateFileSearchPattern(string searchPattern, string path, bool recurse)
         {
             if (string.IsNullOrWhiteSpace(searchPattern) || string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
             {
                 return false;
             }
 
-            if (Directory.GetFiles(path, searchPattern).Length > 0)
+            try
             {
-                return true;
+                if (Directory.GetFiles(path, searchPattern, recurse ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly).Length > 0)
+                {
+                    return true;
+                }
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+
             }
 
             return false;

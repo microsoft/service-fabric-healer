@@ -82,8 +82,10 @@ namespace FabricHealer.Repair
         public const string CpuPercent = "CpuPercent";
         public const string DiskAverageQueueLength = "DiskAverageQueueLength";
         public const string DiskSpaceMB = "DiskSpaceMB";
+        public const string FolderSizeMB = "FolderSizeMB";
         public const string DiskSpacePercent = "DiskSpacePercent";
         public const string EphemeralPorts = "EphemeralPorts";
+        public const string EphemeralPortsPercent = "EphemeralPortsPercent";
         public const string EndpointUnreachable = "EndpointUnreachable";
         public const string FirewallRules = "FirewallRules";
         public const string MemoryMB = "MemoryMB";
@@ -106,5 +108,6 @@ namespace FabricHealer.Repair
         public const string RepairData = "RepairData";
         public const string RepairPolicy = "RepairPolicy";
         public const string FabricHealer = "FabricHealer";
+        public const string ObserverName = "ObserverName";
     }
 }

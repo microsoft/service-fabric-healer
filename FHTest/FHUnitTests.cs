@@ -24,6 +24,7 @@ namespace FHTest
 {
     /// <summary>
     /// NOTE: Run these tests on your machine with a local SF dev cluster running.
+    /// TODO: More code coverage.
     /// </summary>
     
     [TestClass]
@@ -73,6 +74,10 @@ namespace FHTest
             }
         }
 
+        /// <summary>
+        /// This function cancels the local repair tasks created by the tests.
+        /// </summary>
+        /// <returns></returns>
         private static async Task CleanupTestRepairJobsAsync()
         {
             // Complete (Cancel) any existing Test Repair Jobs.
@@ -80,6 +85,7 @@ namespace FHTest
             {
                 var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync();
                 var testRepairTasks = repairTasks.Where(r => r.TaskId.EndsWith("TEST_0"));
+
                 foreach (var repairTask in testRepairTasks)
                 {
                     if (repairTask.State != RepairTaskState.Completed)
@@ -90,9 +96,7 @@ namespace FHTest
             }
             catch (FabricException)
             {
-#if DEBUG
                 throw;
-#endif
             }
         }
 
@@ -103,10 +107,10 @@ namespace FHTest
         }
 
         /* GuanLogic Tests */
-        // TODO: Add more tests.
+        // Currently, the tests below validate logic rules and the successful scheduling of related local repair jobs.
 
-        // This test ensures your actual rule files contain legitimate rules. This will catch bugs in your
-        // logic. Of course, you should have caught these flaws in your end-to-end tests. This is just an extra precaution.
+        // This test ensures your shipping rule files (the guan files located in Config/LogicRules folder)
+        // contain correctly written rules and that the related local repair job is successfully created.
         [TestMethod]
         public async Task TestGuanLogic_AllRules_FabricHealer_EnsureWellFormedRules_QueryInitialized()
         {
@@ -120,6 +124,7 @@ namespace FHTest
                 TelemetryEnabled = false
             };
 
+            // This will be the mock data used to create a repair task.
             var foHealthData = new TelemetryData
             {
                 ApplicationName = "fabric:/test",
@@ -127,6 +132,7 @@ namespace FHTest
                 RepairId = "Test42",
                 Code = FOErrorWarningCodes.AppErrorMemoryMB,
                 ServiceName = "fabric:/test0/service0",
+                Value = 1024.0
             };
 
             var executorData = new RepairExecutorData
@@ -136,25 +142,20 @@ namespace FHTest
 
             foreach (var file in Directory.GetFiles(FHRulesDirectory))
             {
-                List<string> repairRules = ParseRulesFile((await File.ReadAllLinesAsync(file, token)).ToList());
+                List<string> repairRules = ParseRulesFile(await File.ReadAllLinesAsync(file, token));
 
                 try
                 {
-                    Assert.IsTrue(await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData).ConfigureAwait(true));
+                    await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData);
                 }
                 catch (GuanException ge)
                 {
-                    Console.WriteLine(ge.ToString());
-                    throw;
+                    throw new AssertFailedException(ge.Message, ge);
                 }
             }
-
-            Assert.IsTrue(true);
         }
 
-        // This test ensures a given rule can successfully be turned into a GL query. 
-        // This means that the rule is well-formed logic and that the referenced predicates exist.
-        // So, if the rule is malformed or not a logic rule or no predicate exists as written, this test will fail.
+        // This test ensures your test rules housed in testrules_wellformed file or in fact correct.
         [TestMethod]
         public async Task TestGuanLogicRule_GoodRule_QueryInitialized()
         {
@@ -170,7 +171,7 @@ namespace FHTest
 
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed");
             string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token).ConfigureAwait(true);
-            List<string> repairRules = ParseRulesFile(rules.ToList());
+            List<string> repairRules = ParseRulesFile(rules);
             var foHealthData = new TelemetryData
             {
                 ApplicationName = "fabric:/test0",
@@ -189,11 +190,17 @@ namespace FHTest
                 RepairPolicy = new RepairPolicy { RepairAction = RepairActionType.RestartCodePackage },
             };
 
-            Assert.IsTrue(await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData).ConfigureAwait(true));
+            try
+            {
+                await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData);
+            }
+            catch (GuanException ge)
+            {
+                throw new AssertFailedException(ge.Message, ge);
+            }
         }
 
-        // All rules in target rules file are malformed. They should all lead to GuanExceptions.
-        // If they do not lead to a GuanException from TestInitializeGuanAndRunQuery, then this test will fail.
+        // This test ensures your test rules housed in testrules_malformed file or in fact incorrect.
         [TestMethod]
         public async Task TestGuanLogicRule_BadRule_ShouldThrowGuanException()
         {
@@ -208,7 +215,7 @@ namespace FHTest
             };
 
             string[] rules = await File.ReadAllLinesAsync(Path.Combine(Environment.CurrentDirectory, "testrules_malformed"), token).ConfigureAwait(true);
-            List<string> repairAction = ParseRulesFile(rules.ToList());
+            List<string> repairAction = ParseRulesFile(rules);
 
             var foHealthData = new TelemetryData
             {
@@ -231,15 +238,9 @@ namespace FHTest
             await Assert.ThrowsExceptionAsync<GuanException>(async () => { await TestInitializeGuanAndRunQuery(foHealthData, repairAction, executorData); });
         }
 
-        /* FH Repair Scheduler Tests */
-        // TODO.
-
-        /* FH Repair Excecutor Tests */
-        // TODO.
-
         /* private Helpers */
 
-        private async Task<bool> TestInitializeGuanAndRunQuery(TelemetryData foHealthData, List<string> repairRules, RepairExecutorData executorData)
+        private async Task TestInitializeGuanAndRunQuery(TelemetryData foHealthData, List<string> repairRules, RepairExecutorData executorData)
         {
             var fabricClient = new FabricClient();
             var repairTaskManager = new RepairTaskManager(fabricClient, context, token);
@@ -295,17 +296,16 @@ namespace FHTest
             compoundTerm.AddArgument(new Constant(Convert.ToInt64(foHealthData.Value)), RepairConstants.MetricValue);
             compoundTerms.Add(compoundTerm);
 
-            return await queryDispatcher.RunQueryAsync(compoundTerms).ConfigureAwait(false);
-            //return Task.FromResult(true);
+            await queryDispatcher.RunQueryAsync(compoundTerms).ConfigureAwait(false);
         }
 
-        private List<string> ParseRulesFile(List<string> rules)
+        private static List<string> ParseRulesFile(string[] rules)
         {
             var repairRules = new List<string>();
-            int ptr1 = 0; int ptr2 = 0;
-            rules = rules.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+            int ptr1 = 0, ptr2 = 0;
+            rules = rules.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
 
-            while (ptr1 < rules.Count && ptr2 < rules.Count)
+            while (ptr1 < rules.Length && ptr2 < rules.Length)
             {
                 // Single line comments removal.
                 if (rules[ptr2].TrimStart().StartsWith("##"))
@@ -329,6 +329,7 @@ namespace FHTest
                         {
                             rule = rule + ' ' + rules[i].Replace('\t', ' ').TrimStart(' ');
                         }
+
                         repairRules.Add(rule.Remove(rule.Length - 1, 1));
                     }
                     ptr2++;

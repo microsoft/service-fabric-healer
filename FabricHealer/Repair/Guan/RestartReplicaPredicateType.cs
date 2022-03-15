@@ -56,7 +56,7 @@ namespace FabricHealer.Repair.Guan
                             break;
 
                         case "Boolean":
-                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[0].Value.GetObjectValue();
+                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
                         default:

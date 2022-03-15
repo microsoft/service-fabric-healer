@@ -40,9 +40,11 @@ namespace FabricHealer.Repair.Guan
                 }
                 else
                 {
-                    string message = "You must supply a valid TimeSpan string for TimeWindow argument of GetRepairHistoryPredicate. Default result has been supplied (0).";
+                    string message = 
+                        "You must supply a valid TimeSpan string for TimeWindow argument of GetRepairHistoryPredicate. " +
+                        "Default result has been supplied (0).";
 
-                   await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                    await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                             LogLevel.Info,
                                                             $"GetRepairHistoryPredicate::{FOHealthData.RepairId}",
                                                             message,
