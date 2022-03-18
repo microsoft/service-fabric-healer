@@ -137,7 +137,7 @@ Here's a simple example that we've seen before:
 Mitigate() :- RestartCodePackage().
 ```
 
-Essentially, what this logic repair workflow (mitigation scenario) is describing is that if FO emits a health event that falls under the AppServiceCpuMemoryPortAbuseRepairPolicy and if the repair policy is enabled, then we will execute the repair action. FH will automatically detect that it is a logic workflow, so it will invoke the root rule ```Mitigate()```. Guan determines that the ```Mitigate()``` rule is defined inside the repair action, where it then will try to execute the body of the ```Mitigate()``` rule.
+Essentially, what this logic repair workflow (mitigation scenario) is describing that if FO emits a health event Warning/Error related to any application entity and the App repair policy is enabled, then we will execute the repair action. FH will automatically detect that it is a logic workflow, so it will invoke the root rule ```Mitigate()```. Guan determines that the ```Mitigate()``` rule is defined inside the repair action, where it then will try to execute the body of the ```Mitigate()``` rule.
 
 Users can define multiple rules (separated by a newline) as part of a repair workflow, here is an example:
 
