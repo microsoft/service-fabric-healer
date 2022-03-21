@@ -26,19 +26,11 @@ namespace FabricHealer.TelemetryLib
         private const string TaskName = "FabricHealer";
         private readonly TelemetryClient telemetryClient;
         private readonly ServiceContext serviceContext;
-        private readonly ITelemetryEventSource serviceEventSource;
         private readonly string clusterId, tenantId, clusterType;
         private readonly TelemetryConfiguration appInsightsTelemetryConf;
-        private readonly bool isEtwEnabled;
 
-        public TelemetryEvents(
-                    FabricClient fabricClient,
-                    ServiceContext context,
-                    ITelemetryEventSource eventSource,
-                    CancellationToken token,
-                    bool etwEnabled)
+        public TelemetryEvents(FabricClient fabricClient, ServiceContext context, CancellationToken token)
         {
-            serviceEventSource = eventSource;
             serviceContext = context;
             appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
             appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AIKey;
@@ -47,7 +39,6 @@ namespace FabricHealer.TelemetryLib
             clusterId = ClusterId;
             tenantId = TenantId;
             clusterType = ClusterType;
-            isEtwEnabled = etwEnabled;
         }
 
         public bool EmitFabricHealerOperationalEvent(FabricHealerOperationalEventData repairData, TimeSpan runInterval, string logFilePath)

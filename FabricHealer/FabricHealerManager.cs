@@ -28,7 +28,7 @@ namespace FabricHealer
         internal static RepairData RepairHistory;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.0.14";
+        private const string InternalVersionNumber = "1.0.15";
         private static FabricHealerManager singleton;
         private bool disposedValue;
         private readonly StatelessServiceContext serviceContext;
@@ -258,13 +258,7 @@ namespace FabricHealer
                     {
                         try
                         {
-                            using var telemetryEvents = new TelemetryEvents(
-                                                                fabricClient,
-                                                                serviceContext,
-                                                                ServiceEventSource.Current,
-                                                                Token,
-                                                                EtwEnabled);
-
+                            using var telemetryEvents = new TelemetryEvents(fabricClient,serviceContext,Token);
                             var fhData = GetFabricHealerInternalTelemetryData();
 
                             if (fhData != null)
@@ -341,9 +335,7 @@ namespace FabricHealer
                 {
                     try
                     {
-                        using var telemetryEvents =
-                            new TelemetryEvents(fabricClient, serviceContext, ServiceEventSource.Current, Token, EtwEnabled);
-
+                        using var telemetryEvents = new TelemetryEvents(fabricClient, serviceContext, Token);
                         var fhData = new FabricHealerCriticalErrorEventData
                         {
                             Source = nameof(FabricHealerManager),

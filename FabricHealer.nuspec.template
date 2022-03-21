@@ -2,15 +2,8 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.0.14</version>
+    <version>1.0.15</version>
     <releaseNotes>
-Added support for new FabricObserver 3.1.25 - new ephemeral ports metric (Percentage in use of total dynamic ports configured for machine).
-Updated Disk logic rules with Folder Size Warning repair workflow.
-Added more descriptions to all rules files to help clarify how to compose successful related logic.
-Added ObserverName named argument to Mitigate CompoundTerm (e.g., Mitigate(ObserverName=DiskObserver) :- ...).
-Added GetRepairRulesForSupportedObserver function to add more flexibility to getting related rules Lists. This will help limit required FH code changes to support new FO capabilities.
-Renamed rules text files to '[repair type].guan'. Ex: AppRules.guan, DiskRules.guan, etc.
-EnableTelemetryProvider is now an Application Parameter.
 Code improvements.
 	</releaseNotes>
     <authors>Microsoft</authors>
