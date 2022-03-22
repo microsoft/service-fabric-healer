@@ -528,25 +528,38 @@ namespace FabricHealer
 
                 // Check cluster upgrade status. If the cluster is upgrading to a new version (or rolling back)
                 // then do not attempt repairs.
-                int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(fabricClient, Token).ConfigureAwait(false);
-
-                if (udInClusterUpgrade > -1)
+                try
                 {
-                    string telemetryDescription = $"Cluster is currently upgrading in UD {udInClusterUpgrade}. Will not schedule or execute repairs at this time.";
-                    await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                 LogLevel.Info,
-                                                 "MonitorRepairableHealthEventsAsync::ClusterUpgradeDetected",
-                                                 telemetryDescription,
-                                                 Token,
-                                                 null,
-                                                 ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
-                    return;
+                    int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(fabricClient, Token).ConfigureAwait(false);
+
+                    if (udInClusterUpgrade > -1)
+                    {
+                        string telemetryDescription = $"Cluster is currently upgrading in UD {udInClusterUpgrade}. Will not schedule or execute repairs at this time.";
+                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                                     LogLevel.Info,
+                                                     "MonitorRepairableHealthEventsAsync::ClusterUpgradeDetected",
+                                                     telemetryDescription,
+                                                     Token,
+                                                     null,
+                                                     ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
+                        return;
+                    }
+
+                    // Check to see if an Azure tenant update is in progress. Do not conduct repairs if so.
+                    if (await UpgradeChecker.IsAzureTenantUpdateInProgress(fabricClient, serviceContext.NodeContext.NodeType, Token).ConfigureAwait(false))
+                    {
+                        return;
+                    }
                 }
-
-                // Check to see if an Azure tenant update is in progress. Do not conduct repairs if so.
-                if (await UpgradeChecker.IsAzureTenantUpdateInProgress(fabricClient, serviceContext.NodeContext.NodeType, Token).ConfigureAwait(false))
+                catch (Exception e) when (e is FabricException || e is TimeoutException)
                 {
-                    return;
+                    await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                "MonitorRepairableHealthEventsAsync::HandledException",
+                                $"Failure in MonitorRepairableHealthEventAsync::Node:{Environment.NewLine}{e}",
+                                Token,
+                                null,
+                                ConfigSettings.EnableVerboseLogging);
                 }
 
                 var unhealthyEvaluations = clusterHealth.UnhealthyEvaluations;
@@ -571,12 +584,12 @@ namespace FabricHealer
                         catch (Exception e) when (e is FabricException || e is TimeoutException)
                         {
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                         LogLevel.Info,
-                                                         "MonitorRepairableHealthEventsAsync::HandledException",
-                                                         $"Failure in MonitorRepairableHealthEventAsync::Node:{Environment.NewLine}{e}",
-                                                         Token,
-                                                         null,
-                                                         ConfigSettings.EnableVerboseLogging);
+                                        LogLevel.Info,
+                                        "MonitorRepairableHealthEventsAsync::HandledException",
+                                        $"Failure in MonitorRepairableHealthEventAsync::Node:{Environment.NewLine}{e}",
+                                        Token,
+                                        null,
+                                        ConfigSettings.EnableVerboseLogging);
                         }
                     }
                     else if (kind != null && kind.Contains("Application"))
@@ -593,12 +606,12 @@ namespace FabricHealer
                         catch (Exception e) when (e is FabricException || e is TimeoutException)
                         {
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                         LogLevel.Info,
-                                                         "MonitorRepairableHealthEventsAsync::HandledException",
-                                                         $"Failure in MonitorRepairableHealthEventAsync::Application:{Environment.NewLine}{e}",
-                                                         Token,
-                                                         null,
-                                                         ConfigSettings.EnableVerboseLogging);
+                                        LogLevel.Info,
+                                        "MonitorRepairableHealthEventsAsync::HandledException",
+                                        $"Failure in MonitorRepairableHealthEventAsync::Application:{Environment.NewLine}{e}",
+                                        Token,
+                                        null,
+                                        ConfigSettings.EnableVerboseLogging);
                         }
                     }
                     // FYI: FH currently only supports the case where a replica is stuck. FO does not generate Replica Health Reports.
@@ -616,12 +629,12 @@ namespace FabricHealer
                         catch (Exception e) when (e is FabricException || e is TimeoutException)
                         {
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                         LogLevel.Info,
-                                                         "MonitorRepairableHealthEventsAsync::HandledException",
-                                                         $"Failure in MonitorRepairableHealthEventAsync::Replica:{Environment.NewLine}{e}",
-                                                         Token,
-                                                         null,
-                                                         ConfigSettings.EnableVerboseLogging);
+                                        LogLevel.Info,
+                                        "MonitorRepairableHealthEventsAsync::HandledException",
+                                        $"Failure in MonitorRepairableHealthEventAsync::Replica:{Environment.NewLine}{e}",
+                                        Token,
+                                        null,
+                                        ConfigSettings.EnableVerboseLogging);
                         }
                     }
                 }
@@ -629,12 +642,12 @@ namespace FabricHealer
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                             LogLevel.Error,
-                                             "MonitorRepairableHealthEventsAsync::UnhandledException",
-                                             $"Failure in MonitorRepairableHealthEventAsync:{Environment.NewLine}{e}",
-                                             Token,
-                                             null,
-                                             ConfigSettings.EnableVerboseLogging);
+                            LogLevel.Error,
+                            "MonitorRepairableHealthEventsAsync::UnhandledException",
+                            $"Failure in MonitorRepairableHealthEventAsync:{Environment.NewLine}{e}",
+                            Token,
+                            null,
+                            ConfigSettings.EnableVerboseLogging);
 
                 RepairLogger.LogWarning($"Unhandled exception in MonitorRepairableHealthEventsAsync:{Environment.NewLine}{e}");
 
