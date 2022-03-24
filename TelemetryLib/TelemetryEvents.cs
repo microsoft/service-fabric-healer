@@ -29,13 +29,13 @@ namespace FabricHealer.TelemetryLib
         private readonly string clusterId, tenantId, clusterType;
         private readonly TelemetryConfiguration appInsightsTelemetryConf;
 
-        public TelemetryEvents(FabricClient fabricClient, ServiceContext context, CancellationToken token)
+        public TelemetryEvents(ServiceContext context)
         {
             serviceContext = context;
             appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
             appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AIKey;
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
-            var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
+            var (ClusterId, TenantId, ClusterType) = ClusterInformation.ClusterInfoTuple;
             clusterId = ClusterId;
             tenantId = TenantId;
             clusterType = ClusterType;
@@ -57,6 +57,7 @@ namespace FabricHealer.TelemetryLib
                     { "EventName", OperationalEventName},
                     { "TaskName", TaskName},
                     { "EventRunInterval", runInterval.ToString() },
+                    { "SFRuntimeVersion", repairData.SFRuntimeVersion ?? string.Empty },
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
                     { "NodeNameHash", nodeHashString },
@@ -125,6 +126,7 @@ namespace FabricHealer.TelemetryLib
                 {
                     { "EventName", CriticalErrorEventName},
                     { "TaskName", TaskName},
+                    { "SFRuntimeVersion", fhErrorData.SFRuntimeVersion ?? string.Empty },
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
                     { "TenantId", tenantId },

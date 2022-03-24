@@ -5,6 +5,7 @@
 
 using Newtonsoft.Json;
 using System.Runtime.InteropServices;
+using FabricHealer.TelemetryLib;
 
 namespace FabricHealer.Utilities.Telemetry
 {
@@ -15,10 +16,7 @@ namespace FabricHealer.Utilities.Telemetry
             get; set;
         }
 
-        public string ClusterId
-        {
-            get; set;
-        }
+        public string ClusterId => ClusterInformation.ClusterInfoTuple.ClusterId;
 
         public string Code
         {

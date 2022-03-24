@@ -39,6 +39,7 @@ namespace FabricHealer
         private readonly Uri repairManagerServiceUri = new Uri(RepairConstants.RepairManagerAppName);
         private readonly FabricHealthReporter healthReporter;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
+        private readonly string sfRuntimeVersion;
         private int nodeCount;
         private DateTime StartDateTime;
 
@@ -96,6 +97,7 @@ namespace FabricHealer
 
             RepairHistory = new RepairData();
             healthReporter = new FabricHealthReporter(fabricClient);
+            sfRuntimeVersion = GetServiceFabricRuntimeVersion();
         }
 
         /// <summary>
@@ -258,7 +260,7 @@ namespace FabricHealer
                     {
                         try
                         {
-                            using var telemetryEvents = new TelemetryEvents(fabricClient,serviceContext,Token);
+                            using var telemetryEvents = new TelemetryEvents(serviceContext);
                             var fhData = GetFabricHealerInternalTelemetryData();
 
                             if (fhData != null)
@@ -335,14 +337,15 @@ namespace FabricHealer
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(fabricClient, serviceContext, Token);
+                        using var telemetryEvents = new TelemetryEvents(serviceContext);
                         var fhData = new FabricHealerCriticalErrorEventData
                         {
                             Source = nameof(FabricHealerManager),
                             ErrorMessage = e.Message,
                             ErrorStack = e.StackTrace,
                             CrashTime = DateTime.UtcNow.ToString("o"),
-                            Version = InternalVersionNumber
+                            Version = InternalVersionNumber,
+                            SFRuntimeVersion = sfRuntimeVersion
                         };
 
                         string filepath = Path.Combine(RepairLogger.LogFolderBasePath, $"fh_critical_error_telemetry.log");
@@ -381,7 +384,8 @@ namespace FabricHealer
                 {
                     UpTime = DateTime.UtcNow.Subtract(StartDateTime).ToString(),
                     Version = InternalVersionNumber,
-                    RepairData = RepairHistory
+                    RepairData = RepairHistory,
+                    SFRuntimeVersion = sfRuntimeVersion
                 };
             }
             catch
@@ -1530,6 +1534,21 @@ namespace FabricHealer
             {
 
             }
+        }
+
+        private string GetServiceFabricRuntimeVersion()
+        {
+            try
+            {
+                var config = ServiceFabricConfiguration.Instance;
+                return config.FabricVersion;
+            }
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            {
+                RepairLogger.LogWarning($"GetServiceFabricRuntimeVersion failure:{Environment.NewLine}{e}");
+            }
+
+            return null;
         }
     }
 }

@@ -19,6 +19,11 @@ namespace FabricHealer.TelemetryLib
             get; set;
         }
 
+        public string SFRuntimeVersion
+        {
+            get; set;
+        }
+
         public RepairData RepairData
         {
             get; set;
