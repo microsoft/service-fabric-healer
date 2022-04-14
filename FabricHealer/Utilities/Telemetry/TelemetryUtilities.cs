@@ -5,6 +5,7 @@
 
 using FabricHealer.Interfaces;
 using FabricHealer.Repair;
+using FabricHealer.TelemetryLib;
 using System;
 using System.Fabric;
 using System.Fabric.Health;
@@ -117,11 +118,12 @@ namespace FabricHealer.Utilities.Telemetry
                 var telemData = new TelemetryData()
                 {
                     ApplicationName = repairConfig?.AppName?.OriginalString ?? string.Empty,
+                    ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                     Description = description,
-                    HealthState = Enum.GetName(typeof(HealthState), healthState),
+                    HealthState = healthState,
                     Metric = repairAction,
                     NodeName = repairConfig?.NodeName ?? string.Empty,
-                    PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
+                    PartitionId = repairConfig?.PartitionId != null ? repairConfig.PartitionId : default,
                     ReplicaId = repairConfig != null ? repairConfig.ReplicaOrInstanceId : 0,
                     ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
                     Source = source,
@@ -135,22 +137,23 @@ namespace FabricHealer.Utilities.Telemetry
             if (FabricHealerManager.ConfigSettings.EtwEnabled)
             {
                 ServiceEventSource.Current.Write(
-                                    RepairConstants.EventSourceEventName,
-                                    new
-                                    {
-                                        ApplicationName = repairConfig?.AppName?.OriginalString ?? string.Empty,
-                                        Description = description,
-                                        HealthState = Enum.GetName(typeof(HealthState), healthState),
-                                        Metric = repairAction,
-                                        PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
-                                        ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
-                                        Level = level,
-                                        NodeName = repairConfig?.NodeName ?? string.Empty,
-                                        OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
-                                        ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
-                                        Source = source,
-                                        SystemServiceProcessName = repairConfig?.SystemServiceProcessName ?? string.Empty,
-                                    });
+                        RepairConstants.EventSourceEventName,
+                        new
+                        {
+                            ApplicationName = repairConfig?.AppName?.OriginalString ?? string.Empty,
+                            ClusterInformation.ClusterInfoTuple.ClusterId,
+                            Description = description,
+                            HealthState = Enum.GetName(typeof(HealthState), healthState),
+                            Metric = repairAction,
+                            PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
+                            ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
+                            Level = level,
+                            NodeName = repairConfig?.NodeName ?? string.Empty,
+                            OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                            ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
+                            Source = source,
+                            SystemServiceProcessName = repairConfig?.SystemServiceProcessName ?? string.Empty,
+                        });
             }
         }
     }

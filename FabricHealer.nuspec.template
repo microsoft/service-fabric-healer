@@ -2,9 +2,12 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.0.15</version>
+    <version>1.1.0</version>
     <releaseNotes>
-Code improvements.
+		- FabricHealer no longer requires FabricObserver to be deployed in the same cluster.
+		- Any .NET SF service can now interoperate with FabricHealer using the FabricHealerLib .NET Standard library.
+		- FabricHealer now requires Microsoft.ServiceFabric.Services Version 5.0.516 and higher. Lesser runtime versions than 8.0.516 are no longer supported.
+		- FabricHealer can now be deployed via ARM, directly from the repo.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
@@ -19,6 +22,7 @@ Code improvements.
     </contentFiles>
 	  <dependencies>
 		  <dependency id="Microsoft.Logic.Guan" version="1.0.4" />
+		  <dependency id="Microsoft.ServiceFabric.Services" Version="5.0.516" />
 	  </dependencies>
     <projectUrl>https://github.com/microsoft/service-fabric-healer</projectUrl>
     <tags>azure servicefabric fabrichealer fabricobserver auto-mitigation logic-programming guan</tags>

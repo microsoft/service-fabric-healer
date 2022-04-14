@@ -6,11 +6,11 @@
 ## | AppName*                  | Name of the SF System Application. *This is always fabric:/System (FO monitors SF system service processes). |
 ## | NodeName                  | Name of the node                                                                                             | 
 ## | NodeType                  | Type of node                                                                                                 |  
-## | FOErrorCode               | Error Code emitted by FO (e.g. "FO002")                                                                      | 
-## | MetricName                | Name of the resource supplied by FO (e.g., CpuPercent or MemoryMB, etc.)                                     |   
-## | MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)                               | 
-## | SystemServiceProcessName  | The name of a Fabric system service process supplied in FO health data                                       | 
-## | OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                                   |
+## | ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                                        | 
+## | MetricName                | Name of the Metric  (e.g., CpuPercent or MemoryMB, etc.)                                                     |   
+## | MetricValue               | Corresponding Metric value (e.g. "85" indicating 85% CPU usage)                                              | 
+## | SystemServiceProcessName  | The name of a Fabric system service process supplied in TelemetryData instance                               | 
+## | OS                        | The name of the OS from which the data was collected (Linux or Windows)                                      |
 
 ## System Service-related Metric Names.
 ## | Name                      |                                                                                    

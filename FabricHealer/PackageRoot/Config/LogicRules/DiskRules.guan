@@ -5,11 +5,11 @@
 ## |---------------------------|----------------------------------------------------------------------------------------------|
 ## | NodeName                  | Name of the node                                                                             | 
 ## | NodeType                  | Type of node                                                                                 |  
-## | ObserverName              | Name of Observer that generated the event                                                    |
-## | FOErrorCode               | Error Code emitted by FO (Disk codes are FO007-FO010, FO042, F0043)                          | 
-## | MetricName                | Name of the metric supplied by FO                                                            |   
-## | MetricValue               | Corresponding value for supplied metric name                                                 | 
-## | OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                   |
+## | ObserverName              | Name of Observer that generated the event (if data comes from the FabricObserver service)    |
+## | ErrorCode                 | Supported Error Code emitted by caller (Disk codes are FO007-FO010, FO042, F0043)            | 
+## | MetricName                | Name of the supplied metric                                                                  |   
+## | MetricValue               | Corresponding value for supplied metric                                                      | 
+## | OS                        | The name of the OS from which the data was collected (Linux or Windows)                      |
 
 ## Disk-related Metric Names.
 ## | Name                      |                                                                                    
@@ -67,19 +67,19 @@ Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHi
 
 ## Folder size Warning, check ErrorCode from FO (you could also check MetricName -> MetricName=FolderSizeMB, but we already do that in several places). 
 ## See FOErrorWarningCodes.cs for list of codes and renaming function (GetMetricNameFromCode).
-Mitigate(FOErrorCode=FO043) :- GetRepairHistory(?repairCount, 08:00:00),
+Mitigate(ErrorCode=FO043) :- GetRepairHistory(?repairCount, 08:00:00),
 	?repairCount < 4,
 	CheckFolderSize("E:\SvcFab\Log\Traces", MaxFolderSizeGB=50),
 	DeleteFiles("E:\SvcFab\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=25, RecurseSubdirectories=false).
 
 ## Constrain on folder size Error or Warning code.
-Mitigate(FOErrorCode=?FOErrorCode) :- ?FOErrorCode == "FO042" || ?FOErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),
+Mitigate(ErrorCode=?ErrorCode) :- ?ErrorCode == "FO042" || ?ErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),
 	?repairCount < 4,
 	CheckFolderSize("C:\fabric_observer_logs", MaxFolderSizeMB=250),
 	DeleteFiles("C:\fabric_observer_logs", SortOrder=Ascending, MaxFilesToDelete=5, RecurseSubdirectories=true, SearchPattern="*.dmp").
 
 ## Constrain on folder size Error or Warning code; use environment variable for/in supplied path. Note: Environment variable string must be enclosed in quotes.
-Mitigate(FOErrorCode=?FOErrorCode) :- ?FOErrorCode == "FO042" || ?FOErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),
+Mitigate(ErrorCode=?ErrorCode) :- ?ErrorCode == "FO042" || ?ErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),
 	?repairCount < 4,
 	CheckFolderSize("%SOMEPATHVAR%", MaxFolderSizeGB=50),
 	DeleteFiles("%SOMEPATHVAR%", SortOrder=Ascending, MaxFilesToDelete=25, RecurseSubdirectories=false).

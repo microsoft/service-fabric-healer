@@ -104,7 +104,7 @@ namespace FabricHealer.Utilities
             private set;
         }
 
-        public bool EnableNodeRepair
+        public bool EnableFabricNodeRepair
         {
             get;
             private set;
@@ -225,7 +225,7 @@ namespace FabricHealer.Utilities
 
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.FabricNodeRepairPolicySectionName, RepairConstants.Enabled), out bool nodeRepairEnabled))
             {
-                EnableNodeRepair = nodeRepairEnabled;
+                EnableFabricNodeRepair = nodeRepairEnabled;
             }
 
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.ReplicaRepairPolicySectionName, RepairConstants.Enabled), out bool replicaRepairEnabled))

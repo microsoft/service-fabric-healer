@@ -14,7 +14,7 @@ namespace FabricHealer.Repair.Guan
     public class GetRepairHistoryPredicateType : PredicateType
     {
         private static RepairTaskManager RepairTaskManager;
-        private static TelemetryData FOHealthData;
+        private static TelemetryData RepairData;
         private static GetRepairHistoryPredicateType Instance;
 
         private class Resolver : GroundPredicateResolver
@@ -35,7 +35,7 @@ namespace FabricHealer.Repair.Guan
                     repairCount = await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(
                                         timeWindow,
                                         RepairTaskManager.FabricClientInstance,
-                                        FOHealthData,
+                                        RepairData,
                                         RepairTaskManager.Token).ConfigureAwait(false);
                 }
                 else
@@ -46,7 +46,7 @@ namespace FabricHealer.Repair.Guan
 
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                             LogLevel.Info,
-                                                            $"GetRepairHistoryPredicate::{FOHealthData.RepairId}",
+                                                            $"GetRepairHistoryPredicate::{RepairData.RepairId}",
                                                             message,
                                                             RepairTaskManager.Token).ConfigureAwait(false);
                 }
@@ -57,10 +57,10 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static GetRepairHistoryPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData foHealthData)
+        public static GetRepairHistoryPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
         {
             RepairTaskManager = repairTaskManager;
-            FOHealthData = foHealthData;
+            RepairData = repairData;
 
             return Instance ??= new GetRepairHistoryPredicateType(name);
         }

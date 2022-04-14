@@ -16,7 +16,7 @@ namespace FabricHealer.Repair.Guan
     public class DeleteFilesPredicateType : PredicateType
     {
         private static RepairTaskManager RepairTaskManager;
-        private static TelemetryData FOHealthData;
+        private static TelemetryData RepairData;
         private static DeleteFilesPredicateType Instance;
 
         private class Resolver : BooleanPredicateResolver
@@ -28,15 +28,22 @@ namespace FabricHealer.Repair.Guan
             {
                 repairConfiguration = new RepairConfiguration
                 {
-                    AppName = !string.IsNullOrWhiteSpace(FOHealthData.ApplicationName) ? new Uri(FOHealthData.ApplicationName) : null,
-                    FOErrorCode = FOHealthData.Code,
-                    NodeName = FOHealthData.NodeName,
-                    NodeType = FOHealthData.NodeType,
-                    PartitionId = !string.IsNullOrWhiteSpace(FOHealthData.PartitionId) ? new Guid(FOHealthData.PartitionId) : default,
-                    ReplicaOrInstanceId = FOHealthData.ReplicaId > 0 ? FOHealthData.ReplicaId : 0,
-                    ServiceName = !string.IsNullOrWhiteSpace(FOHealthData.ServiceName) ? new Uri(FOHealthData.ServiceName) : null,
-                    FOHealthMetricValue = FOHealthData.Value,
-                    RepairPolicy = new DiskRepairPolicy()
+                    AppName = null,
+                    ErrorCode = RepairData.Code,
+                    NodeName = RepairData.NodeName,
+                    NodeType = RepairData.NodeType,
+                    PartitionId = default,
+                    ReplicaOrInstanceId = 0,
+                    ServiceName =  null,
+                    MetricValue = RepairData.Value,
+                    RepairPolicy = new DiskRepairPolicy
+                    {
+                        RepairAction = RepairActionType.DeleteFiles,
+                        TargetType = RepairTargetType.VirtualMachine,
+                        RepairId = RepairData.RepairId
+                    },
+                    EventSourceId = RepairData.Source,
+                    EventProperty = RepairData.Property
                 };
             }
 
@@ -114,12 +121,7 @@ namespace FabricHealer.Repair.Guan
                     }
                 }
 
-                // RepairPolicy (base)
-                repairConfiguration.RepairPolicy.RepairAction = RepairActionType.DeleteFiles;
-                repairConfiguration.RepairPolicy.TargetType = RepairTargetType.VirtualMachine;
-                repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
-                
-                // DiskRepairPolicy (derives from RepairPolicy)
+                // DiskRepairPolicy
                 (repairConfiguration.RepairPolicy as DiskRepairPolicy).FolderPath = path;
                 (repairConfiguration.RepairPolicy as DiskRepairPolicy).MaxNumberOfFilesToDelete = maxFilesToDelete;
                 (repairConfiguration.RepairPolicy as DiskRepairPolicy).FileAgeSortOrder = direction;
@@ -132,7 +134,6 @@ namespace FabricHealer.Repair.Guan
                                                                                         repairConfiguration,
                                                                                         RepairTaskManager.Token),
                                                                RepairTaskManager.Token).ConfigureAwait(false);
-
                 if (repairTask == null)
                 {
                     return false;
@@ -149,9 +150,9 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static DeleteFilesPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData foHealthData)
+        public static DeleteFilesPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
         {
-            FOHealthData = foHealthData;
+            RepairData = repairData;
             RepairTaskManager = repairTaskManager;
 
             return Instance ??= new DeleteFilesPredicateType(name);

@@ -26,6 +26,9 @@
     <None Include="PublishProfiles\Local.1Node.xml" />
     <None Include="PublishProfiles\Local.5Node.xml" />
     <None Include="Scripts\Deploy-FabricApplication.ps1" />
+    <None Include="StartupServiceParameters\Cloud.xml" />
+    <None Include="StartupServiceParameters\Local.1Node.xml" />
+    <None Include="StartupServiceParameters\Local.5Node.xml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FabricHealer\FabricHealer.csproj" />
@@ -33,6 +36,7 @@
   <ItemGroup>
     <Content Include="packages.config" />
     <Content Include="PublishProfiles\Cloud.xml" />
+    <Content Include="StartupServices.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
   <PropertyGroup>

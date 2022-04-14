@@ -44,7 +44,7 @@ namespace FabricHealer.Repair
         public const string SystemAppRepairPolicySectionName = "SystemAppRepairPolicy";
         public const string VmRepairPolicySectionName = "VMRepairPolicy";
 
-        // RepairPolicy Settings Parameters.
+        // RepairPolicy
         public const string Enabled = "Enabled";
 
         // Mitigate Argument names.
@@ -54,11 +54,12 @@ namespace FabricHealer.Repair
         public const string NodeType = "NodeType";
         public const string PartitionId = "PartitionId";
         public const string ReplicaOrInstanceId = "ReplicaOrInstanceId";
-        public const string FOErrorCode = "FOErrorCode";
+        public const string ErrorCode = "ErrorCode";
         public const string MetricName = "MetricName";
         public const string MetricValue = "MetricValue";
         public const string OS = "OS";
         public const string SystemServiceProcessName = "SystemServiceProcessName";
+        public const string HealthState = "HealthState";
 
         // Repair Actions.
         public const string DeleteFiles = "DeleteFiles";

@@ -5,18 +5,20 @@
 
 using Newtonsoft.Json;
 using System.Runtime.InteropServices;
-using FabricHealer.TelemetryLib;
+using FabricHealer.Interfaces;
+using System.Fabric.Health;
+using System;
 
 namespace FabricHealer.Utilities.Telemetry
 {
-    public class TelemetryData
+    public class TelemetryData : ITelemetryData
     {
+        private readonly string _os;
+
         public string ApplicationName
         {
             get; set;
         }
-
-        public string ClusterId => ClusterInformation.ClusterInfoTuple.ClusterId;
 
         public string Code
         {
@@ -28,16 +30,26 @@ namespace FabricHealer.Utilities.Telemetry
             get; set;
         }
 
+        public string ClusterId
+        {
+            get; set;
+        }
+
         public string Description
         {
             get; set;
         }
 
-        public string HealthState
+        public EntityType EntityType
         {
             get; set;
         }
 
+        public HealthState HealthState
+        {
+            get; set;
+        }
+ 
         public string Metric
         {
             get; set;
@@ -48,22 +60,25 @@ namespace FabricHealer.Utilities.Telemetry
             get; set;
         }
 
+        /// <summary>
+        /// The name of the FabricObserver observer that generated the health information.
+        /// </summary>
         public string ObserverName
         {
             get; set;
         }
-
+ 
         public string OS
         {
-            get;
-        } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
-
-        public string PartitionId
+            get { return _os; }
+        }
+       
+        public Guid PartitionId
         {
             get; set;
         }
 
-        public int ProcessId
+        public long ProcessId
         {
             get; set;
         }
@@ -97,13 +112,15 @@ namespace FabricHealer.Utilities.Telemetry
         {
             get; set;
         }
-
+        /// <summary>
+        /// The Repair Id.
+        /// </summary>
         public string RepairId
         {
             get; set;
         }
 
-        public string HealthEventProperty
+        public string Property
         {
             get; set;
         }
@@ -111,7 +128,7 @@ namespace FabricHealer.Utilities.Telemetry
         [JsonConstructor]
         public TelemetryData()
         {
-
+            _os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
         }
     }
 }

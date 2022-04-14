@@ -69,12 +69,12 @@ Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 102
 
 ## Disk
 
-Mitigate(FOErrorCode=?FOErrorCode) :- ?FOErrorCode == "FO042" || ?FOErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),
+Mitigate(ErrorCode=?ErrorCode) :- ?ErrorCode == "FO042" || ?ErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),
 	?repairCount < 4,
 	CheckFolderSize("E:\SvcFab\Log\Traces", MaxFolderSizeGB=50),
 	DeleteFiles("E:\SvcFab\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=25, RecurseSubdirectories=false).
 
-Mitigate(FOErrorCode=?FOErrorCode) :- ?FOErrorCode == "FO042" || ?FOErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),
+Mitigate(ErrorCode=?ErrorCode) :- ?ErrorCode == "FO042" || ?ErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),
 	?repairCount < 4,
 	CheckFolderSize("%SOMEPATHVAR%", MaxFolderSizeGB=50),
 	DeleteFiles("%SOMEPATHVAR%", SortOrder=Ascending, MaxFilesToDelete=25, RecurseSubdirectories=false).
@@ -101,6 +101,7 @@ Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?A
 ## Threads - Any app service. 5 repairs within 5 hour window. This means if FO warns on Thread count, then heal. There are no conditional checks (on MetricValue) to take place.
 ## Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
+Mitigate(ServiceName=?ServiceName) :- ?ServiceName != null, TimeScopedRestartReplica(5, 05:00:00).
 
 ## Internal Predicates
 

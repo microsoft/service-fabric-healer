@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using FabricHealer.Interfaces;
 
 namespace FabricHealer.Repair
 {
@@ -72,8 +73,18 @@ namespace FabricHealer.Repair
 
                     repairTask.State = RepairTaskState.Restoring;
                     repairTask.ResultStatus = RepairTaskResult.Cancelled;
-                    _ = await fabricClient.RepairManager.UpdateRepairExecutionStateAsync(repairTask).ConfigureAwait(false);
-
+                    try
+                    {
+                        _ = await fabricClient.RepairManager.UpdateRepairExecutionStateAsync(repairTask).ConfigureAwait(false);
+                    }
+                    catch (FabricException fe)
+                    {
+                        // TOTHINK
+                        if (fe.ErrorCode == FabricErrorCode.SequenceNumberCheckFailed)
+                        {
+                            // Not sure what to do here. This can randomly take place (timing).
+                        }
+                    }
                     break;
 
                 case RepairTaskState.Invalid:
@@ -268,7 +279,7 @@ namespace FabricHealer.Repair
         public static async Task<bool> IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
                                          TimeSpan interval,
                                          FabricClient fabricClient,
-                                         TelemetryData foHealthData,
+                                         TelemetryData repairData,
                                          CancellationToken cancellationToken)
         {
 
@@ -289,11 +300,11 @@ namespace FabricHealer.Repair
             var orderedRepairList = allRecentFHRepairTasksCompleted.OrderByDescending(o => o.CompletedTimestamp).ToList();
 
             // There could be several repairs of this type for the same repair target in RM's db.
-            if (orderedRepairList.Any(r => r.ExecutorData.Contains(foHealthData.RepairId)))
+            if (orderedRepairList.Any(r => r.ExecutorData.Contains(repairData.RepairId)))
             {
                 foreach (var repair in orderedRepairList)
                 {
-                    if (repair.ExecutorData.Contains(foHealthData.RepairId))
+                    if (repair.ExecutorData.Contains(repairData.RepairId))
                     {
                         // Completed aborted/cancelled repair tasks should not block repairs if they are inside run interval.
                         return repair.CompletedTimestamp != null && repair.Flags != RepairTaskFlags.AbortRequested && repair.Flags != RepairTaskFlags.CancelRequested && DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= interval;
@@ -304,8 +315,8 @@ namespace FabricHealer.Repair
             // VM repairs - IS is executor, ExecutorData is supplied by IS. Custom FH repair id supplied as repair Description.
             foreach (var repair in allRecentFHRepairTasksCompleted.Where(r => r.ResultStatus == RepairTaskResult.Succeeded))
             {
-                if (repair.Executor != $"fabric:/System/InfrastructureService/{foHealthData.NodeType}" ||
-                    repair.Description != foHealthData.RepairId)
+                if (repair.Executor != $"fabric:/System/InfrastructureService/{repairData.NodeType}" ||
+                    repair.Description != repairData.RepairId)
                 {
                     continue;
                 }
@@ -329,7 +340,7 @@ namespace FabricHealer.Repair
         public static async Task<int> GetCompletedRepairCountWithinTimeRangeAsync(
                                          TimeSpan timeWindow,
                                          FabricClient fabricClient,
-                                         TelemetryData foHealthData,
+                                         TelemetryData repairData,
                                          CancellationToken cancellationToken)
         {
             var allRecentFHRepairTasksCompleted =
@@ -360,7 +371,7 @@ namespace FabricHealer.Repair
                         continue;
                     }
 
-                    if (foHealthData.RepairId != fhExecutorData.RepairPolicy.RepairId)
+                    if (repairData.RepairId != fhExecutorData.RepairPolicy.RepairId)
                     {
                         continue;
                     }
@@ -373,7 +384,7 @@ namespace FabricHealer.Repair
                     }
                 }
                 // VM repairs (IS is executor, ExecutorData supplied by IS. Custom FH repair id supplied as repair Description.)
-                else if (repair.Executor == $"{RepairTaskEngine.InfrastructureServiceName}/{foHealthData.NodeType}" && repair.Description == foHealthData.RepairId)
+                else if (repair.Executor == $"{RepairTaskEngine.InfrastructureServiceName}/{repairData.NodeType}" && repair.Description == repairData.RepairId)
                 {
                     if (repair.CompletedTimestamp == null || !repair.CompletedTimestamp.HasValue)
                     {

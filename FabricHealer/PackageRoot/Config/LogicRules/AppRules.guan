@@ -7,13 +7,13 @@
 ## | ServiceName               | Name of the SF service, format is fabric:/SomeApp/SomeService                                |
 ## | NodeName                  | Name of the node                                                                             | 
 ## | NodeType                  | Type of node                                                                                 |  
-## | ObserverName              | Name of Observer that generated the event.                                                   |
+## | ObserverName              | Name of Observer that generated the event (if the data comes from FabricObserver service)    |
 ## | PartitionId               | Id of the partition                                                                          |
 ## | ReplicaOrInstanceId       | Id of the replica or instance                                                                |
-## | FOErrorCode               | Error Code emitted by FO (e.g. "FO002")                                                      | 
-## | MetricName                | Name of the resource supplied by FO (e.g., CpuPercent or MemoryMB, etc.)                     |   
-## | MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)               | 
-## | OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                   |
+## | ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                        | 
+## | MetricName                | Name of the metric (e.g., CpuPercent or MemoryMB, etc.)                                      |   
+## | MetricValue               | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)                              | 
+## | OS                        | The name of the OS from which the data was collected (Linux or Windows)                      |
  
 ## Application-related Metric Names.
 ## | Name                      |                                                                                    
@@ -153,6 +153,9 @@ Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?A
 ## Threads - Any app service. 5 repairs within 5 hour window. This means if FO warns on Thread count, then heal. There are no conditional checks (on MetricValue) to take place.
 ## Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
+## Generic rule for any service (no facts besides ServiceName). This means any service that is in Error or Warning state and
+## also specified in the serialized TelemetryData instance that forms the Description of the related Service level Health Event will be restarted.
+Mitigate(ReplicaOrInstanceId=?ReplicaOrInstanceId) :- ?ReplicaOrInstanceId > 0, TimeScopedRestartReplica(5, 05:00:00).
 
 ## Internal Predicates
 

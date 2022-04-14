@@ -28,6 +28,6 @@ namespace FabricHealer.Interfaces
 
         Task<bool> SafeRestartServiceFabricNodeAsync(RepairConfiguration repairConfiguration, RepairTask repairTask, CancellationToken cancellationToken);
 
-        Task StartRepairWorkflowAsync(TelemetryData foHealthData, List<string> repairRules, CancellationToken cancellationToken);
+        Task StartRepairWorkflowAsync(TelemetryData repairData, List<string> repairRules, CancellationToken cancellationToken);
     }
 }

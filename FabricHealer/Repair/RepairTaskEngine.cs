@@ -29,7 +29,7 @@ namespace FabricHealer.Repair
 
         public async Task<RepairTask> CreateFabricHealerRepairTask(RepairExecutorData executorData, CancellationToken token)
         {
-            if (executorData == null || executorData.NodeName == null || executorData.FOErrorCode == null)
+            if (executorData == null || executorData.NodeName == null)
             {
                 return null;
             }
@@ -71,7 +71,7 @@ namespace FabricHealer.Repair
             // Error health state on target SF entity can block RM from approving the job to repair it (which is the whole point of doing the job).
             // So, do not do health checks if customer configures FO to emit Error health reports.
             // In general, FO should *not* be configured to emit Error events. See FO documentation.
-            if (executorData.FOErrorCode != null && FOErrorWarningCodes.GetErrorWarningNameFromCode(executorData.FOErrorCode).Contains("Error"))
+            if (executorData.ErrorCode != null && SupportedErrorCodes.GetCodeNameFromErrorCode(executorData.ErrorCode).Contains("Error"))
             {
                 doHealthChecks = false;
             }
@@ -124,7 +124,7 @@ namespace FabricHealer.Repair
             }
 
             string taskId = $"{FHTaskIdPrefix}/{HostVMReboot}/{(uint)repairConfiguration.NodeName.GetHashCode()}/{repairConfiguration.NodeType}";
-            bool doHealthChecks = !FOErrorWarningCodes.GetErrorWarningNameFromCode(repairConfiguration.FOErrorCode).Contains("Error");
+            bool doHealthChecks = !SupportedErrorCodes.GetCodeNameFromErrorCode(repairConfiguration.ErrorCode).Contains("Error");
 
             // Error health state on target SF entity can block RM from approving the job to repair it (which is the whole point of doing the job).
             // So, do not do health checks if customer configures FO to emit Error health reports.

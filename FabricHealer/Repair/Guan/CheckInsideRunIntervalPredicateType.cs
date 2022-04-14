@@ -15,7 +15,7 @@ namespace FabricHealer.Repair.Guan
     {
         private static CheckInsideRunIntervalPredicateType Instance;
         private static RepairTaskManager RepairTaskManager;
-        private static TelemetryData FOHealthData;
+        private static TelemetryData RepairData;
 
         private class Resolver : BooleanPredicateResolver
         {
@@ -47,7 +47,7 @@ namespace FabricHealer.Repair.Guan
                 bool insideRunInterval = await FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
                                                              interval,
                                                              RepairTaskManager.FabricClientInstance,
-                                                             FOHealthData,
+                                                             RepairData,
                                                              RepairTaskManager.Token).ConfigureAwait(false);
                 
                 if (!insideRunInterval)
@@ -55,22 +55,22 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                string message = $"Repair with ID {FOHealthData.RepairId} has already run once within the specified run interval ({(runInterval > TimeSpan.MinValue ? runInterval : interval)}).{Environment.NewLine}" +
+                string message = $"Repair with ID {RepairData.RepairId} has already run once within the specified run interval ({(runInterval > TimeSpan.MinValue ? runInterval : interval)}).{Environment.NewLine}" +
                                  "Will not attempt repair at this time.";
 
                 await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                                              LogLevel.Info,
-                                                             $"CheckInsideRunInterval::{FOHealthData.RepairId}",
+                                                             $"CheckInsideRunInterval::{RepairData.RepairId}",
                                                              message,
                                                              RepairTaskManager.Token).ConfigureAwait(false);
                 return true;
             }
         }
 
-        public static CheckInsideRunIntervalPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData foHealthData)
+        public static CheckInsideRunIntervalPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
         {
             RepairTaskManager = repairTaskManager;
-            FOHealthData = foHealthData;
+            RepairData = repairData;
 
             return Instance ??= new CheckInsideRunIntervalPredicateType(name);
         }

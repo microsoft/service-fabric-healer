@@ -67,19 +67,19 @@ namespace FabricHealer.Utilities.Telemetry
                             string instanceName = null)
         {
             string jsonPayload = JsonConvert.SerializeObject(
-                                                new
-                                                {
-                                                    id = $"FH_{Guid.NewGuid()}",
-                                                    datetime = DateTime.UtcNow,
-                                                    source = "FabricHealer",
-                                                    property = propertyName,
-                                                    healthScope = scope.ToString(),
-                                                    healthState = state.ToString(),
-                                                    healthEvaluation = unhealthyEvaluations,
-                                                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
-                                                    serviceName = serviceName ?? string.Empty,
-                                                    instanceName = instanceName ?? string.Empty,
-                                                });
+                    new
+                    {
+                        id = $"FH_{Guid.NewGuid()}",
+                        datetime = DateTime.UtcNow,
+                        source = "FabricHealer",
+                        property = propertyName,
+                        healthScope = scope.ToString(),
+                        healthState = state.ToString(),
+                        healthEvaluation = unhealthyEvaluations,
+                        osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                        serviceName = serviceName ?? string.Empty,
+                        instanceName = instanceName ?? string.Empty,
+                    });
 
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
         }
@@ -106,15 +106,15 @@ namespace FabricHealer.Utilities.Telemetry
                                     CancellationToken cancellationToken)
         {
             string jsonPayload = JsonConvert.SerializeObject(
-                                                new
-                                                {
-                                                    id = $"FH_{Guid.NewGuid()}",
-                                                    datetime = DateTime.UtcNow,
-                                                    source,
-                                                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
-                                                    property = name,
-                                                    value,
-                                                });
+                    new
+                    {
+                        id = $"FH_{Guid.NewGuid()}",
+                        datetime = DateTime.UtcNow,
+                        source,
+                        osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                        property = name,
+                        value,
+                    });
 
             await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
 

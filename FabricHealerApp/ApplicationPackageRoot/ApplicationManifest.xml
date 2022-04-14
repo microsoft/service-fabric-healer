@@ -1,7 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.0.15" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.1.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
-    <Parameter Name="FabricHealer_InstanceCount" DefaultValue="-1" />
     <!-- FabricHealerManager Settings  -->
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
     <Parameter Name="EventSourceProviderEnabled" DefaultValue="true" />
@@ -16,7 +15,7 @@
     <!-- Repair Policy Enablement -->
     <Parameter Name="EnableAppRepair" DefaultValue="true" />
     <Parameter Name="EnableDiskRepair" DefaultValue="false" />
-    <Parameter Name="EnableNodeRepair" DefaultValue="false" />
+    <Parameter Name="EnableFabricNodeRepair" DefaultValue="true" />
     <Parameter Name="EnableReplicaRepair" DefaultValue="false" />
     <Parameter Name="EnableSystemAppRepair" DefaultValue="false" />
     <Parameter Name="EnableVMRepair" DefaultValue="false" />
@@ -25,7 +24,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.0.15" />
+    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.1.0" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -47,7 +46,7 @@
             <Parameter Name="Enabled" Value="[EnableDiskRepair]" />
           </Section>
           <Section Name="FabricNodeRepairPolicy">
-            <Parameter Name="Enabled" Value="[EnableNodeRepair]" />
+            <Parameter Name="Enabled" Value="[EnableFabricNodeRepair]" />
           </Section>
           <Section Name="ReplicaRepairPolicy">
             <Parameter Name="Enabled" Value="[EnableReplicaRepair]" />
@@ -65,18 +64,6 @@
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
     </Policies>
   </ServiceManifestImport>
-  <DefaultServices>
-    <!-- The section below creates instances of service types, when an instance of this 
-         application type is created. You can also create one or more instances of service type using the 
-         ServiceFabric PowerShell module.
-         
-         The attribute ServiceTypeName below must match the name defined in the imported ServiceManifest.xml file. -->
-    <Service Name="FabricHealer" ServicePackageActivationMode="ExclusiveProcess">
-      <StatelessService ServiceTypeName="FabricHealerType" InstanceCount="[FabricHealer_InstanceCount]">
-        <SingletonPartition />
-      </StatelessService>
-    </Service>
-  </DefaultServices>
   <!-- Because of the actions FabricHealer takes in a cluster, it must run as Admin user on Windows and root on Linux. 
        LocalSystem AccountType maps to System on Windows and root on Linux. -->
   <Principals>

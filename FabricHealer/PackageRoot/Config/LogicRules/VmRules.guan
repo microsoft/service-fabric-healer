@@ -5,10 +5,10 @@
 ## |---------------------------|----------------------------------------------------------------------------------------------|
 ## | NodeName                  | Name of the node                                                                             | 
 ## | NodeType                  | Type of node                                                                                 |  
-## | FOErrorCode               | Error Code emitted by FO (e.g. "FO002")                                                      | 
-## | MetricName                | Name of the resource supplied by FO (e.g., CpuPercent or MemoryMB, etc.)                     |   
-## | MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)               | 
-## | OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                   |
+## | ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                        | 
+## | MetricName                | Name of the Metric  (e.g., CpuPercent or MemoryMB, etc.)                                     |   
+## | MetricValue               | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)                              | 
+## | OS                        | The name of the OS from which the data was collected (Linux or Windows)                      |
     
 ## VM-related Metric Names.
 ## | Name                      |                                                                                    

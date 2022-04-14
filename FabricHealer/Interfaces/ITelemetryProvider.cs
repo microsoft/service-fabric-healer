@@ -88,9 +88,7 @@ namespace FabricHealer.Interfaces
         /// </summary>
         /// <param name="telemetryData">TelemetryData instance.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        Task ReportMetricAsync(
-          TelemetryData telemetryData,
-          CancellationToken cancellationToken);
+        Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken);
 
         /// <summary>
         /// Calls telemetry provider to report a metric.

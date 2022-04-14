@@ -45,7 +45,7 @@ namespace FabricHealer.Repair
         }
 
         [DataMember]
-        public string FOErrorCode
+        public string ErrorCode
         {
             get; set;
         }

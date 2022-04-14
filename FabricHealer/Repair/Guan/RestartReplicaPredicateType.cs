@@ -14,7 +14,7 @@ namespace FabricHealer.Repair.Guan
     public class RestartReplicaPredicateType : PredicateType
     {
         private static RepairTaskManager RepairTaskManager;
-        private static TelemetryData FOHealthData;
+        private static TelemetryData RepairData;
         private static RestartReplicaPredicateType Instance;
 
         private class Resolver : BooleanPredicateResolver
@@ -26,24 +26,28 @@ namespace FabricHealer.Repair.Guan
             {
                 repairConfiguration = new RepairConfiguration
                 {
-                    AppName = !string.IsNullOrWhiteSpace(FOHealthData.ApplicationName) ? new Uri(FOHealthData.ApplicationName) : null,
-                    FOErrorCode = FOHealthData.Code,
-                    NodeName = FOHealthData.NodeName,
-                    NodeType = FOHealthData.NodeType,
-                    PartitionId = !string.IsNullOrWhiteSpace(FOHealthData.PartitionId) ? new Guid(FOHealthData.PartitionId) : default,
-                    ReplicaOrInstanceId = FOHealthData.ReplicaId > 0 ? FOHealthData.ReplicaId : 0,
-                    ServiceName = !string.IsNullOrWhiteSpace(FOHealthData.ServiceName) ? new Uri(FOHealthData.ServiceName) : null,
-                    FOHealthMetricValue = FOHealthData.Value,
-                    RepairPolicy = new RepairPolicy()
+                    AppName = !string.IsNullOrWhiteSpace(RepairData.ApplicationName) ? new Uri(RepairData.ApplicationName) : null,
+                    ErrorCode = RepairData.Code,
+                    EntityType = RepairData.EntityType,
+                    NodeName = RepairData.NodeName,
+                    NodeType = RepairData.NodeType,
+                    PartitionId = RepairData.PartitionId != Guid.Empty ? RepairData.PartitionId : default,
+                    ReplicaOrInstanceId = RepairData.ReplicaId > 0 ? RepairData.ReplicaId : 0,
+                    ServiceName = !string.IsNullOrWhiteSpace(RepairData.ServiceName) ? new Uri(RepairData.ServiceName) : null,
+                    MetricValue = RepairData.Value,
+                    RepairPolicy = new RepairPolicy
+                    {
+                        RepairId = RepairData.RepairId,
+                        TargetType = RepairTargetType.Application,
+                        RepairAction = RepairActionType.RestartReplica
+                    },
+                    EventSourceId = RepairData.Source,
+                    EventProperty = RepairData.Property
                 };
             }
 
             protected override async Task<bool> CheckAsync()
             {
-                repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
-                repairConfiguration.RepairPolicy.TargetType = RepairTargetType.Application;
-                repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartReplica;
-                
                 int count = Input.Arguments.Count;
 
                 for (int i = 0; i < count; i++)
@@ -87,10 +91,10 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static RestartReplicaPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData foHealthData)
+        public static RestartReplicaPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
         {
             RepairTaskManager = repairTaskManager;
-            FOHealthData = foHealthData;
+            RepairData = repairData;
 
             return Instance ??= new RestartReplicaPredicateType(name);
         }

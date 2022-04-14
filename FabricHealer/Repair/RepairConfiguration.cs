@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using FabricHealer.Utilities.Telemetry;
 using System;
 
 namespace FabricHealer.Repair
@@ -54,18 +55,33 @@ namespace FabricHealer.Repair
             get; set;
         }
 
-        public string FOErrorCode
+        public string ErrorCode
         {
             get; set;
         }
 
-        public object FOHealthMetricValue
+        public object MetricValue
+        {
+            get; set;
+        }
+
+        public string EventProperty
         {
             get; set;
         }
 
         public string SystemServiceProcessName 
         { 
+            get; set;
+        }
+
+        public string EventSourceId
+        {
+            get; set;
+        }
+
+        public EntityType EntityType 
+        {
             get; set; 
         }
     }

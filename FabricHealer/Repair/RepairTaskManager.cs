@@ -86,13 +86,13 @@ namespace FabricHealer.Repair
             return true;
         }
 
-        public async Task StartRepairWorkflowAsync(TelemetryData foHealthData, List<string> repairRules, CancellationToken cancellationToken)
+        public async Task StartRepairWorkflowAsync(TelemetryData repairData, List<string> repairRules, CancellationToken cancellationToken)
         {
             Node node = null;
 
-            if (foHealthData.NodeName != null)
+            if (repairData.NodeName != null)
             {
-                node = await GetFabricNodeFromNodeNameAsync(foHealthData.NodeName, cancellationToken).ConfigureAwait(false);
+                node = await GetFabricNodeFromNodeNameAsync(repairData.NodeName, cancellationToken).ConfigureAwait(false);
             }
 
             if (node == null)
@@ -144,11 +144,14 @@ namespace FabricHealer.Repair
                 return;
             }
 
-            foHealthData.NodeType = node.NodeType;
+            if (string.IsNullOrEmpty(repairData.NodeType))
+            {
+                repairData.NodeType = node.NodeType;
+            }
 
             try
             {
-                await RunGuanQueryAsync(foHealthData, repairRules);
+                await RunGuanQueryAsync(repairData, repairRules);
             }
             catch (GuanException ge)
             {
@@ -166,29 +169,29 @@ namespace FabricHealer.Repair
         /// This is the entry point to Guan parsing and query execution. It creates the necessary Guan objects to successfully execute logic rules based on supplied FO data 
         /// and related repair rules.
         /// </summary>
-        /// <param name="foHealthData">Health data from FO for target SF entity</param>
+        /// <param name="repairData">Health data from FO for target SF entity</param>
         /// <param name="repairRules">Repair rules that are related to target SF entity</param>
         /// <param name="repairExecutorData">Optional Repair data that is used primarily when some repair is being restarted (after an FH restart, for example)</param>
         /// <returns></returns>
-        public async Task RunGuanQueryAsync(TelemetryData foHealthData, List<string> repairRules, RepairExecutorData repairExecutorData = null)
+        public async Task RunGuanQueryAsync(TelemetryData repairData, List<string> repairRules, RepairExecutorData repairExecutorData = null)
         {
             // Add predicate types to functor table. Note that all health information data from FO are automatically passed to all predicates.
             FunctorTable functorTable = new FunctorTable();
 
             // Add external helper predicates.
-            functorTable.Add(CheckFolderSizePredicateType.Singleton(RepairConstants.CheckFolderSize, this, foHealthData));
-            functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, this, foHealthData));
-            functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, this, foHealthData));
-            functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, this, foHealthData));
+            functorTable.Add(CheckFolderSizePredicateType.Singleton(RepairConstants.CheckFolderSize, this, repairData));
+            functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, this, repairData));
+            functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, this, repairData));
+            functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, this, repairData));
             functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage, this));
 
             // Add external repair predicates.
-            functorTable.Add(DeleteFilesPredicateType.Singleton(RepairConstants.DeleteFiles, this, foHealthData));
-            functorTable.Add(RestartCodePackagePredicateType.Singleton(RepairConstants.RestartCodePackage, this, foHealthData));
-            functorTable.Add(RestartFabricNodePredicateType.Singleton(RepairConstants.RestartFabricNode, this, repairExecutorData, repairTaskEngine, foHealthData));
-            functorTable.Add(RestartFabricSystemProcessPredicateType.Singleton(RepairConstants.RestartFabricSystemProcess, this, foHealthData));
-            functorTable.Add(RestartReplicaPredicateType.Singleton(RepairConstants.RestartReplica, this, foHealthData));
-            functorTable.Add(RestartVMPredicateType.Singleton(RepairConstants.RestartVM, this, foHealthData));
+            functorTable.Add(DeleteFilesPredicateType.Singleton(RepairConstants.DeleteFiles, this, repairData));
+            functorTable.Add(RestartCodePackagePredicateType.Singleton(RepairConstants.RestartCodePackage, this, repairData));
+            functorTable.Add(RestartFabricNodePredicateType.Singleton(RepairConstants.RestartFabricNode, this, repairExecutorData, repairTaskEngine, repairData));
+            functorTable.Add(RestartFabricSystemProcessPredicateType.Singleton(RepairConstants.RestartFabricSystemProcess, this, repairData));
+            functorTable.Add(RestartReplicaPredicateType.Singleton(RepairConstants.RestartReplica, this, repairData));
+            functorTable.Add(RestartVMPredicateType.Singleton(RepairConstants.RestartVM, this, repairData));
 
             // Parse rules.
             Module module = Module.Parse("external", repairRules, functorTable);
@@ -205,22 +208,23 @@ namespace FabricHealer.Repair
 
             // The type of metric that led FO to generate the unhealthy evaluation for the entity (App, Node, VM, Replica, etc).
             // We rename these for brevity for simplified use in logic rule composition (e;g., MetricName="Threads" instead of MetricName="Total Thread Count").
-            foHealthData.Metric = FOErrorWarningCodes.GetMetricNameFromCode(foHealthData.Code);
+            repairData.Metric = SupportedErrorCodes.GetMetricNameFromErrorCode(repairData.Code);
 
             // These args hold the related values supplied by FO and are available anywhere Mitigate is used as a rule head.
             // Think of these as facts from FabricObserver.
-            compoundTerm.AddArgument(new Constant(foHealthData.ApplicationName), RepairConstants.AppName);
-            compoundTerm.AddArgument(new Constant(foHealthData.Code), RepairConstants.FOErrorCode);
-            compoundTerm.AddArgument(new Constant(foHealthData.Metric), RepairConstants.MetricName);
-            compoundTerm.AddArgument(new Constant(foHealthData.NodeName), RepairConstants.NodeName);
-            compoundTerm.AddArgument(new Constant(foHealthData.NodeType), RepairConstants.NodeType);
-            compoundTerm.AddArgument(new Constant(foHealthData.ObserverName), RepairConstants.ObserverName);
-            compoundTerm.AddArgument(new Constant(foHealthData.OS), RepairConstants.OS);
-            compoundTerm.AddArgument(new Constant(foHealthData.ServiceName), RepairConstants.ServiceName);
-            compoundTerm.AddArgument(new Constant(foHealthData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);
-            compoundTerm.AddArgument(new Constant(foHealthData.PartitionId), RepairConstants.PartitionId);
-            compoundTerm.AddArgument(new Constant(foHealthData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
-            compoundTerm.AddArgument(new Constant(Convert.ToInt64(foHealthData.Value)), RepairConstants.MetricValue);
+            compoundTerm.AddArgument(new Constant(repairData.ApplicationName), RepairConstants.AppName);
+            compoundTerm.AddArgument(new Constant(repairData.Code), RepairConstants.ErrorCode);
+            compoundTerm.AddArgument(new Constant(Enum.GetName(typeof(HealthState), repairData.HealthState)), RepairConstants.HealthState);
+            compoundTerm.AddArgument(new Constant(repairData.Metric), RepairConstants.MetricName);
+            compoundTerm.AddArgument(new Constant(repairData.NodeName), RepairConstants.NodeName);
+            compoundTerm.AddArgument(new Constant(repairData.NodeType), RepairConstants.NodeType);
+            compoundTerm.AddArgument(new Constant(repairData.ObserverName), RepairConstants.ObserverName);
+            compoundTerm.AddArgument(new Constant(repairData.OS), RepairConstants.OS);
+            compoundTerm.AddArgument(new Constant(repairData.ServiceName), RepairConstants.ServiceName);
+            compoundTerm.AddArgument(new Constant(repairData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);
+            compoundTerm.AddArgument(new Constant(repairData.PartitionId), RepairConstants.PartitionId);
+            compoundTerm.AddArgument(new Constant(repairData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
+            compoundTerm.AddArgument(new Constant(Convert.ToInt64(repairData.Value)), RepairConstants.MetricValue);
             compoundTerms.Add(compoundTerm);
 
             // Run Guan query.
@@ -548,8 +552,8 @@ namespace FabricHealer.Repair
             var executorData = new RepairExecutorData
             {
                 ExecutorTimeoutInMinutes = (int)MaxWaitTimeForInfraRepairTaskCompleted.TotalMinutes,
-                FOErrorCode = repairConfiguration.FOErrorCode,
-                FOMetricValue = repairConfiguration.FOHealthMetricValue,
+                ErrorCode = repairConfiguration.ErrorCode,
+                FOMetricValue = repairConfiguration.MetricValue,
                 RepairPolicy = repairConfiguration.RepairPolicy,
                 NodeName = repairConfiguration.NodeName,
                 NodeType = repairConfiguration.NodeType,
@@ -774,6 +778,8 @@ namespace FabricHealer.Repair
 
                         var replica = repList[0];
 
+                        var partition = await FabricClientInstance.QueryManager.GetPartitionAsync(repairConfiguration.PartitionId);
+                        var partitionKind = partition[0].PartitionInformation.Kind;
                         // Restart - stateful replica.
                         if (replica.ServiceKind == ServiceKind.Stateful)
                         {
@@ -1041,20 +1047,20 @@ namespace FabricHealer.Repair
                         isTargetAppHealedOnTargetNode = appHealth.HealthEvents.Any(
                             h => JsonSerializationUtility.TryDeserialize(
                                     h.HealthInformation.Description,
-                                    out TelemetryData foHealthData)
-                                        && foHealthData.NodeName == repairConfig.NodeName
-                                        && foHealthData.SystemServiceProcessName == repairConfig.SystemServiceProcessName
-                                        && foHealthData.HealthState.ToLower() == "ok");
+                                    out TelemetryData repairData)
+                                        && repairData.NodeName == repairConfig.NodeName
+                                        && repairData.SystemServiceProcessName == repairConfig.SystemServiceProcessName
+                                        && repairData.HealthState == HealthState.Ok);
                     }
                     else // Application repairs (code package restarts)
                     {
                         isTargetAppHealedOnTargetNode = appHealth.HealthEvents.Any(
                             h => JsonSerializationUtility.TryDeserialize(
                                     h.HealthInformation.Description,
-                                    out TelemetryData foHealthData)
-                                        && foHealthData.NodeName == repairConfig.NodeName
-                                        && foHealthData.ApplicationName == repairConfig.AppName.OriginalString
-                                        && foHealthData.HealthState.ToLower() == "ok");
+                                    out TelemetryData repairData)
+                                        && repairData.NodeName == repairConfig.NodeName
+                                        && repairData.ApplicationName == repairConfig.AppName.OriginalString
+                                        && repairData.HealthState == HealthState.Ok);
                     }
 
                     return isTargetAppHealedOnTargetNode ? HealthState.Ok : appHealth.AggregatedHealthState;
@@ -1072,9 +1078,9 @@ namespace FabricHealer.Repair
                     bool isTargetNodeHealed = nodeHealth.HealthEvents.Any(
                                                 h => JsonSerializationUtility.TryDeserialize(
                                                         h.HealthInformation.Description,
-                                                        out TelemetryData foHealthData)
-                                                        && foHealthData.NodeName == repairConfig.NodeName
-                                                        && foHealthData.HealthState.ToLower() == "ok");
+                                                        out TelemetryData repairData)
+                                                        && repairData.NodeName == repairConfig.NodeName
+                                                        && repairData.HealthState == HealthState.Ok);
 
                     return isTargetNodeHealed ? HealthState.Ok : nodeHealth.AggregatedHealthState;
                 }
