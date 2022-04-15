@@ -43,7 +43,7 @@ namespace FabricHealer.Repair.Guan
                                                             LogLevel.Info,
                                                             $"GetHealthEventHistoryPredicateType::{RepairData.Property}",
                                                             message,
-                                                            RepairTaskManager.Token).ConfigureAwait(false);
+                                                            RepairTaskManager.Token);
                 }
 
                 var result = new CompoundTerm(this.Input.Functor);

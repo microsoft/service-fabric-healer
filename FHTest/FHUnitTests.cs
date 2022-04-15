@@ -302,7 +302,7 @@ namespace FHTest
             compoundTerm.AddArgument(new Constant(Convert.ToInt64(repairData.Value)), RepairConstants.MetricValue);
             compoundTerms.Add(compoundTerm);
 
-            await queryDispatcher.RunQueryAsync(compoundTerms).ConfigureAwait(false);
+            await queryDispatcher.RunQueryAsync(compoundTerms);
         }
 
         private static List<string> ParseRulesFile(string[] rules)

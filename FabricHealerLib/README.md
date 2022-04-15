@@ -66,7 +66,7 @@ namespace Stateless1
             // Service repair.
             try
             {
-                await fabricHealer.RepairEntityAsync(repairDataServiceTarget, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
+                await fabricHealer.RepairEntityAsync(repairDataServiceTarget, cancellationToken, TimeSpan.FromMinutes(5));
             }
             catch (MissingRequiredDataException)
             {
@@ -93,7 +93,7 @@ namespace Stateless1
             // Node repair.
             try
             {
-                await fabricHealer.RepairEntityAsync(repairDataNodeTarget, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
+                await fabricHealer.RepairEntityAsync(repairDataNodeTarget, cancellationToken, TimeSpan.FromMinutes(5));
             }
             catch (FabricNodeNotFoundException)
             {

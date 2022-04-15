@@ -116,7 +116,7 @@ namespace FabricHealer.Repair.Guan
                                                         LogLevel.Info,
                                                         "DeleteFilesPredicateType::NoFilesMatchSearchPattern",
                                                         $"Specified search pattern, {searchPattern}, does not match any files in {path}.",
-                                                        RepairTaskManager.Token).ConfigureAwait(false);
+                                                        RepairTaskManager.Token);
                         return false;
                     }
                 }
@@ -133,7 +133,7 @@ namespace FabricHealer.Repair.Guan
                                                               () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
                                                                                         repairConfiguration,
                                                                                         RepairTaskManager.Token),
-                                                               RepairTaskManager.Token).ConfigureAwait(false);
+                                                               RepairTaskManager.Token);
                 if (repairTask == null)
                 {
                     return false;
@@ -145,7 +145,7 @@ namespace FabricHealer.Repair.Guan
                                                                                         repairTask,
                                                                                         repairConfiguration,
                                                                                         RepairTaskManager.Token),
-                                                             RepairTaskManager.Token).ConfigureAwait(false);
+                                                             RepairTaskManager.Token);
                 return success;
             }
         }

@@ -48,7 +48,7 @@ namespace FabricHealer.Repair.Guan
                                                              interval,
                                                              RepairTaskManager.FabricClientInstance,
                                                              RepairData,
-                                                             RepairTaskManager.Token).ConfigureAwait(false);
+                                                             RepairTaskManager.Token);
                 
                 if (!insideRunInterval)
                 {
@@ -62,7 +62,7 @@ namespace FabricHealer.Repair.Guan
                                                              LogLevel.Info,
                                                              $"CheckInsideRunInterval::{RepairData.RepairId}",
                                                              message,
-                                                             RepairTaskManager.Token).ConfigureAwait(false);
+                                                             RepairTaskManager.Token);
                 return true;
             }
         }

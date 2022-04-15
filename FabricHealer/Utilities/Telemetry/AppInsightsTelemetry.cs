@@ -173,7 +173,7 @@ namespace FabricHealer.Utilities.Telemetry
 
             telemetryClient?.TrackTrace(tt);
 
-            return await Task.FromResult(true).ConfigureAwait(false);
+            return await Task.FromResult(true);
         }
 
         /// <summary>
@@ -270,7 +270,7 @@ namespace FabricHealer.Utilities.Telemetry
                             long value,
                             CancellationToken cancellationToken)
         {
-            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
+            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
         }
 
         /// <summary>

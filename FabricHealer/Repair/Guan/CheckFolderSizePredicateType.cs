@@ -74,7 +74,7 @@ namespace FabricHealer.Repair.Guan
                                                                 LogLevel.Info,
                                                                 "CheckFolderSizePredicate::DirectoryNotFound",
                                                                 $"Directory {folderPath} does not exist.",
-                                                                RepairTaskManager.Token).ConfigureAwait(false);
+                                                                RepairTaskManager.Token);
                     return false;
                 }
 
@@ -84,7 +84,7 @@ namespace FabricHealer.Repair.Guan
                                                                 LogLevel.Info,
                                                                 "CheckFolderSizePredicate::NoFilesFound",
                                                                 $"Directory {folderPath} does not contain any files.",
-                                                                RepairTaskManager.Token).ConfigureAwait(false);
+                                                                RepairTaskManager.Token);
                         return false;
                 }
 
@@ -118,7 +118,7 @@ namespace FabricHealer.Repair.Guan
                                                             LogLevel.Info,
                                                             "CheckFolderSizePredicate",
                                                             message,
-                                                            RepairTaskManager.Token).ConfigureAwait(false);
+                                                            RepairTaskManager.Token);
                 return false;
             }
             
@@ -131,7 +131,7 @@ namespace FabricHealer.Repair.Guan
                                                             LogLevel.Info,
                                                             "CheckFolderSizePredicate::Size",
                                                             $"Directory {path} size: {folderSizeInBytes} bytes.",
-                                                            RepairTaskManager.Token).ConfigureAwait(false);
+                                                            RepairTaskManager.Token);
                 if (unit == SizeUnit.GB)
                 {
                     return folderSizeInBytes / 1024 / 1024 / 1024;

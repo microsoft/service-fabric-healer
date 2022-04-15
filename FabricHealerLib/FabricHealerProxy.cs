@@ -93,7 +93,7 @@ namespace FabricHealerLib
 
                     if (string.IsNullOrWhiteSpace(repairData.NodeType))
                     {
-                        NodeList nodes = await _fabricClient.QueryManager.GetNodeListAsync(repairData.NodeName, TimeSpan.FromSeconds(30), cancellationToken).ConfigureAwait(false);
+                        NodeList nodes = await _fabricClient.QueryManager.GetNodeListAsync(repairData.NodeName, TimeSpan.FromSeconds(30), cancellationToken);
 
                         if (nodes == null || nodes.Count == 0)
                         {
@@ -110,7 +110,7 @@ namespace FabricHealerLib
                 if (string.IsNullOrWhiteSpace(repairData.Source))
                 {
                     CodePackageActivationContext context = 
-                        await FabricRuntime.GetActivationContextAsync(TimeSpan.FromSeconds(30), cancellationToken).ConfigureAwait(false);
+                        await FabricRuntime.GetActivationContextAsync(TimeSpan.FromSeconds(30), cancellationToken);
                     
                     repairData.Source = context.GetServiceManifestName();
                 }
@@ -134,7 +134,7 @@ namespace FabricHealerLib
                             }
 
                             ApplicationNameResult appNameResult =
-                                await _fabricClient.QueryManager.GetApplicationNameAsync(serviceName, TimeSpan.FromSeconds(60), cancellationToken).ConfigureAwait(false);
+                                await _fabricClient.QueryManager.GetApplicationNameAsync(serviceName, TimeSpan.FromSeconds(60), cancellationToken);
                             
                             appName = appNameResult.ApplicationName;
                             repairData.ApplicationName = appName.OriginalString;
@@ -149,7 +149,7 @@ namespace FabricHealerLib
 
                         if (repairData.PartitionId == null || repairData.ReplicaId == 0)
                         {
-                            var depReplicas = await _fabricClient.QueryManager.GetDeployedReplicaListAsync(repairData.NodeName, appName).ConfigureAwait(false);
+                            var depReplicas = await _fabricClient.QueryManager.GetDeployedReplicaListAsync(repairData.NodeName, appName);
                             var depReplica =
                                 depReplicas.First(r => r.ServiceName.OriginalString.ToLower() == repairData.ServiceName.ToLower() && r.ReplicaStatus == ServiceReplicaStatus.Ready);
                             Guid partitionId = depReplica.Partitionid;
@@ -271,7 +271,7 @@ namespace FabricHealerLib
 
                 if (_retried <= MaxRetries)
                 {
-                    await RepairEntityAsync(repairData, cancellationToken).ConfigureAwait(false);
+                    await RepairEntityAsync(repairData, cancellationToken);
                 }
 
                 throw;

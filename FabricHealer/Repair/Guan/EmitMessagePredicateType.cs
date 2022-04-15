@@ -64,7 +64,7 @@ namespace FabricHealer.Repair.Guan
                                                             LogLevel.Info,
                                                             "EmitMessagePredicate",
                                                             output,
-                                                            RepairTaskManager.Token).ConfigureAwait(false);
+                                                            RepairTaskManager.Token);
                 return true;
             }
         }

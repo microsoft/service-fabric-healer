@@ -12,7 +12,7 @@
     <icon>icon.png</icon>
 	 <readme>FabricHealerLibnuget.md</readme>
     <language>en-US</language>
-    <description>This package contains FabricHealerLib, a utility library that provides a very simple, structured way to communicate Service Fabric entity information to FabricHealer via Service Fabric health reporting. Simply put, you can execute FabricHealer auto-mitigation workflows with just a few lines of C# code from any Service Fabric service running in the same cluster as FabricHealer.</description>
+    <description>This package contains FabricHealerLib, a .NET Standard 2.0 utility library that provides a very simple, structured way to communicate Service Fabric entity repair information to FabricHealer via Service Fabric health reporting. Simply put, you can execute FabricHealer auto-mitigation workflows with just a few lines of C# code from any Service Fabric service running in the same cluster as FabricHealer.</description>
     <contentFiles>
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>

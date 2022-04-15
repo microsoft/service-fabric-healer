@@ -83,7 +83,7 @@ namespace FabricHealer.Repair.Guan
                     success = await RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                                                     repairTask,
                                                     repairConfiguration,
-                                                    RepairTaskManager.Token).ConfigureAwait(false);
+                                                    RepairTaskManager.Token);
                     return success;
                 }
 
@@ -93,7 +93,7 @@ namespace FabricHealer.Repair.Guan
                     await repairTaskEngine.IsFHRepairTaskRunningAsync(
                                             RepairTaskEngine.FabricHealerExecutorName,
                                             repairConfiguration,
-                                            RepairTaskManager.Token).ConfigureAwait(false);
+                                            RepairTaskManager.Token);
 
                 if (isNodeRepairAlreadyInProgress)
                 {
@@ -104,7 +104,7 @@ namespace FabricHealer.Repair.Guan
                                                                 LogLevel.Info,
                                                                 $"RestartFabricNodePredicateType::{RepairData.RepairId}",
                                                                 message,
-                                                                RepairTaskManager.Token).ConfigureAwait(false);
+                                                                RepairTaskManager.Token);
                     return false;
                 }
 
@@ -113,7 +113,7 @@ namespace FabricHealer.Repair.Guan
                                                           () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
                                                                                     repairConfiguration,
                                                                                     RepairTaskManager.Token),
-                                                           RepairTaskManager.Token).ConfigureAwait(false);
+                                                           RepairTaskManager.Token);
 
                 if (repairTask == null)
                 {
@@ -126,7 +126,7 @@ namespace FabricHealer.Repair.Guan
                                                                                 repairTask,
                                                                                 repairConfiguration,
                                                                                 RepairTaskManager.Token),
-                                                        RepairTaskManager.Token).ConfigureAwait(false);
+                                                        RepairTaskManager.Token);
                 return success;
             }
         }

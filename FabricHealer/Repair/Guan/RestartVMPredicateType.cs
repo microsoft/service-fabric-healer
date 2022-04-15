@@ -76,7 +76,7 @@ namespace FabricHealer.Repair.Guan
                     await repairTaskEngine.IsFHRepairTaskRunningAsync(
                                             $"{RepairTaskEngine.InfrastructureServiceName}/{RepairData.NodeType}",
                                             repairConfiguration,
-                                            RepairTaskManager.Token).ConfigureAwait(false);
+                                            RepairTaskManager.Token);
                 
                 if (isRepairAlreadyInProgress)
                 {
@@ -86,7 +86,7 @@ namespace FabricHealer.Repair.Guan
                                                             LogLevel.Info,
                                                             $"RestartVMPredicateType::{RepairData.RepairId}",
                                                             message,
-                                                            RepairTaskManager.Token).ConfigureAwait(false);
+                                                            RepairTaskManager.Token);
                     return false;
                 }
 
@@ -94,7 +94,7 @@ namespace FabricHealer.Repair.Guan
                                                             () => RepairTaskManager.ExecuteRMInfrastructureRepairTask(
                                                                                         repairConfiguration,
                                                                                         RepairTaskManager.Token),
-                                                            RepairTaskManager.Token).ConfigureAwait(false);
+                                                            RepairTaskManager.Token);
                 return success;
             }
         }

@@ -36,7 +36,7 @@ namespace FabricHealer.Repair.Guan
                                         timeWindow,
                                         RepairTaskManager.FabricClientInstance,
                                         RepairData,
-                                        RepairTaskManager.Token).ConfigureAwait(false);
+                                        RepairTaskManager.Token);
                 }
                 else
                 {
@@ -48,7 +48,7 @@ namespace FabricHealer.Repair.Guan
                                                             LogLevel.Info,
                                                             $"GetRepairHistoryPredicate::{RepairData.RepairId}",
                                                             message,
-                                                            RepairTaskManager.Token).ConfigureAwait(false);
+                                                            RepairTaskManager.Token);
                 }
 
                 var result = new CompoundTerm(this.Input.Functor);
