@@ -28,7 +28,7 @@ namespace FabricHealer
         internal static RepairData RepairHistory;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.0.14";
+        private const string InternalVersionNumber = "1.0.15";
         private static FabricHealerManager singleton;
         private bool disposedValue;
         private readonly StatelessServiceContext serviceContext;
@@ -39,6 +39,7 @@ namespace FabricHealer
         private readonly Uri repairManagerServiceUri = new Uri(RepairConstants.RepairManagerAppName);
         private readonly FabricHealthReporter healthReporter;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
+        private readonly string sfRuntimeVersion;
         private int nodeCount;
         private DateTime StartDateTime;
 
@@ -96,6 +97,7 @@ namespace FabricHealer
 
             RepairHistory = new RepairData();
             healthReporter = new FabricHealthReporter(fabricClient);
+            sfRuntimeVersion = GetServiceFabricRuntimeVersion();
         }
 
         /// <summary>
@@ -258,13 +260,7 @@ namespace FabricHealer
                     {
                         try
                         {
-                            using var telemetryEvents = new TelemetryEvents(
-                                                                fabricClient,
-                                                                serviceContext,
-                                                                ServiceEventSource.Current,
-                                                                Token,
-                                                                EtwEnabled);
-
+                            using var telemetryEvents = new TelemetryEvents(serviceContext);
                             var fhData = GetFabricHealerInternalTelemetryData();
 
                             if (fhData != null)
@@ -341,16 +337,15 @@ namespace FabricHealer
                 {
                     try
                     {
-                        using var telemetryEvents =
-                            new TelemetryEvents(fabricClient, serviceContext, ServiceEventSource.Current, Token, EtwEnabled);
-
+                        using var telemetryEvents = new TelemetryEvents(serviceContext);
                         var fhData = new FabricHealerCriticalErrorEventData
                         {
                             Source = nameof(FabricHealerManager),
                             ErrorMessage = e.Message,
                             ErrorStack = e.StackTrace,
                             CrashTime = DateTime.UtcNow.ToString("o"),
-                            Version = InternalVersionNumber
+                            Version = InternalVersionNumber,
+                            SFRuntimeVersion = sfRuntimeVersion
                         };
 
                         string filepath = Path.Combine(RepairLogger.LogFolderBasePath, $"fh_critical_error_telemetry.log");
@@ -389,7 +384,8 @@ namespace FabricHealer
                 {
                     UpTime = DateTime.UtcNow.Subtract(StartDateTime).ToString(),
                     Version = InternalVersionNumber,
-                    RepairData = RepairHistory
+                    RepairData = RepairHistory,
+                    SFRuntimeVersion = sfRuntimeVersion
                 };
             }
             catch
@@ -536,25 +532,38 @@ namespace FabricHealer
 
                 // Check cluster upgrade status. If the cluster is upgrading to a new version (or rolling back)
                 // then do not attempt repairs.
-                int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(fabricClient, Token).ConfigureAwait(false);
-
-                if (udInClusterUpgrade > -1)
+                try
                 {
-                    string telemetryDescription = $"Cluster is currently upgrading in UD {udInClusterUpgrade}. Will not schedule or execute repairs at this time.";
-                    await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                 LogLevel.Info,
-                                                 "MonitorRepairableHealthEventsAsync::ClusterUpgradeDetected",
-                                                 telemetryDescription,
-                                                 Token,
-                                                 null,
-                                                 ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
-                    return;
+                    int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(fabricClient, Token).ConfigureAwait(false);
+
+                    if (udInClusterUpgrade > -1)
+                    {
+                        string telemetryDescription = $"Cluster is currently upgrading in UD {udInClusterUpgrade}. Will not schedule or execute repairs at this time.";
+                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                                     LogLevel.Info,
+                                                     "MonitorRepairableHealthEventsAsync::ClusterUpgradeDetected",
+                                                     telemetryDescription,
+                                                     Token,
+                                                     null,
+                                                     ConfigSettings.EnableVerboseLogging).ConfigureAwait(false);
+                        return;
+                    }
+
+                    // Check to see if an Azure tenant update is in progress. Do not conduct repairs if so.
+                    if (await UpgradeChecker.IsAzureTenantUpdateInProgress(fabricClient, serviceContext.NodeContext.NodeType, Token).ConfigureAwait(false))
+                    {
+                        return;
+                    }
                 }
-
-                // Check to see if an Azure tenant update is in progress. Do not conduct repairs if so.
-                if (await UpgradeChecker.IsAzureTenantUpdateInProgress(fabricClient, serviceContext.NodeContext.NodeType, Token).ConfigureAwait(false))
+                catch (Exception e) when (e is FabricException || e is TimeoutException)
                 {
-                    return;
+                    await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                "MonitorRepairableHealthEventsAsync::HandledException",
+                                $"Failure in MonitorRepairableHealthEventAsync::Node:{Environment.NewLine}{e}",
+                                Token,
+                                null,
+                                ConfigSettings.EnableVerboseLogging);
                 }
 
                 var unhealthyEvaluations = clusterHealth.UnhealthyEvaluations;
@@ -579,12 +588,12 @@ namespace FabricHealer
                         catch (Exception e) when (e is FabricException || e is TimeoutException)
                         {
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                         LogLevel.Info,
-                                                         "MonitorRepairableHealthEventsAsync::HandledException",
-                                                         $"Failure in MonitorRepairableHealthEventAsync::Node:{Environment.NewLine}{e}",
-                                                         Token,
-                                                         null,
-                                                         ConfigSettings.EnableVerboseLogging);
+                                        LogLevel.Info,
+                                        "MonitorRepairableHealthEventsAsync::HandledException",
+                                        $"Failure in MonitorRepairableHealthEventAsync::Node:{Environment.NewLine}{e}",
+                                        Token,
+                                        null,
+                                        ConfigSettings.EnableVerboseLogging);
                         }
                     }
                     else if (kind != null && kind.Contains("Application"))
@@ -601,12 +610,12 @@ namespace FabricHealer
                         catch (Exception e) when (e is FabricException || e is TimeoutException)
                         {
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                         LogLevel.Info,
-                                                         "MonitorRepairableHealthEventsAsync::HandledException",
-                                                         $"Failure in MonitorRepairableHealthEventAsync::Application:{Environment.NewLine}{e}",
-                                                         Token,
-                                                         null,
-                                                         ConfigSettings.EnableVerboseLogging);
+                                        LogLevel.Info,
+                                        "MonitorRepairableHealthEventsAsync::HandledException",
+                                        $"Failure in MonitorRepairableHealthEventAsync::Application:{Environment.NewLine}{e}",
+                                        Token,
+                                        null,
+                                        ConfigSettings.EnableVerboseLogging);
                         }
                     }
                     // FYI: FH currently only supports the case where a replica is stuck. FO does not generate Replica Health Reports.
@@ -624,12 +633,12 @@ namespace FabricHealer
                         catch (Exception e) when (e is FabricException || e is TimeoutException)
                         {
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                         LogLevel.Info,
-                                                         "MonitorRepairableHealthEventsAsync::HandledException",
-                                                         $"Failure in MonitorRepairableHealthEventAsync::Replica:{Environment.NewLine}{e}",
-                                                         Token,
-                                                         null,
-                                                         ConfigSettings.EnableVerboseLogging);
+                                        LogLevel.Info,
+                                        "MonitorRepairableHealthEventsAsync::HandledException",
+                                        $"Failure in MonitorRepairableHealthEventAsync::Replica:{Environment.NewLine}{e}",
+                                        Token,
+                                        null,
+                                        ConfigSettings.EnableVerboseLogging);
                         }
                     }
                 }
@@ -637,12 +646,12 @@ namespace FabricHealer
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                             LogLevel.Error,
-                                             "MonitorRepairableHealthEventsAsync::UnhandledException",
-                                             $"Failure in MonitorRepairableHealthEventAsync:{Environment.NewLine}{e}",
-                                             Token,
-                                             null,
-                                             ConfigSettings.EnableVerboseLogging);
+                            LogLevel.Error,
+                            "MonitorRepairableHealthEventsAsync::UnhandledException",
+                            $"Failure in MonitorRepairableHealthEventAsync:{Environment.NewLine}{e}",
+                            Token,
+                            null,
+                            ConfigSettings.EnableVerboseLogging);
 
                 RepairLogger.LogWarning($"Unhandled exception in MonitorRepairableHealthEventsAsync:{Environment.NewLine}{e}");
 
@@ -1525,6 +1534,21 @@ namespace FabricHealer
             {
 
             }
+        }
+
+        private string GetServiceFabricRuntimeVersion()
+        {
+            try
+            {
+                var config = ServiceFabricConfiguration.Instance;
+                return config.FabricVersion;
+            }
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            {
+                RepairLogger.LogWarning($"GetServiceFabricRuntimeVersion failure:{Environment.NewLine}{e}");
+            }
+
+            return null;
         }
     }
 }

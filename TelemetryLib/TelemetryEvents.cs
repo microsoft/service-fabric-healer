@@ -26,28 +26,19 @@ namespace FabricHealer.TelemetryLib
         private const string TaskName = "FabricHealer";
         private readonly TelemetryClient telemetryClient;
         private readonly ServiceContext serviceContext;
-        private readonly ITelemetryEventSource serviceEventSource;
         private readonly string clusterId, tenantId, clusterType;
         private readonly TelemetryConfiguration appInsightsTelemetryConf;
-        private readonly bool isEtwEnabled;
 
-        public TelemetryEvents(
-                    FabricClient fabricClient,
-                    ServiceContext context,
-                    ITelemetryEventSource eventSource,
-                    CancellationToken token,
-                    bool etwEnabled)
+        public TelemetryEvents(ServiceContext context)
         {
-            serviceEventSource = eventSource;
             serviceContext = context;
             appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
             appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AIKey;
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
-            var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
+            var (ClusterId, TenantId, ClusterType) = ClusterInformation.ClusterInfoTuple;
             clusterId = ClusterId;
             tenantId = TenantId;
             clusterType = ClusterType;
-            isEtwEnabled = etwEnabled;
         }
 
         public bool EmitFabricHealerOperationalEvent(FabricHealerOperationalEventData repairData, TimeSpan runInterval, string logFilePath)
@@ -66,6 +57,7 @@ namespace FabricHealer.TelemetryLib
                     { "EventName", OperationalEventName},
                     { "TaskName", TaskName},
                     { "EventRunInterval", runInterval.ToString() },
+                    { "SFRuntimeVersion", repairData.SFRuntimeVersion ?? string.Empty },
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
                     { "NodeNameHash", nodeHashString },
@@ -134,6 +126,7 @@ namespace FabricHealer.TelemetryLib
                 {
                     { "EventName", CriticalErrorEventName},
                     { "TaskName", TaskName},
+                    { "SFRuntimeVersion", fhErrorData.SFRuntimeVersion ?? string.Empty },
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
                     { "TenantId", tenantId },
