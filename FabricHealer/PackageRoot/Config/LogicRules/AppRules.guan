@@ -116,7 +116,7 @@ Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?M
 	TimeScopedRestartCodePackage(3, 00:10:00).
 
 ## Memory - Megabytes In Use for Any SF Service Process belonging to the specified SF Applications. 5 repairs within 5 hour window.
-Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
+Mitigate(AppName="fabric:/Voting", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 

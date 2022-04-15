@@ -55,7 +55,7 @@ namespace FabricHealerLib
         /// <exception cref="FabricException">Thrown when an internal Service Fabric operation fails.</exception>
         /// <exception cref="FabricNodeNotFoundException">Thrown when specified RepairData.NodeName does not exist in the cluster.</exception>
         /// <exception cref="FabricServiceNotFoundException">Thrown when specified service doesn't exist in the cluster.</exception>
-        /// <exception cref="MissingFieldException">Thrown when required RepairData fields are missing in the supplied instance.</exception>
+        /// <exception cref="MissingRequiredDataException">Thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).</exception>
         /// <exception cref="UriFormatException">Thrown when required ApplicationName or ServiceName value is a malformed Uri string.</exception>
         /// <exception cref="TimeoutException">Thrown when internal Fabric client API calls timeout.</exception>
         public async Task RepairEntityAsync(RepairData repairData, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
@@ -77,7 +77,7 @@ namespace FabricHealerLib
 
             if (string.IsNullOrEmpty(repairData.NodeName))
             {
-                throw new MissingFieldException("RepairData.NodeName is a required field.");
+                throw new MissingRequiredDataException("RepairData.NodeName is a required field.");
             }
 
             if (string.IsNullOrWhiteSpace(repairData.ApplicationName))

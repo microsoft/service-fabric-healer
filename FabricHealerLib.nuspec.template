@@ -17,10 +17,8 @@
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>
     <dependencies>
-		<group targetFramework=".NETStandard2.0">
-			<dependency id="Newtonsoft.Json" version="13.0.1" />
-			<dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
-		</group>
+	    <dependency id="Newtonsoft.Json" version="13.0.1" />
+	    <dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
     </dependencies>
     <projectUrl>https://github.com/microsoft/FabricHealerLib</projectUrl>
     <tags>FabricHealerLib service-fabric netstandard20 netcore csharp</tags>

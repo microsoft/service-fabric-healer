@@ -42,9 +42,9 @@ namespace Stateless1
         {
             // This specifies that you want FabricHealer to repair a service instance deployed to a Fabric node named NodeName.
             // FabricHealer supports both Replica and CodePackage restarts of services. The logic rules will dictate which one of these happens,
-            // so make sure to craft a speific logic rule that makes sense for you (and use some logic!).
-            // Note that, out of the box, FabricHealer's AppRules.guan file already has a restart replica catch-all rule that will restart the primary replica of
-            // the specified service below, deployed to the a node named NodeName. 
+            // so make sure to craft a specific logic rule that makes sense for you (and use some logic!).
+            // Note that, out of the box, FabricHealer's AppRules.guan file already has a restart replica catch-all (applies to any service) rule that will restart the primary replica of
+            // the specified service below, deployed to the a specified Fabric node. 
             var repairDataServiceTarget = new RepairData
             {
                 ServiceName = "fabric:/HealthMetrics/DoctorActorServiceType",
@@ -68,9 +68,9 @@ namespace Stateless1
             {
                 await fabricHealer.RepairEntityAsync(repairDataServiceTarget, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
             }
-            catch (MissingFieldException)
+            catch (MissingRequiredDataException)
             {
-                // This means a required RepairData field was not specified. For example, RepairData.NodeName was not set.
+                // This means a required RepairData property was not specified. For example, RepairData.NodeName was not set.
             }
             catch (FabricNodeNotFoundException)
             {
