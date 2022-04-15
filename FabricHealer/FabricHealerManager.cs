@@ -1249,7 +1249,8 @@ namespace FabricHealer
         // VM is using too much (based on user-supplied threshold value) of some monitored machine resource.
         private async Task ProcessMachineHealthAsync(IEnumerable<NodeHealthState> nodeHealthStates)
         {
-            var supportedNodeHealthStates = nodeHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
+            var supportedNodeHealthStates =
+                nodeHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
 
             foreach (var node in supportedNodeHealthStates)
             {
@@ -1258,8 +1259,9 @@ namespace FabricHealer
                 // Get information about target node.
                 var nodeList =
                         await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                       () => fabricClient.QueryManager.GetNodeListAsync(node.NodeName, ConfigSettings.AsyncTimeout, Token),
-                                                       Token);
+                                    () => fabricClient.QueryManager.GetNodeListAsync(node.NodeName, ConfigSettings.AsyncTimeout, Token),
+                                    Token);
+
                 if (nodeList.Count == 0)
                 {
                     continue;
@@ -1340,7 +1342,7 @@ namespace FabricHealer
                     }
 
                     // FabricHealer only supports VM level repairs that are identified by FabricObserver. FabricHealerLib does not support communicating these types of repairs
-                    // to FabricHealer from a non-FO service (TOTHINK: this may change..).
+                    // to FabricHealer from a non-FO service (TOTHINK: this should change?).
                     if (repairData.ObserverName == null && repairData.EntityType == EntityType.Node)
                     {
                         // FabricHealerLib-generated report, so a restart fabric node request, for example.
@@ -1359,7 +1361,7 @@ namespace FabricHealer
                     {
                         // Disk repair can't take place on any other node than the target node and it has to be same node where FabricObserver (in this case) 
                         // detected the issue.
-                        if (repairData.NodeName != serviceContext.NodeContext.NodeName && repairData.ObserverName == RepairConstants.DiskObserver)
+                        if (repairData.ObserverName == RepairConstants.DiskObserver && repairData.NodeName != serviceContext.NodeContext.NodeName)
                         {
                             continue;
                         }
@@ -1416,9 +1418,18 @@ namespace FabricHealer
                 return;
             }
 
-            var nodeList =
-                        await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                 () => fabricClient.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, Token), Token);
+            // This is just used to make sure there is more than 1 node in the cluster.
+            var nodeQueryDesc = new NodeQueryDescription
+            {
+                MaxResults = 3,
+            };
+
+            var nodeList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                        () => fabricClient.QueryManager.GetNodePagedListAsync(
+                                                nodeQueryDesc,
+                                                ConfigSettings.AsyncTimeout,
+                                                Token),
+                                        Token);
 
             if (nodeList?.Count == 1)
             {
@@ -1785,12 +1796,12 @@ namespace FabricHealer
                     repairPolicySectionName = RepairConstants.SystemAppRepairPolicySectionName;
                     break;
 
-                // Disk repair
-                case EntityType.Node when repairData.Source.Contains(RepairConstants.DiskObserver):
+                // Disk repair. Requires FO as originator. (TOTHINK: Why?)
+                case EntityType.Node when repairData.ObserverName == RepairConstants.DiskObserver && serviceContext.NodeContext.NodeName == repairData.NodeName:
                     repairPolicySectionName = RepairConstants.DiskRepairPolicySectionName;
                     break;
 
-                // VM repair.
+                // VM repair. Requires FO as originator. (TOTHINK: Why?)
                 case EntityType.Node when repairData.Source.Contains(RepairConstants.NodeObserver):
                     repairPolicySectionName = RepairConstants.VmRepairPolicySectionName;
                     break;
