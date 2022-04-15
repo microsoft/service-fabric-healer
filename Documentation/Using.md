@@ -16,7 +16,7 @@ FabricHealer ships with [several logic rules](/FabricHealer/PackageRoot/Config/L
 Run  
 
 ```PowerShell
-Update-ServiceFabricNodeConfiguration -ClusterManifestPath C:\SFDevCluster\Data
+Update-ServiceFabricNodeConfiguration -ClusterManifestPath C:\SFDevCluster\Data\clusterManifest.xml
 ```
 The cluster will be rebuilt and the RepairManager service will be added to the System services. Then, you can experiment with FH locally in the way that it will work on an actual cluster in the cloud.  
 
