@@ -20,6 +20,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Runtime;
 using FabricHealerLib;
+using FabricHealerLib.Exceptions;
 
 namespace Stateless1
 {
@@ -48,14 +49,14 @@ namespace Stateless1
             var repairDataServiceTarget = new RepairData
             {
                 ServiceName = "fabric:/HealthMetrics/DoctorActorServiceType",
-                NodeName = "_Node_42"
+                NodeName = "_Node_0"
             };
 
             // This specifies that you want FabricHealer to repair a Fabric node named NodeName. The only supported repair in FabricHealer is a Restart.
             // So, implicitly, this means you want FabricHealer to restart _Node_0.
             var repairDataNodeTarget = new RepairData
             {
-                NodeName = "_Node_5"
+                NodeName = "_Node_0"
             };
 
             // In this case, you must place this using declaration of FabricHealerProxy instance at function scope (so, not within the try below).
@@ -66,7 +67,7 @@ namespace Stateless1
             // Service repair.
             try
             {
-                await FabricHealerProxy.RepairEntityAsync(repairDataServiceTarget, cancellationToken, TimeSpan.FromMinutes(1)).ConfigureAwait(false);
+                await FabricHealerProxy.RepairEntityAsync(repairDataServiceTarget, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
             }
             catch (MissingRequiredDataException)
             {
@@ -94,7 +95,7 @@ namespace Stateless1
             // Node repair.
             try
             {
-                await FabricHealerProxy.RepairEntityAsync(repairDataNodeTarget, cancellationToken, TimeSpan.FromMinutes(1)).ConfigureAwait(false);
+                await FabricHealerProxy.RepairEntityAsync(repairDataNodeTarget, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
             }
             catch (FabricNodeNotFoundException)
             {
@@ -102,7 +103,7 @@ namespace Stateless1
             }
             catch (FabricException)
             {
-                // No-op unless you want to re-run RepairEntityAsync again..
+                // No-op unless you want to re-run RepairEntityAsync again.
             }
             catch (TimeoutException)
             {

@@ -6,7 +6,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace FabricHealerLib
+namespace FabricHealerLib.Exceptions
 {
     /// <summary>
     /// Exception thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).

@@ -12,6 +12,7 @@ using System.Threading;
 using System.Linq;
 using System.Fabric.Query;
 using Polly;
+using FabricHealerLib.Exceptions;
 
 namespace FabricHealerLib
 {
@@ -40,9 +41,9 @@ namespace FabricHealerLib
         {
             var settings = new FabricClientSettings
             {
-                HealthOperationTimeout = TimeSpan.FromSeconds(90),
+                HealthOperationTimeout = TimeSpan.FromSeconds(60),
                 HealthReportSendInterval = TimeSpan.FromSeconds(1),
-                HealthReportRetrySendInterval = TimeSpan.FromSeconds(1),
+                HealthReportRetrySendInterval = TimeSpan.FromSeconds(3),
             };
 
             using (FabricClient fabricClient = new FabricClient(settings))
@@ -67,20 +68,32 @@ namespace FabricHealerLib
                     throw new MissingRequiredDataException("RepairData.NodeName is a required field.");
                 }
 
-                await Policy.Handle<FabricException>().Or<TimeoutException>()
-                       .WaitAndRetryAsync(
-                            new[]
-                            {
-                                TimeSpan.FromSeconds(3),
-                                TimeSpan.FromSeconds(2),
-                                TimeSpan.FromSeconds(1)
-                            }).ExecuteAsync(
-                                () => RepairEntityAsyncInternal(repairData, repairDataLifetime, fabricClient, cancellationToken));
+                // Polly retry policy and async execution. Any other type of exception shall bubble up to caller as they are no-ops.
+                await Policy.Handle<FabricException>()
+                                .Or<TimeoutException>()
+                                .Or<HealthReportNotFoundException>()
+                                .WaitAndRetryAsync(
+                                    new[]
+                                    {
+                                        TimeSpan.FromSeconds(3),
+                                        TimeSpan.FromSeconds(2),
+                                        TimeSpan.FromSeconds(1)
+                                    }).ExecuteAsync(
+                                        () => RepairEntityAsyncInternal(
+                                                repairData,
+                                                repairDataLifetime,
+                                                fabricClient,
+                                                cancellationToken));
             }
         }
 
         private static async Task RepairEntityAsyncInternal(RepairData repairData, TimeSpan repairDataLifetime, FabricClient fabricClient, CancellationToken cancellationToken)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(repairData.ApplicationName))
             {
                 // Application (0) EntityType enum default. Check to see if only Service was supplied. OR, check to see if only NodeName was supplied.
@@ -219,7 +232,7 @@ namespace FabricHealerLib
                 if (!await GenerateHealthReportAsync(repairData, fabricClient, healthInformation, cancellationToken).ConfigureAwait(false))
                 {
                     // This will initiate a retry (see Polly.RetryPolicy definition in caller).
-                     throw new FabricException($"Failed to generate health report!");
+                    throw new HealthReportNotFoundException($"Health Report with sourceid {repairData.Source} and property {repairData.Property}) not found in HM database.");
                 }
             }
             catch (Exception e) when (e is FabricServiceNotFoundException)
@@ -234,6 +247,12 @@ namespace FabricHealerLib
 
         private static async Task<bool> GenerateHealthReportAsync(RepairData repairData, FabricClient fabricClient, HealthInformation healthInformation, CancellationToken cancellationToken)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                // don't retry..
+                return true;
+            }
+
             var sendOptions = new HealthReportSendOptions { Immediate = true };
 
             switch (repairData.EntityType)
@@ -279,14 +298,17 @@ namespace FabricHealerLib
                     break;
             }
 
-            // Give HM time to complete health report generation. (this is hacky)
-            //await Task.Delay(1000, cancellationToken);
-
-            return await HealthReportExistsAsync(repairData, fabricClient);
+            return await HealthReportExistsAsync(repairData, fabricClient, cancellationToken);
         }
 
-        private static async Task<bool> HealthReportExistsAsync(RepairData repairData, FabricClient fabricClient)
+        private static async Task<bool> HealthReportExistsAsync(RepairData repairData, FabricClient fabricClient, CancellationToken cancellationToken)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                // don't retry..
+                return true;
+            }
+
             if (!string.IsNullOrWhiteSpace(repairData.ServiceName))
             {
                 try
