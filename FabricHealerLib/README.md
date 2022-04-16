@@ -48,25 +48,25 @@ namespace Stateless1
             var repairDataServiceTarget = new RepairData
             {
                 ServiceName = "fabric:/HealthMetrics/DoctorActorServiceType",
-                NodeName = Context.NodeContext.NodeName
+                NodeName = "_Node_42"
             };
 
             // This specifies that you want FabricHealer to repair a Fabric node named NodeName. The only supported repair in FabricHealer is a Restart.
             // So, implicitly, this means you want FabricHealer to restart _Node_0.
             var repairDataNodeTarget = new RepairData
             {
-                NodeName = "_Node_0"
+                NodeName = "_Node_5"
             };
 
             // In this case, you must place this using declaration of FabricHealerProxy instance at function scope (so, not within the try below).
             // Failure to do so will result in nothing happening as the FabricClient instance that FabricHealerProxy creates will have closed before
             // Service Fabric's HealthManager has completed its related work.
-            using var fabricHealer = new FabricHealerProxy();
-        
+            
+
             // Service repair.
             try
             {
-                await fabricHealer.RepairEntityAsync(repairDataServiceTarget, cancellationToken, TimeSpan.FromMinutes(5));
+                await FabricHealerProxy.RepairEntityAsync(repairDataServiceTarget, cancellationToken, TimeSpan.FromMinutes(1)).ConfigureAwait(false);
             }
             catch (MissingRequiredDataException)
             {
@@ -88,12 +88,13 @@ namespace Stateless1
             catch (TimeoutException)
             {
                 // Thrown when a Fabric client API call times out. This will have already lead to 3 internal retries before surfacing here.
+                // ClusterManager service could be hammered (flooded with queries), for example. You could retry RepairEntityAsync again after you wait a bit..
             }
 
             // Node repair.
             try
             {
-                await fabricHealer.RepairEntityAsync(repairDataNodeTarget, cancellationToken, TimeSpan.FromMinutes(5));
+                await FabricHealerProxy.RepairEntityAsync(repairDataNodeTarget, cancellationToken, TimeSpan.FromMinutes(1)).ConfigureAwait(false);
             }
             catch (FabricNodeNotFoundException)
             {
