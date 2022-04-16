@@ -17,8 +17,7 @@ using FabricHealerLib.Exceptions;
 namespace FabricHealerLib
 {
     /// <summary>
-    /// FabricHealer utility library that provides a very simple, structured way to share Service Fabric entity repair information to FabricHealer 
-    /// via Service Fabric entity health reporting.
+    /// FabricHealer utility library that provides a very simple and reliable way to share Service Fabric entity repair information to FabricHealer service running in the same cluster.
     /// </summary>
     public static class FabricHealerProxy
     {

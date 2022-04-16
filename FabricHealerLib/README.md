@@ -1,17 +1,18 @@
 ﻿# FabricHealerLib
 
-FabricHealerLib is a utility library that provides a very simple, structured way to communicate Service Fabric entity repair information to FabricHealer via Service Fabric health
-reporting. Simply put, you can execute FabricHealer auto-mitigation workflows with just a few lines of C# code from any .NET Service Fabric service running in the same cluster
-as FabricHealer. You can install it into your Service Fabric service from the [nuget.org package gallery](...). 
+FabricHealerLib is a .NET Standard 2.0 library that provides a very simple and reliable way to share Service Fabric entity repair information to FabricHealer service instances running in the same cluster. You can install FabricHealerLib into your .NET Service Fabric service from the [nuget.org package gallery](...). 
 
-### Example
+### How to use FabricHealerLib
 
-- Deploy FabricHealer to your cluster (Do note that if you deploy FabricHealer as a singleton partition 1 (versus -1), then FH will only conduct SF-related repairs).
-- Install FabricHealerLib nupkg into your own service from where you want to repair SF entities.
-- Add code like below to your own service to heal some target Service Fabric entity. Note that only Service Fabric entities (not including System services) are supported (not machines or Disks, for example).
+- Deploy [FabricHealer](https://github.com/microsoft/service-fabric-healer/releases) [TODO: this will point to Deployment doc folder] to your cluster (Do note that if you deploy FabricHealer as a singleton partition 1 (versus -1), then FH will only conduct SF-related repairs).
+- Install FabricHealerLib nupkg into your own service from where you want to initiate repair of SF entities (stateful/stateless services, Fabric nodes).
 
 FabricHealer will execute entity-related logic rules (housed in it's FabricNodeRules.guan file in this case), and if any of the rules succeed, then FH will create a Repair Job with pre and post safety checks (default),
 orchestrate RM through to repair completion (FH will be the executor of the repair), emit repair step information via telemetry, local logging, and etw.
+
+### Sample application (Stateless Service)
+
+stateless1.cs 
 
 ```C#
 using System;
