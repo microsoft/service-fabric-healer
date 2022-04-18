@@ -120,11 +120,10 @@ namespace FabricHealer
         /// <param name="serviceNameFabricUri"></param>
         /// <param name="cancellationToken">cancellation token to stop the async operation</param>
         /// <returns>true if repair manager application is present in cluster, otherwise false</returns>
-        private async Task<bool> CheckRepairManagerDeploymentStatusAsync(Uri serviceNameFabricUri, CancellationToken cancellationToken)
+        private async Task<bool> InitializeAsync()
         {
-            string okMessage = $"{serviceNameFabricUri} is deployed.";
+            string okMessage = $"{repairManagerServiceUri} is deployed.";
             bool isRmDeployed = true;
-
             var healthReport = new HealthReport
             {
                 NodeName = serviceContext.NodeContext.NodeName,
@@ -136,19 +135,19 @@ namespace FabricHealer
                 HealthReportTimeToLive = TimeSpan.FromMinutes(5),
                 SourceId = RepairConstants.FabricHealer,
             };
-
-            var serviceList = await fabricClient.QueryManager.GetServiceListAsync(
+            ServiceList serviceList = await fabricClient.QueryManager.GetServiceListAsync(
                                       systemAppUri,
-                                      serviceNameFabricUri,
+                                      repairManagerServiceUri,
                                       ConfigSettings.AsyncTimeout,
-                                      cancellationToken);
+                                      Token);
 
             if ((serviceList?.Count ?? 0) == 0)
             {
-                var warnMessage =
+                string warnMessage =
                     $"{repairManagerServiceUri} could not be found, " +
                     $"FabricHealer Service requires {repairManagerServiceUri} system service to be deployed in the cluster. " +
                     "Consider adding a RepairManager section in your cluster manifest.";
+
                 healthReport.HealthMessage = warnMessage;
                 healthReport.State = HealthState.Warning;
                 healthReport.Code = SupportedErrorCodes.Ok;
@@ -160,16 +159,17 @@ namespace FabricHealer
             healthReporter.ReportHealthToServiceFabric(healthReport);
 
             // Set the service replica instance count (FH is a Stateless singleton service, so it will either be -1 or the number of nodes FH is deployed to).
-            _instanceCount = await GetServiceInstanceCountAsync(cancellationToken);
+            _instanceCount = await GetServiceInstanceCountAsync();
 
             return isRmDeployed;
         }
 
-        private async Task<long> GetServiceInstanceCountAsync(CancellationToken cancellationToken)
+        private async Task<long> GetServiceInstanceCountAsync()
         {
-            var serviceDesc = await fabricClient.ServiceManager.GetServiceDescriptionAsync(serviceContext.ServiceName);
-            long count = (serviceDesc as StatelessServiceDescription).InstanceCount;
-            return count;
+            ServiceDescription serviceDesc =
+                await fabricClient.ServiceManager.GetServiceDescriptionAsync(serviceContext.ServiceName, ConfigSettings.AsyncTimeout, Token);
+
+            return (serviceDesc as StatelessServiceDescription).InstanceCount;
         }
 
         /// <summary>
@@ -234,9 +234,15 @@ namespace FabricHealer
         public async Task StartAsync()
         {
             StartDateTime = DateTime.UtcNow;
-            bool isRMDeployed = await CheckRepairManagerDeploymentStatusAsync(repairManagerServiceUri, Token);
 
-            if (!isRMDeployed || !ConfigSettings.EnableAutoMitigation)
+            if (!ConfigSettings.EnableAutoMitigation)
+            {
+                return;
+            }
+
+            bool initialized = await InitializeAsync();
+
+            if (!initialized)
             {
                 return;
             }

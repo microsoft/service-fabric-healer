@@ -21,6 +21,16 @@ namespace FabricHealerLib
     /// </summary>
     public static class FabricHealerProxy
     {
+        private static readonly FabricClientSettings settings = new FabricClientSettings
+        {
+            HealthOperationTimeout = TimeSpan.FromSeconds(60),
+            HealthReportSendInterval = TimeSpan.FromSeconds(1),
+            HealthReportRetrySendInterval = TimeSpan.FromSeconds(3),
+        };
+
+        // Use one FC for the lifetime of the consuming SF service process that loads FabricHealerLib.dll.
+        private static readonly FabricClient fabricClient = new FabricClient(settings);
+
         /// <summary>
         /// This function generates a specially-crafted Service Fabric Health Report that the FabricHealer service will understand and act upon given the facts supplied
         /// in the RepairData instance.
@@ -33,57 +43,48 @@ namespace FabricHealerLib
         /// <exception cref="FabricException">Thrown when an internal Service Fabric operation fails.</exception>
         /// <exception cref="FabricNodeNotFoundException">Thrown when specified RepairData.NodeName does not exist in the cluster.</exception>
         /// <exception cref="FabricServiceNotFoundException">Thrown when specified service doesn't exist in the cluster.</exception>
-        /// <exception cref="MissingRequiredDataException">Thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).</exception>
+        /// <exception cref="MissingRepairDataException">Thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).</exception>
         /// <exception cref="UriFormatException">Thrown when required ApplicationName or ServiceName value is a malformed Uri string.</exception>
         /// <exception cref="TimeoutException">Thrown when internal Fabric client API calls timeout.</exception>
         public static async Task RepairEntityAsync(RepairData repairData, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
         {
-            var settings = new FabricClientSettings
+            if (cancellationToken.IsCancellationRequested)
             {
-                HealthOperationTimeout = TimeSpan.FromSeconds(60),
-                HealthReportSendInterval = TimeSpan.FromSeconds(1),
-                HealthReportRetrySendInterval = TimeSpan.FromSeconds(3),
-            };
-
-            using (FabricClient fabricClient = new FabricClient(settings))
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                if (repairData.HealthState == HealthState.Ok)
-                {
-                    return;
-                }
-
-                if (repairData == null)
-                {
-                    throw new ArgumentNullException("Supplied null for repairData argument. You must supply an instance of RepairData.");
-                }
-
-                if (string.IsNullOrEmpty(repairData.NodeName))
-                {
-                    throw new MissingRequiredDataException("RepairData.NodeName is a required field.");
-                }
-
-                // Polly retry policy and async execution. Any other type of exception shall bubble up to caller as they are no-ops.
-                await Policy.Handle<FabricException>()
-                                .Or<TimeoutException>()
-                                .Or<HealthReportNotFoundException>()
-                                .WaitAndRetryAsync(
-                                    new[]
-                                    {
-                                        TimeSpan.FromSeconds(3),
-                                        TimeSpan.FromSeconds(2),
-                                        TimeSpan.FromSeconds(1)
-                                    }).ExecuteAsync(
-                                        () => RepairEntityAsyncInternal(
-                                                repairData,
-                                                repairDataLifetime,
-                                                fabricClient,
-                                                cancellationToken));
+                return;
             }
+
+            if (repairData.HealthState == HealthState.Ok)
+            {
+                return;
+            }
+
+            if (repairData == null)
+            {
+                throw new ArgumentNullException("Supplied null for repairData argument. You must supply an instance of RepairData.");
+            }
+
+            if (string.IsNullOrEmpty(repairData.NodeName))
+            {
+                throw new MissingRepairDataException("RepairData.NodeName is a required field.");
+            }
+
+            // Polly retry policy and async execution. Any other type of exception shall bubble up to caller as they are no-ops.
+            await Policy.Handle<FabricException>()
+                            .Or<TimeoutException>()
+                            .Or<HealthReportNotFoundException>()
+                            .WaitAndRetryAsync(
+                                new[]
+                                {
+                                    TimeSpan.FromSeconds(3),
+                                    TimeSpan.FromSeconds(2),
+                                    TimeSpan.FromSeconds(1)
+                                }).ExecuteAsync(
+                                    () => RepairEntityAsyncInternal(
+                                            repairData,
+                                            repairDataLifetime,
+                                            fabricClient,
+                                            cancellationToken));
+            
         }
 
         private static async Task RepairEntityAsyncInternal(RepairData repairData, TimeSpan repairDataLifetime, FabricClient fabricClient, CancellationToken cancellationToken)
@@ -125,7 +126,7 @@ namespace FabricHealerLib
                     CodePackageActivationContext context =
                         await FabricRuntime.GetActivationContextAsync(TimeSpan.FromSeconds(30), cancellationToken);
 
-                    repairData.Source = context.GetServiceManifestName();
+                    repairData.Source = context.GetServiceManifestName() + "_" + "FabricHealerLib";
                 }
 
                 // Support for repair data that does not contain replica/partition facts for service level repair.
@@ -191,7 +192,7 @@ namespace FabricHealerLib
 
                         if (string.IsNullOrWhiteSpace(repairData.Description))
                         {
-                            repairData.Description = $"{repairData.ServiceName} has been designated as Unhealthy by {repairData.Source}.";
+                            repairData.Description = $"{repairData.Source} has put {repairData.ServiceName} into {repairData.HealthState}.";
                         }
 
                         if (string.IsNullOrWhiteSpace(repairData.Property))
@@ -204,7 +205,7 @@ namespace FabricHealerLib
 
                         if (string.IsNullOrWhiteSpace(repairData.Description))
                         {
-                            repairData.Description = $"{repairData.NodeName} of type {repairData.NodeType} has been designated as Unhealthy by {repairData.Source}.";
+                            repairData.Description = $"{repairData.Source} has put {repairData.NodeName} of type {repairData.NodeType} into {repairData.HealthState}.";
                         }
 
                         if (string.IsNullOrWhiteSpace(repairData.Property))

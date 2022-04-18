@@ -11,6 +11,7 @@
 ## | MetricValue               | Corresponding Metric value (e.g. "85" indicating 85% CPU usage)                                              | 
 ## | SystemServiceProcessName  | The name of a Fabric system service process supplied in TelemetryData instance                               | 
 ## | OS                        | The name of the OS from which the data was collected (Linux or Windows)                                      |
+## | HealthState               | The HealthState of the target entity: Error or Warning                                                       |
 
 ## System Service-related Metric Names.
 ## | Name                      |                                                                                    

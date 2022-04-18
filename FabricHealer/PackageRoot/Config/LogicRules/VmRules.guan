@@ -9,6 +9,7 @@
 ## | MetricName                | Name of the Metric  (e.g., CpuPercent or MemoryMB, etc.)                                     |   
 ## | MetricValue               | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)                              | 
 ## | OS                        | The name of the OS from which the data was collected (Linux or Windows)                      |
+## | HealthState               | The HealthState of the target entity: Error or Warning                                       |
     
 ## VM-related Metric Names.
 ## | Name                      |                                                                                    

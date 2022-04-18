@@ -10,6 +10,7 @@
 ## | MetricName                | Name of the supplied metric                                                                  |   
 ## | MetricValue               | Corresponding value for supplied metric                                                      | 
 ## | OS                        | The name of the OS from which the data was collected (Linux or Windows)                      |
+## | HealthState               | The HealthState of the target entity: Error or Warning                                       |
 
 ## Disk-related Metric Names.
 ## | Name                      |                                                                                    
