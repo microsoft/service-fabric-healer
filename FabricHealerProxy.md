@@ -1,4 +1,4 @@
-﻿# FabricHealerProxy
+# FabricHealerProxy
 
 FabricHealerProxy is a .NET Standard 2.0 library that provides a very simple and reliable way to share Service Fabric entity repair information to FabricHealer service instances running in the same cluster. You can install FabricHealerProxy into your .NET Service Fabric service from the [nuget.org package gallery](...). 
 
@@ -132,4 +132,3 @@ namespace Stateless1
     }
 }
 ```
-

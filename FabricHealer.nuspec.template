@@ -5,7 +5,7 @@
     <version>1.1.0</version>
     <releaseNotes>
 		- FabricHealer no longer requires FabricObserver to be deployed in the same cluster.
-		- Any .NET SF service can now interoperate with FabricHealer using the FabricHealerLib .NET Standard library.
+		- Any .NET SF service can now interoperate with FabricHealer using the FabricHealerProxy .NET Standard 2.0 library.
 		- FabricHealer now requires Microsoft.ServiceFabric.Services Version 5.0.516 and higher. Lesser runtime versions than 8.0.516 are no longer supported.
 		- FabricHealer can now be deployed via ARM, directly from the repo.
 	</releaseNotes>

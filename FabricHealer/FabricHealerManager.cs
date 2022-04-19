@@ -819,7 +819,7 @@ namespace FabricHealer
                         continue;
                     }
 
-                    // Only FabricObserver can initiate Service Fabric System service repair. FabricHealerLib does not support this.
+                    // Only FabricObserver can initiate Service Fabric System service repair. FabricHealerProxy does not support this.
                     if (repairData.ObserverName != RepairConstants.FabricSystemObserver)
                     {
                         continue;
@@ -1347,11 +1347,11 @@ namespace FabricHealer
                         }
                     }
 
-                    // FabricHealer only supports VM level repairs that are identified by FabricObserver. FabricHealerLib does not support communicating these types of repairs
+                    // FabricHealer only supports VM level repairs that are identified by FabricObserver. FabricHealerProxy does not support communicating these types of repairs
                     // to FabricHealer from a non-FO service (TOTHINK: this should change?).
                     if (repairData.ObserverName == null && repairData.EntityType == EntityType.Node)
                     {
-                        // FabricHealerLib-generated report, so a restart fabric node request, for example.
+                        // FabricHealerProxy-generated report, so a restart fabric node request, for example.
                         await ProcessFabricNodeHealthAsync(evt, repairData);
                         continue;
                     }
@@ -1812,7 +1812,7 @@ namespace FabricHealer
                     repairPolicySectionName = RepairConstants.VmRepairPolicySectionName;
                     break;
 
-                // Fabric Node repair (from FabricHealerLib, for example, where there is no concept of Observer).
+                // Fabric Node repair (from FabricHealerProxy, for example, where there is no concept of Observer).
                 case EntityType.Node when repairData.ObserverName == null && repairData.NodeName != null && repairData.NodeType != null:
                     repairPolicySectionName = RepairConstants.FabricNodeRepairPolicySectionName;
                     break;

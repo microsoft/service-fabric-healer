@@ -1,3 +1,0 @@
-# FabricHealerLib
-
-### Getting Started 
