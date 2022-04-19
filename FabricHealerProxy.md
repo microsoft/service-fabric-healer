@@ -1,6 +1,6 @@
 # FabricHealerProxy
 
-FabricHealerProxy is a .NET Standard 2.0 library that provides a very simple and reliable way to share Service Fabric entity repair information to FabricHealer service instances running in the same cluster. You can install FabricHealerProxy into your .NET Service Fabric service from the [nuget.org package gallery](...). 
+FabricHealerProxy is a .NET Standard 2.0 library that provides a very simple and reliable way for any .NET Service Fabric service to initiate Service Fabric entity repair by the FabricHealer service running in the same cluster. 
 
 ### How to use FabricHealerProxy
 
@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Runtime;
 using FabricHealerProxy;
 using FabricHealerProxy.Exceptions;
+using System.Collections.Generic;
 
 namespace Stateless1
 {
@@ -45,11 +46,18 @@ namespace Stateless1
             // This specifies that you want FabricHealer to repair a service instance deployed to a Fabric node named NodeName.
             // FabricHealer supports both Replica and CodePackage restarts of services. The logic rules will dictate which one of these happens,
             // so make sure to craft a specific logic rule that makes sense for you (and use some logic!).
-            // Note that, out of the box, FabricHealer's AppRules.guan file (located in the FabricHealer project's PackageRoot/Config/LogicRules folder) already has a restart replica catch-all (applies to any service) rule that will restart the primary replica of
+            // Note that, out of the box, FabricHealer's AppRules.guan file (located in the FabricHealer project's PackageRoot/Config/LogicRules folder)
+            // already has a restart replica catch-all (applies to any service) rule that will restart the primary replica of
             // the specified service below, deployed to the a specified Fabric node. 
             var repairDataServiceTarget = new RepairData
             {
                 ServiceName = "fabric:/HealthMetrics/DoctorActorServiceType",
+                NodeName = "_Node_0"
+            };
+
+            var repairDataServiceTarget2 = new RepairData
+            {
+                ServiceName = "fabric:/HealthMetrics/BandActorServiceType",
                 NodeName = "_Node_0"
             };
 
@@ -61,10 +69,27 @@ namespace Stateless1
                 NodeName = "_Node_0"
             };
 
-            // Service repair.
+            // For use in the IEnumerable<RepairData> RepairEntityAsync overload.
+            List<RepairData> repairDataList = new List<RepairData>
+            {
+                repairDataNodeTarget,
+                repairDataServiceTarget,
+                repairDataServiceTarget2
+            };
+
+            // For use in the single instance RepairData RepairEntityAsync overload.
+            var repairDataServiceTargetSingle = new RepairData
+            {
+                ServiceName = "fabric:/HealthMetrics/HealthMetrics.WebServiceType",
+                NodeName = "_Node_0"
+            };
+
+            // This demonstrates which exceptions will be thrown by the API. The first three represent user error (most likely). The last two are internal SF issues which 
+            // will be thrown only after a series of retries. How to handle these is up to you.
             try
             {
-                await FabricHealer.Proxy.RepairEntityAsync(repairDataServiceTarget, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
+                await FabricHealer.Proxy.RepairEntityAsync(repairDataServiceTargetSingle, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
+                await FabricHealer.Proxy.RepairEntityAsync(repairDataList, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
             }
             catch (MissingRepairDataException)
             {
@@ -89,30 +114,6 @@ namespace Stateless1
                 // ClusterManager service could be hammered (flooded with queries), for example. You could retry RepairEntityAsync again after you wait a bit..
             }
 
-            // Node repair.
-            try
-            {
-                await FabricHealer.Proxy.RepairEntityAsync(repairDataNodeTarget, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
-            }
-            catch (FabricNodeNotFoundException)
-            {
-                // Check your spelling..
-            }
-            catch (FabricException)
-            {
-                // No-op unless you want to re-run RepairEntityAsync again.
-            }
-            catch (TimeoutException)
-            {
-                // ClusterManager service could be hammered (flooded with queries), for example. You could retry RepairEntityAsync again after you wait a bit..
-            }
-
-            var repairDataServiceTarget2 = new RepairData
-            {
-                ServiceName = "fabric:/HealthMetrics/BandActorServiceType",
-                NodeName = "_Node_0"
-            };
-
             // Do nothing and wait.
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -125,8 +126,9 @@ namespace Stateless1
 
                 }
             }
-            
-            // Close the Proxy to clear internal state and remove health reports that are still active.
+
+            // Close the proxy (this cleans up state and removes any health report that is currently active (not expired).
+            // Note: this does not cancel repairs that are in flight or in the FabricHealer internal repair queue.
             await FabricHealer.Proxy.Close();
         }
     }

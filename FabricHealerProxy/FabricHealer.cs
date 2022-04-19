@@ -35,7 +35,8 @@ namespace FabricHealerProxy
 
         // Use one FC for the lifetime of the consuming SF service process that loads FabricHealerProxy.dll.
         private static readonly FabricClient fabricClient = new FabricClient(settings);
-        private static readonly object lockObj = new object();
+        private static readonly object instanceLock = new object();
+        private static readonly object writeLock = new object();
         private static readonly TimeSpan defaultHealthReportTtl = TimeSpan.FromMinutes(15);
         private static readonly TimeSpan maxDataLifeTime = defaultHealthReportTtl;
 
@@ -60,7 +61,7 @@ namespace FabricHealerProxy
             {
                 if (instance == null)
                 {
-                    lock (lockObj)
+                    lock (instanceLock)
                     {
                         if (instance == null)
                         {
@@ -126,7 +127,30 @@ namespace FabricHealerProxy
                                             repairData,
                                             repairDataLifetime,
                                             fabricClient,
-                                            cancellationToken));
+                                            cancellationToken)).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// This function generates a specially-crafted Service Fabric Health Report that the FabricHealer service will understand and act upon given the facts supplied
+        /// in the RepairData instance. Use this function to supply a list or array of RepairData objects.
+        /// </summary>
+        /// <param name="repairDataCollection">A collection of RepairData instances. RepairData is a well-known (ITelemetryData) data ty[e that contains facts which FabricHealer will use 
+        /// in the execution of its entity repair logic rules and related mitigation functions.</param>
+        /// <param name="cancellationToken">CancellationToken used to ensure this function stops processing when the token is cancelled.</param>
+        /// <param name="repairDataLifetime">The amount of time for the repair data to remain active (TTL of associated health report). Default is 15 mins.</param>
+        /// <exception cref="ArgumentNullException">Thrown when RepairData instance is null.</exception>
+        /// <exception cref="FabricException">Thrown when an internal Service Fabric operation fails.</exception>
+        /// <exception cref="FabricNodeNotFoundException">Thrown when specified RepairData.NodeName does not exist in the cluster.</exception>
+        /// <exception cref="FabricServiceNotFoundException">Thrown when specified service doesn't exist in the cluster.</exception>
+        /// <exception cref="MissingRepairDataException">Thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).</exception>
+        /// <exception cref="UriFormatException">Thrown when required ApplicationName or ServiceName value is a malformed Uri string.</exception>
+        /// <exception cref="TimeoutException">Thrown when internal Fabric client API calls timeout.</exception>
+        public async Task RepairEntityAsync(IEnumerable<RepairData> repairDataCollection, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
+        {
+            foreach (var repairData in repairDataCollection)
+            {
+                await RepairEntityAsync(repairData, cancellationToken, repairDataLifetime).ConfigureAwait(false);
+            }
         }
 
         private async Task RepairEntityAsyncInternal(RepairData repairData, TimeSpan repairDataLifetime, FabricClient fabricClient, CancellationToken cancellationToken)
@@ -137,7 +161,10 @@ namespace FabricHealerProxy
             }
 
             // Remove expired repair data.
-            ManageRepairDataHistory();
+            lock (writeLock)
+            {
+                ManageRepairDataHistory();
+            }
 
             if (string.IsNullOrWhiteSpace(repairData.ApplicationName))
             {
@@ -288,7 +315,10 @@ namespace FabricHealerProxy
             }
 
             // Add repairData to history.
-            repairDataHistory.Add((DateTime.UtcNow, repairData));
+            lock (writeLock)
+            {
+                repairDataHistory.Add((DateTime.UtcNow, repairData));
+            }
         }
 
         private void ManageRepairDataHistory()
@@ -365,7 +395,7 @@ namespace FabricHealerProxy
                     break;
             }
 
-            return await HealthReportExistsAsync(repairData, fabricClient, cancellationToken);
+            return await HealthReportExistsAsync(repairData, fabricClient, cancellationToken).ConfigureAwait(false);
         }
 
         private async Task<bool> HealthReportExistsAsync(RepairData repairData, FabricClient fabricClient, CancellationToken cancellationToken)
@@ -466,7 +496,7 @@ namespace FabricHealerProxy
                                     TimeSpan.FromSeconds(1),
                                     TimeSpan.FromSeconds(3),
                                     TimeSpan.FromSeconds(5)
-                                }).ExecuteAsync(() => ClearHealthReportsInternalAsync());
+                                }).ExecuteAsync(() => ClearHealthReportsInternalAsync()).ConfigureAwait(false);
         }
 
         private async Task ClearHealthReportsInternalAsync()
@@ -534,7 +564,13 @@ namespace FabricHealerProxy
 
                 }
 
-                await Task.Delay(250);
+                await Task.Delay(250).ConfigureAwait(false);
+
+                lock (writeLock)
+                {
+                    repairDataHistory.RemoveAt(i);
+                    --i;
+                }
             }
         }
 
@@ -544,9 +580,20 @@ namespace FabricHealerProxy
         public async Task Close()
         {
             await ClearHealthReports();
-            repairDataHistory?.Clear();
-            repairDataHistory = null;
-            instance = null;
+
+            if (repairDataHistory != null)
+            {
+                lock (writeLock)
+                {
+                    repairDataHistory?.Clear();
+                    repairDataHistory = null;
+
+                    if (instance != null)
+                    {
+                        instance = null;
+                    }
+                }
+            }
         }
     }
 }
