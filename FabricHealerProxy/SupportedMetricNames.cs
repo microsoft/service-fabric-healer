@@ -3,7 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace FabricHealerLib
+namespace FabricHealerProxy
 {
     /// <summary>
     /// Metric names that FabricHealer expects and therefore understands what to do with.

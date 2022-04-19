@@ -3,13 +3,13 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricHealerLib.Interfaces;
+using FabricHealerProxy.Interfaces;
 using Newtonsoft.Json;
 using System;
 using System.Fabric.Health;
 using System.Runtime.InteropServices;
 
-namespace FabricHealerLib
+namespace FabricHealerProxy
 {
     /// <summary>
     /// Data type that houses facts that FabricHealer expects and therefore understands. This type is serialized by ServiceFabricHealthReporter and used as the Description property 

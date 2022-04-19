@@ -31,7 +31,7 @@ Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "FabricHealerApp", "FabricHe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TelemetryLib", "TelemetryLib\TelemetryLib.csproj", "{7BC6991F-C840-413E-B1CD-4025947CF5FA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FabricHealerLib", "FabricHealerLib\FabricHealerLib.csproj", "{C6180826-6E9D-488E-B212-999540122211}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FabricHealerProxy", "FabricHealerProxy\FabricHealerProxy.csproj", "{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -77,14 +77,14 @@ Global
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|x64.ActiveCfg = Release|x64
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|x64.Build.0 = Release|x64
-		{C6180826-6E9D-488E-B212-999540122211}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{C6180826-6E9D-488E-B212-999540122211}.Debug|Any CPU.Build.0 = Debug|x64
-		{C6180826-6E9D-488E-B212-999540122211}.Debug|x64.ActiveCfg = Debug|x64
-		{C6180826-6E9D-488E-B212-999540122211}.Debug|x64.Build.0 = Debug|x64
-		{C6180826-6E9D-488E-B212-999540122211}.Release|Any CPU.ActiveCfg = Release|x64
-		{C6180826-6E9D-488E-B212-999540122211}.Release|Any CPU.Build.0 = Release|x64
-		{C6180826-6E9D-488E-B212-999540122211}.Release|x64.ActiveCfg = Release|x64
-		{C6180826-6E9D-488E-B212-999540122211}.Release|x64.Build.0 = Release|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Debug|Any CPU.Build.0 = Debug|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Debug|x64.ActiveCfg = Debug|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Debug|x64.Build.0 = Debug|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|Any CPU.ActiveCfg = Release|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|Any CPU.Build.0 = Release|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|x64.ActiveCfg = Release|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

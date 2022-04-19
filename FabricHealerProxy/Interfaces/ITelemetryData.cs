@@ -6,7 +6,7 @@
 using System;
 using System.Fabric.Health;
 
-namespace FabricHealerLib.Interfaces
+namespace FabricHealerProxy.Interfaces
 {
     /// <summary>
     /// 

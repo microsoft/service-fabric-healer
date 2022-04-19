@@ -6,44 +6,44 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace FabricHealerLib.Exceptions
+namespace FabricHealerProxy.Exceptions
 {
     /// <summary>
-    /// Internal exception that is thrown when a custom generated health report is not found in the health event store.
+    /// Exception thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).
     /// </summary>
     [Serializable]
-    internal class HealthReportNotFoundException : Exception
+    public class MissingRepairDataException : Exception
     {
         /// <summary>
-        /// Creates an instance of HealthReportNotFoundException.
+        /// Creates an instance of MissingRequiredDataException.
         /// </summary>
-        public HealthReportNotFoundException()
+        public MissingRepairDataException()
         {
         }
 
         /// <summary>
-        ///  Creates an instance of HealthReportNotFoundException.
+        ///  Creates an instance of MissingRequiredDataException.
         /// </summary>
         /// <param name="message">Error message that describes the problem.</param>
-        public HealthReportNotFoundException(string message) : base(message)
+        public MissingRepairDataException(string message) : base(message)
         {
         }
 
         /// <summary>
-        /// Creates an instance of HealthReportNotFoundException.
+        /// Creates an instance of MissingRequiredDataException.
         /// </summary>
         /// <param name="message">Error message that describes the problem.</param>
         /// <param name="innerException">InnerException instance.</param>
-        public HealthReportNotFoundException(string message, Exception innerException) : base(message, innerException)
+        public MissingRepairDataException(string message, Exception innerException) : base(message, innerException)
         {
         }
 
         /// <summary>
-        /// Creates an instance of HealthReportNotFoundException.
+        /// Creates an instance of MissingRequiredDataException.
         /// </summary>
         /// <param name="info">SerializationInfo</param>
         /// <param name="context">StreamingContext</param>
-        protected HealthReportNotFoundException(SerializationInfo info, StreamingContext context) : base(info, context)
+        protected MissingRepairDataException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }
