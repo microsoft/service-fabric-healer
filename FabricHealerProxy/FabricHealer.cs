@@ -459,14 +459,14 @@ namespace FabricHealerProxy
         private async Task ClearHealthReports()
         {
             await Policy.Handle<FabricException>()
-                      .Or<TimeoutException>()
-                      .WaitAndRetryAsync(
-                            new[]
-                            {
-                                TimeSpan.FromSeconds(1),
-                                TimeSpan.FromSeconds(3),
-                                TimeSpan.FromSeconds(5)
-                            }).ExecuteAsync(() => ClearHealthReportsInternalAsync());
+                            .Or<TimeoutException>()
+                            .WaitAndRetryAsync(
+                                new[]
+                                {
+                                    TimeSpan.FromSeconds(1),
+                                    TimeSpan.FromSeconds(3),
+                                    TimeSpan.FromSeconds(5)
+                                }).ExecuteAsync(() => ClearHealthReportsInternalAsync());
         }
 
         private async Task ClearHealthReportsInternalAsync()
