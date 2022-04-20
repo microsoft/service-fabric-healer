@@ -6,7 +6,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace FabricHealerProxy.Exceptions
+namespace FabricHealerProxy
 {
     /// <summary>
     /// Exception thrown when specified node does not exist in the cluster.

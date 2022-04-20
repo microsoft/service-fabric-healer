@@ -12,8 +12,8 @@ using System.Threading;
 using System.Linq;
 using System.Fabric.Query;
 using Polly;
-using FabricHealerProxy.Exceptions;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace FabricHealerProxy
 {
@@ -41,14 +41,14 @@ namespace FabricHealerProxy
         private static readonly TimeSpan maxDataLifeTime = defaultHealthReportTtl;
 
         // Instance tuple that stores RepairData objects for a specified duration (defaultHealthReportTtl).
-        private List<(DateTime DateAdded, RepairData RepairData)> repairDataHistory =
-                 new List<(DateTime DateAdded, RepairData RepairData)>();
+        private ConcurrentDictionary<string, (DateTime DateAdded, RepairData RepairData)> repairDataHistory =
+                 new ConcurrentDictionary<string, (DateTime DateAdded, RepairData RepairData)>();
 
         private FabricHealer()
         {
             if (repairDataHistory == null)
             {
-                repairDataHistory = new List<(DateTime DateAdded, RepairData RepairData)>();
+                repairDataHistory = new ConcurrentDictionary<string, (DateTime DateAdded, RepairData RepairData)>();
             }
         }
 
@@ -161,10 +161,7 @@ namespace FabricHealerProxy
             }
 
             // Remove expired repair data.
-            lock (writeLock)
-            {
-                ManageRepairDataHistory();
-            }
+            ManageRepairDataHistory();
 
             if (string.IsNullOrWhiteSpace(repairData.ApplicationName))
             {
@@ -315,10 +312,7 @@ namespace FabricHealerProxy
             }
 
             // Add repairData to history.
-            lock (writeLock)
-            {
-                repairDataHistory.Add((DateTime.UtcNow, repairData));
-            }
+            _ = repairDataHistory.TryAdd(repairData.Property, (DateTime.UtcNow, repairData));
         }
 
         private void ManageRepairDataHistory()
@@ -327,11 +321,11 @@ namespace FabricHealerProxy
             {
                 try
                 {
-                    var data = repairDataHistory[i];
+                    var data = repairDataHistory.ElementAt(i);
 
-                    if (DateTime.UtcNow.Subtract(data.DateAdded) > maxDataLifeTime)
+                    if (DateTime.UtcNow.Subtract(data.Value.DateAdded) > maxDataLifeTime)
                     {
-                        _ = repairDataHistory.Remove(data);
+                        _ = repairDataHistory.TryRemove(data.Key, out _);
                         --i;
                     }
                 }
@@ -505,7 +499,7 @@ namespace FabricHealerProxy
             return false;
         }
 
-        private async Task ClearHealthReports()
+        private async Task ClearHealthReportsAsync()
         {
             await Policy.Handle<FabricException>()
                             .Or<TimeoutException>()
@@ -522,7 +516,7 @@ namespace FabricHealerProxy
         {
             for (int i = 0; i < repairDataHistory.Count; i++)
             {
-                var repairData = repairDataHistory[i].RepairData;
+                var repairData = repairDataHistory.ElementAt(i).Value.RepairData;
 
                 try
                 {
@@ -584,32 +578,31 @@ namespace FabricHealerProxy
                 }
 
                 await Task.Delay(250).ConfigureAwait(false);
-
-                lock (writeLock)
-                {
-                    repairDataHistory.RemoveAt(i);
-                    --i;
-                }
+               _ = repairDataHistory.TryRemove(repairDataHistory.ElementAt(i).Key, out _);
+               --i;
             }
         }
 
         /// <summary>
         /// Releases resources used by FabricHealer.Proxy, including cleaning up any active health reports.
         /// </summary>
-        public async Task Close()
+        public async Task CloseAsync()
         {
-            await ClearHealthReports();
+            await ClearHealthReportsAsync();
 
             if (repairDataHistory != null)
             {
-                lock (writeLock)
-                {
-                    repairDataHistory?.Clear();
-                    repairDataHistory = null;
+                repairDataHistory?.Clear();
+                repairDataHistory = null;
 
-                    if (instance != null)
+                if (instance != null)
+                {
+                    lock (writeLock)
                     {
-                        instance = null;
+                        if (instance != null)
+                        {
+                            instance = null;
+                        }
                     }
                 }
             }

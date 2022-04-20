@@ -12,17 +12,16 @@ orchestrate RM through to repair completion (FH will be the executor of the repa
 
 ### Sample application (Stateless Service)
 
-stateless1.cs 
+Stateless1.cs 
 
 ```C#
 using System;
+using System.Collections.Generic;
 using System.Fabric;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Runtime;
 using FabricHealerProxy;
-using FabricHealerProxy.Exceptions;
-using System.Collections.Generic;
 
 namespace Stateless1
 {
@@ -46,8 +45,7 @@ namespace Stateless1
             // This specifies that you want FabricHealer to repair a service instance deployed to a Fabric node named NodeName.
             // FabricHealer supports both Replica and CodePackage restarts of services. The logic rules will dictate which one of these happens,
             // so make sure to craft a specific logic rule that makes sense for you (and use some logic!).
-            // Note that, out of the box, FabricHealer's AppRules.guan file (located in the FabricHealer project's PackageRoot/Config/LogicRules folder)
-            // already has a restart replica catch-all (applies to any service) rule that will restart the primary replica of
+            // Note that, out of the box, FabricHealer's AppRules.guan file (located in the FabricHealer project's PackageRoot/Config/LogicRules folder) already has a restart replica catch-all (applies to any service) rule that will restart the primary replica of
             // the specified service below, deployed to the a specified Fabric node. 
             var repairDataServiceTarget = new RepairData
             {
@@ -127,10 +125,10 @@ namespace Stateless1
                 }
             }
 
-            // Close the proxy (this cleans up state and removes any health report that is currently active (not expired).
+            // Close the proxy (this cleans up state and removes any health reports that are currently active (not expired)).
             // Note: this does not cancel repairs that are in flight or in the FabricHealer internal repair queue.
-            await FabricHealer.Proxy.Close();
-        }
+            await FabricHealer.Proxy.CloseAsync();
+        } 
     }
 }
 ```
