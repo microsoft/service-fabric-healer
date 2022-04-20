@@ -38,8 +38,7 @@ namespace FabricHealer.Repair.Guan
                     RepairPolicy = new RepairPolicy
                     {
                         RepairAction = RepairActionType.RestartVM,
-                        RepairId = RepairData.RepairId,
-                        TargetType = RepairTargetType.VirtualMachine
+                        RepairId = RepairData.RepairId
                     },
                     EventSourceId = RepairData.Source,
                     EventProperty = RepairData.Property

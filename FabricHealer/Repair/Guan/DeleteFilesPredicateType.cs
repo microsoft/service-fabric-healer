@@ -39,7 +39,6 @@ namespace FabricHealer.Repair.Guan
                     RepairPolicy = new DiskRepairPolicy
                     {
                         RepairAction = RepairActionType.DeleteFiles,
-                        TargetType = RepairTargetType.VirtualMachine,
                         RepairId = RepairData.RepairId
                     },
                     EventSourceId = RepairData.Source,

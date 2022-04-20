@@ -827,34 +827,45 @@ namespace FabricHealer.Repair
             }
 
             // What was the target (a node, app, replica, etc..)?
-            string repairTarget = repairConfiguration.RepairPolicy.RepairId;
+            string repairTarget;
 
-            switch (repairConfiguration.RepairPolicy.TargetType)
+            switch (repairConfiguration.EntityType)
             {
-                case RepairTargetType.Application:
-                {
+                // FO..
+                case EntityType.Application:
+                
                     repairTarget = $"{repairConfiguration.AppName.OriginalString} on Node {repairConfiguration.NodeName}";
 
                     if (repairConfiguration.AppName.OriginalString == RepairConstants.SystemAppName && !string.IsNullOrWhiteSpace(repairConfiguration.SystemServiceProcessName))
                     {
                         repairTarget = $"{repairConfiguration.SystemServiceProcessName} on Node {repairConfiguration.NodeName}";
                     }
-
                     break;
-                }
 
-                case RepairTargetType.Node:
+                case EntityType.Service:
+                    
+                    repairTarget = $"{repairConfiguration.ServiceName.OriginalString} on Node {repairConfiguration.NodeName}";
+                    break;
+
+                case EntityType.Process:
+                    
+                    repairTarget = $"{repairConfiguration.SystemServiceProcessName} on Node {repairConfiguration.NodeName}";
+                    break;
+
+                case EntityType.Node:
                     repairTarget = repairConfiguration.NodeName;
                     break;
 
-                case RepairTargetType.Replica:
-                    repairTarget = $"{repairConfiguration.ServiceName}";
+                case EntityType.Replica:
+                    repairTarget = $"{repairConfiguration.ReplicaOrInstanceId}";
                     break;
 
-                case RepairTargetType.Partition:
+                case EntityType.Partition:
+                    repairTarget = $"{repairConfiguration.PartitionId}";
                     break;
 
-                case RepairTargetType.VirtualMachine:
+                case EntityType.Machine:
+                    repairTarget = "Machine hosting Fabric node" + repairConfiguration.NodeName;
                     break;
 
                 default:
@@ -863,41 +874,53 @@ namespace FabricHealer.Repair
 
             if (success)
             {
-                string target = Enum.GetName(typeof(RepairTargetType), repairConfiguration.RepairPolicy.TargetType);
+                string target = Enum.GetName(typeof(EntityType), repairConfiguration.EntityType);
                 TimeSpan maxWaitForHealthStateOk = TimeSpan.FromMinutes(30);
 
-                switch (repairConfiguration.RepairPolicy.TargetType)
+                switch (repairConfiguration.EntityType)
                 {
-                    case RepairTargetType.Application when repairConfiguration.AppName.OriginalString != RepairConstants.SystemAppName:
-                    case RepairTargetType.Replica:
+                    case EntityType.Application when repairConfiguration.AppName.OriginalString != RepairConstants.SystemAppName:
+                    case EntityType.Replica:
                         maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
                             ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
                             : TimeSpan.FromMinutes(10);
                         break;
 
-                    case RepairTargetType.Application when repairConfiguration.AppName.OriginalString == RepairConstants.SystemAppName && repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartProcess:
+                    case EntityType.Application when repairConfiguration.AppName.OriginalString == RepairConstants.SystemAppName && repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartProcess:
                         maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
                            ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
                            : TimeSpan.FromMinutes(5);
                         break;
 
-                    case RepairTargetType.Application when repairConfiguration.AppName.OriginalString == RepairConstants.SystemAppName && repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode:
+                    case EntityType.Application when repairConfiguration.AppName.OriginalString == RepairConstants.SystemAppName && repairConfiguration.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode:
                         maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
                             ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
                             : TimeSpan.FromMinutes(30);
                         break;
 
-                    case RepairTargetType.Node:
+                    case EntityType.Service:
+                        maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
+                            ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
+                            : TimeSpan.FromMinutes(10);
                         break;
 
-                    case RepairTargetType.Partition:
+                    case EntityType.Node:
+                        maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
+                            ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
+                            : TimeSpan.FromMinutes(30);
                         break;
 
-                    case RepairTargetType.VirtualMachine:
+                    case EntityType.Partition:
+                        maxWaitForHealthStateOk = repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
+                            ? repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck
+                            : TimeSpan.FromMinutes(15);
+                        break;
+
+                    case EntityType.Machine:
                         break;
 
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new ArgumentException("Unknown repair target type.");
                 }
 
                 // Check healthstate of repair target to see if the repair worked.
@@ -1028,19 +1051,19 @@ namespace FabricHealer.Repair
         /// <returns></returns>
         private async Task<HealthState> GetCurrentAggregatedHealthStateAsync(RepairConfiguration repairConfig, CancellationToken token)
         {
-            switch (repairConfig.RepairPolicy.TargetType)
+            switch (repairConfig.EntityType)
             {
-                case RepairTargetType.Application:
-                {
+                case EntityType.Application:
+                
                     var appHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                                    () => FabricClientInstance.HealthManager.GetApplicationHealthAsync(
-                                                                                repairConfig.AppName,
-                                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                                token),
-                                                                    token);
+                                             () => FabricClientInstance.HealthManager.GetApplicationHealthAsync(
+                                                        repairConfig.AppName,
+                                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                        token),
+                                             token);
 
                     bool isTargetAppHealedOnTargetNode = false;
-                    
+
                     // System Service repairs (process restarts)
                     if (repairConfig.AppName.OriginalString == RepairConstants.SystemAppName)
                     {
@@ -1064,16 +1087,34 @@ namespace FabricHealer.Repair
                     }
 
                     return isTargetAppHealedOnTargetNode ? HealthState.Ok : appHealth.AggregatedHealthState;
-                }
-                case RepairTargetType.Node:
-                case RepairTargetType.VirtualMachine:
-                {
+                    
+                case EntityType.Service:
+
+                    var serviceHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                () => FabricClientInstance.HealthManager.GetServiceHealthAsync(
+                                                        repairConfig.ServiceName,
+                                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                        token),
+                                                token);
+
+                    bool isTargetServiceHealedOnTargetNode = serviceHealth.HealthEvents.Any(
+                               h => JsonSerializationUtility.TryDeserialize(
+                                       h.HealthInformation.Description,
+                                       out TelemetryData repairData)
+                                           && repairData.NodeName == repairConfig.NodeName
+                                           && repairData.ServiceName == repairConfig.ServiceName.OriginalString
+                                           && repairData.HealthState == HealthState.Ok);
+                    return isTargetServiceHealedOnTargetNode ? HealthState.Ok : serviceHealth.AggregatedHealthState;
+
+                case EntityType.Node:
+                case EntityType.Machine:
+                
                     var nodeHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                                    () => FabricClientInstance.HealthManager.GetNodeHealthAsync(
-                                                                                repairConfig.NodeName,
-                                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                                token),
-                                                                    token);
+                                                () => FabricClientInstance.HealthManager.GetNodeHealthAsync(
+                                                            repairConfig.NodeName,
+                                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                            token),
+                                                token);
 
                     bool isTargetNodeHealed = nodeHealth.HealthEvents.Any(
                                                 h => JsonSerializationUtility.TryDeserialize(
@@ -1083,18 +1124,19 @@ namespace FabricHealer.Repair
                                                         && repairData.HealthState == HealthState.Ok);
 
                     return isTargetNodeHealed ? HealthState.Ok : nodeHealth.AggregatedHealthState;
-                }
-                case RepairTargetType.Replica:
-                {
+                   
+                case EntityType.Replica:
+                
                     // Make sure the Partition where the restarted replica was located is now healthy.
                     var partitionHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                                            () => FabricClientInstance.HealthManager.GetPartitionHealthAsync(
-                                                                                        repairConfig.PartitionId,
-                                                                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                                        token),
-                                                                            token);
+                                                    () => FabricClientInstance.HealthManager.GetPartitionHealthAsync(
+                                                                repairConfig.PartitionId,
+                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                token),
+                                                    token);
+
                     return partitionHealth.AggregatedHealthState;
-                }
+                    
                 default:
                     return HealthState.Unknown;
             }

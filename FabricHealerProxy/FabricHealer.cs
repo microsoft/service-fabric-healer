@@ -406,7 +406,26 @@ namespace FabricHealerProxy
                 return true;
             }
 
-            if (!string.IsNullOrWhiteSpace(repairData.ServiceName))
+            if (!string.IsNullOrWhiteSpace(repairData.ApplicationName) && repairData.ApplicationName.ToLower() == "fabric:/system")
+            {
+                try
+                {
+                    var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(new Uri("fabric:/System")).ConfigureAwait(false);
+                    var unhealthyEvents =
+                        appHealth.HealthEvents?.Where(
+                            s => s.HealthInformation.SourceId == repairData.Source && s.HealthInformation.Property == repairData.Property);
+
+                    if (unhealthyEvents?.Count() == 0)
+                    {
+                        return false;
+                    }
+                }
+                catch (FabricException)
+                {
+                    return false;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(repairData.ServiceName))
             {
                 try
                 {

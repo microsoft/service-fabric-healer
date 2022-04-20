@@ -29,14 +29,6 @@ namespace FabricHealer.Repair
         }
 
         /// <summary>
-        /// The type of repair target (Application, Disk, Node, Replica, VM)
-        /// </summary>
-        public RepairTargetType TargetType
-        {
-            get; set;
-        }
-
-        /// <summary>
         /// Maximum amount of time to check if health state of repaired target entity is Ok.
         /// </summary>
         public TimeSpan MaxTimePostRepairHealthCheck

@@ -31,9 +31,9 @@ namespace FabricHealerProxy
         /// </summary>
         StatelessService,
         /// <summary>
-        /// Partition type. NOTE: Partition repair is not currently supported.
+        /// Partition report.
         /// </summary>
-        Partition, 
+        Partition,
         /// <summary>
         /// DeployedApplication type.
         /// </summary>
@@ -41,6 +41,18 @@ namespace FabricHealerProxy
         /// <summary>
         /// Process. This is only for direct process restarts of a Service Fabric system service executable.
         /// </summary>
-        Process
+        Process,
+        /// <summary>
+        /// Machine (physical or virtual) type. This is for machine reboot repairs.
+        /// </summary>
+        Machine,
+        /// <summary>
+        /// Replica type.
+        /// </summary>
+        Replica,
+        /// <summary>
+        /// Disk type.
+        /// </summary>
+        Disk
     }
 }

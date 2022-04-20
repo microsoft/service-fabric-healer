@@ -41,8 +41,7 @@ namespace FabricHealer.Repair.Guan
                     RepairPolicy = new RepairPolicy
                     {
                         RepairAction = RepairActionType.RestartFabricNode,
-                        RepairId = RepairData.RepairId,
-                        TargetType = RepairData.ApplicationName == RepairConstants.SystemAppName ? RepairTargetType.Application : RepairTargetType.Node
+                        RepairId = RepairData.RepairId
                     },
                     EventSourceId = RepairData.Source,
                     EventProperty = RepairData.Property

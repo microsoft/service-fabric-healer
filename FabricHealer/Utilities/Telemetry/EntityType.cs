@@ -41,6 +41,18 @@ namespace FabricHealer.Utilities.Telemetry
         /// <summary>
         /// Process. This is only for direct process restarts of a Service Fabric system service executable.
         /// </summary>
-        Process
+        Process,
+        /// <summary>
+        /// Machine (physical or virtual) type. This is for machine reboot repairs.
+        /// </summary>
+        Machine,
+        /// <summary>
+        /// Replica type.
+        /// </summary>
+        Replica,
+        /// <summary>
+        /// Disk type.
+        /// </summary>
+        Disk
     }
 }
