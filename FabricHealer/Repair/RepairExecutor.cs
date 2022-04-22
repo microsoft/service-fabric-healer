@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.ComponentModel;
 using Newtonsoft.Json;
+using System.Fabric.Description;
 
 namespace FabricHealer.Repair
 {
@@ -189,42 +190,21 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            bool isTargetNodeHostingFH = repairConfiguration.NodeName == serviceContext.NodeContext.NodeName;
-
-            if (isTargetNodeHostingFH)
+            var nodeQueryDesc = new NodeQueryDescription
             {
-                return false;
-            }
+                MaxResults = 5,
+            };
 
-            var nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                            () =>
-                                            fabricClient.QueryManager.GetNodeListAsync(
-                                                            repairConfiguration.NodeName,
-                                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                            cancellationToken), cancellationToken);
-            if (nodes.Count == 0)
+            NodeList nodeList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                  () => fabricClient.QueryManager.GetNodePagedListAsync(
+                                          nodeQueryDesc,
+                                          FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                          cancellationToken),
+                                  cancellationToken);
+
+            if (nodeList.Count < 3)
             {
-                string info = $"Target node not found: {repairConfiguration.NodeName}. Aborting node restart operation.";
-
-                await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                            LogLevel.Info,
-                                            "RepairExecutor.SafeRestartFabricNodeAsync::NodeCount0",
-                                            info,
-                                            cancellationToken,
-                                            repairConfiguration,
-                                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-                return false;
-            }
-
-            var allnodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                            () =>
-                                            fabricClient.QueryManager.GetNodeListAsync(
-                                                            null,
-                                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                            cancellationToken), cancellationToken);
-            if (allnodes.Count < 3)
-            {
-                string info = $"Unsupported repair for a {nodes.Count} node cluster. Aborting fabric node restart operation.";
+                string info = $"Unsupported repair for a {nodeList.Count} node cluster. Aborting fabric node restart operation.";
 
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                             LogLevel.Info,
@@ -235,11 +215,38 @@ namespace FabricHealer.Repair
                                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                 FabricHealerManager.RepairLogger.LogInfo(info);
-
                 return false;
             }
 
-            var nodeInstanceId = nodes[0].NodeInstanceId;
+            ServiceDescription serviceDesc =
+               await fabricClient.ServiceManager.GetServiceDescriptionAsync(serviceContext.ServiceName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
+
+            int instanceCount = (serviceDesc as StatelessServiceDescription).InstanceCount;
+
+            if (instanceCount == -1)
+            {
+                bool isTargetNodeHostingFH = repairConfiguration.NodeName == serviceContext.NodeContext.NodeName;
+
+                if (isTargetNodeHostingFH)
+                {
+                    return false;
+                }
+            }
+          
+            if (!nodeList.Any(n => n.NodeName == repairConfiguration.NodeName))
+            {
+                string info = $"Fabric node {repairConfiguration.NodeName} does not exist.";
+
+                await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                            LogLevel.Info,
+                                            "RepairExecutor.SafeRestartFabricNodeAsync::MissingNode",
+                                            info,
+                                            cancellationToken,
+                                            repairConfiguration,
+                                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+            }
+
+            var nodeInstanceId = nodeList.First(n => n.NodeName == repairConfiguration.NodeName).NodeInstanceId;
             var stopwatch = new Stopwatch();
             var maxWaitTimeout = TimeSpan.FromMinutes(MaxWaitTimeMinutesForNodeOperation);
             string actionMessage = $"Attempting to safely restart Fabric node {repairConfiguration.NodeName} with InstanceId {nodeInstanceId}.";
@@ -299,18 +306,18 @@ namespace FabricHealer.Repair
                     // Wait for node to get into Disabled state.
                     while (stopwatch.Elapsed <= maxWaitTimeout)
                     {
-                        var nodeList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                        var nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                             () =>
                                                             fabricClient.QueryManager.GetNodeListAsync(
                                                                             repairConfiguration.NodeName,
                                                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                                             cancellationToken), cancellationToken);
-                        if (nodeList == null || nodeList.Count == 0)
+                        if (nodes == null || nodes.Count == 0)
                         {
                             break;
                         }
 
-                        Node targetNode = nodeList[0];
+                        Node targetNode = nodes[0];
 
                         // exit loop, this is the state we're looking for.
                         if (targetNode.NodeStatus == NodeStatus.Disabled)
@@ -358,7 +365,7 @@ namespace FabricHealer.Repair
                                                 () =>
                                                 fabricClient.FaultManager.RestartNodeAsync(
                                                                 repairConfiguration.NodeName,
-                                                                nodes[0].NodeInstanceId,
+                                                                nodeInstanceId,
                                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                                 cancellationToken), cancellationToken);
                     stopwatch.Start();
@@ -366,14 +373,14 @@ namespace FabricHealer.Repair
                     // Wait for Disabled/OK
                     while (stopwatch.Elapsed <= maxWaitTimeout)
                     {
-                        var nodeList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                        var nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                         () =>
                                                         fabricClient.QueryManager.GetNodeListAsync(
                                                                         repairConfiguration.NodeName,
                                                                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                                         cancellationToken), cancellationToken);
 
-                        Node targetNode = nodeList[0];
+                        Node targetNode = nodes[0];
 
                         // Node is ready to be enabled.
                         if (targetNode.NodeStatus == NodeStatus.Disabled && targetNode.HealthState == HealthState.Ok)
@@ -414,13 +421,13 @@ namespace FabricHealer.Repair
 
                     await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
 
-                    var nodeList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                    var nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                         () =>
                                                         fabricClient.QueryManager.GetNodeListAsync(
                                                                         repairConfiguration.NodeName,
                                                                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                                         cancellationToken), cancellationToken);
-                    Node targetNode = nodeList[0];
+                    Node targetNode = nodes[0];
 
                     // Make sure activation request went through.
                     if (targetNode.NodeStatus == NodeStatus.Disabled && targetNode.HealthState == HealthState.Ok)

@@ -16,9 +16,16 @@
     <Parameter Name="EnableAppRepair" DefaultValue="true" />
     <Parameter Name="EnableDiskRepair" DefaultValue="false" />
     <Parameter Name="EnableFabricNodeRepair" DefaultValue="true" />
+    <Parameter Name="EnableMachineRepair" DefaultValue="true" />
     <Parameter Name="EnableReplicaRepair" DefaultValue="false" />
     <Parameter Name="EnableSystemAppRepair" DefaultValue="false" />
-    <Parameter Name="EnableVMRepair" DefaultValue="false" />
+    <!-- Logic rule files -->
+    <Parameter Name="AppRulesConfigurationFile" DefaultValue="AppRules.guan" />
+    <Parameter Name="DiskRulesConfigurationFile" DefaultValue="DiskRules.guan" />
+    <Parameter Name="FabricNodeRulesConfigurationFile" DefaultValue="FabricNodeRules.guan" />
+    <Parameter Name="MachineRulesConfigurationFile" DefaultValue="MachineRules.guan" />
+    <Parameter Name="ReplicaRulesConfigurationFile" DefaultValue="ReplicaRules.guan" />
+    <Parameter Name="SystemServiceRulesConfigurationFile" DefaultValue="SystemServiceRules.guan" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
@@ -41,21 +48,27 @@
           <!-- Repair policies -->
           <Section Name="AppRepairPolicy">
             <Parameter Name="Enabled" Value="[EnableAppRepair]" />
+            <Parameter Name="LogicRulesConfigurationFile" Value="[AppRulesConfigurationFile]" />
           </Section>
           <Section Name="DiskRepairPolicy">
             <Parameter Name="Enabled" Value="[EnableDiskRepair]" />
+            <Parameter Name="LogicRulesConfigurationFile" Value="[DiskRulesConfigurationFile]" />
           </Section>
           <Section Name="FabricNodeRepairPolicy">
             <Parameter Name="Enabled" Value="[EnableFabricNodeRepair]" />
+            <Parameter Name="LogicRulesConfigurationFile" Value="[FabricNodeRulesConfigurationFile]" />
           </Section>
           <Section Name="ReplicaRepairPolicy">
             <Parameter Name="Enabled" Value="[EnableReplicaRepair]" />
+            <Parameter Name="LogicRulesConfigurationFile" Value="[ReplicaRulesConfigurationFile]" />
           </Section>
           <Section Name="SystemAppRepairPolicy">
             <Parameter Name="Enabled" Value="[EnableSystemAppRepair]" />
+            <Parameter Name="LogicRulesConfigurationFile" Value="[SystemServiceRulesConfigurationFile]" />
           </Section>
-          <Section Name="VMRepairPolicy">
-            <Parameter Name="Enabled" Value="[EnableVMRepair]" />
+          <Section Name="MachineRepairPolicy">
+            <Parameter Name="Enabled" Value="[EnableMachineRepair]" />
+            <Parameter Name="LogicRulesConfigurationFile" Value="[MachineRulesConfigurationFile]" />
           </Section>
         </Settings>
       </ConfigOverride>

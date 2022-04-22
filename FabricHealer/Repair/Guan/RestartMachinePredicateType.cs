@@ -11,11 +11,11 @@ using System.Threading.Tasks;
 
 namespace FabricHealer.Repair.Guan
 {
-    public class RestartVMPredicateType : PredicateType
+    public class RestartMachinePredicateType : PredicateType
     {
         private static RepairTaskManager RepairTaskManager;
         private static TelemetryData RepairData;
-        private static RestartVMPredicateType Instance;
+        private static RestartMachinePredicateType Instance;
 
         private class Resolver : BooleanPredicateResolver
         {
@@ -98,15 +98,15 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static RestartVMPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
+        public static RestartMachinePredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
         {
             RepairTaskManager = repairTaskManager;
             RepairData = repairData;
 
-            return Instance ??= new RestartVMPredicateType(name);
+            return Instance ??= new RestartMachinePredicateType(name);
         }
 
-        private RestartVMPredicateType(string name)
+        private RestartMachinePredicateType(string name)
                  : base(name, true, 0)
         {
 

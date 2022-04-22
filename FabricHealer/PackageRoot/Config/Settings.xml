@@ -29,29 +29,29 @@
     <Parameter Name="LogAnalyticsLogType" Value="FabricHealer" />
   </Section>
   <!-- Repair Policies.
-       Overridable Parameters (Enabled) must be set in ApplicationManifest.xml. -->
+       Overridable Parameters. Must be set in ApplicationManifest.xml. -->
   <Section Name="AppRepairPolicy">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="AppRules.guan" />
+    <Parameter Name="LogicRulesConfigurationFile" Value="" />
   </Section>
   <Section Name="DiskRepairPolicy">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="DiskRules.guan" />
+    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
   </Section>
   <Section Name="FabricNodeRepairPolicy">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="FabricNodeRules.guan" />
+    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
   </Section>
   <Section Name="ReplicaRepairPolicy">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="ReplicaRules.guan" />
+    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
   </Section>
   <Section Name="SystemAppRepairPolicy">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="SystemAppRules.guan" />
+    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
   </Section>
-  <Section Name="VMRepairPolicy">
+  <Section Name="MachineRepairPolicy">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="VmRules.guan" />
+    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
   </Section>
 </Settings>

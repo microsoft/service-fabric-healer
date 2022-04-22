@@ -9,41 +9,41 @@ using System.Runtime.Serialization;
 namespace FabricHealerProxy
 {
     /// <summary>
-    /// Exception thrown when a specified node does not exist in the cluster.
+    /// Exception thrown when a specified service does not exist in the cluster.
     /// </summary>
     [Serializable]
-    public class NodeNotFoundException : Exception
+    public class ServiceNotFoundException : Exception
     {
         /// <summary>
-        /// Creates an instance of NodeNotFoundException.
+        /// Creates an instance of ServiceNotFoundException.
         /// </summary>
-        public NodeNotFoundException()
+        public ServiceNotFoundException()
         {
         }
 
         /// <summary>
-        /// Creates an instance of FabricNodeNotFoundException.
+        /// Creates an instance of ServiceNotFoundException.
         /// </summary>
         /// <param name="message">Error message that describes the problem.</param>
-        public NodeNotFoundException(string message) : base(message)
+        public ServiceNotFoundException(string message) : base(message)
         {
         }
 
         /// <summary>
-        /// Creates an instance of FabricNodeNotFoundException.
+        /// Creates an instance of ServiceNotFoundException.
         /// </summary>
         /// <param name="message">Error message that describes the problem.</param>
         /// <param name="innerException">InnerException instance.</param>
-        public NodeNotFoundException(string message, Exception innerException) : base(message, innerException)
+        public ServiceNotFoundException(string message, Exception innerException) : base(message, innerException)
         {
         }
 
         /// <summary>
-        /// Creates an instance of FabricNodeNotFoundException.
+        /// Creates an instance of ServiceNotFoundException.
         /// </summary>
         /// <param name="info">SerializationInfo</param>
         /// <param name="context">StreamingContext</param>
-        protected NodeNotFoundException(SerializationInfo info, StreamingContext context) : base(info, context)
+        protected ServiceNotFoundException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }

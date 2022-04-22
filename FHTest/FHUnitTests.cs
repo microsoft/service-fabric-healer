@@ -267,7 +267,7 @@ namespace FHTest
             functorTable.Add(RestartFabricNodePredicateType.Singleton(RepairConstants.RestartFabricNode, repairTaskManager, executorData, repairTaskEngine, repairData));
             functorTable.Add(RestartFabricSystemProcessPredicateType.Singleton(RepairConstants.RestartFabricSystemProcess, repairTaskManager, repairData));
             functorTable.Add(RestartReplicaPredicateType.Singleton(RepairConstants.RestartReplica, repairTaskManager, repairData));
-            functorTable.Add(RestartVMPredicateType.Singleton(RepairConstants.RestartVM, repairTaskManager, repairData));
+            functorTable.Add(RestartMachinePredicateType.Singleton(RepairConstants.RestartVM, repairTaskManager, repairData));
 
             // Parse rules
             Module module = Module.Parse("external", repairRules, functorTable);

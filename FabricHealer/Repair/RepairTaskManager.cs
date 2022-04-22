@@ -107,43 +107,6 @@ namespace FabricHealer.Repair
                 return;
             }
 
-            try
-            {
-                if (repairRules.Any(r => r.Contains(RepairConstants.RestartVM)))
-                {
-                    // Do not allow VM reboot to take place in one-node cluster.
-                    var nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(
-                                        null,
-                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                        cancellationToken);
-
-                    int nodeCount = nodes.Count;
-
-                    if (nodeCount == 1)
-                    {
-                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                  LogLevel.Warning,
-                                                  "RepairTaskManager.StartRepairWorkflowAsync::OneNodeCluster",
-                                                  "Will not attempt VM-level repair in a one node cluster.",
-                                                  cancellationToken,
-                                                  null,
-                                                  FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-                        return;
-                    }
-                }
-            }
-            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TimeoutException)
-            {
-                await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                          LogLevel.Warning,
-                                          "RepairTaskManager.StartRepairWorkflowAsync::NodeCount",
-                                          $"Unable to determine node count. Will not attempt VM level repairs:{Environment.NewLine}{e}",
-                                          cancellationToken,
-                                          null,
-                                          FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-                return;
-            }
-
             if (string.IsNullOrEmpty(repairData.NodeType))
             {
                 repairData.NodeType = node.NodeType;
@@ -191,7 +154,7 @@ namespace FabricHealer.Repair
             functorTable.Add(RestartFabricNodePredicateType.Singleton(RepairConstants.RestartFabricNode, this, repairExecutorData, repairTaskEngine, repairData));
             functorTable.Add(RestartFabricSystemProcessPredicateType.Singleton(RepairConstants.RestartFabricSystemProcess, this, repairData));
             functorTable.Add(RestartReplicaPredicateType.Singleton(RepairConstants.RestartReplica, this, repairData));
-            functorTable.Add(RestartVMPredicateType.Singleton(RepairConstants.RestartVM, this, repairData));
+            functorTable.Add(RestartMachinePredicateType.Singleton(RepairConstants.RestartVM, this, repairData));
 
             // Parse rules.
             Module module = Module.Parse("external", repairRules, functorTable);

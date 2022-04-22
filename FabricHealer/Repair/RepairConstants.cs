@@ -42,7 +42,7 @@ namespace FabricHealer.Repair
         public const string AppRepairPolicySectionName = "AppRepairPolicy";
         public const string DiskRepairPolicySectionName = "DiskRepairPolicy";
         public const string SystemAppRepairPolicySectionName = "SystemAppRepairPolicy";
-        public const string VmRepairPolicySectionName = "VMRepairPolicy";
+        public const string MachineRepairPolicySectionName = "MachineRepairPolicy";
 
         // RepairPolicy
         public const string Enabled = "Enabled";

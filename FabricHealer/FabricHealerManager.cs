@@ -596,14 +596,14 @@ namespace FabricHealer
 
                     if (kind != null && kind.Contains("Node"))
                     {
-                        if (!ConfigSettings.EnableVmRepair && !ConfigSettings.EnableDiskRepair && !ConfigSettings.EnableFabricNodeRepair)
+                        if (!ConfigSettings.EnableMachineRepair && !ConfigSettings.EnableDiskRepair && !ConfigSettings.EnableFabricNodeRepair)
                         {
                             continue;
                         }
 
                         try
                         {
-                            await ProcessMachineHealthAsync(clusterHealth.NodeHealthStates);
+                            await ProcessNodeHealthAsync(clusterHealth.NodeHealthStates);
                         }
                         catch (Exception e) when (e is FabricException || e is TimeoutException)
                         {
@@ -630,8 +630,7 @@ namespace FabricHealer
                             try
                             {
                                 var entityHealth =
-                                    await fabricClient.HealthManager.GetApplicationHealthAsync(
-                                            app.ApplicationName, ConfigSettings.AsyncTimeout, Token);
+                                    await fabricClient.HealthManager.GetApplicationHealthAsync(app.ApplicationName, ConfigSettings.AsyncTimeout, Token);
 
                                 if (app.AggregatedHealthState == HealthState.Ok)
                                 {
@@ -664,7 +663,7 @@ namespace FabricHealer
                             }
                         }
                     }
-                    // FYI: FH currently only supports the case where a replica is stuck. FO does not generate Replica Health Reports.
+                    // FYI: FH currently only supports the case where a replica is stuck.
                     else if (kind != null && kind.Contains("Replica"))
                     {
                         if (!ConfigSettings.EnableReplicaRepair)
@@ -1251,51 +1250,27 @@ namespace FabricHealer
             
         }
 
-        // As far as FabricObserver(FO) is concerned, a node is a VM, so FO only creates NodeHealthReports when a VM level issue
-        // is detected. FO does not monitor Fabric node health, but will put a Fabric node in Error or Warning if the underlying 
-        // VM is using too much (based on user-supplied threshold value) of some monitored machine resource.
-        private async Task ProcessMachineHealthAsync(IEnumerable<NodeHealthState> nodeHealthStates)
+        private async Task ProcessNodeHealthAsync(IEnumerable<NodeHealthState> nodeHealthStates)
         {
+            // This is just used to make sure there is more than 1 node in the cluster. We don't need a list of all nodes.
+            var nodeQueryDesc = new NodeQueryDescription
+            {
+                MaxResults = 3,
+            };
+
+            NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                    () => fabricClient.QueryManager.GetNodePagedListAsync(
+                                            nodeQueryDesc,
+                                            ConfigSettings.AsyncTimeout,
+                                            Token),
+                                    Token);
+            
             var supportedNodeHealthStates =
                 nodeHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
 
             foreach (var node in supportedNodeHealthStates)
             {
                 Token.ThrowIfCancellationRequested();
-
-                // Get information about target node.
-                var nodeList =
-                        await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => fabricClient.QueryManager.GetNodeListAsync(node.NodeName, ConfigSettings.AsyncTimeout, Token),
-                                    Token);
-
-                if (nodeList.Count == 0)
-                {
-                    continue;
-                }
-
-                Node targetNode = nodeList[0];
-
-                // Check to see if a VM-level repair is already in flight in the cluster.
-                var currentFHVMRepairTasksInProgress =
-                            await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                                                      $"{RepairTaskEngine.InfrastructureServiceName}/{targetNode.NodeType}",
-                                                      Token);
-
-                // FH is very conservative. If there is already a VM or Fabric node-level repair in progress in the cluster, then move on.
-                if (currentFHVMRepairTasksInProgress.Count > 0)
-                {
-                    await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            "MonitorRepairableHealthEventsAsync::VM_Repair_In_Progress",
-                            $"There is already a VM-level repair running in the cluster for node type {targetNode.NodeType}. " +
-                            "Will not do any other VM-level repairs at this time.",
-                            Token,
-                            null,
-                            ConfigSettings.EnableVerboseLogging);
-
-                    continue;
-                }
             
                 var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(node.NodeName);
                 var observerHealthEvents =
@@ -1320,6 +1295,29 @@ namespace FabricHealer
                         continue;
                     }
 
+                    // Disk?
+                    if (repairData.EntityType == EntityType.Disk && ConfigSettings.EnableDiskRepair)
+                    {
+                        await ProcessDiskHealthAsync(evt, repairData);
+                        continue;
+                    }
+
+                    // Node/Machine repair not supported in onebox clusters..
+                    if (nodes?.Count == 1)
+                    {
+                        string message = "Machine/Fabric Node repair is not supported in clusters with 1 Fabric node.";
+
+                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                $"ProcessNodeHealthAsync::NotSupported",
+                                message,
+                                Token,
+                                null,
+                                ConfigSettings.EnableVerboseLogging);
+
+                        return;
+                    }
+
                     // Fabric node?
                     if (repairData.EntityType == EntityType.Node)
                     {
@@ -1328,22 +1326,11 @@ namespace FabricHealer
                         continue;
                     }
 
-                    // Disk?
-                    if (repairData.EntityType == EntityType.Disk && ConfigSettings.EnableDiskRepair)
-                    {
-                        await ProcessDiskHealthAsync(evt, repairData);
-                        continue;
-                    }
+                    // Machine repair \\
 
-                    // VM?
-                    if (repairData.EntityType == EntityType.Machine && !ConfigSettings.EnableVmRepair)
-                    {
-                        continue;
-                    }
-
-                    // If there are mulitple instances of FH deployed to the cluster (like -1 InstanceCount), then don't do VM-level repairs if this instance of FH 
-                    // detects a need to do so. Another instance on a different node will take the job. Only DiskObserver-generated repair data can be done on the node
-                    // where DiskObserver emitted the related information (like Disk space issues and the need to clean specified (in logic rules) folders).
+                    // If there are mulitple instances of FH deployed to the cluster (like -1 InstanceCount), then don't do machine repairs if this instance of FH 
+                    // detects a need to do so. Another instance on a different node will take the job. Only DiskObserver-generated repair data has to be done on the node
+                    // where FO's DiskObserver emitted the related information, for example (like Disk space issues and the need to clean specified (in logic rules) folders).
                     if (_instanceCount == -1 && repairData.NodeName == serviceContext.NodeContext.NodeName)
                     {
                         continue;
@@ -1359,7 +1346,7 @@ namespace FabricHealer
 
                     /* Start repair workflow */
 
-                    string Id = $"VM_Repair_{repairData.Code}{repairData.NodeName}";
+                    string Id = $"Machine_Repair_{repairData.NodeName}_Reboot";
                     repairData.RepairId = Id;
                     repairData.Property = evt.HealthInformation.Property;
                     string errOrWarn = "Error";
@@ -1370,17 +1357,14 @@ namespace FabricHealer
                     }
 
                     await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                 LogLevel.Info,
-                                                 $"MonitorRepairableHealthEventsAsync:{Id}",
-                                                 $"Detected VM hosting {repairData.NodeName} is in {errOrWarn}. " +
-                                                 $"{errOrWarn} Code: {repairData.Code}" +
-                                                 $"({SupportedErrorCodes.GetCodeNameFromErrorCode(repairData.Code)})" +
-                                                 $"{Environment.NewLine}" +
-                                                 $"VM repair policy is enabled. {repairRules.Count} Logic rules found for VM-level repair.",
-                                                 Token,
-                                                 null,
-                                                 ConfigSettings.EnableVerboseLogging);
-                    
+                            LogLevel.Info,
+                            Id,
+                            $"Detected machine hosting {repairData.NodeName} is in {errOrWarn}.{Environment.NewLine}" +
+                            $"Machine repair is enabled. {repairRules.Count} logic rules found for Machine repair.",
+                            Token,
+                            null,
+                            ConfigSettings.EnableVerboseLogging);
+
                     // Update the in-memory HealthEvent List.
                     repairTaskManager.DetectedHealthEvents.Add(evt);
 
@@ -1392,11 +1376,6 @@ namespace FabricHealer
 
         private async Task ProcessDiskHealthAsync(HealthEvent evt, TelemetryData repairData)
         {
-            if (repairData.EntityType == EntityType.Disk && !ConfigSettings.EnableDiskRepair)
-            {
-                return;
-            }
-
             // Can only repair local disks.
             if (repairData.NodeName != serviceContext.NodeContext.NodeName)
             {
@@ -1413,7 +1392,7 @@ namespace FabricHealer
 
             /* Start repair workflow */
 
-            string Id = $"Disk_Repair_{repairData.Code}{repairData.NodeName}";
+            string Id = $"Disk_Repair_{repairData.Code}{repairData.NodeName}_DeleteFiles";
             repairData.RepairId = Id;
             repairData.Property = evt.HealthInformation.Property;
             string errOrWarn = "Error";
@@ -1424,16 +1403,13 @@ namespace FabricHealer
             }
 
             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                         LogLevel.Info,
-                                         $"MonitorRepairableHealthEventsAsync:{Id}",
-                                         $"Detected Fabric node {repairData.NodeName} is in {errOrWarn}. " +
-                                         $"{errOrWarn} Code: {repairData.Code}" +
-                                         $"({SupportedErrorCodes.GetCodeNameFromErrorCode(repairData.Code)})" +
-                                         $"{Environment.NewLine}" +
-                                         $"Disk repair policy is enabled. {repairRules.Count} Logic rules found for VM-level repair.",
-                                         Token,
-                                         null,
-                                         ConfigSettings.EnableVerboseLogging);
+                    LogLevel.Info,
+                    Id,
+                    $"Detected {repairData.NodeName} is in {errOrWarn}.{Environment.NewLine}" +
+                    $"Disk repair is enabled. {repairRules.Count} logic rules found for Disk repair.",
+                    Token,
+                    null,
+                    ConfigSettings.EnableVerboseLogging);
 
             // Update the in-memory HealthEvent List.
             repairTaskManager.DetectedHealthEvents.Add(evt);
@@ -1444,68 +1420,6 @@ namespace FabricHealer
 
         private async Task ProcessFabricNodeHealthAsync(HealthEvent healthEvent, TelemetryData repairData)
         {
-            if (!ConfigSettings.EnableFabricNodeRepair)
-            {
-                return;
-            }
-
-            // This is just used to make sure there is more than 1 node in the cluster.
-            var nodeQueryDesc = new NodeQueryDescription
-            {
-                MaxResults = 3,
-            };
-
-            var nodeList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => fabricClient.QueryManager.GetNodePagedListAsync(
-                                                nodeQueryDesc,
-                                                ConfigSettings.AsyncTimeout,
-                                                Token),
-                                        Token);
-
-            if (nodeList?.Count == 1)
-            {
-                string message = "Fabric node repair is not supported in clusters with 1 node.";
-
-                await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        $"ProcessNodeHealthAsync::Invalid",
-                        message,
-                        Token,
-                        null,
-                        ConfigSettings.EnableVerboseLogging);
-                return;
-            }
-
-            // Block attempts to schedule Fabric node-level repairs if one is already executing in the cluster.
-            var fhRepairTasks = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token);
-
-            if (fhRepairTasks.Count > 0)
-            {
-                foreach (var repair in fhRepairTasks)
-                {
-                    var executorData = JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
-
-                    if (executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartFabricNode &&
-                        executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartProcess)
-                    {
-                        continue;
-                    }
-
-                    string message = $"A Service Fabric Node repair ({repair.TaskId}) is already in progress in the cluster(state: {repair.State}). " +
-                                     $"Will not attempt repair at this time.";
-
-                    await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            $"ProcessNodeHealthAsync::{repair.TaskId}",
-                            message,
-                            Token,
-                            null,
-                            ConfigSettings.EnableVerboseLogging);
-
-                    return;
-                }
-            }
-
             var repairRules = GetRepairRulesForTelemetryData(repairData);
 
             if (repairRules == null || repairRules?.Count == 0)
@@ -1518,9 +1432,8 @@ namespace FabricHealer
 
             var currentRepairs =
                 await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token);
-
-            // Is a repair for the target app service instance already happening in the cluster?
-            // There can be multiple Warnings emitted by FO for a single app at the same time.
+            
+            // Block attempts to reschedule another Fabric node-level repair for the same node if a current repair has not yet completed.
             if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
             {
                 var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(repairData.NodeType));
@@ -1531,12 +1444,6 @@ namespace FabricHealer
                             Token,
                             null,
                             ConfigSettings.EnableVerboseLogging);
-                return;
-            }
-
-            // Repair already in progress?
-            if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
-            {
                 return;
             }
 
@@ -1553,7 +1460,7 @@ namespace FabricHealer
                     LogLevel.Info,
                     repairId,
                     $"Detected {repairData.NodeName} is in {errOrWarn}.{Environment.NewLine}" +
-                    $"Fabric Node repair is enabled. {repairRules.Count} Logic rules found for Fabric Node-level repair.",
+                    $"Fabric Node repair is enabled. {repairRules.Count} Logic rules found for Fabric Node repair.",
                     Token,
                     null,
                     ConfigSettings.EnableVerboseLogging);
@@ -1747,7 +1654,7 @@ namespace FabricHealer
                 case SupportedErrorCodes.NodeWarningTooManyActiveTcpPorts:
                 case SupportedErrorCodes.NodeWarningTotalOpenFileHandlesPercent:
 
-                    repairPolicySectionName = RepairConstants.VmRepairPolicySectionName;
+                    repairPolicySectionName = RepairConstants.MachineRepairPolicySectionName;
                     break;
 
                 // Disk repair.
@@ -1793,7 +1700,7 @@ namespace FabricHealer
                 // VM repair.
                 case RepairConstants.NodeObserver:
 
-                    repairPolicySectionName = RepairConstants.VmRepairPolicySectionName;
+                    repairPolicySectionName = RepairConstants.MachineRepairPolicySectionName;
                     break;
 
                 default:
@@ -1835,7 +1742,7 @@ namespace FabricHealer
 
                 // VM repair.
                 case EntityType.Machine:
-                    repairPolicySectionName = RepairConstants.VmRepairPolicySectionName;
+                    repairPolicySectionName = RepairConstants.MachineRepairPolicySectionName;
                     break;
 
                 // Fabric Node repair (from FabricHealerProxy, for example, where there is no concept of Observer).

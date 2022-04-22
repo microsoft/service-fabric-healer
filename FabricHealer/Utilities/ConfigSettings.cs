@@ -122,7 +122,7 @@ namespace FabricHealer.Utilities
             private set;
         }
 
-        public bool EnableVmRepair
+        public bool EnableMachineRepair
         {
             get;
             private set;
@@ -238,9 +238,9 @@ namespace FabricHealer.Utilities
                 EnableSystemAppRepair = systemAppRepairEnabled;
             }
 
-            if (bool.TryParse(GetConfigSettingValue(RepairConstants.VmRepairPolicySectionName, RepairConstants.Enabled), out bool vmRepairEnabled))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.Enabled), out bool vmRepairEnabled))
             {
-                EnableVmRepair = vmRepairEnabled;
+                EnableMachineRepair = vmRepairEnabled;
             }
         }
 

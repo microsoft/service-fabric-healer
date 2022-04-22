@@ -51,10 +51,10 @@
     <None Update="PackageRoot\Config\LogicRules\ReplicaRules.guan">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
-    <None Update="PackageRoot\Config\LogicRules\SystemAppRules.guan">
+    <None Update="PackageRoot\Config\LogicRules\SystemServiceRules.guan">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
-    <None Update="PackageRoot\Config\LogicRules\VmRules.guan">
+    <None Update="PackageRoot\Config\LogicRules\MachineRules.guan">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
   </ItemGroup>
