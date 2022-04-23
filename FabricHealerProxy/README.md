@@ -104,6 +104,13 @@ namespace Stateless1
                 NodeName = "_Node_0"
             };
 
+            // Initiate a reboot of the machine hosting the specified Fabric node. This will be executed by the InfrastructureService for the related node type.
+            var repairDataMachineTarget = new RepairData
+            {
+                NodeName = "_Node_4",
+                EntityType = EntityType.Machine
+            };
+
             // For use in the IEnumerable<RepairData> RepairEntityAsync overload.
             List<RepairData> repairDataList = new List<RepairData>
             {
@@ -118,11 +125,11 @@ namespace Stateless1
                 repairDataServiceTarget8
             };
 
-            // This demonstrates which exceptions will be thrown by the API. The first three represent user error (most likely). The last two are internal SF issues which 
-            // will be thrown only after a series of retries. How to handle these is up to you.
+            // This demonstrates which exceptions will be thrown by the API. The first three are FabricHealerProxy custom exceptions and represent user error (most likely).
+            // The last two are internal SF issues which will be thrown only after a series of retries. How to handle these is up to you.
             try
             {
-                await FabricHealer.Proxy.RepairEntityAsync(repairDataServiceTarget1, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
+                await FabricHealer.Proxy.RepairEntityAsync(repairDataMachineTarget, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
                 await FabricHealer.Proxy.RepairEntityAsync(repairDataList, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
             }
             catch (MissingRepairDataException)
@@ -149,7 +156,7 @@ namespace Stateless1
             }
 
             // FabricHealerProxy API is thread-safe. So, you can process the list of repairs above in a parallel loop, for example.
-            var result = Parallel.For (0, repairDataList.Count, async (i, state) =>
+            /*var result = Parallel.For (0, repairDataList.Count, async (i, state) =>
             {
                 try
                 {
@@ -175,7 +182,7 @@ namespace Stateless1
                 {
                     
                 }
-            });
+            });*/
 
             // Do nothing and wait.
             while (!cancellationToken.IsCancellationRequested)

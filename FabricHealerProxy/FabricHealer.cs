@@ -42,8 +42,8 @@ namespace FabricHealerProxy
         private static readonly TimeSpan maxDataLifeTime = defaultHealthReportTtl;
 
         // Instance tuple that stores RepairData objects for a specified duration (defaultHealthReportTtl).
-        private ConcurrentDictionary<string, (DateTime DateAdded, RepairData RepairData)> repairDataHistory =
-                 new ConcurrentDictionary<string, (DateTime DateAdded, RepairData RepairData)>();
+        private ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairData)> repairDataHistory =
+                 new ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairData)>();
         CancellationTokenRegistration tokenRegistration;
         CancellationTokenSource cts = null;
 
@@ -51,7 +51,7 @@ namespace FabricHealerProxy
         {
             if (repairDataHistory == null)
             {
-                repairDataHistory = new ConcurrentDictionary<string, (DateTime DateAdded, RepairData RepairData)>();
+                repairDataHistory = new ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairData)>();
             }
         }
 
@@ -93,7 +93,7 @@ namespace FabricHealerProxy
         /// <exception cref="MissingRepairDataException">Thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).</exception>
         /// <exception cref="UriFormatException">Thrown when required ApplicationName or ServiceName value is a malformed Uri string.</exception>
         /// <exception cref="TimeoutException">Thrown when internal Fabric client API calls timeout.</exception>
-        public async Task RepairEntityAsync(RepairData repairData, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
+        public async Task RepairEntityAsync(RepairFacts repairData, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
         {
             if (cts == null)
             {
@@ -158,7 +158,7 @@ namespace FabricHealerProxy
         /// <exception cref="MissingRepairDataException">Thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).</exception>
         /// <exception cref="UriFormatException">Thrown when required ApplicationName or ServiceName value is a malformed Uri string.</exception>
         /// <exception cref="TimeoutException">Thrown when internal Fabric client API calls timeout.</exception>
-        public async Task RepairEntityAsync(IEnumerable<RepairData> repairDataCollection, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
+        public async Task RepairEntityAsync(IEnumerable<RepairFacts> repairDataCollection, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
         {
             if (cts == null)
             {
@@ -183,7 +183,7 @@ namespace FabricHealerProxy
             }
         }
 
-        private async Task RepairEntityAsyncInternal(RepairData repairData, TimeSpan repairDataLifetime, FabricClient fabricClient, CancellationToken cancellationToken)
+        private async Task RepairEntityAsyncInternal(RepairFacts repairData, TimeSpan repairDataLifetime, FabricClient fabricClient, CancellationToken cancellationToken)
         {
             if (cancellationToken.IsCancellationRequested)
             {
@@ -372,7 +372,7 @@ namespace FabricHealerProxy
             }
         }
 
-        private async Task<bool> GenerateHealthReportAsync(RepairData repairData, HealthInformation healthInformation, CancellationToken cancellationToken)
+        private async Task<bool> GenerateHealthReportAsync(RepairFacts repairData, HealthInformation healthInformation, CancellationToken cancellationToken)
         {
             if (cancellationToken.IsCancellationRequested)
             {
@@ -428,7 +428,7 @@ namespace FabricHealerProxy
             return await VerifyHealthReportExistsAsync(repairData, fabricClient, cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task<bool> VerifyHealthReportExistsAsync(RepairData repairData, FabricClient fabricClient, CancellationToken cancellationToken)
+        private async Task<bool> VerifyHealthReportExistsAsync(RepairFacts repairData, FabricClient fabricClient, CancellationToken cancellationToken)
         {
             if (cancellationToken.IsCancellationRequested)
             {
