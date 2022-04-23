@@ -90,7 +90,7 @@ namespace FabricHealerProxy
         /// <exception cref="FabricException">Thrown when an internal Service Fabric operation fails.</exception>
         /// <exception cref="NodeNotFoundException">Thrown when specified RepairData.NodeName does not exist in the cluster.</exception>
         /// <exception cref="FabricServiceNotFoundException">Thrown when specified service doesn't exist in the cluster.</exception>
-        /// <exception cref="MissingRepairDataException">Thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).</exception>
+        /// <exception cref="MissingRepairFactsException">Thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).</exception>
         /// <exception cref="UriFormatException">Thrown when required ApplicationName or ServiceName value is a malformed Uri string.</exception>
         /// <exception cref="TimeoutException">Thrown when internal Fabric client API calls timeout.</exception>
         public async Task RepairEntityAsync(RepairFacts repairData, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
@@ -119,7 +119,7 @@ namespace FabricHealerProxy
 
             if (string.IsNullOrEmpty(repairData.NodeName))
             {
-                throw new MissingRepairDataException("RepairData.NodeName is a required field.");
+                throw new MissingRepairFactsException("RepairData.NodeName is a required field.");
             }
 
             // Polly retry policy and async execution. Any other type of exception shall bubble up to caller as they are no-ops.
@@ -155,7 +155,7 @@ namespace FabricHealerProxy
         /// <exception cref="FabricException">Thrown when an internal Service Fabric operation fails.</exception>
         /// <exception cref="NodeNotFoundException">Thrown when a specified node does not exist in the Service Fabric cluster.</exception>
         /// <exception cref="ServiceNotFoundException">Thrown when a specified service doesn't exist in the Service Fabric cluster.</exception>
-        /// <exception cref="MissingRepairDataException">Thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).</exception>
+        /// <exception cref="MissingRepairFactsException">Thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).</exception>
         /// <exception cref="UriFormatException">Thrown when required ApplicationName or ServiceName value is a malformed Uri string.</exception>
         /// <exception cref="TimeoutException">Thrown when internal Fabric client API calls timeout.</exception>
         public async Task RepairEntityAsync(IEnumerable<RepairFacts> repairDataCollection, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)

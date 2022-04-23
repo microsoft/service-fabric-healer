@@ -12,12 +12,12 @@ namespace FabricHealerProxy
     /// Exception thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).
     /// </summary>
     [Serializable]
-    public class MissingRepairDataException : Exception
+    public class MissingRepairFactsException : Exception
     {
         /// <summary>
         /// Creates an instance of MissingRequiredDataException.
         /// </summary>
-        public MissingRepairDataException()
+        public MissingRepairFactsException()
         {
         }
 
@@ -25,7 +25,7 @@ namespace FabricHealerProxy
         ///  Creates an instance of MissingRequiredDataException.
         /// </summary>
         /// <param name="message">Error message that describes the problem.</param>
-        public MissingRepairDataException(string message) : base(message)
+        public MissingRepairFactsException(string message) : base(message)
         {
         }
 
@@ -34,7 +34,7 @@ namespace FabricHealerProxy
         /// </summary>
         /// <param name="message">Error message that describes the problem.</param>
         /// <param name="innerException">InnerException instance.</param>
-        public MissingRepairDataException(string message, Exception innerException) : base(message, innerException)
+        public MissingRepairFactsException(string message, Exception innerException) : base(message, innerException)
         {
         }
 
@@ -43,7 +43,7 @@ namespace FabricHealerProxy
         /// </summary>
         /// <param name="info">SerializationInfo</param>
         /// <param name="context">StreamingContext</param>
-        protected MissingRepairDataException(SerializationInfo info, StreamingContext context) : base(info, context)
+        protected MissingRepairFactsException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }
