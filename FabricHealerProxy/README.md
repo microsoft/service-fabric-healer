@@ -45,143 +45,127 @@ namespace Stateless1
             // This specifies that you want FabricHealer to repair a service instance deployed to a Fabric node named NodeName.
             // FabricHealer supports both Replica and CodePackage restarts of services. The logic rules will dictate which one of these happens,
             // so make sure to craft a specific logic rule that makes sense for you (and use some logic!).
-            // Note that, out of the box, FabricHealer's AppRules.guan file (located in the FabricHealer project's PackageRoot/Config/LogicRules folder)
+            // Note that, out of the box, FabricHealer's AppRules.guan file located in the FabricHealer project's PackageRoot/Config/LogicRules folder
             // already has a restart replica catch-all (applies to any service) rule that will restart the primary replica of
             // the specified service below, deployed to the a specified Fabric node. 
-            var repairDataServiceTarget1 = new RepairData
+            // By default, if you only supply NodeName and ServiceName, then FabricHealerProxy assumes the target EntityType is Service. This is a convience to limit how many facts
+            // you must supply in a RepairFacts instance. For any type of repair, NodeName is always required.
+            var RepairFactsServiceTarget1 = new RepairFacts
             {
                 ServiceName = "fabric:/HealthMetrics/DoctorActorServiceType",
                 NodeName = "_Node_0"
             };
 
-            var repairDataServiceTarget2 = new RepairData
+            var RepairFactsServiceTarget2 = new RepairFacts
             {
                 ServiceName = "fabric:/HealthMetrics/BandActorServiceType",
                 NodeName = "_Node_0"
             };
 
-            var repairDataServiceTarget3 = new RepairData
+            var RepairFactsServiceTarget3 = new RepairFacts
             {
                 ServiceName = "fabric:/HealthMetrics/HealthMetrics.WebServiceType",
                 NodeName = "_Node_0"
             };
 
-            var repairDataServiceTarget4 = new RepairData
+            var RepairFactsServiceTarget4 = new RepairFacts
             {
                 ServiceName = "fabric:/BadApp/BadService",
                 NodeName = "_Node_0"
             };
 
-            var repairDataServiceTarget5 = new RepairData
+            var RepairFactsServiceTarget5 = new RepairFacts
             {
                 ServiceName = "fabric:/Voting/VotingData",
                 NodeName = "_Node_0"
             };
 
-            var repairDataServiceTarget6 = new RepairData
+            var RepairFactsServiceTarget6 = new RepairFacts
             {
                 ServiceName = "fabric:/Voting/VotingWeb",
                 NodeName = "_Node_0"
             };
 
-            var repairDataServiceTarget7 = new RepairData
+            var RepairFactsServiceTarget7 = new RepairFacts
             {
                 ServiceName = "fabric:/ContainerFoo2/ContainerFooService",
                 NodeName = "_Node_0"
             };
 
-            var repairDataServiceTarget8 = new RepairData
+            var RepairFactsServiceTarget8 = new RepairFacts
             {
                 ServiceName = "fabric:/ContainerFoo2/ContainerService2",
                 NodeName = "_Node_0"
             };
 
-            // This specifies that you want FabricHealer to repair a Fabric node named NodeName. The only supported repair in FabricHealer is a Restart.
-            // Related rules can be found in FabricNodeRepair.guan file in the FabricHealer project's PackageRoot/Config/LogicRules folder.
-            // So, implicitly, this means you want FabricHealer to restart _Node_0. You can of course modify the related logic rules to do something else. It's up to you!
-            var repairDataNodeTarget = new RepairData
+            // This specifies that you want FabricHealer to repair a Fabric node named _Node_0. The only supported Fabric node repair in FabricHealer is a Restart.
+            // Related rules can be found in FabricNodeRules.guan file in the FabricHealer project's PackageRoot/Config/LogicRules folder.
+            // So, implicitly, this means you want FabricHealer to restart _Node_0. By default, if you only supply NodeName, then FabricHealerProxy assumes the target EntityType is Node.
+            var RepairFactsNodeTarget = new RepairFacts
             {
                 NodeName = "_Node_0"
             };
 
-            // Initiate a reboot of the machine hosting the specified Fabric node. This will be executed by the InfrastructureService for the related node type.
-            var repairDataMachineTarget = new RepairData
+            // Initiate a reboot of the machine hosting the specified Fabric node, _Node_4. This will be executed by the InfrastructureService for the related node type.
+            // The related logic rules for this repair target are housed in FabricHealer's MachineRules.guan file.
+            var RepairFactsMachineTarget = new RepairFacts
             {
-                NodeName = "_Node_4",
+                NodeName = "_Node_0",
                 EntityType = EntityType.Machine
             };
 
-            // For use in the IEnumerable<RepairData> RepairEntityAsync overload.
-            List<RepairData> repairDataList = new List<RepairData>
+            // For use in the IEnumerable<RepairFacts> RepairEntityAsync overload.
+            List<RepairFacts> RepairFactsList = new List<RepairFacts>
             {
-                repairDataNodeTarget,
-                repairDataServiceTarget1,
-                repairDataServiceTarget2,
-                repairDataServiceTarget3,
-                repairDataServiceTarget4,
-                repairDataServiceTarget5,
-                repairDataServiceTarget6,
-                repairDataServiceTarget7,
-                repairDataServiceTarget8
+                RepairFactsNodeTarget,
+                RepairFactsServiceTarget1,
+                RepairFactsServiceTarget2,
+                RepairFactsServiceTarget3,
+                RepairFactsServiceTarget4,
+                RepairFactsServiceTarget5,
+                RepairFactsServiceTarget6,
+                RepairFactsServiceTarget7,
+                RepairFactsServiceTarget8
             };
 
             // This demonstrates which exceptions will be thrown by the API. The first three are FabricHealerProxy custom exceptions and represent user error (most likely).
             // The last two are internal SF issues which will be thrown only after a series of retries. How to handle these is up to you.
             try
             {
-                await FabricHealer.Proxy.RepairEntityAsync(repairDataMachineTarget, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
-                await FabricHealer.Proxy.RepairEntityAsync(repairDataList, cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
+                await FabricHealer.Proxy.RepairEntityAsync(RepairFactsMachineTarget, cancellationToken).ConfigureAwait(false);
+                await FabricHealer.Proxy.RepairEntityAsync(RepairFactsList, cancellationToken).ConfigureAwait(false);
             }
-            catch (MissingRepairDataException)
+            catch (MissingRepairFactsException)
             {
-                // This means a required non-null value for a RepairData property was not specified. For example, RepairData.NodeName was not set.
+                // This means a required non-null value for a RepairFacts property was not specified. For example, RepairFacts.NodeName was not set.
+                // Any instance of RepairFacts must contain a value for NodeName.
+                // If you catch this exception, then the idea is that you would do something about it here. 
             }
             catch (NodeNotFoundException)
             {
-                // The Fabric node you specified in RepairData.NodeName does not exist.
+                // The Fabric node you specified in RepairFacts.NodeName does not exist.
+                // If you catch this exception, then the idea is that you would do something about it here. 
             }
             catch (ServiceNotFoundException)
             {
-                // The Fabric service you specified in RepairData.ServiceName does not exist.
+                // The Fabric service you specified in RepairFacts.ServiceName does not exist.
+                // If you catch this exception, then the idea is that you would do something about it here. 
             }
             catch (FabricException)
             {
-                // Thrown when an internal Service Fabric operation fails. Internally, RepairEntityAsync will retry failed Fabric client operations 3 times.
-                // This will have already lead to 3 internal retries before surfacing here.
+                // Thrown when an internal Service Fabric operation fails. Internally, RepairEntityAsync will retry failed Fabric client operations 4 times at increasing wait intervals.
+                // This means that something is wrong at the SF level, so you could wait and then try again later.
             }
             catch (TimeoutException)
             {
-                // Thrown when a Fabric client API call times out. This will have already lead to 3 internal retries before surfacing here.
-                // ClusterManager service could be hammered (flooded with queries), for example. You could retry RepairEntityAsync again after you wait a bit..
+                // Thrown when a Fabric client API call times out. This will have already lead to 4 internal retries before surfacing here.
+                // This means that something is wrong at the SF level, so you could wait and then try again later.
             }
 
-            // FabricHealerProxy API is thread-safe. So, you can process the list of repairs above in a parallel loop, for example.
-            /*var result = Parallel.For (0, repairDataList.Count, async (i, state) =>
+            // FabricHealerProxy API is thread-safe. So, you can process the list of repair facts above in a parallel loop, for example.
+            /*_ = Parallel.For (0, RepairFactsList.Count, async (i, state) =>
             {
-                try
-                {
-                   await FabricHealer.Proxy.RepairEntityAsync(repairDataList[i], cancellationToken, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
-                }
-                catch (MissingRepairDataException)
-                {
-                   
-                }
-                catch (NodeNotFoundException)
-                {
-                   
-                }
-                catch (ServiceNotFoundException)
-                {
-                    
-                }
-                catch (FabricException)
-                {
-                   
-                }
-                catch (TimeoutException)
-                {
-                    
-                }
+                await FabricHealer.Proxy.RepairEntityAsync(RepairFactsList[i], cancellationToken).ConfigureAwait(false);
             });*/
 
             // Do nothing and wait.
@@ -197,7 +181,9 @@ namespace Stateless1
                 }
             }
 
-            // When cancellationToken is cancelled (in this case by the SF runtime) any active health reports will be automatically cleared by FabricHealerProxy.Proxy.
+            // When cancellationToken is cancelled (in this case by the SF runtime) any active health reports will be automatically cleared by FabricHealerProxy.
+            // Note: This does not guarantee that some target entity that has an active FabricHealerProxy health report will be cancelled. Cancellation of repairs is
+            // not currently supported by FabricHealer.
         } 
     }
 }

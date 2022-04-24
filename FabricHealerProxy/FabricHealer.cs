@@ -14,14 +14,16 @@ using System.Fabric.Query;
 using Polly;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 
 namespace FabricHealerProxy
 {
     /// <summary>
-    /// FabricHealer utility library that provides a very simple and reliable way to share Service Fabric entity repair information to FabricHealer service running in the same cluster.
-    /// If configured with supporting repair rules, then FabricHealer will attempt to repair the target entity as specified in the related logic rules. There are a number of pre-existing rules,
-    /// so modify them to suit your needs. Without corresponding rules, FabricHealer will not act on the specially-crafted health reports this library produces.
+    /// FabricHealer utility class that provides a very simple and reliable way for any .NET Service Fabric user service to share Service Fabric entity repair facts to the FabricHealer 
+    /// service running in the same cluster. If configured with supporting repair rules, then FabricHealer will attempt to repair the target entity using the supplied facts 
+    /// in the entity-specific logic rules. There are a number of pre-existing logic rules covering the array of supported entities, so modify them to suit your specific needs. 
+    /// FabricHealerProxy's RepairData is a crititcal type that holds user-supplied (and in some cases FabricHealerProxy-determined) values (facts) 
+    /// that dictate which rules will be loaded by FabricHealer and passed to Guan for logic rule query execution that may or may not lead 
+    /// to some repair (depends on the facts and the results of the logic programs that employ them).
     /// </summary>
     public sealed class FabricHealer
     {
@@ -51,7 +53,7 @@ namespace FabricHealerProxy
         {
             if (repairDataHistory == null)
             {
-                repairDataHistory = new ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairData)>();
+                repairDataHistory = new ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairFacts)>();
             }
         }
 
@@ -81,7 +83,7 @@ namespace FabricHealerProxy
         /// This function generates a specially-crafted Service Fabric Health Report that the FabricHealer service will understand and act upon given the facts supplied
         /// in the RepairData instance.
         /// </summary>
-        /// <param name="repairData">A RepairData instance. This is a well-known (ITelemetryData) data type that contains facts that FabricHealer will use 
+        /// <param name="repairFacts">A RepairFacts instance. This is a well-known (ITelemetryData) data type that contains facts that FabricHealer will use 
         /// in the execution of its entity repair logic rules and related mitigation functions.</param>
         /// <param name="cancellationToken">CancellationToken used to ensure this function stops processing when the token is cancelled. Any existing (active) health report will be cleared
         /// when this token is cancelled.</param>
@@ -93,7 +95,7 @@ namespace FabricHealerProxy
         /// <exception cref="MissingRepairFactsException">Thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).</exception>
         /// <exception cref="UriFormatException">Thrown when required ApplicationName or ServiceName value is a malformed Uri string.</exception>
         /// <exception cref="TimeoutException">Thrown when internal Fabric client API calls timeout.</exception>
-        public async Task RepairEntityAsync(RepairFacts repairData, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
+        public async Task RepairEntityAsync(RepairFacts repairFacts, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
         {
             if (cts == null)
             {
@@ -107,17 +109,17 @@ namespace FabricHealerProxy
                 }
             }
 
-            if (repairData.HealthState == HealthState.Ok)
+            if (repairFacts.HealthState == HealthState.Ok)
             {
                 return;
             }
 
-            if (repairData == null)
+            if (repairFacts == null)
             {
                 throw new ArgumentNullException("Supplied null for repairData argument. You must supply an instance of RepairData.");
             }
 
-            if (string.IsNullOrEmpty(repairData.NodeName))
+            if (string.IsNullOrEmpty(repairFacts.NodeName))
             {
                 throw new MissingRepairFactsException("RepairData.NodeName is a required field.");
             }
@@ -136,7 +138,7 @@ namespace FabricHealerProxy
                                 })
                             .ExecuteAsync(
                                 () => RepairEntityAsyncInternal(
-                                        repairData,
+                                        repairFacts,
                                         repairDataLifetime,
                                         fabricClient,
                                         cancellationToken)).ConfigureAwait(false);
@@ -146,7 +148,7 @@ namespace FabricHealerProxy
         /// This function generates a specially-crafted Service Fabric Health Report that the FabricHealer service will understand and act upon given the facts supplied
         /// in the RepairData instance. Use this function to supply a list or array of RepairData objects.
         /// </summary>
-        /// <param name="repairDataCollection">A collection of RepairData instances. RepairData is a well-known (ITelemetryData) data ty[e that contains facts which FabricHealer will use 
+        /// <param name="repairFactsCollection">A collection of RepairFacts instances. RepairFacts is a well-known (ITelemetryData) data type that contains facts which FabricHealer will use 
         /// in the execution of its entity repair logic rules and related mitigation functions.</param>
         /// <param name="cancellationToken">CancellationToken used to ensure this function stops processing when the token is cancelled. Any existing (active) health report will be cleared
         /// when this token is cancelled.</param>
@@ -158,7 +160,7 @@ namespace FabricHealerProxy
         /// <exception cref="MissingRepairFactsException">Thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).</exception>
         /// <exception cref="UriFormatException">Thrown when required ApplicationName or ServiceName value is a malformed Uri string.</exception>
         /// <exception cref="TimeoutException">Thrown when internal Fabric client API calls timeout.</exception>
-        public async Task RepairEntityAsync(IEnumerable<RepairFacts> repairDataCollection, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
+        public async Task RepairEntityAsync(IEnumerable<RepairFacts> repairFactsCollection, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
         {
             if (cts == null)
             {
@@ -172,7 +174,7 @@ namespace FabricHealerProxy
                 }
             }
 
-            foreach (var repairData in repairDataCollection)
+            foreach (var repairData in repairFactsCollection)
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -193,28 +195,25 @@ namespace FabricHealerProxy
             // Remove expired repair data.
             ManageRepairDataHistory(cancellationToken);
 
-            if (string.IsNullOrWhiteSpace(repairData.ApplicationName))
+            // Application (0) EntityType enum default. Check to see if only Service was supplied. OR, check to see if only NodeName was supplied.
+            if (!string.IsNullOrWhiteSpace(repairData.ServiceName) && repairData.EntityType == EntityType.Application)
             {
-                // Application (0) EntityType enum default. Check to see if only Service was supplied. OR, check to see if only NodeName was supplied.
-                if (!string.IsNullOrWhiteSpace(repairData.ServiceName) && repairData.EntityType == EntityType.Application)
-                {
-                    repairData.EntityType = EntityType.Service;
-                }
-                else if (!string.IsNullOrEmpty(repairData.NodeName) && (repairData.EntityType == EntityType.Application || repairData.EntityType == EntityType.Machine))
-                {
-                    repairData.EntityType = repairData.EntityType == EntityType.Machine ? EntityType.Machine : EntityType.Node;
+                repairData.EntityType = EntityType.Service;
+            }
+            else if (!string.IsNullOrEmpty(repairData.NodeName) && (repairData.EntityType == EntityType.Application || repairData.EntityType == EntityType.Machine))
+            {
+                repairData.EntityType = repairData.EntityType == EntityType.Machine ? EntityType.Machine : EntityType.Node;
 
-                    if (string.IsNullOrWhiteSpace(repairData.NodeType))
+                if (string.IsNullOrWhiteSpace(repairData.NodeType))
+                {
+                    NodeList nodes = await fabricClient.QueryManager.GetNodeListAsync(repairData.NodeName, TimeSpan.FromSeconds(30), cancellationToken);
+
+                    if (nodes == null || nodes.Count == 0)
                     {
-                        NodeList nodes = await fabricClient.QueryManager.GetNodeListAsync(repairData.NodeName, TimeSpan.FromSeconds(30), cancellationToken);
-
-                        if (nodes == null || nodes.Count == 0)
-                        {
-                            throw new NodeNotFoundException($"NodeName {repairData.NodeName} does not exist in this cluster.");
-                        }
-
-                        repairData.NodeType = nodes[0].NodeType;
+                        throw new NodeNotFoundException($"NodeName {repairData.NodeName} does not exist in this cluster.");
                     }
+
+                    repairData.NodeType = nodes[0].NodeType;
                 }
             }
 
@@ -372,7 +371,7 @@ namespace FabricHealerProxy
             }
         }
 
-        private async Task<bool> GenerateHealthReportAsync(RepairFacts repairData, HealthInformation healthInformation, CancellationToken cancellationToken)
+        private async Task<bool> GenerateHealthReportAsync(RepairFacts repairFacts, HealthInformation healthInformation, CancellationToken cancellationToken)
         {
             if (cancellationToken.IsCancellationRequested)
             {
@@ -381,68 +380,68 @@ namespace FabricHealerProxy
 
             var sendOptions = new HealthReportSendOptions { Immediate = true };
 
-            switch (repairData.EntityType)
+            switch (repairFacts.EntityType)
             {
-                case EntityType.Application when repairData.ApplicationName != null:
+                case EntityType.Application when repairFacts.ApplicationName != null:
 
-                    var appHealthReport = new ApplicationHealthReport(new Uri(repairData.ApplicationName), healthInformation);
+                    var appHealthReport = new ApplicationHealthReport(new Uri(repairFacts.ApplicationName), healthInformation);
                     fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
                     break;
 
-                case EntityType.Service when repairData.ServiceName != null:
+                case EntityType.Service when repairFacts.ServiceName != null:
 
-                    var serviceHealthReport = new ServiceHealthReport(new Uri(repairData.ServiceName), healthInformation);
+                    var serviceHealthReport = new ServiceHealthReport(new Uri(repairFacts.ServiceName), healthInformation);
                     fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
                     break;
 
-                case EntityType.StatefulService when repairData.PartitionId != Guid.Empty && repairData.ReplicaId > 0:
+                case EntityType.StatefulService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
 
-                    var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(repairData.PartitionId, repairData.ReplicaId, healthInformation);
+                    var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
                     fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
                     break;
 
-                case EntityType.StatelessService when repairData.PartitionId != Guid.Empty && repairData.ReplicaId > 0:
+                case EntityType.StatelessService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
 
-                    var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(repairData.PartitionId, repairData.ReplicaId, healthInformation);
+                    var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
                     fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
                     break;
 
-                case EntityType.Partition when repairData.PartitionId != Guid.Empty:
-                    var partitionHealthReport = new PartitionHealthReport(repairData.PartitionId, healthInformation);
+                case EntityType.Partition when repairFacts.PartitionId != Guid.Empty:
+                    var partitionHealthReport = new PartitionHealthReport(repairFacts.PartitionId, healthInformation);
                     fabricClient.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                     break;
 
-                case EntityType.DeployedApplication when repairData.ApplicationName != null:
+                case EntityType.DeployedApplication when repairFacts.ApplicationName != null:
 
-                    var deployedApplicationHealthReport = new DeployedApplicationHealthReport(new Uri(repairData.ApplicationName), repairData.NodeName, healthInformation);
+                    var deployedApplicationHealthReport = new DeployedApplicationHealthReport(new Uri(repairFacts.ApplicationName), repairFacts.NodeName, healthInformation);
                     fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
                     break;
 
                 case EntityType.Machine:
                 case EntityType.Node:
-                    var nodeHealthReport = new NodeHealthReport(repairData.NodeName, healthInformation);
+                    var nodeHealthReport = new NodeHealthReport(repairFacts.NodeName, healthInformation);
                     fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                     break;
             }
 
-            return await VerifyHealthReportExistsAsync(repairData, fabricClient, cancellationToken).ConfigureAwait(false);
+            return await VerifyHealthReportExistsAsync(repairFacts, fabricClient, cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task<bool> VerifyHealthReportExistsAsync(RepairFacts repairData, FabricClient fabricClient, CancellationToken cancellationToken)
+        private async Task<bool> VerifyHealthReportExistsAsync(RepairFacts repairFacts, FabricClient fabricClient, CancellationToken cancellationToken)
         {
             if (cancellationToken.IsCancellationRequested)
             {
                 return true;
             }
 
-            if (!string.IsNullOrWhiteSpace(repairData.ApplicationName) && repairData.ApplicationName.ToLower() == "fabric:/system")
+            if (!string.IsNullOrWhiteSpace(repairFacts.ApplicationName) && repairFacts.ApplicationName.ToLower() == "fabric:/system")
             {
                 try
                 {
                     var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(new Uri("fabric:/System")).ConfigureAwait(false);
                     var unhealthyEvents =
                         appHealth.HealthEvents?.Where(
-                            s => s.HealthInformation.SourceId == repairData.Source && s.HealthInformation.Property == repairData.Property);
+                            s => s.HealthInformation.SourceId == repairFacts.Source && s.HealthInformation.Property == repairFacts.Property);
 
                     if (unhealthyEvents?.Count() == 0)
                     {
@@ -454,14 +453,14 @@ namespace FabricHealerProxy
                     return false;
                 }
             }
-            else if (!string.IsNullOrWhiteSpace(repairData.ServiceName))
+            else if (!string.IsNullOrWhiteSpace(repairFacts.ServiceName))
             {
                 try
                 {
-                    var serviceHealth = await fabricClient.HealthManager.GetServiceHealthAsync(new Uri(repairData.ServiceName)).ConfigureAwait(false);
+                    var serviceHealth = await fabricClient.HealthManager.GetServiceHealthAsync(new Uri(repairFacts.ServiceName)).ConfigureAwait(false);
                     var unhealthyEvents =
                         serviceHealth.HealthEvents?.Where(
-                            s => s.HealthInformation.SourceId == repairData.Source && s.HealthInformation.Property == repairData.Property);
+                            s => s.HealthInformation.SourceId == repairFacts.Source && s.HealthInformation.Property == repairFacts.Property);
 
                     if (unhealthyEvents?.Count() == 0)
                     {
@@ -473,16 +472,16 @@ namespace FabricHealerProxy
                     return false;
                 }
             }
-            else if (!string.IsNullOrWhiteSpace(repairData.NodeName))
+            else if (!string.IsNullOrWhiteSpace(repairFacts.NodeName))
             {
                 // Node reports
                 try
                 {
-                    var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(repairData.NodeName).ConfigureAwait(false);
+                    var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(repairFacts.NodeName).ConfigureAwait(false);
 
                     var unhealthyNodeEvents =
                         nodeHealth.HealthEvents?.Where(
-                            s => s.HealthInformation.SourceId == repairData.Source && s.HealthInformation.Property == repairData.Property);
+                            s => s.HealthInformation.SourceId == repairFacts.Source && s.HealthInformation.Property == repairFacts.Property);
 
                     if (unhealthyNodeEvents?.Count() == 0)
                     {
@@ -559,55 +558,55 @@ namespace FabricHealerProxy
             {
                 try
                 {
-                    var repairData = repairDataHistory.ElementAt(i).Value.RepairData;
-                    var healthInformation = new HealthInformation(repairData.Source, repairData.Property, HealthState.Ok)
+                    var repairFacts = repairDataHistory.ElementAt(i).Value.RepairData;
+                    var healthInformation = new HealthInformation(repairFacts.Source, repairFacts.Property, HealthState.Ok)
                     {
-                        Description = "Clearing existing health reports from FabricHealerProxy",
+                        Description = $"Clearing existing {repairFacts.EntityType} health reports created by FabricHealerProxy",
                         TimeToLive = TimeSpan.FromMinutes(5),
                         RemoveWhenExpired = true
                     };
                     var sendOptions = new HealthReportSendOptions { Immediate = true };
 
-                    switch (repairData.EntityType)
+                    switch (repairFacts.EntityType)
                     {
-                        case EntityType.Application when repairData.ApplicationName != null:
+                        case EntityType.Application when repairFacts.ApplicationName != null:
 
-                            var appHealthReport = new ApplicationHealthReport(new Uri(repairData.ApplicationName), healthInformation);
+                            var appHealthReport = new ApplicationHealthReport(new Uri(repairFacts.ApplicationName), healthInformation);
                             fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
                             break;
 
-                        case EntityType.Service when repairData.ServiceName != null:
+                        case EntityType.Service when repairFacts.ServiceName != null:
 
-                            var serviceHealthReport = new ServiceHealthReport(new Uri(repairData.ServiceName), healthInformation);
+                            var serviceHealthReport = new ServiceHealthReport(new Uri(repairFacts.ServiceName), healthInformation);
                             fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
                             break;
 
-                        case EntityType.StatefulService when repairData.PartitionId != Guid.Empty && repairData.ReplicaId > 0:
+                        case EntityType.StatefulService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
 
-                            var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(repairData.PartitionId, repairData.ReplicaId, healthInformation);
+                            var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
                             fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
                             break;
 
-                        case EntityType.StatelessService when repairData.PartitionId != Guid.Empty && repairData.ReplicaId > 0:
+                        case EntityType.StatelessService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
 
-                            var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(repairData.PartitionId, repairData.ReplicaId, healthInformation);
+                            var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
                             fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
                             break;
 
-                        case EntityType.Partition when repairData.PartitionId != Guid.Empty:
-                            var partitionHealthReport = new PartitionHealthReport(repairData.PartitionId, healthInformation);
+                        case EntityType.Partition when repairFacts.PartitionId != Guid.Empty:
+                            var partitionHealthReport = new PartitionHealthReport(repairFacts.PartitionId, healthInformation);
                             fabricClient.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                             break;
 
-                        case EntityType.DeployedApplication when repairData.ApplicationName != null:
+                        case EntityType.DeployedApplication when repairFacts.ApplicationName != null:
 
-                            var deployedApplicationHealthReport = new DeployedApplicationHealthReport(new Uri(repairData.ApplicationName), repairData.NodeName, healthInformation);
+                            var deployedApplicationHealthReport = new DeployedApplicationHealthReport(new Uri(repairFacts.ApplicationName), repairFacts.NodeName, healthInformation);
                             fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
                             break;
 
                         case EntityType.Machine:
                         case EntityType.Node:
-                            var nodeHealthReport = new NodeHealthReport(repairData.NodeName, healthInformation);
+                            var nodeHealthReport = new NodeHealthReport(repairFacts.NodeName, healthInformation);
                             fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                             break;
                     }

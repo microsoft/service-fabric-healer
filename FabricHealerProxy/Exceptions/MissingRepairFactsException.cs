@@ -9,20 +9,20 @@ using System.Runtime.Serialization;
 namespace FabricHealerProxy
 {
     /// <summary>
-    /// Exception thrown when RepairData instance is missing values for required non-null members (E.g., NodeName).
+    /// Exception thrown when RepairFacts instance is missing values for required non-null members (E.g., NodeName).
     /// </summary>
     [Serializable]
     public class MissingRepairFactsException : Exception
     {
         /// <summary>
-        /// Creates an instance of MissingRequiredDataException.
+        /// Creates an instance of MissingRequiredFactsException.
         /// </summary>
         public MissingRepairFactsException()
         {
         }
 
         /// <summary>
-        ///  Creates an instance of MissingRequiredDataException.
+        ///  Creates an instance of MissingRequiredFactsException.
         /// </summary>
         /// <param name="message">Error message that describes the problem.</param>
         public MissingRepairFactsException(string message) : base(message)
@@ -30,7 +30,7 @@ namespace FabricHealerProxy
         }
 
         /// <summary>
-        /// Creates an instance of MissingRequiredDataException.
+        /// Creates an instance of MissingRequiredFactsException.
         /// </summary>
         /// <param name="message">Error message that describes the problem.</param>
         /// <param name="innerException">InnerException instance.</param>
@@ -39,7 +39,7 @@ namespace FabricHealerProxy
         }
 
         /// <summary>
-        /// Creates an instance of MissingRequiredDataException.
+        /// Creates an instance of MissingRequiredFactsException.
         /// </summary>
         /// <param name="info">SerializationInfo</param>
         /// <param name="context">StreamingContext</param>
