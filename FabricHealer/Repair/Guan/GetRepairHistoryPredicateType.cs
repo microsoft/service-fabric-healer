@@ -45,10 +45,10 @@ namespace FabricHealer.Repair.Guan
                         "Default result has been supplied (0).";
 
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                            LogLevel.Info,
-                                                            $"GetRepairHistoryPredicate::{RepairData.RepairId}",
-                                                            message,
-                                                            RepairTaskManager.Token);
+                            LogLevel.Info,
+                            $"GetRepairHistoryPredicate::{RepairData.RepairId}",
+                            message,
+                            RepairTaskManager.Token);
                 }
 
                 var result = new CompoundTerm(this.Input.Functor);

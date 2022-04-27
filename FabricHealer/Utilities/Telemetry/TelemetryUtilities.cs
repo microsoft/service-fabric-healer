@@ -58,15 +58,15 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="repairConfig">RepairConfiguration instance.</param>
         /// <returns></returns>
         public async Task EmitTelemetryEtwHealthEventAsync(
-                                LogLevel level,
-                                string source,
-                                string description,
-                                CancellationToken token,
-                                RepairConfiguration repairConfig = null,
-                                bool verboseLogging = true,
-                                TimeSpan ttl = default(TimeSpan),
-                                string property = "RepairStateInformation",
-                                HealthReportType reportType = HealthReportType.Node)
+                            LogLevel level,
+                            string source,
+                            string description,
+                            CancellationToken token,
+                            RepairConfiguration repairConfig = null,
+                            bool verboseLogging = true,
+                            TimeSpan ttl = default(TimeSpan),
+                            string property = "RepairStateInformation",
+                            EntityType reportType = EntityType.Node)
         {
             bool hasRepairInfo = repairConfig != null;
             string repairAction = string.Empty;
@@ -99,11 +99,11 @@ namespace FabricHealer.Utilities.Telemetry
             var healthReporter = new FabricHealthReporter(fabricClient);
             var healthReport = new HealthReport
             {
-                AppName = reportType == HealthReportType.Application ? new Uri("fabric:/FabricHealer") : null,
+                AppName = reportType == EntityType.Application ? new Uri("fabric:/FabricHealer") : null,
                 Code = repairConfig?.RepairPolicy.RepairId,
                 HealthMessage = description,
                 NodeName = serviceContext.NodeContext.NodeName,
-                ReportType = reportType,
+                EntityType = reportType,
                 State = healthState,
                 HealthReportTimeToLive = ttl == default(TimeSpan) ? TimeSpan.FromMinutes(5) : ttl,
                 Property = property,
@@ -137,23 +137,23 @@ namespace FabricHealer.Utilities.Telemetry
             if (FabricHealerManager.ConfigSettings.EtwEnabled)
             {
                 ServiceEventSource.Current.Write(
-                        RepairConstants.EventSourceEventName,
-                        new
-                        {
-                            ApplicationName = repairConfig?.AppName?.OriginalString ?? string.Empty,
-                            ClusterInformation.ClusterInfoTuple.ClusterId,
-                            Description = description,
-                            HealthState = Enum.GetName(typeof(HealthState), healthState),
-                            Metric = repairAction,
-                            PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
-                            ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
-                            Level = level,
-                            NodeName = repairConfig?.NodeName ?? string.Empty,
-                            OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
-                            ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
-                            Source = source,
-                            SystemServiceProcessName = repairConfig?.SystemServiceProcessName ?? string.Empty,
-                        });
+                    RepairConstants.EventSourceEventName,
+                    new
+                    {
+                        ApplicationName = repairConfig?.AppName?.OriginalString ?? string.Empty,
+                        ClusterInformation.ClusterInfoTuple.ClusterId,
+                        Description = description,
+                        HealthState = Enum.GetName(typeof(HealthState), healthState),
+                        Metric = repairAction,
+                        PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
+                        ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
+                        Level = level,
+                        NodeName = repairConfig?.NodeName ?? string.Empty,
+                        OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                        ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
+                        Source = source,
+                        SystemServiceProcessName = repairConfig?.SystemServiceProcessName ?? string.Empty,
+                    });
             }
         }
     }

@@ -112,10 +112,11 @@ namespace FabricHealer.Repair.Guan
                     if (!ValidateFileSearchPattern(searchPattern, path, recurseSubDirectories))
                     {
                         await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                        LogLevel.Info,
-                                                        "DeleteFilesPredicateType::NoFilesMatchSearchPattern",
-                                                        $"Specified search pattern, {searchPattern}, does not match any files in {path}.",
-                                                        RepairTaskManager.Token);
+                                LogLevel.Info,
+                                "DeleteFilesPredicateType::NoFilesMatchSearchPattern",
+                                $"Specified search pattern, {searchPattern}, does not match any files in {path}.",
+                                RepairTaskManager.Token);
+
                         return false;
                     }
                 }
@@ -140,11 +141,11 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to execute repair (FH executor does this work and manages repair state through RM, as always).
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                            () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
-                                                                                        repairTask,
-                                                                                        repairConfiguration,
-                                                                                        RepairTaskManager.Token),
-                                                             RepairTaskManager.Token);
+                                        () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                                                repairTask,
+                                                repairConfiguration,
+                                                RepairTaskManager.Token),
+                                        RepairTaskManager.Token);
                 return success;
             }
         }

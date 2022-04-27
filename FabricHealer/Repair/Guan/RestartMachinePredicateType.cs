@@ -73,27 +73,28 @@ namespace FabricHealer.Repair.Guan
                 var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
                 var isRepairAlreadyInProgress =
                     await repairTaskEngine.IsFHRepairTaskRunningAsync(
-                                            $"{RepairTaskEngine.InfrastructureServiceName}/{RepairData.NodeType}",
-                                            repairConfiguration,
-                                            RepairTaskManager.Token);
+                            $"{RepairTaskEngine.InfrastructureServiceName}/{RepairData.NodeType}",
+                            repairConfiguration,
+                            RepairTaskManager.Token);
                 
                 if (isRepairAlreadyInProgress)
                 {
                     string message = $"VM Repair {RepairData.RepairId} is already in progress. Will not attempt repair at this time.";
 
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                            LogLevel.Info,
-                                                            $"RestartVMPredicateType::{RepairData.RepairId}",
-                                                            message,
-                                                            RepairTaskManager.Token);
+                            LogLevel.Info,
+                            $"RestartVMPredicateType::{RepairData.RepairId}",
+                            message,
+                            RepairTaskManager.Token);
+
                     return false;
                 }
 
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                            () => RepairTaskManager.ExecuteRMInfrastructureRepairTask(
-                                                                                        repairConfiguration,
-                                                                                        RepairTaskManager.Token),
-                                                            RepairTaskManager.Token);
+                                        () => RepairTaskManager.ExecuteRMInfrastructureRepairTask(
+                                                repairConfiguration,
+                                                RepairTaskManager.Token),
+                                        RepairTaskManager.Token);
                 return success;
             }
         }

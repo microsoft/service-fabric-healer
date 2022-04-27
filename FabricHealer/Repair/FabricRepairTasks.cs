@@ -20,15 +20,12 @@ namespace FabricHealer.Repair
     public static class FabricRepairTasks
     {
         public static async Task<bool> IsRepairTaskInDesiredStateAsync(
-                                         string taskId,
-                                         FabricClient fabricClient,
-                                         string executorName,
-                                         List<RepairTaskState> desiredStates)
+                                        string taskId,
+                                        FabricClient fabricClient,
+                                        string executorName,
+                                        List<RepairTaskState> desiredStates)
         {
-            IList<RepairTask> repairTaskList = await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                                                                   taskId,
-                                                                                   RepairTaskStateFilter.All,
-                                                                                   executorName);
+            IList<RepairTask> repairTaskList = await fabricClient.RepairManager.GetRepairTaskListAsync(taskId, RepairTaskStateFilter.All, executorName);
 
             return desiredStates.Any(desiredState => repairTaskList.Count(rt => rt.State == desiredState) > 0);
         }
@@ -56,10 +53,7 @@ namespace FabricHealer.Repair
                 {
                     try
                     {
-                        _ = await fabricClient.RepairManager.CancelRepairTaskAsync(
-                                                                   repairTask.TaskId,
-                                                                   repairTask.Version,
-                                                                   true);
+                        _ = await fabricClient.RepairManager.CancelRepairTaskAsync(repairTask.TaskId, repairTask.Version, true);
                     }
                     catch (InvalidOperationException)
                     {
@@ -98,10 +92,10 @@ namespace FabricHealer.Repair
         }
 
         public static async Task<bool> CompleteCustomActionRepairJobAsync(
-                                               RepairTask repairTask,
-                                               FabricClient fabricClient,
-                                               StatelessServiceContext context,
-                                               CancellationToken token)
+                                            RepairTask repairTask,
+                                            FabricClient fabricClient,
+                                            StatelessServiceContext context,
+                                            CancellationToken token)
         {
             var telemetryUtilities = new TelemetryUtilities(fabricClient, context);
 
@@ -129,20 +123,21 @@ namespace FabricHealer.Repair
             catch (InvalidOperationException e)
             {
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                             LogLevel.Info,
-                                             "FabricRepairTasks.CompleteCustomActionRepairJobAsync",
-                                             $"Failed to Complete Repair Job {repairTask.TaskId} due to invalid state transition.{Environment.NewLine}:{e}",
-                                             token);
+                        LogLevel.Info,
+                        "FabricRepairTasks.CompleteCustomActionRepairJobAsync",
+                        $"Failed to Complete Repair Job {repairTask.TaskId} due to invalid state transition.{Environment.NewLine}:{e}",
+                        token);
 
                 return false;
             }
             catch (Exception e)
             {
                 await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                             LogLevel.Info,
-                                             "FabricRepairTasks.CompleteCustomActionRepairJobAsync",
-                                             $"Failed to Complete Repair Job {repairTask.TaskId} with unhandled exception:{Environment.NewLine}{e}",
-                                             token);
+                        LogLevel.Info,
+                        "FabricRepairTasks.CompleteCustomActionRepairJobAsync",
+                        $"Failed to Complete Repair Job {repairTask.TaskId} with unhandled exception:{Environment.NewLine}{e}",
+                        token);
+
                 throw;
             }
 
@@ -150,11 +145,11 @@ namespace FabricHealer.Repair
         }
 
         public static async Task<RepairTask> ScheduleRepairTaskAsync(
-                                                     RepairConfiguration repairConfiguration,
-                                                     RepairExecutorData executorData,
-                                                     string executorName,
-                                                     FabricClient fabricClient,
-                                                     CancellationToken token)
+                                                RepairConfiguration repairConfiguration,
+                                                RepairExecutorData executorData,
+                                                string executorName,
+                                                FabricClient fabricClient,
+                                                CancellationToken token)
         {
             var repairTaskEngine = new RepairTaskEngine(fabricClient);
             RepairActionType repairAction = repairConfiguration.RepairPolicy.RepairAction;
@@ -232,12 +227,12 @@ namespace FabricHealer.Repair
                 string message = $"Unable to create repairtask:{Environment.NewLine}{fe}";
                 FabricHealerManager.RepairLogger.LogWarning(message);
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                                 LogLevel.Warning,
-                                                                 "FabricRepairTasks::TryCreateRepairTaskAsync",
-                                                                 message,
-                                                                 token,
-                                                                 repairConfiguration,
-                                                                 FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                        LogLevel.Warning,
+                        "FabricRepairTasks::TryCreateRepairTaskAsync",
+                        message,
+                        token,
+                        repairConfiguration,
+                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
             }
 
             return false;
@@ -264,10 +259,11 @@ namespace FabricHealer.Repair
             var allSystemServices =
                 await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                () => fabricClient.QueryManager.GetServiceListAsync(
-                                                                                  new Uri(RepairConstants.SystemAppName),
-                                                                                  null,
-                                                                                  FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                                  cancellationToken),
+                                                        new Uri(RepairConstants.SystemAppName),
+                                                        null,
+                                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                        cancellationToken),
+
                                                cancellationToken);
 
             var infraInstances = 
@@ -286,11 +282,11 @@ namespace FabricHealer.Repair
             // Repairs where FH or IS is executor.
             var allRecentFHRepairTasksCompleted =
                             await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                                                RepairTaskEngine.FHTaskIdPrefix,
-                                                                RepairTaskStateFilter.Completed,
-                                                                null,
-                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                cancellationToken);
+                                    RepairTaskEngine.FHTaskIdPrefix,
+                                    RepairTaskStateFilter.Completed,
+                                    null,
+                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                    cancellationToken);
 
             if (allRecentFHRepairTasksCompleted == null || allRecentFHRepairTasksCompleted.Count == 0)
             {
@@ -307,7 +303,10 @@ namespace FabricHealer.Repair
                     if (repair.ExecutorData.Contains(repairData.RepairId))
                     {
                         // Completed aborted/cancelled repair tasks should not block repairs if they are inside run interval.
-                        return repair.CompletedTimestamp != null && repair.Flags != RepairTaskFlags.AbortRequested && repair.Flags != RepairTaskFlags.CancelRequested && DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= interval;
+                        return repair.CompletedTimestamp != null &&
+                                repair.Flags != RepairTaskFlags.AbortRequested &&
+                                repair.Flags != RepairTaskFlags.CancelRequested &&
+                                DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= interval;
                     }
                 }
             }
@@ -345,11 +344,12 @@ namespace FabricHealer.Repair
         {
             var allRecentFHRepairTasksCompleted =
                             await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                                                RepairTaskEngine.FHTaskIdPrefix,
-                                                                RepairTaskStateFilter.Completed,
-                                                                null,
-                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                cancellationToken);
+                                    RepairTaskEngine.FHTaskIdPrefix,
+                                    RepairTaskStateFilter.Completed,
+                                    null,
+                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                    cancellationToken);
+
             if (!allRecentFHRepairTasksCompleted.Any())
             {
                 return 0;

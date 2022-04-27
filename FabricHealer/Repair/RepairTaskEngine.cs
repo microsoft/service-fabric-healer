@@ -98,13 +98,13 @@ namespace FabricHealer.Repair
         public async Task<RepairTaskList> GetFHRepairTasksCurrentlyProcessingAsync(string executorName, CancellationToken cancellationToken)
         {
             var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                                                  FHTaskIdPrefix,
-                                                                  RepairTaskStateFilter.Active |
-                                                                  RepairTaskStateFilter.Approved |
-                                                                  RepairTaskStateFilter.Executing,
-                                                                  executorName,
-                                                                  FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                  cancellationToken);
+                                        FHTaskIdPrefix,
+                                        RepairTaskStateFilter.Active |
+                                        RepairTaskStateFilter.Approved |
+                                        RepairTaskStateFilter.Executing,
+                                        executorName,
+                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                        cancellationToken);
 
             return repairTasks;
         }
@@ -150,11 +150,11 @@ namespace FabricHealer.Repair
             // remain in an active state which will block any duplicate scheduling by another FH instance.
             var currentFHRepairTasksInProgress =
                             await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                                                FHTaskIdPrefix,
-                                                                RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
-                                                                executorName,
-                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                token);
+                                    FHTaskIdPrefix,
+                                    RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                                    executorName,
+                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                    token);
 
             if (currentFHRepairTasksInProgress == null || currentFHRepairTasksInProgress.Count == 0)
             {

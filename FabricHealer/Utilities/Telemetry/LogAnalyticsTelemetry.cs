@@ -57,7 +57,7 @@ namespace FabricHealer.Utilities.Telemetry
         }
 
         public async Task ReportHealthAsync(
-                            HealthScope scope,
+                            EntityType entityType,
                             string propertyName,
                             HealthState state,
                             string unhealthyEvaluations,
@@ -73,7 +73,7 @@ namespace FabricHealer.Utilities.Telemetry
                         datetime = DateTime.UtcNow,
                         source = "FabricHealer",
                         property = propertyName,
-                        healthScope = scope.ToString(),
+                        healthScope = entityType.ToString(),
                         healthState = state.ToString(),
                         healthEvaluation = unhealthyEvaluations,
                         osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",

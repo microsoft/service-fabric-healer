@@ -96,7 +96,7 @@ namespace FabricHealer.Utilities.Telemetry
         /// <summary>
         /// Calls AI to report health.
         /// </summary>
-        /// <param name="scope">Scope of health evaluation (Cluster, Node, etc.).</param>
+        /// <param name="entityType">Scope of health evaluation (Cluster, Node, etc.).</param>
         /// <param name="propertyName">Value of the property.</param>
         /// <param name="state">Health state.</param>
         /// <param name="unhealthyEvaluations">Unhealthy evaluations aggregated description.</param>
@@ -106,7 +106,7 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="instanceName">Optional: TraceTelemetry context cloud instance name.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportHealthAsync(
-                        HealthScope scope,
+                        EntityType entityType,
                         string propertyName,
                         HealthState state,
                         string unhealthyEvaluations,
@@ -134,7 +134,7 @@ namespace FabricHealer.Utilities.Telemetry
                     healthInfo += $"{Environment.NewLine}{unhealthyEvaluations}";
                 }
 
-                var tt = new TraceTelemetry($"Service Fabric Health report - {Enum.GetName(typeof(HealthScope), scope)}: {Enum.GetName(typeof(HealthState), state)} -> {source}:{propertyName}{healthInfo}", sev);
+                var tt = new TraceTelemetry($"Service Fabric Health report - {Enum.GetName(typeof(EntityType), entityType)}: {Enum.GetName(typeof(HealthState), state)} -> {source}:{propertyName}{healthInfo}", sev);
                 tt.Context.Cloud.RoleName = serviceName;
                 tt.Context.Cloud.RoleInstance = instanceName;
 

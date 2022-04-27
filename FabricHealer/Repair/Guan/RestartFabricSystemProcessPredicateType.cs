@@ -79,10 +79,10 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to schedule repair with RM.
                 var repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                          () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                                                                    repairConfiguration,
-                                                                                    RepairTaskManager.Token),
-                                                           RepairTaskManager.Token).GetAwaiter().GetResult();
+                                    () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
+                                            repairConfiguration,
+                                            RepairTaskManager.Token),
+                                    RepairTaskManager.Token).GetAwaiter().GetResult();
 
                 if (repairTask == null)
                 {
@@ -91,11 +91,11 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to execute repair (FH executor does this work and manages repair state).
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                        () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
-                                                                                    repairTask,
-                                                                                    repairConfiguration,
-                                                                                    RepairTaskManager.Token),
-                                                         RepairTaskManager.Token);
+                                        () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                                                repairTask,
+                                                repairConfiguration,
+                                                RepairTaskManager.Token),
+                                            RepairTaskManager.Token);
                 return success;
             }
         }

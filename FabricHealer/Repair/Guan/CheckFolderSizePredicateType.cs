@@ -71,20 +71,22 @@ namespace FabricHealer.Repair.Guan
                 if (!Directory.Exists(folderPath))
                 {
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                                LogLevel.Info,
-                                                                "CheckFolderSizePredicate::DirectoryNotFound",
-                                                                $"Directory {folderPath} does not exist.",
-                                                                RepairTaskManager.Token);
+                            LogLevel.Info,
+                            "CheckFolderSizePredicate::DirectoryNotFound",
+                            $"Directory {folderPath} does not exist.",
+                            RepairTaskManager.Token);
+
                     return false;
                 }
 
                 if (Directory.GetFiles(folderPath, "*", new EnumerationOptions { RecurseSubdirectories = true }).Length == 0)
                 {
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                                LogLevel.Info,
-                                                                "CheckFolderSizePredicate::NoFilesFound",
-                                                                $"Directory {folderPath} does not contain any files.",
-                                                                RepairTaskManager.Token);
+                            LogLevel.Info,
+                            "CheckFolderSizePredicate::NoFilesFound",
+                            $"Directory {folderPath} does not contain any files.",
+                            RepairTaskManager.Token);
+
                         return false;
                 }
 
@@ -115,10 +117,11 @@ namespace FabricHealer.Repair.Guan
                         "Will not attempt repair.";
 
                 await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                            LogLevel.Info,
-                                                            "CheckFolderSizePredicate",
-                                                            message,
-                                                            RepairTaskManager.Token);
+                        LogLevel.Info,
+                        "CheckFolderSizePredicate",
+                        message,
+                        RepairTaskManager.Token);
+
                 return false;
             }
             
@@ -128,10 +131,11 @@ namespace FabricHealer.Repair.Guan
                 double folderSizeInBytes = Convert.ToDouble(dir.EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length));
 
                 await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                            LogLevel.Info,
-                                                            "CheckFolderSizePredicate::Size",
-                                                            $"Directory {path} size: {folderSizeInBytes} bytes.",
-                                                            RepairTaskManager.Token);
+                        LogLevel.Info,
+                        "CheckFolderSizePredicate::Size",
+                        $"Directory {path} size: {folderSizeInBytes} bytes.",
+                        RepairTaskManager.Token);
+
                 if (unit == SizeUnit.GB)
                 {
                     return folderSizeInBytes / 1024 / 1024 / 1024;

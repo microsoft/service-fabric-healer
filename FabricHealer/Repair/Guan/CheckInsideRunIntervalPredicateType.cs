@@ -55,14 +55,16 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                string message = $"Repair with ID {RepairData.RepairId} has already run once within the specified run interval ({(runInterval > TimeSpan.MinValue ? runInterval : interval)}).{Environment.NewLine}" +
+                string message = $"Repair with ID {RepairData.RepairId} has already run once within the specified run interval " +
+                                 $"({(runInterval > TimeSpan.MinValue ? runInterval : interval)}).{Environment.NewLine}" +
                                  "Will not attempt repair at this time.";
 
                 await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                             LogLevel.Info,
-                                                             $"CheckInsideRunInterval::{RepairData.RepairId}",
-                                                             message,
-                                                             RepairTaskManager.Token);
+                        LogLevel.Info,
+                        $"CheckInsideRunInterval::{RepairData.RepairId}",
+                        message,
+                        RepairTaskManager.Token);
+
                 return true;
             }
         }

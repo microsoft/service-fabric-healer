@@ -44,9 +44,9 @@ namespace FabricHealer.Repair
                 {
                     var upgradeProgress =
                         await fabricClient.ApplicationManager.GetApplicationUpgradeProgressAsync(
-                                                                application.ApplicationName, 
-                                                                TimeSpan.FromMinutes(1), 
-                                                                token);
+                                application.ApplicationName, 
+                                TimeSpan.FromMinutes(1), 
+                                token);
 
                     if (!upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingBackInProgress) &&
                         !upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingForwardInProgress) &&
@@ -97,9 +97,9 @@ namespace FabricHealer.Repair
             {
                 FabricUpgradeProgress fabricUpgradeProgress =
                     await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                    () => fabricClient.ClusterManager.GetFabricUpgradeProgressAsync(
-                                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                    token), token);
+                            () => fabricClient.ClusterManager.GetFabricUpgradeProgressAsync(
+                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            token), token);
 
                 if (!fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingBackInProgress) &&
                     !fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingForwardInProgress) &&
@@ -126,11 +126,11 @@ namespace FabricHealer.Repair
         public static async Task<bool> IsAzureTenantUpdateInProgress(FabricClient fabricClient, string nodeType, CancellationToken token)
         {
             var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                                                "Azure",
-                                                                System.Fabric.Repair.RepairTaskStateFilter.Active | System.Fabric.Repair.RepairTaskStateFilter.Executing,
-                                                                $"fabric:/System/InfrastructureService/{nodeType}",
-                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                token);
+                                        "Azure",
+                                        System.Fabric.Repair.RepairTaskStateFilter.Active | System.Fabric.Repair.RepairTaskStateFilter.Executing,
+                                        $"fabric:/System/InfrastructureService/{nodeType}",
+                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                        token);
 
             bool isAzureTenantRepairInProgress = repairTasks.Count > 0;
 
@@ -142,10 +142,11 @@ namespace FabricHealer.Repair
             string message = "Azure Tenant Update in progress. Will not attempt repairs at this time.";
 
             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                            LogLevel.Info,
-                                                            "AzureTenantUpdateInProgress",
-                                                            message,
-                                                            token);
+                    LogLevel.Info,
+                    "AzureTenantUpdateInProgress",
+                    message,
+                    token);
+
             return true;
         }
     }
