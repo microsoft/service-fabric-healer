@@ -41,7 +41,6 @@ namespace FabricHealerProxy
         private static readonly object instanceLock = new object();
         private static readonly object writeLock = new object();
         private static readonly TimeSpan defaultHealthReportTtl = TimeSpan.FromMinutes(15);
-        private static readonly TimeSpan maxDataLifeTime = defaultHealthReportTtl;
 
         // Instance tuple that stores RepairData objects for a specified duration (defaultHealthReportTtl).
         private ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairData)> repairDataHistory =
@@ -124,24 +123,33 @@ namespace FabricHealerProxy
                 throw new MissingRepairFactsException("RepairData.NodeName is a required field.");
             }
 
-            // Polly retry policy and async execution. Any other type of exception shall bubble up to caller as they are no-ops.
-            await Policy.Handle<HealthReportNotFoundException>()
-                            .Or<FabricException>()
-                            .Or<TimeoutException>()
-                            .WaitAndRetryAsync(
-                                new[]
-                                {
+            try
+            {
+                // Polly retry policy and async execution. Any other type of exception shall bubble up to caller as they are no-ops.
+                await Policy.Handle<HealthReportNotFoundException>()
+                                .Or<FabricException>()
+                                .Or<TimeoutException>()
+                                .WaitAndRetryAsync(
+                                    new[]
+                                    {
                                     TimeSpan.FromSeconds(1),
                                     TimeSpan.FromSeconds(5),
                                     TimeSpan.FromSeconds(10),
                                     TimeSpan.FromSeconds(15)
-                                })
-                            .ExecuteAsync(
-                                () => RepairEntityAsyncInternal(
-                                        repairFacts,
-                                        repairDataLifetime,
-                                        fabricClient,
-                                        cancellationToken)).ConfigureAwait(false);
+                                    })
+                                .ExecuteAsync(
+                                    () => RepairEntityAsyncInternal(
+                                            repairFacts,
+                                            repairDataLifetime,
+                                            fabricClient,
+                                            cancellationToken)).ConfigureAwait(false);
+            }
+            catch (InvalidOperationException)
+            {
+                // This can happen when the internal ExecuteAsync impl calls LINQ's First() on a zero-sized collection, for example.
+                // This should not crash the containing process, so just capture it here.
+                // TODO: Add a file logger so folks can debug issues they run into with the library..
+            }
         }
 
         /// <summary>
@@ -358,7 +366,7 @@ namespace FabricHealerProxy
                 {
                     var data = repairDataHistory.ElementAt(i);
 
-                    if (DateTime.UtcNow.Subtract(data.Value.DateAdded) > maxDataLifeTime)
+                    if (DateTime.UtcNow.Subtract(data.Value.DateAdded) >= defaultHealthReportTtl)
                     {
                         _ = repairDataHistory.TryRemove(data.Key, out _);
                         --i;
@@ -542,7 +550,8 @@ namespace FabricHealerProxy
                         {
                             TimeSpan.FromSeconds(1),
                             TimeSpan.FromSeconds(3),
-                            TimeSpan.FromSeconds(5)
+                            TimeSpan.FromSeconds(5),
+                            TimeSpan.FromSeconds(10)
                         })
                       .Execute(() => ClearHealthReportsInternal());
         }
@@ -604,6 +613,7 @@ namespace FabricHealerProxy
                             fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
                             break;
 
+                        case EntityType.Disk:
                         case EntityType.Machine:
                         case EntityType.Node:
                             var nodeHealthReport = new NodeHealthReport(repairFacts.NodeName, healthInformation);
