@@ -1333,6 +1333,11 @@ namespace FabricHealer
 
                     // Machine repair \\
 
+                    if (!ConfigSettings.EnableMachineRepair)
+                    {
+                        continue;
+                    }
+
                     // If there are mulitple instances of FH deployed to the cluster (like -1 InstanceCount), then don't do machine repairs if this instance of FH 
                     // detects a need to do so. Another instance on a different node will take the job. Only DiskObserver-generated repair data has to be done on the node
                     // where FO's DiskObserver emitted the related information, for example (like Disk space issues and the need to clean specified (in logic rules) folders).

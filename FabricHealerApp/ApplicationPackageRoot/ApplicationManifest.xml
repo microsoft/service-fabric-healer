@@ -15,8 +15,8 @@
     <!-- Repair Policy Enablement -->
     <Parameter Name="EnableAppRepair" DefaultValue="true" />
     <Parameter Name="EnableDiskRepair" DefaultValue="false" />
-    <Parameter Name="EnableFabricNodeRepair" DefaultValue="true" />
-    <Parameter Name="EnableMachineRepair" DefaultValue="true" />
+    <Parameter Name="EnableFabricNodeRepair" DefaultValue="false" />
+    <Parameter Name="EnableMachineRepair" DefaultValue="false" />
     <Parameter Name="EnableReplicaRepair" DefaultValue="false" />
     <Parameter Name="EnableSystemAppRepair" DefaultValue="false" />
     <!-- Logic rule files -->

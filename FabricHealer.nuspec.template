@@ -22,7 +22,7 @@
     </contentFiles>
 	  <dependencies>
 		  <dependency id="Microsoft.Logic.Guan" version="1.0.4" />
-		  <dependency id="Microsoft.ServiceFabric.Services" Version="5.0.516" />
+		  <dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
 	  </dependencies>
     <projectUrl>https://github.com/microsoft/service-fabric-healer</projectUrl>
     <tags>azure servicefabric fabrichealer fabricobserver auto-mitigation logic-programming guan</tags>
