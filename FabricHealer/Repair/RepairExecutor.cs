@@ -987,11 +987,11 @@ namespace FabricHealer.Repair
                     ServiceName = repairConfiguration.ServiceName?.OriginalString,
                     Code = "FO000",
                     HealthState = HealthState.Ok,
-                    Description = $"{(repairConfiguration.EventSourceId == RepairConstants.FabricSystemObserver ? repairConfiguration.SystemServiceProcessName : repairConfiguration.ServiceName.OriginalString)} has been repaired.",
+                    Description = $"{(repairConfiguration.EventSourceId.Contains(RepairConstants.FabricSystemObserver) ? repairConfiguration.SystemServiceProcessName : repairConfiguration.RepairPolicy.RepairId)} repair has successfully completed.",
                     NodeName = repairConfiguration.NodeName,
                     NodeType = repairConfiguration.NodeType,
                     Source = RepairTaskEngine.FabricHealerExecutorName,
-                    SystemServiceProcessName = $"{(repairConfiguration.EventSourceId == RepairConstants.FabricSystemObserver ? repairConfiguration.SystemServiceProcessName : string.Empty)}",
+                    SystemServiceProcessName = $"{(repairConfiguration.EventSourceId.Contains(RepairConstants.FabricSystemObserver) ? repairConfiguration.SystemServiceProcessName : string.Empty)}",
                 };
 
                 var healthInformation = new HealthInformation(repairConfiguration.EventSourceId, repairConfiguration.EventProperty, HealthState.Ok)
