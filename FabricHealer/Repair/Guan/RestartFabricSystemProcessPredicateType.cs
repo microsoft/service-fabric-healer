@@ -19,40 +19,16 @@ namespace FabricHealer.Repair.Guan
 
         private class Resolver : BooleanPredicateResolver
         {
-            private readonly RepairConfiguration repairConfiguration;
-
             public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
                     : base(input, constraint, context)
             {
 
-                repairConfiguration = new RepairConfiguration
-                {
-                    AppName = !string.IsNullOrWhiteSpace(RepairData.ApplicationName) ? new Uri(RepairData.ApplicationName) : null,
-                    ContainerId = RepairData.ContainerId,
-                    ErrorCode = RepairData.Code,
-                    EntityType = RepairData.EntityType,
-                    NodeName = RepairData.NodeName,
-                    NodeType = RepairData.NodeType,
-                    PartitionId = default,
-                    ProcessId = (int)(RepairData.ProcessId > 0 ? RepairData.ProcessId : -1),
-                    SystemServiceProcessName = !string.IsNullOrWhiteSpace(RepairData.SystemServiceProcessName) ? RepairData.SystemServiceProcessName : string.Empty,
-                    ReplicaOrInstanceId = RepairData.ReplicaId > 0 ? RepairData.ReplicaId : 0,
-                    ServiceName = !string.IsNullOrWhiteSpace(RepairData.ServiceName) ? new Uri(RepairData.ServiceName) : null,
-                    MetricValue = RepairData.Value,
-                    RepairPolicy = new RepairPolicy
-                    {
-                        RepairAction = RepairActionType.RestartProcess,
-                        RepairId = RepairData.RepairId
-                    },
-                    EventSourceId = RepairData.Source,
-                    EventProperty = RepairData.Property
-                };
             }
 
             protected override async Task<bool> CheckAsync()
             {
                 // Can only kill processes on the same node where the FH instance that took the job is running.
-                if (repairConfiguration.NodeName != RepairTaskManager.Context.NodeContext.NodeName)
+                if (RepairData.NodeName != RepairTaskManager.Context.NodeContext.NodeName)
                 {
                     return false;
                 }
@@ -65,11 +41,11 @@ namespace FabricHealer.Repair.Guan
                     switch (typeString)
                     {
                         case "TimeSpan":
-                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
                         case "Boolean":
-                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
                         default:
@@ -77,10 +53,12 @@ namespace FabricHealer.Repair.Guan
                     }
                 }
 
+                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartProcess;
+
                 // Try to schedule repair with RM.
                 var repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                     () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                            repairConfiguration,
+                                            RepairData,
                                             RepairTaskManager.Token),
                                     RepairTaskManager.Token).GetAwaiter().GetResult();
 
@@ -93,7 +71,7 @@ namespace FabricHealer.Repair.Guan
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                                                 repairTask,
-                                                repairConfiguration,
+                                                RepairData,
                                                 RepairTaskManager.Token),
                                             RepairTaskManager.Token);
                 return success;

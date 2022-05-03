@@ -55,26 +55,26 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="source">Err/Warning source id.</param>
         /// <param name="description">Message.</param>
         /// <param name="token">Cancellation token.</param>
-        /// <param name="repairConfig">RepairConfiguration instance.</param>
+        /// <param name="repairData">repairData instance.</param>
         /// <returns></returns>
         public async Task EmitTelemetryEtwHealthEventAsync(
                             LogLevel level,
                             string source,
                             string description,
                             CancellationToken token,
-                            RepairConfiguration repairConfig = null,
+                            TelemetryData repairData = null,
                             bool verboseLogging = true,
-                            TimeSpan ttl = default(TimeSpan),
+                            TimeSpan ttl = default,
                             string property = "RepairStateInformation",
                             EntityType reportType = EntityType.Node)
         {
-            bool hasRepairInfo = repairConfig != null;
+            bool hasRepairInfo = repairData != null;
             string repairAction = string.Empty;
             source = source != "FabricHealer" ? source?.Insert(0, "FabricHealer.") : "FabricHealer";
 
             if (hasRepairInfo)
             {
-                repairAction = Enum.GetName(typeof(RepairActionType), repairConfig.RepairPolicy.RepairAction);
+                repairAction = Enum.GetName(typeof(RepairActionType), repairData.RepairPolicy.RepairAction);
             }
 
             HealthState healthState = level switch
@@ -100,12 +100,12 @@ namespace FabricHealer.Utilities.Telemetry
             var healthReport = new HealthReport
             {
                 AppName = reportType == EntityType.Application ? new Uri("fabric:/FabricHealer") : null,
-                Code = repairConfig?.RepairPolicy.RepairId,
+                Code = repairData?.RepairPolicy?.RepairId,
                 HealthMessage = description,
                 NodeName = serviceContext.NodeContext.NodeName,
                 EntityType = reportType,
                 State = healthState,
-                HealthReportTimeToLive = ttl == default(TimeSpan) ? TimeSpan.FromMinutes(5) : ttl,
+                HealthReportTimeToLive = ttl == default ? TimeSpan.FromMinutes(5) : ttl,
                 Property = property,
                 SourceId = source,
             };
@@ -117,17 +117,17 @@ namespace FabricHealer.Utilities.Telemetry
             {
                 var telemData = new TelemetryData()
                 {
-                    ApplicationName = repairConfig?.AppName?.OriginalString ?? string.Empty,
+                    ApplicationName = repairData?.ApplicationName ?? string.Empty,
                     ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                     Description = description,
                     HealthState = healthState,
                     Metric = repairAction,
-                    NodeName = repairConfig?.NodeName ?? string.Empty,
-                    PartitionId = repairConfig?.PartitionId != null ? repairConfig.PartitionId : default,
-                    ReplicaId = repairConfig != null ? repairConfig.ReplicaOrInstanceId : 0,
-                    ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
+                    NodeName = repairData?.NodeName ?? string.Empty,
+                    PartitionId = repairData?.PartitionId != null ? repairData.PartitionId : default,
+                    ReplicaId = repairData != null ? repairData.ReplicaId : 0,
+                    ServiceName = repairData?.ServiceName ?? string.Empty,
                     Source = source,
-                    SystemServiceProcessName = repairConfig?.SystemServiceProcessName ?? string.Empty,
+                    SystemServiceProcessName = repairData?.SystemServiceProcessName ?? string.Empty,
                 };
 
                 await telemetryClient?.ReportMetricAsync(telemData, token);
@@ -140,19 +140,19 @@ namespace FabricHealer.Utilities.Telemetry
                     RepairConstants.EventSourceEventName,
                     new
                     {
-                        ApplicationName = repairConfig?.AppName?.OriginalString ?? string.Empty,
+                        ApplicationName = repairData?.ApplicationName ?? string.Empty,
                         ClusterInformation.ClusterInfoTuple.ClusterId,
                         Description = description,
                         HealthState = Enum.GetName(typeof(HealthState), healthState),
                         Metric = repairAction,
-                        PartitionId = repairConfig?.PartitionId.ToString() ?? string.Empty,
-                        ReplicaId = repairConfig?.ReplicaOrInstanceId.ToString() ?? string.Empty,
+                        PartitionId = repairData?.PartitionId.ToString() ?? string.Empty,
+                        ReplicaId = repairData?.ReplicaId.ToString() ?? string.Empty,
                         Level = level,
-                        NodeName = repairConfig?.NodeName ?? string.Empty,
+                        NodeName = repairData?.NodeName ?? string.Empty,
                         OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
-                        ServiceName = repairConfig?.ServiceName?.OriginalString ?? string.Empty,
+                        ServiceName = repairData?.ServiceName ?? string.Empty,
                         Source = source,
-                        SystemServiceProcessName = repairConfig?.SystemServiceProcessName ?? string.Empty,
+                        SystemServiceProcessName = repairData?.SystemServiceProcessName ?? string.Empty,
                     });
             }
         }

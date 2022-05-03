@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using FabricHealer.Interfaces;
 using System.Fabric.Health;
 using System;
+using FabricHealer.Repair;
 
 namespace FabricHealer.Utilities.Telemetry
 {
@@ -112,15 +113,13 @@ namespace FabricHealer.Utilities.Telemetry
         {
             get; set;
         }
-        /// <summary>
-        /// The Repair Id.
-        /// </summary>
-        public string RepairId
+
+        public string Property
         {
             get; set;
         }
 
-        public string Property
+        public RepairPolicy RepairPolicy
         {
             get; set;
         }

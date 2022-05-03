@@ -145,20 +145,20 @@ namespace FabricHealer.Repair
         }
 
         public static async Task<RepairTask> ScheduleRepairTaskAsync(
-                                                RepairConfiguration repairConfiguration,
+                                                TelemetryData repairData,
                                                 RepairExecutorData executorData,
                                                 string executorName,
                                                 FabricClient fabricClient,
                                                 CancellationToken token)
         {
             var repairTaskEngine = new RepairTaskEngine(fabricClient);
-            RepairActionType repairAction = repairConfiguration.RepairPolicy.RepairAction;
+            RepairActionType repairAction = repairData.RepairPolicy.RepairAction;
             RepairTask repairTask;
 
             await Task.Delay(new Random().Next(100, 1500));
 
             var isRepairAlreadyInProgress =
-                    await repairTaskEngine.IsFHRepairTaskRunningAsync(executorName, repairConfiguration, token);
+                    await repairTaskEngine.IsFHRepairTaskRunningAsync(executorName, repairData, token);
 
             if (isRepairAlreadyInProgress)
             {
@@ -169,7 +169,7 @@ namespace FabricHealer.Repair
             {
                 case RepairActionType.RestartVM:
 
-                    repairTask = await repairTaskEngine.CreateVmRebootISRepairTaskAsync(repairConfiguration, executorName, token);
+                    repairTask = await repairTaskEngine.CreateVmRebootISRepairTaskAsync(repairData, executorName, token);
                     break;
 
                 case RepairActionType.DeleteFiles:
@@ -190,7 +190,7 @@ namespace FabricHealer.Repair
             bool success = await TryCreateRepairTaskAsync(
                                     fabricClient,
                                     repairTask,
-                                    repairConfiguration,
+                                    repairData,
                                     repairTaskEngine,
                                     token);
 
@@ -200,7 +200,7 @@ namespace FabricHealer.Repair
         private static async Task<bool> TryCreateRepairTaskAsync(
                                             FabricClient fabricClient,
                                             RepairTask repairTask,
-                                            RepairConfiguration repairConfiguration,
+                                            TelemetryData repairData,
                                             RepairTaskEngine repairTaskEngine,
                                             CancellationToken token)
         {
@@ -214,7 +214,7 @@ namespace FabricHealer.Repair
             try
             {
                 var isRepairAlreadyInProgress =
-                    await repairTaskEngine.IsFHRepairTaskRunningAsync(repairTask.Executor, repairConfiguration, token);
+                    await repairTaskEngine.IsFHRepairTaskRunningAsync(repairTask.Executor, repairData, token);
 
                 if (!isRepairAlreadyInProgress)
                 {
@@ -231,7 +231,7 @@ namespace FabricHealer.Repair
                         "FabricRepairTasks::TryCreateRepairTaskAsync",
                         message,
                         token,
-                        repairConfiguration,
+                        repairData,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
             }
 
@@ -296,11 +296,11 @@ namespace FabricHealer.Repair
             var orderedRepairList = allRecentFHRepairTasksCompleted.OrderByDescending(o => o.CompletedTimestamp).ToList();
 
             // There could be several repairs of this type for the same repair target in RM's db.
-            if (orderedRepairList.Any(r => r.ExecutorData.Contains(repairData.RepairId)))
+            if (orderedRepairList.Any(r => r.ExecutorData.Contains(repairData.RepairPolicy.RepairId)))
             {
                 foreach (var repair in orderedRepairList)
                 {
-                    if (repair.ExecutorData.Contains(repairData.RepairId))
+                    if (repair.ExecutorData.Contains(repairData.RepairPolicy.RepairId))
                     {
                         // Completed aborted/cancelled repair tasks should not block repairs if they are inside run interval.
                         return repair.CompletedTimestamp != null &&
@@ -315,7 +315,7 @@ namespace FabricHealer.Repair
             foreach (var repair in allRecentFHRepairTasksCompleted.Where(r => r.ResultStatus == RepairTaskResult.Succeeded))
             {
                 if (repair.Executor != $"fabric:/System/InfrastructureService/{repairData.NodeType}" ||
-                    repair.Description != repairData.RepairId)
+                    repair.Description != repairData.RepairPolicy.RepairId)
                 {
                     continue;
                 }
@@ -366,12 +366,12 @@ namespace FabricHealer.Repair
                 {
                     var fhExecutorData = JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
-                    if (fhExecutorData == null || fhExecutorData.RepairPolicy == null || repair.CompletedTimestamp == null || !repair.CompletedTimestamp.HasValue)
+                    if (fhExecutorData == null || fhExecutorData.RepairData?.RepairPolicy == null || repair.CompletedTimestamp == null || !repair.CompletedTimestamp.HasValue)
                     {
                         continue;
                     }
 
-                    if (repairData.RepairId != fhExecutorData.RepairPolicy.RepairId)
+                    if (repairData.RepairPolicy.RepairId != fhExecutorData.RepairData.RepairPolicy.RepairId)
                     {
                         continue;
                     }
@@ -384,7 +384,7 @@ namespace FabricHealer.Repair
                     }
                 }
                 // VM repairs (IS is executor, ExecutorData supplied by IS. Custom FH repair id supplied as repair Description.)
-                else if (repair.Executor == $"{RepairTaskEngine.InfrastructureServiceName}/{repairData.NodeType}" && repair.Description == repairData.RepairId)
+                else if (repair.Executor == $"{RepairTaskEngine.InfrastructureServiceName}/{repairData.NodeType}" && repair.Description == repairData.RepairPolicy.RepairId)
                 {
                     if (repair.CompletedTimestamp == null || !repair.CompletedTimestamp.HasValue)
                     {

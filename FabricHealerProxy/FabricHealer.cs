@@ -132,10 +132,10 @@ namespace FabricHealerProxy
                                 .WaitAndRetryAsync(
                                     new[]
                                     {
-                                    TimeSpan.FromSeconds(1),
-                                    TimeSpan.FromSeconds(5),
-                                    TimeSpan.FromSeconds(10),
-                                    TimeSpan.FromSeconds(15)
+                                        TimeSpan.FromSeconds(1),
+                                        TimeSpan.FromSeconds(5),
+                                        TimeSpan.FromSeconds(10),
+                                        TimeSpan.FromSeconds(15)
                                     })
                                 .ExecuteAsync(
                                     () => RepairEntityAsyncInternal(

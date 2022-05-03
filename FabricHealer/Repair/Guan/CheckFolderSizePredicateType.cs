@@ -112,7 +112,7 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 string message =
-                        $"Repair {RepairData.RepairId}: Supplied Maximum folder size value ({(maxFolderSizeGB > 0 ? maxFolderSizeGB + "GB" : maxFolderSizeMB + "MB")}) " +
+                        $"Repair {RepairData.RepairPolicy.RepairId}: Supplied Maximum folder size value ({(maxFolderSizeGB > 0 ? maxFolderSizeGB + "GB" : maxFolderSizeMB + "MB")}) " +
                         $"for path {folderPath} is less than computed folder size ({size}{(maxFolderSizeGB > 0 ? "GB" : "MB")}). " +
                         "Will not attempt repair.";
 

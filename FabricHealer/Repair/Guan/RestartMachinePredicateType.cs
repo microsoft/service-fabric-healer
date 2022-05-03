@@ -19,30 +19,10 @@ namespace FabricHealer.Repair.Guan
 
         private class Resolver : BooleanPredicateResolver
         {
-            private readonly RepairConfiguration repairConfiguration;
-
             public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
                     : base(input, constraint, context)
             {
-                repairConfiguration = new RepairConfiguration
-                {
-                    AppName = null,
-                    ErrorCode = RepairData.Code,
-                    EntityType = RepairData.EntityType,
-                    NodeName = RepairData.NodeName,
-                    NodeType = RepairData.NodeType,
-                    PartitionId = default,
-                    ReplicaOrInstanceId = 0,
-                    ServiceName = null,
-                    MetricValue = RepairData.Value,
-                    RepairPolicy = new RepairPolicy
-                    {
-                        RepairAction = RepairActionType.RestartVM,
-                        RepairId = RepairData.RepairId
-                    },
-                    EventSourceId = RepairData.Source,
-                    EventProperty = RepairData.Property
-                };
+
             }
 
             protected override async Task<bool> CheckAsync()
@@ -55,11 +35,11 @@ namespace FabricHealer.Repair.Guan
                     switch (typeString)
                     {
                         case "TimeSpan":
-                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
                         case "Boolean":
-                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
                         default:
@@ -74,25 +54,27 @@ namespace FabricHealer.Repair.Guan
                 var isRepairAlreadyInProgress =
                     await repairTaskEngine.IsFHRepairTaskRunningAsync(
                             $"{RepairTaskEngine.InfrastructureServiceName}/{RepairData.NodeType}",
-                            repairConfiguration,
+                            RepairData,
                             RepairTaskManager.Token);
                 
                 if (isRepairAlreadyInProgress)
                 {
-                    string message = $"VM Repair {RepairData.RepairId} is already in progress. Will not attempt repair at this time.";
+                    string message = $"VM Repair {RepairData.RepairPolicy.RepairId} is already in progress. Will not attempt repair at this time.";
 
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            $"RestartVMPredicateType::{RepairData.RepairId}",
+                            $"RestartVMPredicateType::{RepairData.RepairPolicy.RepairId}",
                             message,
                             RepairTaskManager.Token);
 
                     return false;
                 }
 
+                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartVM;
+
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => RepairTaskManager.ExecuteRMInfrastructureRepairTask(
-                                                repairConfiguration,
+                                                RepairData,
                                                 RepairTaskManager.Token),
                                         RepairTaskManager.Token);
                 return success;

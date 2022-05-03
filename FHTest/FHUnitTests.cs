@@ -130,16 +130,20 @@ namespace FHTest
             {
                 ApplicationName = "fabric:/test",
                 NodeName = "TEST_0",
-                RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}",
                 Code = SupportedErrorCodes.AppErrorMemoryMB,
                 HealthState = HealthState.Warning,
                 ServiceName = "fabric:/test0/service0",
                 Value = 1024.0
             };
 
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}"
+            };
+
             var executorData = new RepairExecutorData
             {
-                RepairPolicy = new RepairPolicy(),
+                RepairData = repairData
             };
 
             foreach (var file in Directory.GetFiles(FHRulesDirectory))
@@ -180,7 +184,6 @@ namespace FHTest
                 NodeName = "TEST_0",
                 Metric = "Memory",
                 HealthState = HealthState.Warning,
-                RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}",
                 Code = SupportedErrorCodes.AppErrorMemoryMB,
                 ServiceName = "fabric:/test0/service0",
                 Value = 42,
@@ -188,9 +191,14 @@ namespace FHTest
                 PartitionId = default,
             };
 
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}"
+            };
+
             var executorData = new RepairExecutorData
             {
-                RepairPolicy = new RepairPolicy { RepairAction = RepairActionType.RestartCodePackage },
+                RepairData = repairData
             };
 
             try
@@ -226,7 +234,6 @@ namespace FHTest
                 NodeName = "TEST_0",
                 Metric = "Memory",
                 HealthState = HealthState.Warning,
-                RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}",
                 Code = SupportedErrorCodes.AppErrorMemoryMB,
                 ServiceName = "fabric:/test0/service0",
                 Value = 42,
@@ -234,9 +241,14 @@ namespace FHTest
                 PartitionId = default,
             };
 
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}"
+            };
+
             var executorData = new RepairExecutorData
             {
-                RepairPolicy = new RepairPolicy { RepairAction = RepairActionType.RestartCodePackage },
+                RepairData = repairData
             };
 
             await Assert.ThrowsExceptionAsync<GuanException>(async () => { await TestInitializeGuanAndRunQuery(repairData, repairAction, executorData); });

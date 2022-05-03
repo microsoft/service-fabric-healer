@@ -22,30 +22,10 @@ namespace FabricHealer.Repair.Guan
 
         private class Resolver : BooleanPredicateResolver
         {
-            private readonly RepairConfiguration repairConfiguration;
-
             public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
                     : base(input, constraint, context)
             {
-                repairConfiguration = new RepairConfiguration
-                {
-                    AppName = !string.IsNullOrWhiteSpace(RepairData.ApplicationName) ? new Uri(RepairData.ApplicationName) : null,
-                    ErrorCode = RepairData.Code,
-                    EntityType = RepairData.EntityType,
-                    NodeName = RepairData.NodeName,
-                    NodeType = RepairData.NodeType,
-                    PartitionId = default,
-                    ReplicaOrInstanceId = RepairData.ReplicaId > 0 ? RepairData.ReplicaId : 0,
-                    ServiceName = (!string.IsNullOrWhiteSpace(RepairData.ServiceName) && RepairData.ServiceName.Contains("fabric:/")) ? new Uri(RepairData.ServiceName) : null,
-                    MetricValue = RepairData.Value,
-                    RepairPolicy = new RepairPolicy
-                    {
-                        RepairAction = RepairActionType.RestartFabricNode,
-                        RepairId = RepairData.RepairId
-                    },
-                    EventSourceId = RepairData.Source,
-                    EventProperty = RepairData.Property
-                };
+
             }
 
             protected override async Task<bool> CheckAsync()
@@ -58,11 +38,11 @@ namespace FabricHealer.Repair.Guan
                     switch (typeString)
                     {
                         case "TimeSpan":
-                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
                         case "Boolean":
-                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
                         default:
@@ -72,6 +52,7 @@ namespace FabricHealer.Repair.Guan
 
                 RepairTask repairTask;
                 bool success;
+                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartFabricNode;
 
                 // This means it's a resumed repair.
                 if (RepairExecutorData != null)
@@ -81,7 +62,7 @@ namespace FabricHealer.Repair.Guan
                     repairTask = await RepairTaskEngine.CreateFabricHealerRepairTask(RepairExecutorData, RepairTaskManager.Token);
                     success = await RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                                         repairTask,
-                                        repairConfiguration,
+                                        RepairData,
                                         RepairTaskManager.Token);
                     return success;
                 }
@@ -91,17 +72,17 @@ namespace FabricHealer.Repair.Guan
                 var isNodeRepairAlreadyInProgress =
                     await repairTaskEngine.IsFHRepairTaskRunningAsync(
                             RepairTaskEngine.FabricHealerExecutorName,
-                            repairConfiguration,
+                            RepairData,
                             RepairTaskManager.Token);
 
                 if (isNodeRepairAlreadyInProgress)
                 {
                     string message =
-                    $"A Fabric Node repair, {RepairData.RepairId}, is already in progress in the cluster. Will not attempt repair at this time.";
+                    $"A Fabric Node repair, {RepairData.RepairPolicy.RepairId}, is already in progress in the cluster. Will not attempt repair at this time.";
 
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            $"RestartFabricNodePredicateType::{RepairData.RepairId}",
+                            $"RestartFabricNodePredicateType::{RepairData.RepairPolicy.RepairId}",
                             message,
                             RepairTaskManager.Token);
 
@@ -111,7 +92,7 @@ namespace FabricHealer.Repair.Guan
                 // Try to schedule repair with RM.
                 repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                     () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                            repairConfiguration,
+                                            RepairData,
                                             RepairTaskManager.Token),
                                     RepairTaskManager.Token);
 
@@ -124,7 +105,7 @@ namespace FabricHealer.Repair.Guan
                 success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                     () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                                             repairTask,
-                                            repairConfiguration,
+                                            RepairData,
                                             RepairTaskManager.Token),
                                     RepairTaskManager.Token);
                 return success;

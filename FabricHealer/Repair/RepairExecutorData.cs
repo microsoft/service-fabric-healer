@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using FabricHealer.Utilities.Telemetry;
 using System;
 using System.Runtime.Serialization;
 
@@ -27,57 +28,9 @@ namespace FabricHealer.Repair
         } = FabricNodeRepairStep.Scheduled;
 
         [DataMember]
-        public string NodeType
+        public TelemetryData RepairData
         {
             get; set;
-        }
-
-        [DataMember]
-        public string NodeName
-        {
-            get; set;
-        }
-
-        [DataMember]
-        public RepairPolicy RepairPolicy
-        {
-            get; set;
-        }
-
-        [DataMember]
-        public string ErrorCode
-        {
-            get; set;
-        }
-
-        [DataMember]
-        public object FOMetricValue
-        {
-            get; set;
-        }
-
-        [DataMember]
-        public Guid PartitionId 
-        { 
-            get; internal set; 
-        }
-
-        [DataMember]
-        public long ReplicaOrInstanceId 
-        { 
-            get; internal set; 
-        }
-
-        [DataMember]
-        public Uri ServiceName 
-        { 
-            get; internal set; 
-        }
-
-        [DataMember]
-        public string SystemServiceProcessName 
-        {
-            get; internal set; 
         }
     }
 }

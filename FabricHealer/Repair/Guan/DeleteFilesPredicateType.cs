@@ -21,35 +21,16 @@ namespace FabricHealer.Repair.Guan
 
         private class Resolver : BooleanPredicateResolver
         {
-            private readonly RepairConfiguration repairConfiguration;
-
             public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
                     : base(input, constraint, context)
             {
-                repairConfiguration = new RepairConfiguration
-                {
-                    AppName = null,
-                    ErrorCode = RepairData.Code,
-                    NodeName = RepairData.NodeName,
-                    NodeType = RepairData.NodeType,
-                    PartitionId = default,
-                    ReplicaOrInstanceId = 0,
-                    ServiceName =  null,
-                    MetricValue = RepairData.Value,
-                    RepairPolicy = new DiskRepairPolicy
-                    {
-                        RepairAction = RepairActionType.DeleteFiles,
-                        RepairId = RepairData.RepairId
-                    },
-                    EventSourceId = RepairData.Source,
-                    EventProperty = RepairData.Property
-                };
+
             }
 
             protected override async Task<bool> CheckAsync()
             {
                 // Can only delete files on the same VM where the FH instance that took the job is running.
-                if (repairConfiguration.NodeName != RepairTaskManager.Context.NodeContext.NodeName)
+                if (RepairData.NodeName != RepairTaskManager.Context.NodeContext.NodeName)
                 {
                     return false;
                 }
@@ -75,6 +56,8 @@ namespace FabricHealer.Repair.Guan
                 {
                     throw new GuanException($"{path} does not exist.");
                 }
+
+                RepairData.RepairPolicy.RepairAction = RepairActionType.DeleteFiles;
 
                 // default as 0 means delete all files.
                 long maxFilesToDelete = 0;
@@ -122,18 +105,19 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 // DiskRepairPolicy
-                (repairConfiguration.RepairPolicy as DiskRepairPolicy).FolderPath = path;
-                (repairConfiguration.RepairPolicy as DiskRepairPolicy).MaxNumberOfFilesToDelete = maxFilesToDelete;
-                (repairConfiguration.RepairPolicy as DiskRepairPolicy).FileAgeSortOrder = direction;
-                (repairConfiguration.RepairPolicy as DiskRepairPolicy).RecurseSubdirectories = recurseSubDirectories;
-                (repairConfiguration.RepairPolicy as DiskRepairPolicy).FileSearchPattern = !string.IsNullOrWhiteSpace(searchPattern) ? searchPattern : "*";
+                (RepairData.RepairPolicy as DiskRepairPolicy).FolderPath = path;
+                (RepairData.RepairPolicy as DiskRepairPolicy).MaxNumberOfFilesToDelete = maxFilesToDelete;
+                (RepairData.RepairPolicy as DiskRepairPolicy).FileAgeSortOrder = direction;
+                (RepairData.RepairPolicy as DiskRepairPolicy).RecurseSubdirectories = recurseSubDirectories;
+                (RepairData.RepairPolicy as DiskRepairPolicy).FileSearchPattern = !string.IsNullOrWhiteSpace(searchPattern) ? searchPattern : "*";
 
                 // Try to schedule repair with RM.
                 var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                              () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                                                                        repairConfiguration,
-                                                                                        RepairTaskManager.Token),
-                                                               RepairTaskManager.Token);
+                                          () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
+                                                  RepairData,
+                                                  RepairTaskManager.Token),
+                                          RepairTaskManager.Token);
+
                 if (repairTask == null)
                 {
                     return false;
@@ -143,7 +127,7 @@ namespace FabricHealer.Repair.Guan
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                                                 repairTask,
-                                                repairConfiguration,
+                                                RepairData,
                                                 RepairTaskManager.Token),
                                         RepairTaskManager.Token);
                 return success;

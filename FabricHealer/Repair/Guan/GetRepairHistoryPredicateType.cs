@@ -46,7 +46,7 @@ namespace FabricHealer.Repair.Guan
 
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            $"GetRepairHistoryPredicate::{RepairData.RepairId}",
+                            $"GetRepairHistoryPredicate::{RepairData.RepairPolicy.RepairId}",
                             message,
                             RepairTaskManager.Token);
                 }

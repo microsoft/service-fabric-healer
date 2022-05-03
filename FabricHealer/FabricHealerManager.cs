@@ -111,7 +111,7 @@ namespace FabricHealer
         /// <returns>The singleton instance of FabricHealerManager.</returns>
         public static FabricHealerManager Instance(StatelessServiceContext context, CancellationToken token)
         {
-            return singleton ??= new FabricHealerManager(context ?? throw new ArgumentException("context can't be null"), token);
+            return singleton ??= new FabricHealerManager(context ?? throw new ArgumentException(nameof(context)), token);
         }
 
         /// <summary>
@@ -136,10 +136,10 @@ namespace FabricHealer
                 SourceId = RepairConstants.FabricHealer,
             };
             ServiceList serviceList = await fabricClient.QueryManager.GetServiceListAsync(
-                                      systemAppUri,
-                                      repairManagerServiceUri,
-                                      ConfigSettings.AsyncTimeout,
-                                      Token);
+                                              systemAppUri,
+                                              repairManagerServiceUri,
+                                              ConfigSettings.AsyncTimeout,
+                                              Token);
 
             if ((serviceList?.Count ?? 0) == 0)
             {
@@ -459,7 +459,7 @@ namespace FabricHealer
                     }
 
                     // Don't do anything if the orphaned repair was for a different node than this one:
-                    if (_instanceCount == -1 && repairExecutorData.NodeName != serviceContext.NodeContext.NodeName)
+                    if (_instanceCount == -1 && repairExecutorData.RepairData.NodeName != serviceContext.NodeContext.NodeName)
                     {
                         continue;
                     }
@@ -475,12 +475,12 @@ namespace FabricHealer
                     /* Resume interrupted Fabric Node restart repairs */
 
                     // There is no need to resume simple repairs that do not require multiple repair steps (e.g., codepackage/process/replica restarts).
-                    if (repairExecutorData.RepairPolicy.RepairAction != RepairActionType.RestartFabricNode)
+                    if (repairExecutorData.RepairData.RepairPolicy.RepairAction != RepairActionType.RestartFabricNode)
                     {
                         continue;
                     }
 
-                    string errorCode = repairExecutorData.ErrorCode;
+                    string errorCode = repairExecutorData.RepairData.Code;
                     
                     if (string.IsNullOrWhiteSpace(errorCode))
                     {
@@ -488,19 +488,22 @@ namespace FabricHealer
                     }
 
                     // File Deletion repair is a node-level (VM) repair, but is not multi-step. Ignore.
-                    if (SupportedErrorCodes.GetCodeNameFromErrorCode(errorCode).Contains("Disk"))
+                    if (SupportedErrorCodes.GetCodeNameFromErrorCode(errorCode).Contains("Disk")
+                        || repairExecutorData.RepairData.RepairPolicy.RepairAction == RepairActionType.DeleteFiles)
                     {
                         continue;
                     }
 
                     // Fabric System service warnings/errors from FO can be Node level repair targets (e.g., Fabric binary needs to be restarted).
                     // FH will restart the node hosting the troubled SF system service if specified in related logic rules.
-                    var repairRules = GetRepairRulesFromConfiguration(
-                        !string.IsNullOrWhiteSpace(repairExecutorData.SystemServiceProcessName) ? RepairConstants.SystemAppRepairPolicySectionName : RepairConstants.FabricNodeRepairPolicySectionName);
+                    var repairRules =
+                        GetRepairRulesFromConfiguration(
+                            !string.IsNullOrWhiteSpace(
+                                repairExecutorData.RepairData.SystemServiceProcessName) ? RepairConstants.SystemAppRepairPolicySectionName : RepairConstants.FabricNodeRepairPolicySectionName);
 
                     var repairData = new TelemetryData
                     {
-                        NodeName = repairExecutorData.NodeName,
+                        NodeName = repairExecutorData.RepairData.NodeName,
                         Code = errorCode,
                     };
 
@@ -836,8 +839,8 @@ namespace FabricHealer
                         {
                             var executorData = JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
-                            if (executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartFabricNode &&
-                                executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartProcess)
+                            if (executorData?.RepairData?.RepairPolicy?.RepairAction != RepairActionType.RestartFabricNode &&
+                                executorData?.RepairData?.RepairPolicy?.RepairAction != RepairActionType.RestartProcess)
                             {
                                 continue;
                             }
@@ -939,7 +942,10 @@ namespace FabricHealer
 
                 /* Start repair workflow */
 
-                repairData.RepairId = repairId;
+                repairData.RepairPolicy = new RepairPolicy
+                {
+                    RepairId = repairId
+                };
                 repairData.Property = evt.HealthInformation.Property;
                 string errOrWarn = "Error";
 
@@ -1125,8 +1131,8 @@ namespace FabricHealer
                         {
                             var executorData = JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
-                            if (executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartFabricNode &&
-                                executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartProcess)
+                            if (executorData?.RepairData?.RepairPolicy?.RepairAction != RepairActionType.RestartFabricNode &&
+                                executorData?.RepairData?.RepairPolicy?.RepairAction != RepairActionType.RestartProcess)
                             {
                                 continue;
                             }
@@ -1165,12 +1171,13 @@ namespace FabricHealer
                     {
                         var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(serviceName.OriginalString));
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                        LogLevel.Info,
-                                                        $"MonitorRepairableHealthEventsAsync::{serviceName.OriginalString}",
-                                                        $"There is already a repair in progress for Fabric system service {serviceName.OriginalString}(state: {repair.State})",
-                                                        Token,
-                                                        null,
-                                                        ConfigSettings.EnableVerboseLogging);
+                                LogLevel.Info,
+                                $"MonitorRepairableHealthEventsAsync::{serviceName.OriginalString}",
+                                $"There is already a repair in progress for Fabric system service {serviceName.OriginalString}(state: {repair.State})",
+                                Token,
+                                null,
+                                ConfigSettings.EnableVerboseLogging);
+
                         continue;
                     }
 
@@ -1225,8 +1232,10 @@ namespace FabricHealer
                 }
 
                 /* Start repair workflow */
-
-                repairData.RepairId = repairId;
+                repairData.RepairPolicy = new RepairPolicy
+                {
+                    RepairId = repairId
+                };
                 repairData.Property = evt.HealthInformation.Property;
                 string errOrWarn = "Error";
 
@@ -1356,8 +1365,11 @@ namespace FabricHealer
 
                     /* Start repair workflow */
 
-                    string Id = $"Machine_Repair_{repairData.NodeName}_Reboot";
-                    repairData.RepairId = Id;
+                    string repairId = $"Machine_Repair_{repairData.NodeName}_Reboot";
+                    repairData.RepairPolicy = new RepairPolicy
+                    {
+                        RepairId = repairId
+                    };
                     repairData.Property = evt.HealthInformation.Property;
                     string errOrWarn = "Error";
 
@@ -1368,7 +1380,7 @@ namespace FabricHealer
 
                     await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            Id,
+                            repairId,
                             $"Detected machine hosting {repairData.NodeName} is in {errOrWarn}.{Environment.NewLine}" +
                             $"Machine repair is enabled. {repairRules.Count} logic rules found for Machine repair.",
                             Token,
@@ -1402,8 +1414,11 @@ namespace FabricHealer
 
             /* Start repair workflow */
 
-            string Id = $"Disk_Repair_{repairData.Code}{repairData.NodeName}_DeleteFiles";
-            repairData.RepairId = Id;
+            string repairId = $"Disk_Repair_{repairData.Code}{repairData.NodeName}_DeleteFiles";
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = repairId
+            };
             repairData.Property = evt.HealthInformation.Property;
             string errOrWarn = "Error";
 
@@ -1414,7 +1429,7 @@ namespace FabricHealer
 
             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
-                    Id,
+                    repairId,
                     $"Detected {repairData.NodeName} is in {errOrWarn}.{Environment.NewLine}" +
                     $"Disk repair is enabled. {repairRules.Count} logic rules found for Disk repair.",
                     Token,
@@ -1457,7 +1472,10 @@ namespace FabricHealer
                 return;
             }
 
-            repairData.RepairId = repairId;
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = repairId
+            };
             repairData.Property = repairData.Property;
             string errOrWarn = "Error";
 
@@ -1591,7 +1609,10 @@ namespace FabricHealer
                 }
 
                 string repairId = $"ReplicaRepair_{repairData.PartitionId}_{repairData.ReplicaId}";
-                repairData.RepairId = repairId;
+                repairData.RepairPolicy = new RepairPolicy
+                {
+                    RepairId = repairId
+                };
 
                 // Repair already in progress?
                 var currentRepairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token);
@@ -1951,7 +1972,7 @@ namespace FabricHealer
 
                 var appName = new Uri(RepairConstants.FabricHealerAppName);
                 var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(appName);
-                var FHAppEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(RepairConstants.FabricHealer));
+                var FHAppEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains($"{RepairConstants.FabricHealer}."));
 
                 foreach (HealthEvent evt in FHAppEvents)
                 {

@@ -19,30 +19,10 @@ namespace FabricHealer.Repair.Guan
 
         private class Resolver : BooleanPredicateResolver
         {
-            private readonly RepairConfiguration repairConfiguration;
-
             public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
                     : base(input, constraint, context)
             {
-                repairConfiguration = new RepairConfiguration
-                {
-                    AppName = !string.IsNullOrWhiteSpace(RepairData.ApplicationName) ? new Uri(RepairData.ApplicationName) : null,
-                    ErrorCode = RepairData.Code,
-                    EntityType = RepairData.EntityType,
-                    NodeName = RepairData.NodeName,
-                    NodeType = RepairData.NodeType,
-                    PartitionId = RepairData.PartitionId != Guid.Empty ? RepairData.PartitionId : default,
-                    ReplicaOrInstanceId = RepairData.ReplicaId > 0 ? RepairData.ReplicaId : 0,
-                    ServiceName = !string.IsNullOrWhiteSpace(RepairData.ServiceName) ? new Uri(RepairData.ServiceName) : null,
-                    MetricValue = RepairData.Value,
-                    RepairPolicy = new RepairPolicy
-                    {
-                        RepairId = RepairData.RepairId,
-                        RepairAction = RepairActionType.RestartReplica
-                    },
-                    EventSourceId = RepairData.Source,
-                    EventProperty = RepairData.Property
-                };
+
             }
 
             protected override async Task<bool> CheckAsync()
@@ -55,11 +35,11 @@ namespace FabricHealer.Repair.Guan
                     switch (typeString)
                     {
                         case "TimeSpan":
-                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
                         case "Boolean":
-                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
                         default:
@@ -70,7 +50,7 @@ namespace FabricHealer.Repair.Guan
                 // Try to schedule repair with RM.
                 var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                                repairConfiguration,
+                                                RepairData,
                                                 RepairTaskManager.Token),
                                         RepairTaskManager.Token);
 
@@ -79,11 +59,13 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
+                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartReplica;
+
                 // Try to execute custom repair (FH executor).
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                                                 repairTask,
-                                                repairConfiguration,
+                                                RepairData,
                                                 RepairTaskManager.Token),
                                         RepairTaskManager.Token);
                 return success;
