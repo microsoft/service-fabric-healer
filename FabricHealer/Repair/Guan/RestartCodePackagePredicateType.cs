@@ -27,6 +27,7 @@ namespace FabricHealer.Repair.Guan
 
             protected override async Task<bool> CheckAsync()
             {
+                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartCodePackage;
                 int count = Input.Arguments.Count;
 
                 for (int i = 0; i < count; i++)
@@ -46,8 +47,6 @@ namespace FabricHealer.Repair.Guan
                             throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetObjectValue().GetType()}");
                     }
                 }
-
-                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartCodePackage;
 
                 // Try to schedule repair with RM.
                 var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(

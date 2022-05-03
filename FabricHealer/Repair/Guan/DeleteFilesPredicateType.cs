@@ -35,6 +35,7 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
+                RepairData.RepairPolicy.RepairAction = RepairActionType.DeleteFiles;
                 bool recurseSubDirectories = false;
                 string path = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue();
                 
@@ -56,8 +57,6 @@ namespace FabricHealer.Repair.Guan
                 {
                     throw new GuanException($"{path} does not exist.");
                 }
-
-                RepairData.RepairPolicy.RepairAction = RepairActionType.DeleteFiles;
 
                 // default as 0 means delete all files.
                 long maxFilesToDelete = 0;

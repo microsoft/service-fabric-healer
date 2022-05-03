@@ -27,6 +27,31 @@ namespace FabricHealer.Repair.Guan
 
             protected override async Task<bool> CheckAsync()
             {
+                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartVM;
+
+                // FH does not execute repairs for VM level mitigation. InfrastructureService (IS) does,
+                // so, FH schedules VM repairs via RM and the execution is taken care of by IS (the executor).
+                // Block attempts to create duplicate repair tasks.
+                var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
+                var isRepairAlreadyInProgress =
+                    await repairTaskEngine.IsFHRepairTaskRunningAsync(
+                            $"{RepairTaskEngine.InfrastructureServiceName}/{RepairData.NodeType}",
+                            RepairData,
+                            RepairTaskManager.Token);
+
+                if (isRepairAlreadyInProgress)
+                {
+                    string message = $"VM Repair {RepairData.RepairPolicy.RepairId} is already in progress. Will not attempt repair at this time.";
+
+                    await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            $"RestartVMPredicateType::{RepairData.RepairPolicy.RepairId}",
+                            message,
+                            RepairTaskManager.Token);
+
+                    return false;
+                }
+
                 int count = Input.Arguments.Count;
 
                 for (int i = 0; i < count; i++)
@@ -46,31 +71,6 @@ namespace FabricHealer.Repair.Guan
                             throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetObjectValue().GetType()}");
                     }
                 }
-
-                // FH does not execute repairs for VM level mitigation. InfrastructureService (IS) does,
-                // so, FH schedules VM repairs via RM and the execution is taken care of by IS (the executor).
-                // Block attempts to create duplicate repair tasks.
-                var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
-                var isRepairAlreadyInProgress =
-                    await repairTaskEngine.IsFHRepairTaskRunningAsync(
-                            $"{RepairTaskEngine.InfrastructureServiceName}/{RepairData.NodeType}",
-                            RepairData,
-                            RepairTaskManager.Token);
-                
-                if (isRepairAlreadyInProgress)
-                {
-                    string message = $"VM Repair {RepairData.RepairPolicy.RepairId} is already in progress. Will not attempt repair at this time.";
-
-                    await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            $"RestartVMPredicateType::{RepairData.RepairPolicy.RepairId}",
-                            message,
-                            RepairTaskManager.Token);
-
-                    return false;
-                }
-
-                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartVM;
 
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => RepairTaskManager.ExecuteRMInfrastructureRepairTask(

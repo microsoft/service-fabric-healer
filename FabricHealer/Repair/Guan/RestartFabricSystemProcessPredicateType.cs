@@ -33,6 +33,7 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
+                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartProcess;
                 int count = Input.Arguments.Count;
 
                 for (int i = 0; i < count; i++)
@@ -52,8 +53,6 @@ namespace FabricHealer.Repair.Guan
                             throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetObjectValue().GetType()}");
                     }
                 }
-
-                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartProcess;
 
                 // Try to schedule repair with RM.
                 var repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(

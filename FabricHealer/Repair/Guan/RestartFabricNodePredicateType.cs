@@ -30,6 +30,7 @@ namespace FabricHealer.Repair.Guan
 
             protected override async Task<bool> CheckAsync()
             {
+                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartFabricNode;
                 int count = Input.Arguments.Count;
 
                 for (int i = 0; i < count; i++)
@@ -52,7 +53,6 @@ namespace FabricHealer.Repair.Guan
 
                 RepairTask repairTask;
                 bool success;
-                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartFabricNode;
 
                 // This means it's a resumed repair.
                 if (RepairExecutorData != null)

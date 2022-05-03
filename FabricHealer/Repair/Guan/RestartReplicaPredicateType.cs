@@ -27,6 +27,7 @@ namespace FabricHealer.Repair.Guan
 
             protected override async Task<bool> CheckAsync()
             {
+                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartReplica;
                 int count = Input.Arguments.Count;
 
                 for (int i = 0; i < count; i++)
@@ -58,8 +59,6 @@ namespace FabricHealer.Repair.Guan
                 {
                     return false;
                 }
-
-                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartReplica;
 
                 // Try to execute custom repair (FH executor).
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
