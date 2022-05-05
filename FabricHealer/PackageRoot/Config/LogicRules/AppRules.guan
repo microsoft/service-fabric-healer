@@ -3,8 +3,8 @@
 ## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
 ## |---------------------------|----------------------------------------------------------------------------------------------|
-## | AppName                   | Name of the SF application, format is fabric:/SomeApp                                        |
-## | ServiceName               | Name of the SF service, format is fabric:/SomeApp/SomeService                                |
+## | AppName                   | Name of the SF application, format is "fabric:/SomeApp" (Quotes are required)                |
+## | ServiceName               | Name of the SF service, format is "fabric:/SomeApp/SomeService" (Quotes are required)        |
 ## | NodeName                  | Name of the node                                                                             | 
 ## | NodeType                  | Type of node                                                                                 |  
 ## | ObserverName              | Name of Observer that generated the event (if the data comes from FabricObserver service)    |

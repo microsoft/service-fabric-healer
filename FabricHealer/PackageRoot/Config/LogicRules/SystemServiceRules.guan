@@ -3,7 +3,7 @@
 ## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                                   |
 ## |---------------------------|--------------------------------------------------------------------------------------------------------------|
-## | AppName*                  | Name of the SF System Application. *This is always fabric:/System (FO monitors SF system service processes). |
+## | AppName                   | Name of the SF System Application entity. This is always "fabric:/System"                                    |
 ## | NodeName                  | Name of the node                                                                                             | 
 ## | NodeType                  | Type of node                                                                                                 |  
 ## | ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                                        | 
