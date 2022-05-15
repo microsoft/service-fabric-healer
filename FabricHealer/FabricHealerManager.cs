@@ -693,6 +693,10 @@ namespace FabricHealer
                     }
                 }
             }
+            catch (FabricException)
+            {
+                // Don't crash.
+            }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -825,10 +829,10 @@ namespace FabricHealer
                     }
 
                     // Only FabricObserver can initiate Service Fabric System service repair. FabricHealerProxy does not support this.
-                    if (repairData.ObserverName != RepairConstants.FabricSystemObserver)
+                    /*if (repairData.ObserverName != RepairConstants.FabricSystemObserver)
                     {
                         continue;
-                    }
+                    }*/
 
                     // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
                     var fhRepairTasks = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token);
@@ -1594,6 +1598,8 @@ namespace FabricHealer
                 var repairData = new TelemetryData
                 {
                     ApplicationName = appName,
+                    EntityType = EntityType.Replica,
+                    HealthState = healthEvent.AggregatedHealthState,
                     NodeName = nodeName,
                     ReplicaId = eval.ReplicaOrInstanceId,
                     PartitionId = eval.PartitionId,
@@ -1608,7 +1614,7 @@ namespace FabricHealer
                     errOrWarn = "Warning";
                 }
 
-                string repairId = $"ReplicaRepair_{repairData.PartitionId}_{repairData.ReplicaId}";
+                string repairId = $"{nodeName}_{service.ServiceName.OriginalString.Remove(0, appName.Length + 1)}_{repairData.PartitionId}";
                 repairData.RepairPolicy = new RepairPolicy
                 {
                     RepairId = repairId
@@ -1625,15 +1631,15 @@ namespace FabricHealer
                 /* Start repair workflow */
 
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                             LogLevel.Info,
-                                             $"MonitorRepairableHealthEventsAsync:Replica_{eval.ReplicaOrInstanceId}_{errOrWarn}",
-                                             $"Detected Replica {eval.ReplicaOrInstanceId} on Partition " +
-                                             $"{eval.PartitionId} is in {errOrWarn}.{Environment.NewLine}" +
-                                             $"Replica repair policy is enabled. " +
-                                             $"{repairRules.Count} Logic rules found for Replica repair.",
-                                             Token,
-                                             null,
-                                             ConfigSettings.EnableVerboseLogging);
+                        LogLevel.Info,
+                        $"MonitorRepairableHealthEventsAsync:Replica_{eval.ReplicaOrInstanceId}_{errOrWarn}",
+                        $"Detected Replica {eval.ReplicaOrInstanceId} on Partition " +
+                        $"{eval.PartitionId} is in {errOrWarn}.{Environment.NewLine}" +
+                        $"Replica repair policy is enabled. " +
+                        $"{repairRules.Count} Logic rules found for Replica repair.",
+                        Token,
+                        null,
+                        ConfigSettings.EnableVerboseLogging);
 
                 // Start the repair workflow.
                 await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);

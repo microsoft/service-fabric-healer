@@ -605,7 +605,7 @@ namespace FabricHealer.Repair
                 // FO provided the offending process id in TelemetryData instance. Chances are good it will still be running.
                 // If the process with this id is no longer running, then we can assume it makes no sense to try to restart it:
                 // Just let the ArgumentException bubble out to the catch.
-                if (repairData.ProcessId > -1)
+                if (repairData.ProcessId > 0)
                 {
                     p = Process.GetProcessById((int)repairData.ProcessId);  
                 }
@@ -624,13 +624,24 @@ namespace FabricHealer.Repair
 
                     if (ps == null || ps.Length == 0)
                     {
+                        string err =
+                          $"Exception in RestartSystemServiceProcessAsync: Unable to restart process {repairData.SystemServiceProcessName}. ps is null or empty";
+
+                        await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Warning,
+                                "RepairExecutor.RestartSystemServiceProcessAsync",
+                                err,
+                                cancellationToken,
+                                repairData,
+                                FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
                         return false;
                     }
 
                     p = ps[0];
                 }
 
-                p?.Kill(true);
+                p?.Kill();
                 UpdateRepairHistory(repairData);
 
                 // Clear Warning from FO. If in fact the issue has not been solved, then FO will generate a new health report for the target and the game will be played again.
@@ -639,7 +650,19 @@ namespace FabricHealer.Repair
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException  || e is NotSupportedException || e is Win32Exception)
             {
                 FabricHealerManager.RepairHistory.FailedRepairs++;
-                FabricHealerManager.RepairLogger.LogWarning(e.ToString());
+                string err =
+                   $"Exception in RestartSystemServiceProcessAsync: Unable to restart process {repairData.SystemServiceProcessName} " +
+                   $"on node {repairData.NodeName}.{Environment.NewLine}" +
+                   $"Exception Info:{Environment.NewLine}{e}";
+
+                await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Warning,
+                        "RepairExecutor.RestartSystemServiceProcessAsync",
+                        err,
+                        cancellationToken,
+                        repairData,
+                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
                 return false;
             }
             catch (Exception e)

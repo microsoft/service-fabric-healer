@@ -611,6 +611,7 @@ namespace FabricHealer.Repair
 
             bool success;
             var repairAction = repairData.RepairPolicy.RepairAction;
+
             try
             {
                 switch (repairAction)

@@ -139,11 +139,11 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            string message = "Azure Tenant Update in progress. Will not attempt repairs at this time.";
+            string message = "Azure Platform or Tenant Update in progress. Will not attempt repairs at this time.";
 
             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
-                    "AzureTenantUpdateInProgress",
+                    "AzurePlatformOrTenantUpdateInProgress",
                     message,
                     token);
 

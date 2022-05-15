@@ -208,7 +208,9 @@ namespace FabricHealerProxy
             {
                 repairData.EntityType = EntityType.Service;
             }
-            else if (!string.IsNullOrEmpty(repairData.NodeName) && (repairData.EntityType == EntityType.Application || repairData.EntityType == EntityType.Machine))
+            else if (!string.IsNullOrEmpty(repairData.NodeName) &&
+                     ((string.IsNullOrWhiteSpace(repairData.ApplicationName) && repairData.EntityType == EntityType.Application) || 
+                       repairData.EntityType == EntityType.Machine))
             {
                 repairData.EntityType = repairData.EntityType == EntityType.Machine ? EntityType.Machine : EntityType.Node;
 
@@ -267,7 +269,7 @@ namespace FabricHealerProxy
                             }
                         }
 
-                        if (repairData.PartitionId == null || repairData.ReplicaId == 0)
+                        if (repairData.ApplicationName != "fabric:/System" && (repairData.PartitionId == null || repairData.ReplicaId == 0))
                         {
                             var depReplicas = await fabricClient.QueryManager.GetDeployedReplicaListAsync(repairData.NodeName, appName);
                             var depReplica =
@@ -298,12 +300,20 @@ namespace FabricHealerProxy
 
                         if (string.IsNullOrWhiteSpace(repairData.Description))
                         {
-                            repairData.Description = $"{repairData.Source} has put {repairData.ServiceName} into {repairData.HealthState}.";
+                            repairData.Description = $"{repairData.Source} has put " +
+                                $"{(!string.IsNullOrWhiteSpace(repairData.ServiceName) ? repairData.ServiceName : repairData.ApplicationName)} into {repairData.HealthState}.";
                         }
 
                         if (string.IsNullOrWhiteSpace(repairData.Property))
                         {
-                            repairData.Property = $"{repairData.NodeName}_{repairData.ServiceName.Remove(0, repairData.ApplicationName.Length + 1)}_{repairData.Metric ?? "FHRepair"}";
+                            if (repairData.ServiceName != null)
+                            {
+                                repairData.Property = $"{repairData.NodeName}_{repairData.ServiceName.Remove(0, repairData.ApplicationName.Length + 1)}_{repairData.Metric ?? "FHRepair"}";
+                            }
+                            else
+                            {
+                                repairData.Property = $"{repairData.NodeName}_{repairData.ApplicationName.Replace("fabric:/", "")}_{repairData.Metric ?? "FHRepair"}";
+                            }
                         }
                         break;
 
