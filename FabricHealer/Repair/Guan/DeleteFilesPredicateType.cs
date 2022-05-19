@@ -115,7 +115,7 @@ namespace FabricHealer.Repair.Guan
                                           () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
                                                   RepairData,
                                                   RepairTaskManager.Token),
-                                          RepairTaskManager.Token);
+                                           RepairTaskManager.Token);
 
                 if (repairTask == null)
                 {
@@ -128,7 +128,7 @@ namespace FabricHealer.Repair.Guan
                                                 repairTask,
                                                 RepairData,
                                                 RepairTaskManager.Token),
-                                        RepairTaskManager.Token);
+                                         RepairTaskManager.Token);
                 return success;
             }
         }

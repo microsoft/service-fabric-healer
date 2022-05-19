@@ -414,18 +414,18 @@ namespace FabricHealerProxy
 
                 case EntityType.StatefulService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
 
-                    var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
+                    var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport((Guid)repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
                     fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
                     break;
 
                 case EntityType.StatelessService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
 
-                    var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
+                    var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport((Guid)repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
                     fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
                     break;
 
                 case EntityType.Partition when repairFacts.PartitionId != Guid.Empty:
-                    var partitionHealthReport = new PartitionHealthReport(repairFacts.PartitionId, healthInformation);
+                    var partitionHealthReport = new PartitionHealthReport((Guid)repairFacts.PartitionId, healthInformation);
                     fabricClient.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                     break;
 
@@ -602,18 +602,18 @@ namespace FabricHealerProxy
 
                         case EntityType.StatefulService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
 
-                            var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
+                            var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport((Guid)repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
                             fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
                             break;
 
                         case EntityType.StatelessService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
 
-                            var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
+                            var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport((Guid)repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
                             fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
                             break;
 
                         case EntityType.Partition when repairFacts.PartitionId != Guid.Empty:
-                            var partitionHealthReport = new PartitionHealthReport(repairFacts.PartitionId, healthInformation);
+                            var partitionHealthReport = new PartitionHealthReport((Guid)repairFacts.PartitionId, healthInformation);
                             fabricClient.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                             break;
 

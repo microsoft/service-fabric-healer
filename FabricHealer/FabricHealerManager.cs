@@ -1088,6 +1088,12 @@ namespace FabricHealer
                     continue;
                 }
 
+                // PartitionId is Guid? in ITelemetryData.
+                if (repairData.PartitionId == null)
+                {
+                    continue;
+                }
+
                 if (string.IsNullOrWhiteSpace(repairData.ApplicationName))
                 {
                     repairData.ApplicationName = appName.OriginalString;

@@ -71,7 +71,7 @@ namespace FabricHealerProxy
             get { return _os; }
         }
         /// <inheritdoc/>
-        public Guid PartitionId
+        public Guid? PartitionId
         {
             get; set;
         }

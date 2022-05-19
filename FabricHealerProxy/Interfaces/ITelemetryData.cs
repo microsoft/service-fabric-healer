@@ -52,7 +52,7 @@ namespace FabricHealerProxy.Interfaces
         /// <summary>
         /// Required if the repair target is a Service. The Partition Id (as a string) where the replica or instance resides that is in Error or Warning state.
         /// </summary>
-        Guid PartitionId { get; set; }
+        Guid? PartitionId { get; set; }
         /// <summary>
         /// Optional. The host process id of the Service entity.
         /// </summary>

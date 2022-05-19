@@ -45,10 +45,10 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 bool insideRunInterval = await FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
-                                                             interval,
-                                                             RepairTaskManager.FabricClientInstance,
-                                                             RepairData,
-                                                             RepairTaskManager.Token);
+                                                interval,
+                                                RepairTaskManager.FabricClientInstance,
+                                                RepairData,
+                                                RepairTaskManager.Token);
                 
                 if (!insideRunInterval)
                 {
