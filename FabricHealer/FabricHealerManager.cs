@@ -1555,12 +1555,13 @@ namespace FabricHealer
                     continue;
                 }
 
-                if (!healthEvent.UnhealthyEvent.HealthInformation.Property.Contains("IStatefulServiceReplica.ChangeRole(N)Duration"))
+                if (!healthEvent.UnhealthyEvent.HealthInformation.Property.Contains("IStatefulServiceReplica.ChangeRole") ||
+                    !healthEvent.UnhealthyEvent.HealthInformation.Property.Contains("IReplicator.BuildReplica"))
                 {
                     continue;
                 }
 
-                if (!healthEvent.UnhealthyEvent.HealthInformation.Description.Contains("stuck"))
+                if (!healthEvent.UnhealthyEvent.HealthInformation.Description.Contains("is stuck"))
                 {
                     continue;
                 }
