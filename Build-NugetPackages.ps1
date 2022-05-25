@@ -37,11 +37,11 @@ try {
 
     Install-Nuget
 
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.SelfContained" "$scriptPath\bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType"
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.FrameworkDependent" "$scriptPath\bin\release\FabricHealer\linux-x64\framework-dependent\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.SelfContained_SF9x" "$scriptPath\bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.FrameworkDependent_SF9x" "$scriptPath\bin\release\FabricHealer\linux-x64\framework-dependent\FabricHealerType"
 
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" "$scriptPath\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent" "$scriptPath\bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained_SF9x" "$scriptPath\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent_SF9x" "$scriptPath\bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType"
 }
 finally {
     Pop-Location
