@@ -16,10 +16,10 @@
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>
     <dependencies>
-		<group targetFramework=".NETStandard2.0">
+		<group targetFramework="netstandard2.0">
 			<dependency id="Newtonsoft.Json" version="13.0.1" />
-			<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
 			<dependency id="Polly" version="7.2.3" />
+		    <dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
 		</group>
     </dependencies>
     <projectUrl>https://github.com/microsoft/FabricHealerProxy</projectUrl>

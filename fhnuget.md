@@ -1,20 +1,25 @@
 ## FabricHealer
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
 
-FabricHealer is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls, but can also be fully customizable (like Disk repair). All repairs are safely orchestrated through the Service Fabric RepairManager system service. Repair workflow configuration is written as [Prolog](http://www.let.rug.nl/bos/lpn//lpnpage.php?pageid=online)-like [logic](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/PackageRoot/Config/LogicRules) with [supporting external predicates](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/Repair/Guan) written in C#. 
+### (Requires net6.0+ and SF Runtime 9.0+)
 
-FabricHealer's Configuration-as-Logic feature is made possible by a new logic programming library for .NET, [Guan](https://github.com/microsoft/guan). The fun starts when FabricHealer detects supported error or warning health events reported by [FabricObserver](https://github.com/microsoft/service-fabric-observer).
+FabricHealer (FH) is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
+applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls,
+but can also be fully customizable (like Disk repair). All repairs are safely orchestrated through the Service Fabric RepairManager system service.
+Repair workflow configuration is written as [Prolog](http://www.let.rug.nl/bos/lpn//lpnpage.php?pageid=online)-like [logic](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/PackageRoot/Config/LogicRules) with [supporting external predicates](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/Repair/Guan) written in C#. 
 
-FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster. It is a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04).  
+FabricHealer's Configuration-as-Logic feature is made possible by a new logic programming library for .NET, [Guan](https://github.com/microsoft/guan).
+The fun starts when FabricHealer detects supported error or warning health events reported by [FabricObserver](https://github.com/microsoft/service-fabric-observer), for example.
+You can use FabricHealer if you don't also deploy FabricObserver. Just install FabricHealerProxy into your .NET Service Fabric project and you can leverage the power of FH from there.
+There is a very simple "interface" to FabricHealer that begins with some service generating a Service Fabric Health Report. This health report must contain a specially-crafted
+Description value: a serialized instance of a well-known (to FH) type (must implement ITelemetryData). As mentioned above, just use FabricHealerProxy to push FH into motion from your
+Service Fabric service.
 
-All warning and error health reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) and subsequently repaired by FabricHealer are user-configured - developer control extends from unhealthy event source to related healing operations. 
-
-FabricObserver and FabricHealer are part of a family of highly configurable Service Fabric observability tools that work together to keep your clusters green.
-
-To learn more about FabricHealer's configuration-as-logic model, [click here.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/LogicWorkflows.md)  
+FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster.
+It is a net 6 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04).  
 
 ```
-FabricHealer requires that FabricObserver and RepairManager (RM) service are deployed. 
+FabricHealer requires that  RepairManager (RM) service is deployed. 
 ```
 ```
 For VM level repair, InfrastructureService (IS) service must be deployed.
