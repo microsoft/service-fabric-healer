@@ -1051,7 +1051,10 @@ namespace FabricHealer.Repair
                         fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
                         break;
 
+                    case EntityType.Disk when !string.IsNullOrWhiteSpace(repairData.NodeName):
+                    case EntityType.Machine when !string.IsNullOrWhiteSpace(repairData.NodeName):
                     case EntityType.Node when !string.IsNullOrWhiteSpace(repairData.NodeName):
+                   
                         var nodeHealthReport = new NodeHealthReport(repairData.NodeName, healthInformation);
                         fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                         break;
