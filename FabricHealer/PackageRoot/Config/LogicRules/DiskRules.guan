@@ -1,6 +1,6 @@
 ﻿## Logic rules for Disk repair. Only file management is supported (file deletion).
 
-## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
+## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver or FHProxy, renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
 ## |---------------------------|----------------------------------------------------------------------------------------------|
 ## | NodeName                  | Name of the node                                                                             | 
@@ -57,14 +57,14 @@ Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHi
 	CheckFolderSize(?X, MaxFolderSizeGB=?Y),
 	DeleteFiles(?X, SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true).
 
-## Single rule for one directory with all optional args supplied, including a search pattern for target file name matching. 
+## Single rule for one directory with all optional args supplied, including a search pattern for target file name matching ("SFBDMiniport_traces*"). 
 ## Please note: when specifying search pattern string, you must enclose it in quotes since the special characters used can also be interpreted as mathematical operators (like / or *) by Guan
 ## if they are not quoted strings. This is true for Guan across the board. Keep this in mind when you pass arguments in rules that contain special characters
 ## that are also mathematical operators (*,+,/,-,%, etc...).
 Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, 08:00:00),
 	?repairCount < 4,
-	CheckFolderSize("E:\SvcFab\Log\QueryTraces", MaxFolderSizeGB=20),
-	DeleteFiles("E:\SvcFab\Log\QueryTraces", SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true, SearchPattern="SFBDMiniport_traces*").
+	CheckFolderSize("E:\SvcFab\Log\Traces", MaxFolderSizeGB=20),
+	DeleteFiles("E:\SvcFab\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true, SearchPattern="SFBDMiniport_traces*").
 
 ## Folder size Warning, check ErrorCode from FO (you could also check MetricName -> MetricName=FolderSizeMB, but we already do that in several places). 
 ## See FOErrorWarningCodes.cs for list of codes and renaming function (GetMetricNameFromCode).
