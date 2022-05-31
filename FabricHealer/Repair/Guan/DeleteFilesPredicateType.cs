@@ -104,11 +104,17 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 // DiskRepairPolicy
-                (RepairData.RepairPolicy as DiskRepairPolicy).FolderPath = path;
-                (RepairData.RepairPolicy as DiskRepairPolicy).MaxNumberOfFilesToDelete = maxFilesToDelete;
-                (RepairData.RepairPolicy as DiskRepairPolicy).FileAgeSortOrder = direction;
-                (RepairData.RepairPolicy as DiskRepairPolicy).RecurseSubdirectories = recurseSubDirectories;
-                (RepairData.RepairPolicy as DiskRepairPolicy).FileSearchPattern = !string.IsNullOrWhiteSpace(searchPattern) ? searchPattern : "*";
+                var diskRepairPolicy = new DiskRepairPolicy
+                {
+                    FolderPath = path,
+                    MaxNumberOfFilesToDelete = maxFilesToDelete,
+                    FileAgeSortOrder = direction,
+                    RecurseSubdirectories = recurseSubDirectories,
+                    FileSearchPattern = !string.IsNullOrWhiteSpace(searchPattern) ? searchPattern : "*"
+                };
+
+                RepairData.RepairPolicy = diskRepairPolicy;
+                RepairData.RepairPolicy.RepairAction = RepairActionType.DeleteFiles;
 
                 // Try to schedule repair with RM.
                 var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(

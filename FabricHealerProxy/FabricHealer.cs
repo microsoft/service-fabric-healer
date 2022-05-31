@@ -330,6 +330,19 @@ namespace FabricHealerProxy
                             repairData.Property = $"{repairData.NodeName}_{repairData.Metric ?? repairData.NodeType}_FHRepair_{(repairData.EntityType == EntityType.Node ? "FabricNode" : "Machine")}";
                         }
                         break;
+
+                    case EntityType.Disk:
+
+                        if (string.IsNullOrWhiteSpace(repairData.Description))
+                        {
+                            repairData.Description = $"{repairData.Source} has put {repairData.NodeName} into {repairData.HealthState}.";
+                        }
+
+                        if (string.IsNullOrWhiteSpace(repairData.Property))
+                        {
+                            repairData.Property = $"{repairData.NodeName}_FHRepair_Disk";
+                        }
+                        break;
                 }
 
                 if (repairDataLifetime == default)
@@ -435,6 +448,7 @@ namespace FabricHealerProxy
                     fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
                     break;
 
+                case EntityType.Disk:
                 case EntityType.Machine:
                 case EntityType.Node:
                     var nodeHealthReport = new NodeHealthReport(repairFacts.NodeName, healthInformation);
