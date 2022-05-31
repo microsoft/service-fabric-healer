@@ -902,7 +902,7 @@ namespace FabricHealer.Repair
                     case EntityType.Disk:
                         maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
                             ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                            : TimeSpan.FromMinutes(1);
+                            : TimeSpan.FromSeconds(5);
                         break;
 
                     case EntityType.Machine:
