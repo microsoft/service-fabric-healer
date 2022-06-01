@@ -16,13 +16,6 @@ namespace FabricHealer.Utilities.Telemetry
     {
         public static readonly ServiceEventSource Current = new ServiceEventSource();
 
-        static ServiceEventSource()
-        {
-            // A workaround for the problem where ETW activities do not get tracked until Tasks infrastructure is initialized.
-            // This problem is fixed in .NET Framework 4.6.2. If you are running this version or greater, then delete the below code.
-            _ = Task.Run(() => { });
-        }
-
         // Instance constructor is private to enforce singleton semantics.
         // FabricObserver ETW provider name is passed to base.ctor here instead of decorating this class.
         private ServiceEventSource() : base(RepairConstants.EventSourceProviderName)

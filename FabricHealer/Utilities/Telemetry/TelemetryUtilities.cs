@@ -84,19 +84,16 @@ namespace FabricHealer.Utilities.Telemetry
                 _ => HealthState.Ok
             };
 
-            // Do not write ETW/send Telemetry if the data is informational-only and verbose logging is not enabled.
+            // Do not write ETW/send Telemetry/create health report if the data is informational-only and verbose logging is not enabled.
             // This means only Warning and Error messages will be transmitted. In general, however, it is best to enable Verbose Logging (default)
-            // in FabricHealer as it will not generate noisy local logs and you will have a complete record of mitigation steps in your AI or LA workspace.
+            // in FabricHealer as it will not generate noisy local logs and you will have a complete record of mitigation history in your AI or LA workspace.
             if (!verboseLogging && level == LogLevel.Info)
             {
                 return;
             }
 
-            // Local Logging
-            logger.LogInfo(description);
-
             // Service Fabric health report generation.
-            var healthReporter = new FabricHealthReporter(fabricClient);
+            var healthReporter = new FabricHealthReporter(fabricClient, logger);
             var healthReport = new HealthReport
             {
                 AppName = reportType == EntityType.Application ? new Uri("fabric:/FabricHealer") : null,
@@ -108,52 +105,61 @@ namespace FabricHealer.Utilities.Telemetry
                 HealthReportTimeToLive = ttl == default ? TimeSpan.FromMinutes(5) : ttl,
                 Property = property,
                 SourceId = source,
+                EmitLogEvent = true
             };
 
             healthReporter.ReportHealthToServiceFabric(healthReport);
 
+            if (!FabricHealerManager.ConfigSettings.EtwEnabled && !FabricHealerManager.ConfigSettings.TelemetryEnabled)
+            {
+                return;
+            }
+
+            var telemData = new TelemetryData()
+            {
+                ApplicationName = repairData?.ApplicationName,
+                ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                Code = repairData?.Code,
+                ContainerId = repairData?.ContainerId,
+                Description = description,
+                EntityType = reportType,
+                HealthState = healthState,
+                Metric = repairAction,
+                NodeName = repairData?.NodeName,
+                NodeType = repairData?.NodeType,
+                ObserverName = repairData?.ObserverName,
+                PartitionId = repairData?.PartitionId,
+                ProcessId = repairData != null ? repairData.ProcessId : -1,
+                Property = property,
+                ReplicaId = repairData != null ? repairData.ReplicaId : 0,
+                RepairPolicy = repairData?.RepairPolicy ?? new RepairPolicy(),
+                ServiceName = repairData?.ServiceName,
+                Source = source,
+                SystemServiceProcessName = repairData?.SystemServiceProcessName,
+                Value = repairData != null ? repairData.Value : -1,
+            };
+
             // Telemetry.
             if (FabricHealerManager.ConfigSettings.TelemetryEnabled)
             {
-                var telemData = new TelemetryData()
-                {
-                    ApplicationName = repairData?.ApplicationName ?? string.Empty,
-                    ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
-                    Description = description,
-                    HealthState = healthState,
-                    Metric = repairAction,
-                    NodeName = repairData?.NodeName ?? string.Empty,
-                    PartitionId = repairData?.PartitionId != null ? repairData.PartitionId : default,
-                    ReplicaId = repairData != null ? repairData.ReplicaId : 0,
-                    ServiceName = repairData?.ServiceName ?? string.Empty,
-                    Source = source,
-                    SystemServiceProcessName = repairData?.SystemServiceProcessName ?? string.Empty,
-                };
-
                 await telemetryClient?.ReportMetricAsync(telemData, token);
             }
 
             // ETW.
             if (FabricHealerManager.ConfigSettings.EtwEnabled)
             {
-                ServiceEventSource.Current.Write(
-                    RepairConstants.EventSourceEventName,
-                    new
-                    {
-                        ApplicationName = repairData?.ApplicationName ?? string.Empty,
-                        ClusterInformation.ClusterInfoTuple.ClusterId,
-                        Description = description,
-                        HealthState = Enum.GetName(typeof(HealthState), healthState),
-                        Metric = repairAction,
-                        PartitionId = repairData?.PartitionId.ToString() ?? string.Empty,
-                        ReplicaId = repairData?.ReplicaId.ToString() ?? string.Empty,
-                        Level = level,
-                        NodeName = repairData?.NodeName ?? string.Empty,
-                        OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
-                        ServiceName = repairData?.ServiceName ?? string.Empty,
-                        Source = source,
-                        SystemServiceProcessName = repairData?.SystemServiceProcessName ?? string.Empty,
-                    });
+                if (healthState == HealthState.Ok || healthState == HealthState.Unknown || healthState == HealthState.Invalid)
+                {
+                    ServiceEventSource.Current.DataTypeWriteInfo(RepairConstants.EventSourceEventName, telemData);
+                }
+                else if (healthState == HealthState.Warning)
+                {
+                    ServiceEventSource.Current.DataTypeWriteWarning(RepairConstants.EventSourceEventName, telemData);
+                }
+                else
+                {
+                    ServiceEventSource.Current.DataTypeWriteError(RepairConstants.EventSourceEventName, telemData);
+                }
             }
         }
     }

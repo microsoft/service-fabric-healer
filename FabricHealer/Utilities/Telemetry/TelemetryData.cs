@@ -9,9 +9,12 @@ using FabricHealer.Interfaces;
 using System.Fabric.Health;
 using System;
 using FabricHealer.Repair;
+using System.Diagnostics.Tracing;
 
 namespace FabricHealer.Utilities.Telemetry
 {
+    [EventData]
+    [Serializable]
     public class TelemetryData : ITelemetryData
     {
         private readonly string _os;
@@ -41,11 +44,13 @@ namespace FabricHealer.Utilities.Telemetry
             get; set;
         }
 
+        [EventField]
         public EntityType EntityType
         {
             get; set;
         }
 
+        [EventField]
         public HealthState HealthState
         {
             get; set;
@@ -68,12 +73,13 @@ namespace FabricHealer.Utilities.Telemetry
         {
             get; set;
         }
- 
+
         public string OS
         {
             get { return _os; }
         }
        
+        [EventField]
         public Guid? PartitionId
         {
             get; set;
@@ -119,6 +125,7 @@ namespace FabricHealer.Utilities.Telemetry
             get; set;
         }
 
+        [EventField]
         public RepairPolicy RepairPolicy
         {
             get; set;

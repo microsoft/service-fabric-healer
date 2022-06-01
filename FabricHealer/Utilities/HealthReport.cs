@@ -31,7 +31,10 @@ namespace FabricHealer.Utilities
             get; set;
         }
 
-        public bool EmitLogEvent { get; set; } = true;
+        public bool EmitLogEvent
+        {
+            get; set;
+        }
 
         public EntityType EntityType
         {

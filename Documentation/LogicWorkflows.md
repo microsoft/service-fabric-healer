@@ -23,16 +23,16 @@ Mitigate(AppName="fabric:/App1", MetricName="MemoryPercent") :- RestartCodePacka
 
 Don't be alarmed if you don't understand how to read that repair action! We will go more in-depth later about the syntax and semantics of Guan. The takeaway is that expressing a Guan repair workflow doesn't require a deep knowledge of Prolog programming to get started. Hopefully this also gives you a general idea about the kinds of repair workflows we can express with GuanLogic.
 
-Each repair policy has its own corresponding configuration file: 
+Each repair policy has its own corresponding configuration file located in the FabricHealer project's PackageRoot/Config/LogicRules folder: 
 
 | Repair Policy             | Configuration File Name      | 
 |---------------------------|------------------------------| 
-| AppRepairPolicy           | AppRules.config.txt          | 
-| DiskRepairPolicy          | DiskRules.config.txt         | 
-| FabricNodeRepairPolicy    | FabricNodeRules.config.txt   | 
-| ReplicaRepairPolicy       | ReplicaRules.config.txt      | 
-| SystemAppRepairPolicy     | SystemAppRules.config.txt    | 
-| VMRepairPolicy            | VmRules.config.txt           | 
+| AppRepairPolicy           | AppRules.guan                | 
+| DiskRepairPolicy          | DiskRules.guan               | 
+| FabricNodeRepairPolicy    | FabricNodeRules.guan         |  
+| MachineRepairPolicy       | MachineRules.guan            | 
+| ReplicaRepairPolicy       | ReplicaRules.guan            | 
+| SystemServiceRepairPolicy | SystemServiceRules.guan      | 
 
 
 Now let's look at *how* to actually define a Guan logic repair workflow, so that you will have the knowledge necessary to express your own.
@@ -113,17 +113,18 @@ By default, for logic-based repair workflows, FH will execute a query which call
 
 | Argument Name             | Definition                                                                                   |
 |---------------------------|----------------------------------------------------------------------------------------------|
-| AppName                   | Name of the SF application, format is fabric:/SomeApp                                        |
-| ServiceName               | Name of the SF service, format is fabric:/SomeApp/SomeService                                |
+| AppName                   | Name of the SF application, format is "fabric:/SomeApp" (Quotes are required)                |
+| ServiceName               | Name of the SF service, format is "fabric:/SomeApp/SomeService" (Quotes are required)        |
 | NodeName                  | Name of the node                                                                             | 
 | NodeType                  | Type of node                                                                                 |  
+| ObserverName              | Name of Observer that generated the event (if the data comes from FabricObserver service)    |
 | PartitionId               | Id of the partition                                                                          |
 | ReplicaOrInstanceId       | Id of the replica or instance                                                                |
-| FOErrorCode               | Error Code emitted by FO (e.g. "FO002")                                                      | 
-| MetricName                | Name of the resource supplied by FO (e.g., CpuPercent or MemoryMB, etc.)                     |   
-| MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)               | 
-| SystemServiceProcessName  | The name of a Fabric system service process supplied in FO health data                       | 
-| OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                   |
+| ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                        | 
+| MetricName                | Name of the metric (e.g., CpuPercent or MemoryMB, etc.)                                      |   
+| MetricValue               | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)                              | 
+| OS                        | The name of the OS from which the data was collected (Linux or Windows)                      |
+| HealthState               | The HealthState of the target entity: Error or Warning                                       |
 
 For example if you wanted to use AppName and ServiceName in your repair workflow you would specify them like so:
 ```

@@ -1,5 +1,6 @@
-## FabricHealer
+## FabricHealer 1.1.0
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
+### Important: Requires Service Fabric version 8.x and higher
 
 ### (Requires net6.0+ and SF Runtime 9.0+)
 
@@ -25,6 +26,12 @@ FabricHealer requires that  RepairManager (RM) service is deployed.
 For VM level repair, InfrastructureService (IS) service must be deployed.
 ```
 
+## Build and run  
+
+1. Clone the repo.
+2. Install [.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
+3. Build. 
+
 ***Note: FabricHealer must be run under the LocalSystem account (see ApplicationManifest.xml) in order to function correctly. This means on Windows, by default, it will run as System user. On Linux, by default, it will run as root user. You do not have to make any changes to ApplicationManifest.xml for this to be the case.*** 
 
 ## Using FabricHealer  
@@ -34,7 +41,7 @@ FabricHealer is a service specifically designed to auto-mitigate Service Fabric 
 the result of bugs in user code.
 ```  
 
-Let's say you have a service that leaks memory or ephemeral ports. You would use FabricHealer to keep the problem in check while your developers figure out the root cause and fix the bug(s) that lead to resource usage over-consumption. FabricHealer is really just a temporary solution to problems, not a fix. This is how you should think about auto-mitigation, generally. FabricHealer aims to keep your cluster green while you fix your bugs. With it's configuration-as-logic support, you can easily specify that some repair for some service should only be attempted for n weeks or months, while your dev team fixes the underlying issues with the problematic service. FabricHealer should be thought of as a "disappearing task force" in that it can provide stability during times of instability, then "go away" when bugs are fixed. 
+Let's say you have a service that is using too much memory or too many ephemeral ports, as defined in both FabricObserver (which generates the Warning(s)) and in your related logic rule (this is optional since you can decide that if FabricObserver warns, then FabricHealer should mitigate without testing the related metric value that led to the Warning by FabricObserver, which, of course, you configured. It's up to you.). You would use FabricHealer to keep the problem in check while your developers figure out the root cause and fix the bug(s) that lead to resource usage over-consumption. FabricHealer is really just a temporary solution to problems, not a fix. This is how you should think about auto-mitigation, generally. FabricHealer aims to keep your cluster green while you fix your bugs. With it's configuration-as-logic support, you can easily specify that some repair for some service should only be attempted for n weeks or months, while your dev team fixes the underlying issues with the problematic service. FabricHealer should be thought of as a "disappearing task force" in that it can provide stability during times of instability, then "go away" when bugs are fixed. 
 
 FabricHealer comes with a number of already-implemented/tested target-specific logic rules. You will only need to modify existing rules to get going quickly. FabricHealer is a rule-based repair service and the rules are defined in logic. These rules also form FabricHealer's repair workflow configuration. This is what is meant by Configuration-as-Logic. The only use of XML-based configuration with respect to repair workflow is enabling automitigation (big on/off switch), enabling repair policies, and specifying rule file names. The rest is just the typical Service Fabric application configuration that you know and love. Most of the settings in Settings.xml are overridable parameters and you set the values in ApplicationManifest.xml. This enables versionless parameter-only application upgrades, which means you can change Settings.xml-based settings without redeploying FabricHealer. 
 
@@ -60,4 +67,5 @@ Mitigate(AppName="fabric:/ILikeMemory", MetricName="MemoryPercent", MetricValue=
 
 ## Quickstart
 
-To quickly learn how to use FabricHealer, please see the [simple scenario-based examples.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/Using.md)
+
+To quickly learn how to use FabricHealer, please see the [simple scenario-based examples.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/Using.md) 
