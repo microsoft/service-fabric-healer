@@ -51,11 +51,6 @@ namespace FabricHealer
             private set;
         }
 
-        private bool FabricHealerOperationalTelemetryEnabled
-        {
-            get; set;
-        }
-
         // CancellationToken from FabricHealer.RunAsync.
         private CancellationToken Token
         {
@@ -98,7 +93,7 @@ namespace FabricHealer
             };
 
             RepairHistory = new RepairData();
-            healthReporter = new FabricHealthReporter(fabricClient);
+            healthReporter = new FabricHealthReporter(fabricClient, RepairLogger);
             sfRuntimeVersion = GetServiceFabricRuntimeVersion();
         }
 
@@ -395,13 +390,13 @@ namespace FabricHealer
 
         private FabricHealerOperationalEventData GetFabricHealerInternalTelemetryData()
         {
-            FabricHealerOperationalEventData telemetryData = null;
+            FabricHealerOperationalEventData opsTelemData = null;
 
             try
             {
                 RepairHistory.EnabledRepairCount = GetEnabledRepairRuleCount();
 
-                telemetryData = new FabricHealerOperationalEventData
+                opsTelemData = new FabricHealerOperationalEventData
                 {
                     UpTime = DateTime.UtcNow.Subtract(StartDateTime).ToString(),
                     Version = InternalVersionNumber,
@@ -414,7 +409,7 @@ namespace FabricHealer
 
             }
 
-            return telemetryData;
+            return opsTelemData;
         }
 
         /// <summary>
@@ -499,7 +494,7 @@ namespace FabricHealer
                     var repairRules =
                         GetRepairRulesFromConfiguration(
                             !string.IsNullOrWhiteSpace(
-                                repairExecutorData.RepairData.SystemServiceProcessName) ? RepairConstants.SystemAppRepairPolicySectionName : RepairConstants.FabricNodeRepairPolicySectionName);
+                                repairExecutorData.RepairData.SystemServiceProcessName) ? RepairConstants.SystemServiceRepairPolicySectionName : RepairConstants.FabricNodeRepairPolicySectionName);
 
                     var repairData = new TelemetryData
                     {
@@ -565,7 +560,7 @@ namespace FabricHealer
                         string telemetryDescription = $"Cluster is currently upgrading in UD {udInClusterUpgrade}. Will not schedule or execute repairs at this time.";
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
-                                "MonitorRepairableHealthEventsAsync::ClusterUpgradeDetected",
+                                "MonitorHealthEventsAsync::ClusterUpgradeDetected",
                                 telemetryDescription,
                                 Token,
                                 null,
@@ -582,13 +577,15 @@ namespace FabricHealer
                 }
                 catch (Exception e) when (e is FabricException || e is TimeoutException)
                 {
+#if DEBUG
                     await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            "MonitorRepairableHealthEventsAsync::HandledException",
-                            $"Failure in MonitorRepairableHealthEventAsync::Node:{Environment.NewLine}{e}",
+                            "MonitorHealthEventsAsync::HandledException",
+                            $"Failure in MonitorHealthEventsAsync::Node:{Environment.NewLine}{e}",
                             Token,
                             null,
                             ConfigSettings.EnableVerboseLogging);
+#endif
                 }
 
                 var unhealthyEvaluations = clusterHealth.UnhealthyEvaluations;
@@ -612,13 +609,15 @@ namespace FabricHealer
                         }
                         catch (Exception e) when (e is FabricException || e is TimeoutException)
                         {
+#if DEBUG
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
-                                    "MonitorRepairableHealthEventsAsync::HandledException",
-                                    $"Failure in MonitorRepairableHealthEventAsync::Node:{Environment.NewLine}{e}",
+                                    "MonitorHealthEventsAsync::HandledException",
+                                    $"Failure in MonitorHealthEventsAsync::Node:{Environment.NewLine}{e}",
                                     Token,
                                     null,
                                     ConfigSettings.EnableVerboseLogging);
+#endif
                         }
                     }
                     else if (kind != null && kind.Contains("Application"))
@@ -658,13 +657,15 @@ namespace FabricHealer
                             }
                             catch (Exception e) when (e is FabricException || e is TimeoutException)
                             {
+#if DEBUG
                                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                         LogLevel.Info,
-                                        "MonitorRepairableHealthEventsAsync::HandledException",
-                                        $"Failure in MonitorRepairableHealthEventAsync::Application:{Environment.NewLine}{e}",
+                                        "MonitorHealthEventsAsync::HandledException",
+                                        $"Failure in MonitorHealthEventsAsync::Application:{Environment.NewLine}{e}",
                                         Token,
                                         null,
                                         ConfigSettings.EnableVerboseLogging);
+#endif
                             }
                         }
                     }
@@ -682,18 +683,20 @@ namespace FabricHealer
                         }
                         catch (Exception e) when (e is FabricException || e is TimeoutException)
                         {
+#if DEBUG
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
-                                    "MonitorRepairableHealthEventsAsync::HandledException",
-                                    $"Failure in MonitorRepairableHealthEventAsync::Replica:{Environment.NewLine}{e}",
+                                    "MonitorHealthEventsAsync::HandledException",
+                                    $"Failure in MonitorHealthEventsAsync::Replica:{Environment.NewLine}{e}",
                                     Token,
                                     null,
                                     ConfigSettings.EnableVerboseLogging);
+#endif
                         }
                     }
                 }
             }
-            catch (FabricException)
+            catch (Exception e) when (e is ArgumentException || e is FabricException)
             {
                 // Don't crash.
             }
@@ -701,15 +704,15 @@ namespace FabricHealer
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Error,
-                        "MonitorRepairableHealthEventsAsync::UnhandledException",
-                        $"Failure in MonitorRepairableHealthEventAsync:{Environment.NewLine}{e}",
+                        "MonitorHealthEventsAsync::UnhandledException",
+                        $"Failure in MonitorHealthEventsAsync:{Environment.NewLine}{e}",
                         Token,
                         null,
                         ConfigSettings.EnableVerboseLogging);
 
-                RepairLogger.LogWarning($"Unhandled exception in MonitorRepairableHealthEventsAsync:{Environment.NewLine}{e}");
+                RepairLogger.LogWarning($"Unhandled exception in MonitorHealthEventsAsync:{Environment.NewLine}{e}");
 
-                // Fix the bug(s)..
+                // Fix the bug(s).
                 throw;
             }
         }
@@ -1681,7 +1684,7 @@ namespace FabricHealer
                 case SupportedErrorCodes.AppWarningTooManyOpenFileHandles:
                 case SupportedErrorCodes.AppWarningTooManyThreads:
 
-                    repairPolicySectionName = app == RepairConstants.SystemAppName ? RepairConstants.SystemAppRepairPolicySectionName : RepairConstants.AppRepairPolicySectionName;
+                    repairPolicySectionName = app == RepairConstants.SystemAppName ? RepairConstants.SystemServiceRepairPolicySectionName : RepairConstants.AppRepairPolicySectionName;
                     break;
 
                 // VM repair.
@@ -1733,7 +1736,7 @@ namespace FabricHealer
 
                 // System service repair.
                 case RepairConstants.FabricSystemObserver:
-                    repairPolicySectionName = RepairConstants.SystemAppRepairPolicySectionName;
+                    repairPolicySectionName = RepairConstants.SystemServiceRepairPolicySectionName;
                     break;
 
                 // Disk repair
@@ -1776,7 +1779,7 @@ namespace FabricHealer
                 // System service process repair.
                 case EntityType.Application when repairData.SystemServiceProcessName != null:
                 case EntityType.Process:
-                    repairPolicySectionName = RepairConstants.SystemAppRepairPolicySectionName;
+                    repairPolicySectionName = RepairConstants.SystemServiceRepairPolicySectionName;
                     break;
 
                 // Disk repair.
@@ -1974,7 +1977,7 @@ namespace FabricHealer
         {
             try
             {
-                var healthReporter = new FabricHealthReporter(fabricClient);
+                var healthReporter = new FabricHealthReporter(fabricClient, RepairLogger);
                 var healthReport = new HealthReport
                 {
                     HealthMessage = "Clearing existing health reports as FabricHealer is stopping or updating.",

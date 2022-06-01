@@ -185,11 +185,12 @@ namespace FabricHealer.Repair
 
             if (!FabricHealerManager.RepairHistory.Repairs.ContainsKey(repairName))
             {
-                FabricHealerManager.RepairHistory.Repairs.Add(repairName, 1);
+                FabricHealerManager.RepairHistory.Repairs.Add(repairName, (repairData.Source, 1));
             }
             else
             {
-                FabricHealerManager.RepairHistory.Repairs[repairName]++;
+                double count = FabricHealerManager.RepairHistory.Repairs[repairName].Count + 1;
+                FabricHealerManager.RepairHistory.Repairs[repairName] = (repairData.Source, count);
             }
 
             FabricHealerManager.RepairHistory.RepairCount++;

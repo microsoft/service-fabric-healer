@@ -25,9 +25,9 @@ namespace FabricHealer.Repair
         // RepairManager Settings Parameters.
         public const string RepairManagerConfigurationSectionName = "RepairManagerConfiguration";
         public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
-        public const string AppInsightsTelemetryEnabled = "EnableTelemetryProvider";
+        public const string EnableTelemetry = "EnableTelemetry";
         public const string AppInsightsInstrumentationKeyParameter = "AppInsightsInstrumentationKey";
-        public const string EnableEventSourceProvider = "EnableEventSourceProvider";
+        public const string EnableETW = "EnableETW";
         public const string HealthCheckLoopSleepTimeSeconds = "HealthCheckLoopSleepTimeSeconds";
         public const string LocalLogPathParameter = "LocalLogPath";
         public const string AsyncOperationTimeout = "AsyncOperationTimeoutSeconds";
@@ -41,7 +41,7 @@ namespace FabricHealer.Repair
         public const string ReplicaRepairPolicySectionName = "ReplicaRepairPolicy";
         public const string AppRepairPolicySectionName = "AppRepairPolicy";
         public const string DiskRepairPolicySectionName = "DiskRepairPolicy";
-        public const string SystemAppRepairPolicySectionName = "SystemAppRepairPolicy";
+        public const string SystemServiceRepairPolicySectionName = "SystemServiceRepairPolicy";
         public const string MachineRepairPolicySectionName = "MachineRepairPolicy";
 
         // RepairPolicy
@@ -95,7 +95,7 @@ namespace FabricHealer.Repair
         public const string FileHandlesPercent = "FileHandlesPercent";
         public const string Threads = "Threads";
 
-        // Supported Observer Names
+        // Supported FabricObserver Observer Names
         public const string AppObserver = "AppObserver";
         public const string ContainerObserver = "ContainerObserver";
         public const string DiskObserver = "DiskObserver";

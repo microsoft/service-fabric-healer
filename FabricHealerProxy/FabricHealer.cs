@@ -27,6 +27,7 @@ namespace FabricHealerProxy
     /// </summary>
     public sealed class FabricHealer
     {
+        private const string FHProxyId = "FabricHealerProxy";
         private static FabricHealer instance;
 
         private static readonly FabricClientSettings settings = new FabricClientSettings
@@ -234,7 +235,7 @@ namespace FabricHealerProxy
                     CodePackageActivationContext context =
                         await FabricRuntime.GetActivationContextAsync(TimeSpan.FromSeconds(30), cancellationToken);
 
-                    repairData.Source = context.GetServiceManifestName() + "_" + "FabricHealerProxy";
+                    repairData.Source = $"{context.GetServiceManifestName()}_{FHProxyId}";
                 }
 
                 // Support for repair data that does not contain replica/partition facts for service level repair.

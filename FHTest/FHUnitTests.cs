@@ -176,7 +176,7 @@ namespace FHTest
             };
 
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed");
-            string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token).ConfigureAwait(true);
+            string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
             List<string> repairRules = ParseRulesFile(rules);
             var repairData = new TelemetryData
             {
@@ -225,7 +225,7 @@ namespace FHTest
                 TelemetryEnabled = false
             };
 
-            string[] rules = await File.ReadAllLinesAsync(Path.Combine(Environment.CurrentDirectory, "testrules_malformed"), token).ConfigureAwait(true);
+            string[] rules = await File.ReadAllLinesAsync(Path.Combine(Environment.CurrentDirectory, "testrules_malformed"), token);
             List<string> repairAction = ParseRulesFile(rules);
 
             var repairData = new TelemetryData

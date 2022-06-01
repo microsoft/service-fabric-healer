@@ -48,7 +48,7 @@ namespace FabricHealer.Interfaces
         /// </summary>
         string OS { get; }
         /// <summary>
-        /// Required if the repair target is a Service. The Partition Id (as a string) where the replica or instance resides that is in Error or Warning state.
+        /// Required if the repair target is a Service. The Partition Id (as a nullable Guid) where the replica or instance resides that is in Error or Warning state.
         /// </summary>
         Guid? PartitionId { get; set; }
         /// <summary>

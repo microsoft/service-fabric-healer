@@ -168,7 +168,7 @@ namespace FabricHealer.Utilities
             }
 
             // Telemetry.
-            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AppInsightsTelemetryEnabled), out bool telemEnabled))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableTelemetry), out bool telemEnabled))
             {
                 TelemetryEnabled = telemEnabled;
 
@@ -200,8 +200,8 @@ namespace FabricHealer.Utilities
                 }
             }
 
-            // FabricHealer ETW telemetry.
-            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableEventSourceProvider), out bool etwEnabled))
+            // ETW.
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableETW), out bool etwEnabled))
             {
                 EtwEnabled = etwEnabled;
             }
@@ -233,7 +233,7 @@ namespace FabricHealer.Utilities
                 EnableReplicaRepair = replicaRepairEnabled;
             }
 
-            if (bool.TryParse(GetConfigSettingValue(RepairConstants.SystemAppRepairPolicySectionName, RepairConstants.Enabled), out bool systemAppRepairEnabled))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.SystemServiceRepairPolicySectionName, RepairConstants.Enabled), out bool systemAppRepairEnabled))
             {
                 EnableSystemAppRepair = systemAppRepairEnabled;
             }

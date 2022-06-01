@@ -16,16 +16,18 @@ namespace FabricHealer.Utilities
     public class FabricHealthReporter
     {
         private readonly FabricClient fabricClient;
+        private readonly Logger _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricHealthReporter"/> class.
         /// </summary>
         /// <param name="fabricClient"></param>
-        public FabricHealthReporter(FabricClient fabricClient)
+        public FabricHealthReporter(FabricClient fabricClient, Logger logger)
         {
             this.fabricClient = fabricClient ?? throw new ArgumentException("FabricClient can't be null");
             this.fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
             this.fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
+            _logger = logger;
         }
 
         public void ReportHealthToServiceFabric(HealthReport healthReport)
@@ -56,6 +58,19 @@ namespace FabricHealer.Utilities
                 TimeToLive = timeToLive,
                 RemoveWhenExpired = true,
             };
+
+            // Local file logging.
+            if (healthReport.EmitLogEvent)
+            {
+                if (healthReport.State == HealthState.Ok)
+                {
+                    _logger.LogInfo(healthReport.HealthMessage);
+                }
+                else
+                {
+                    _logger.LogWarning(healthReport.HealthMessage);
+                }
+            }
 
             switch (healthReport.EntityType)
             {

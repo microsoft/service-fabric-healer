@@ -5,8 +5,8 @@
          These must be set in ApplicationManifest.xml -->
     <Parameter Name="HealthCheckLoopSleepTimeSeconds" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-    <Parameter Name="EnableTelemetryProvider" Value="" MustOverride="true" />
-    <Parameter Name="EnableEventSourceProvider" Value="" MustOverride="true" />
+    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <Parameter Name="EnableETW" Value="" MustOverride="true" />
     <Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
     <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
     <!-- Folder name for local log output. You can use a full path or just a folder name. -->
@@ -46,7 +46,7 @@
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
   </Section>
-  <Section Name="SystemAppRepairPolicy">
+  <Section Name="SystemServiceRepairPolicy">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
   </Section>
