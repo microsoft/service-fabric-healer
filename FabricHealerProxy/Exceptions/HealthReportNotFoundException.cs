@@ -6,7 +6,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace FabricHealerProxy
+namespace FabricHealer
 {
     /// <summary>
     /// Internal exception that is thrown when a custom generated health report is not found in the health event store.

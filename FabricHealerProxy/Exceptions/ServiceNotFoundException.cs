@@ -6,7 +6,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace FabricHealerProxy
+namespace FabricHealer
 {
     /// <summary>
     /// Exception thrown when a specified service does not exist in the cluster.

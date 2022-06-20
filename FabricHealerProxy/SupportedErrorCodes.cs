@@ -6,7 +6,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace FabricHealerProxy
+namespace FabricHealer
 {
     /// <summary>
     /// Error and Warning Codes related to machine resource usage metrics at the machine and service levels. 
