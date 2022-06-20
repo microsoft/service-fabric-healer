@@ -486,6 +486,11 @@ namespace FHTest
         [TestMethod]
         public async Task FabricHealerProxy_Restart_Service_Generates_Entity_Health_Warning()
         {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
             // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
             await Proxy.Instance.RepairEntityAsync(RepairFactsServiceTarget, token);
             var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, RepairFactsServiceTarget.ServiceName);
@@ -499,6 +504,11 @@ namespace FHTest
         [TestMethod]
         public async Task FabricHealerProxy_Restart_Node_Generates_Entity_Health_Warning()
         {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
             // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
             await Proxy.Instance.RepairEntityAsync(RepairFactsNodeTarget, token);
             var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, null, NodeName);
@@ -512,6 +522,11 @@ namespace FHTest
         [TestMethod]
         public async Task FHProxy_MissingFact_Generates_MissingRepairFactsException()
         {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
             var repairFacts = new RepairFacts
             {
                 ServiceName = "fabric:/foo/bar",
@@ -526,6 +541,11 @@ namespace FHTest
         [TestMethod]
         public async Task FHProxy_MissingFact_Generates_ServiceNotFoundException()
         {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
             var repairFacts = new RepairFacts
             {
                 ServiceName = "fabric:/foo/bar",
@@ -541,6 +561,11 @@ namespace FHTest
         [TestMethod]
         public async Task FHProxy_MissingFact_Generates_NodeNotFoundException()
         {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
             var repairFacts = new RepairFacts
             {
                 NodeName = "_Node_007x",
