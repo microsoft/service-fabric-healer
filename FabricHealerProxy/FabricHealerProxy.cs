@@ -25,10 +25,10 @@ namespace FabricHealer
     /// that dictate which rules will be loaded by FabricHealer and passed to Guan for logic rule query execution that may or may not lead 
     /// to some repair (depends on the facts and the results of the logic programs that employ them).
     /// </summary>
-    public sealed class Proxy
+    public sealed class FabricHealerProxy
     {
         private const string FHProxyId = "FabricHealerProxy";
-        private static Proxy instance;
+        private static FabricHealerProxy instance;
 
         private static readonly FabricClientSettings settings = new FabricClientSettings
         {
@@ -49,7 +49,7 @@ namespace FabricHealer
         CancellationTokenRegistration tokenRegistration;
         CancellationTokenSource cts = null;
 
-        private Proxy()
+        private FabricHealerProxy()
         {
             if (repairDataHistory == null)
             {
@@ -58,9 +58,9 @@ namespace FabricHealer
         }
 
         /// <summary>
-        /// FabricHealerProxy.Proxy singleton. This is thread-safe.
+        /// FabricHealerProxy static singleton. This is thread-safe.
         /// </summary>
-        public static Proxy Instance
+        public static FabricHealerProxy Instance
         {
             get
             {
@@ -70,7 +70,7 @@ namespace FabricHealer
                     {
                         if (instance == null)
                         {
-                            instance = new Proxy();
+                            instance = new FabricHealerProxy();
                         }
                     }
                 }
@@ -574,6 +574,7 @@ namespace FabricHealer
         {
             Policy.Handle<FabricException>()
                       .Or<TimeoutException>()
+                      .Or<HealthReportNotFoundException>()
                       .WaitAndRetry(
                         new[]
                         {
@@ -599,7 +600,7 @@ namespace FabricHealer
                     var repairFacts = repairDataHistory.ElementAt(i).Value.RepairData;
                     var healthInformation = new HealthInformation(repairFacts.Source, repairFacts.Property, HealthState.Ok)
                     {
-                        Description = $"Clearing existing {repairFacts.EntityType} health reports created by FabricHealerProxy",
+                        Description = $"Clearing existing {repairFacts.EntityType} health report created by FabricHealerProxy",
                         TimeToLive = TimeSpan.FromMinutes(5),
                         RemoveWhenExpired = true
                     };
@@ -650,6 +651,11 @@ namespace FabricHealer
                             break;
                     }
 
+                    if (!VerifyHealthReportExistsAsync(repairFacts, fabricClient, cts.Token).Result)
+                    {
+                        throw new HealthReportNotFoundException();
+                    }
+
                     _ = repairDataHistory.TryRemove(repairDataHistory.ElementAt(i).Key, out _);
                     --i;
                 }
@@ -661,10 +667,11 @@ namespace FabricHealer
         }
 
         /// <summary>
-        /// Clears instance data created by FabricHealer.Proxy, including cleaning up any active Service Fabric health reports.
-        /// Note: calling Close does not cancel repairs that are in flight or in the FabricHealer internal repair queue.
+        /// Closes the FabricHealerProxy.Instance, disposes all IDisposable objects currently in memory, and clears all health data and health reports.
+        /// Note: calling Close does not cancel repairs that are in flight or in the FabricHealer internal repair queue. This function is called automatically when
+        /// a consuming SF service closes. You do not need to call this directly unless that is your intention.
         /// </summary>
-        private void Close()
+        public void Close()
         {
             if (repairDataHistory != null)
             {

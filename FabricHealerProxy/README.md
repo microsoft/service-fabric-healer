@@ -21,7 +21,7 @@ using System.Fabric;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Runtime;
-using FabricHealerProxy;
+using FabricHealer;
 
 namespace Stateless1
 {
@@ -137,18 +137,17 @@ namespace Stateless1
                 RepairFactsServiceTarget3,
                 RepairFactsServiceTarget4,
                 RepairFactsServiceTarget5,
-                RepairFactsServiceTarget6,
-                RepairFactsServiceTarget7
+                RepairFactsServiceTarget6
             };
 
             // This demonstrates which exceptions will be thrown by the API. The first three are FabricHealerProxy custom exceptions and represent user error (most likely).
             // The last two are internal SF issues which will be thrown only after a series of retries. How to handle these is up to you.
             try
             {
-                await FabricHealer.Proxy.RepairEntityAsync(DiskRepairFacts, cancellationToken);
-                //await FabricHealer.Proxy.RepairEntityAsync(SystemServiceRepairFacts, cancellationToken);
-                //await FabricHealer.Proxy.RepairEntityAsync(RepairFactsMachineTarget, cancellationToken);
-                //await FabricHealer.Proxy.RepairEntityAsync(RepairFactsList, cancellationToken);
+                await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsServiceTarget7, cancellationToken);
+                await FabricHealerProxy.Instance.RepairEntityAsync(SystemServiceRepairFacts, cancellationToken);
+                await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsMachineTarget, cancellationToken);
+                await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsList, cancellationToken);
             }
             catch (MissingRepairFactsException)
             {

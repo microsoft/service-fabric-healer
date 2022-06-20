@@ -21,6 +21,7 @@ using System.Fabric.Repair;
 using System.Diagnostics;
 using System.Fabric.Health;
 using SupportedErrorCodes = FabricHealer.Utilities.SupportedErrorCodes;
+using EntityType = FabricHealer.EntityType;
 
 namespace FHTest
 {
@@ -110,6 +111,9 @@ namespace FHTest
         public static async Task TestClassCleanupAsync()
         {
             await CleanupTestRepairJobsAsync();
+
+            // Ensure FHProxy cleans up its health reports.
+            FabricHealerProxy.Instance.Close();
         }
 
         /* GuanLogic Tests */
@@ -364,7 +368,7 @@ namespace FHTest
             return repairRules;
         }
 
-        private async Task<(bool, TelemetryData data)> 
+        private static async Task<(bool, TelemetryData data)> 
             IsEntityInWarningStateAsync(string appName = null, string serviceName = null, string nodeName = null)
         {
             EntityHealth healthData = null;
@@ -440,7 +444,7 @@ namespace FHTest
         static readonly RepairFacts RepairFactsMachineTarget = new RepairFacts
         {
             NodeName = NodeName,
-            EntityType = FabricHealer.EntityType.Machine,
+            EntityType = EntityType.Machine,
             // Specifying Source is Required for unit tests.
             // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
             Source = "fabric:/Test"
@@ -464,7 +468,7 @@ namespace FHTest
         static readonly RepairFacts DiskRepairFacts = new RepairFacts
         {
             NodeName = NodeName,
-            EntityType = FabricHealer.EntityType.Disk,
+            EntityType = EntityType.Disk,
             Metric = SupportedMetricNames.DiskSpaceUsageMb,
             Code = SupportedErrorCodes.NodeWarningDiskSpaceMB,
             // Specifying Source is Required for unit tests.
@@ -479,11 +483,11 @@ namespace FHTest
             RepairFactsMachineTarget,
             RepairFactsNodeTarget,
             RepairFactsServiceTarget,
-            SystemServiceRepairFacts,
+            SystemServiceRepairFacts
         };
 
         [TestMethod]
-        public async Task FabricHealerProxy_Restart_Service_Generates_Entity_Health_Warning()
+        public async Task FHProxy_Service_Facts_Generate_Entity_Health_Warning()
         {
             if (!IsLocalSFRuntimePresent())
             {
@@ -491,17 +495,18 @@ namespace FHTest
             }
 
             // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
-            await Proxy.Instance.RepairEntityAsync(RepairFactsServiceTarget, token);
-            var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, RepairFactsServiceTarget.ServiceName);
+            await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsServiceTarget, token);
 
             // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");
             Assert.IsTrue(RepairFactsServiceTarget.Source.EndsWith(FHProxyId));
+
+            var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, RepairFactsServiceTarget.ServiceName);
             Assert.IsTrue(generatedWarning);
-            Assert.IsTrue(data is TelemetryData);
+            Assert.IsTrue(data is not null);
         }
 
         [TestMethod]
-        public async Task FabricHealerProxy_Restart_Node_Generates_Entity_Health_Warning()
+        public async Task FHProxy_Node_Facts_Generates_Entity_Health_Warning()
         {
             if (!IsLocalSFRuntimePresent())
             {
@@ -509,17 +514,18 @@ namespace FHTest
             }
 
             // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
-            await Proxy.Instance.RepairEntityAsync(RepairFactsNodeTarget, token);
-            var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, null, NodeName);
+            await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsNodeTarget, token);
 
             // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");
             Assert.IsTrue(RepairFactsNodeTarget.Source.EndsWith(FHProxyId));
+
+            var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, null, NodeName);
             Assert.IsTrue(generatedWarning);
-            Assert.IsTrue(data is TelemetryData);
+            Assert.IsTrue(data is not null);
         }
 
         [TestMethod]
-        public async Task FHProxy_MissingFact_Generates_MissingRepairFactsException()
+        public async Task FHProxy_Missing_Fact_Generates_MissingRepairFactsException()
         {
             if (!IsLocalSFRuntimePresent())
             {
@@ -534,11 +540,22 @@ namespace FHTest
                 Source = "fabric:/Test"
             };
 
-            await Assert.ThrowsExceptionAsync<MissingRepairFactsException>(async () => { await Proxy.Instance.RepairEntityAsync(repairFacts, token); });
+            await Assert.ThrowsExceptionAsync<MissingRepairFactsException>(async () =>
+            {
+                try
+                {
+                    await FabricHealerProxy.Instance.RepairEntityAsync(repairFacts, token);
+                }
+                finally
+                {
+                    // Ensure FHProxy cleans up its health reports.
+                    FabricHealerProxy.Instance.Close();
+                }
+            });
         }
 
         [TestMethod]
-        public async Task FHProxy_MissingFact_Generates_ServiceNotFoundException()
+        public async Task FHProxy_Missing_Fact_Generates_ServiceNotFoundException()
         {
             if (!IsLocalSFRuntimePresent())
             {
@@ -554,11 +571,16 @@ namespace FHTest
                 Source = "fabric:/Test"
             };
 
-            await Assert.ThrowsExceptionAsync<ServiceNotFoundException>(async () => { await Proxy.Instance.RepairEntityAsync(repairFacts, token); });
+            await Assert.ThrowsExceptionAsync<ServiceNotFoundException>(async () => 
+            {
+                
+                    await FabricHealerProxy.Instance.RepairEntityAsync(repairFacts, token);
+                
+            });
         }
 
         [TestMethod]
-        public async Task FHProxy_MissingFact_Generates_NodeNotFoundException()
+        public async Task FHProxy_Missing_Fact_Generates_NodeNotFoundException()
         {
             if (!IsLocalSFRuntimePresent())
             {
@@ -571,7 +593,43 @@ namespace FHTest
                 // No need for Source here as an invalid node will be detected before the Source value matters.
             };
 
-            await Assert.ThrowsExceptionAsync<NodeNotFoundException>(async () => { await Proxy.Instance.RepairEntityAsync(repairFacts, token); });
+            await Assert.ThrowsExceptionAsync<NodeNotFoundException>(async () => 
+            { 
+                
+                    await FabricHealerProxy.Instance.RepairEntityAsync(repairFacts, token); 
+                
+            });
+        }
+
+        [TestMethod]
+        public async Task FHProxy_Multiple_Entity_Repair_Facts_Generate_Warnings()
+        {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
+            // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
+            await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsList, token);
+
+            foreach (var repair in RepairFactsList)
+            {
+                if (repair.ServiceName != null)
+                {
+                    var (generatedWarningService, sdata) = await IsEntityInWarningStateAsync(null, repair.ServiceName);
+                    Assert.IsTrue(generatedWarningService);
+                    Assert.IsTrue(sdata is not null);
+                }
+                else if (repair.EntityType == EntityType.Disk || repair.EntityType == EntityType.Machine || repair.EntityType == EntityType.Node)
+                {
+                    var (generatedWarningNode, ndata) = await IsEntityInWarningStateAsync(null, null, NodeName);
+                    Assert.IsTrue(generatedWarningNode);
+                    Assert.IsTrue(ndata is not null);
+                }
+
+                // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");
+                Assert.IsTrue(repair.Source.EndsWith(FHProxyId));
+            }
         }
     }
 }
