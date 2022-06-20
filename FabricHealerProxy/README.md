@@ -181,7 +181,7 @@ namespace Stateless1
 
             _ = Parallel.For (0, RepairFactsList.Count, async (i, state) =>
             {
-                await FabricHealer.Proxy.RepairEntityAsync(RepairFactsList[i], cancellationToken).ConfigureAwait(false);
+                await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsList[i], cancellationToken).ConfigureAwait(false);
             });
             
             */
