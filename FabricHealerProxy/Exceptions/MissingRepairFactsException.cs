@@ -6,7 +6,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace FabricHealerProxy
+namespace FabricHealer
 {
     /// <summary>
     /// Exception thrown when RepairFacts instance is missing values for required non-null members (E.g., NodeName).

@@ -15,7 +15,7 @@ using Polly;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 
-namespace FabricHealerProxy
+namespace FabricHealer
 {
     /// <summary>
     /// FabricHealer utility class that provides a very simple and reliable way for any .NET Service Fabric user service to share Service Fabric entity repair facts to the FabricHealer 
@@ -25,10 +25,10 @@ namespace FabricHealerProxy
     /// that dictate which rules will be loaded by FabricHealer and passed to Guan for logic rule query execution that may or may not lead 
     /// to some repair (depends on the facts and the results of the logic programs that employ them).
     /// </summary>
-    public sealed class FabricHealer
+    public sealed class Proxy
     {
         private const string FHProxyId = "FabricHealerProxy";
-        private static FabricHealer instance;
+        private static Proxy instance;
 
         private static readonly FabricClientSettings settings = new FabricClientSettings
         {
@@ -49,7 +49,7 @@ namespace FabricHealerProxy
         CancellationTokenRegistration tokenRegistration;
         CancellationTokenSource cts = null;
 
-        private FabricHealer()
+        private Proxy()
         {
             if (repairDataHistory == null)
             {
@@ -58,9 +58,9 @@ namespace FabricHealerProxy
         }
 
         /// <summary>
-        /// FabricHealer.Proxy singleton. This is thread-safe.
+        /// FabricHealerProxy.Proxy singleton. This is thread-safe.
         /// </summary>
-        public static FabricHealer Proxy
+        public static Proxy Instance
         {
             get
             {
@@ -70,7 +70,7 @@ namespace FabricHealerProxy
                     {
                         if (instance == null)
                         {
-                            instance = new FabricHealer();
+                            instance = new Proxy();
                         }
                     }
                 }
@@ -236,6 +236,10 @@ namespace FabricHealerProxy
                         await FabricRuntime.GetActivationContextAsync(TimeSpan.FromSeconds(30), cancellationToken);
 
                     repairData.Source = $"{context.GetServiceManifestName()}_{FHProxyId}";
+                }
+                else if (!repairData.Source.ToLower().EndsWith(FHProxyId.ToLower()))
+                {
+                    repairData.Source += $"_{FHProxyId}";
                 }
 
                 // Support for repair data that does not contain replica/partition facts for service level repair.

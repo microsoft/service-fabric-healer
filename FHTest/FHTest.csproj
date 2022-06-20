@@ -35,6 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\FabricHealerProxy\FabricHealerProxy.csproj" />
     <ProjectReference Include="..\FabricHealer\FabricHealer.csproj" />
   </ItemGroup>
 

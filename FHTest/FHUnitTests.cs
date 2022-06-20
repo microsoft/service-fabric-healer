@@ -20,6 +20,8 @@ using FabricHealer;
 using System.Fabric.Repair;
 using System.Diagnostics;
 using System.Fabric.Health;
+using SupportedErrorCodes = FabricHealer.Utilities.SupportedErrorCodes;
+using FabricHealer.Interfaces;
 
 namespace FHTest
 {
@@ -27,7 +29,7 @@ namespace FHTest
     /// NOTE: Run these tests on your machine with a local SF dev cluster running.
     /// TODO: More code coverage.
     /// </summary>
-    
+
     [TestClass]
     public class FHUnitTests
     {
@@ -57,6 +59,10 @@ namespace FHTest
                                 long.MaxValue);
 
         private readonly CancellationToken token = new CancellationToken();
+
+        // This is the name of the node used on your local dev machine's SF cluster. If you customize this, then change it.
+        private const string NodeName = "_Node_0";
+        private const string FHProxyId = "FabricHealerProxy";
 
         // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
         // e.g., if developing on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\LogicRules\";
@@ -133,12 +139,11 @@ namespace FHTest
                 Code = SupportedErrorCodes.AppErrorMemoryMB,
                 HealthState = HealthState.Warning,
                 ServiceName = "fabric:/test0/service0",
-                Value = 1024.0
-            };
-
-            repairData.RepairPolicy = new RepairPolicy
-            {
-                RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}"
+                Value = 1024.0,
+                RepairPolicy = new RepairPolicy
+                {
+                    RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}"
+                }
             };
 
             var executorData = new RepairExecutorData
@@ -189,11 +194,10 @@ namespace FHTest
                 Value = 42,
                 ReplicaId = default,
                 PartitionId = default,
-            };
-
-            repairData.RepairPolicy = new RepairPolicy
-            {
-                RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}"
+                RepairPolicy = new RepairPolicy
+                {
+                    RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}"
+                }
             };
 
             var executorData = new RepairExecutorData
@@ -239,11 +243,10 @@ namespace FHTest
                 Value = 42,
                 ReplicaId = default,
                 PartitionId = default,
-            };
-
-            repairData.RepairPolicy = new RepairPolicy
-            {
-                RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}"
+                RepairPolicy = new RepairPolicy
+                {
+                    RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}"
+                }
             };
 
             var executorData = new RepairExecutorData
@@ -360,6 +363,191 @@ namespace FHTest
             }
 
             return repairRules;
+        }
+
+        private async Task<(bool, TelemetryData data)> 
+            IsEntityInWarningStateAsync(string appName = null, string serviceName = null, string nodeName = null)
+        {
+            EntityHealth healthData = null;
+
+            if (appName != null)
+            {
+                healthData = await fabricClient.HealthManager.GetApplicationHealthAsync(new Uri(appName));
+            }
+            else if (serviceName != null)
+            {
+                healthData = await fabricClient.HealthManager.GetServiceHealthAsync(new Uri(serviceName));
+            }
+            else if (nodeName != null)
+            {
+                healthData = await fabricClient.HealthManager.GetNodeHealthAsync(nodeName);
+            }
+            else
+            {
+                return (false, null);
+            }
+
+            if (healthData == null)
+            {
+                return (false, null);
+            }
+
+            bool isInWarning = healthData.HealthEvents.Any(h => h?.HealthInformation?.HealthState == HealthState.Warning);
+
+            if (!isInWarning)
+            {
+                return (false, null);
+            }
+
+            HealthEvent healthEventWarning = healthData.HealthEvents.FirstOrDefault(h => h.HealthInformation?.HealthState == HealthState.Warning);
+            _ = JsonSerializationUtility.TryDeserialize(healthEventWarning.HealthInformation.Description, out TelemetryData data);
+
+            return (true, data);
+        }
+
+        // FabricHealearProxy tests \\
+
+        // This specifies that you want FabricHealer to repair a service instance deployed to a Fabric node named NodeName.
+        // FabricHealer supports both Replica and CodePackage restarts of services. The logic rules will dictate which one of these happens,
+        // so make sure to craft a specific logic rule that makes sense for you (and use some logic!).
+        // Note that, out of the box, FabricHealer's AppRules.guan file located in the FabricHealer project's PackageRoot/Config/LogicRules folder
+        // already has a restart replica catch-all (applies to any service) rule that will restart the primary replica of
+        // the specified service below, deployed to the a specified Fabric node. 
+        // By default, if you only supply NodeName and ServiceName, then FabricHealerProxy assumes the target EntityType is Service. This is a convience to limit how many facts
+        // you must supply in a RepairFacts instance. For any type of repair, NodeName is always required.
+
+        static readonly RepairFacts RepairFactsServiceTarget = new RepairFacts
+        {
+            ServiceName = "fabric:/GettingStartedApplication/MyActorService",
+            NodeName = NodeName,
+            // Specifying Source is Required for unit tests.
+            // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+            Source = "fabric:/test"
+        };
+
+        // This specifies that you want FabricHealer to repair a Fabric node named _Node_0. The only supported Fabric node repair in FabricHealer is a Restart.
+        // Related rules can be found in FabricNodeRules.guan file in the FabricHealer project's PackageRoot/Config/LogicRules folder.
+        // So, implicitly, this means you want FabricHealer to restart _Node_0. By default, if you only supply NodeName, then FabricHealerProxy assumes the target EntityType is Node.
+        static readonly RepairFacts RepairFactsNodeTarget = new RepairFacts
+        {
+            NodeName = NodeName,
+            // Specifying Source is Required for unit tests.
+            // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+            Source = "fabric:/Test"
+        };
+
+        // Initiate a reboot of the machine hosting the specified Fabric node, _Node_4. This will be executed by the InfrastructureService for the related node type.
+        // The related logic rules for this repair target are housed in FabricHealer's MachineRules.guan file.
+        static readonly RepairFacts RepairFactsMachineTarget = new RepairFacts
+        {
+            NodeName = NodeName,
+            EntityType = FabricHealer.EntityType.Machine,
+            // Specifying Source is Required for unit tests.
+            // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+            Source = "fabric:/Test"
+        };
+
+        // Restart system service process.
+        static readonly RepairFacts SystemServiceRepairFacts = new RepairFacts
+        {
+            ApplicationName = "fabric:/System",
+            NodeName = NodeName,
+            SystemServiceProcessName = "FabricDCA",
+            ProcessId = 73588,
+            Code = SupportedErrorCodes.AppWarningMemoryMB,
+            // Specifying Source is Required for unit tests.
+            // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+            Source = "fabric:/Test"
+        };
+
+        // Disk - Delete files. This only works if FabricHealer instance is present on the same target node.
+        // Note the rules in FabricHealer\PackageRoot\LogicRules\DiskRules.guan file in the FabricHealer project.
+        static readonly RepairFacts DiskRepairFacts = new RepairFacts
+        {
+            NodeName = NodeName,
+            EntityType = FabricHealer.EntityType.Disk,
+            Metric = SupportedMetricNames.DiskSpaceUsageMb,
+            Code = SupportedErrorCodes.NodeWarningDiskSpaceMB,
+            // Specifying Source is Required for unit tests.
+            // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+            Source = "fabric:/Test"
+        };
+
+        // For use in the IEnumerable<RepairFacts> RepairEntityAsync overload.
+        static readonly List<RepairFacts> RepairFactsList = new List<RepairFacts>
+        {
+            DiskRepairFacts,
+            RepairFactsMachineTarget,
+            RepairFactsNodeTarget,
+            RepairFactsServiceTarget,
+            SystemServiceRepairFacts,
+        };
+
+        [TestMethod]
+        public async Task FabricHealerProxy_Restart_Service_Generates_Entity_Health_Warning()
+        {
+            // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
+            await Proxy.Instance.RepairEntityAsync(RepairFactsServiceTarget, token);
+            var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, RepairFactsServiceTarget.ServiceName);
+
+            // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");
+            Assert.IsTrue(RepairFactsServiceTarget.Source.EndsWith(FHProxyId));
+            Assert.IsTrue(generatedWarning);
+            Assert.IsTrue(data is TelemetryData);
+        }
+
+        [TestMethod]
+        public async Task FabricHealerProxy_Restart_Node_Generates_Entity_Health_Warning()
+        {
+            // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
+            await Proxy.Instance.RepairEntityAsync(RepairFactsNodeTarget, token);
+            var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, null, NodeName);
+
+            // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");
+            Assert.IsTrue(RepairFactsNodeTarget.Source.EndsWith(FHProxyId));
+            Assert.IsTrue(generatedWarning);
+            Assert.IsTrue(data is TelemetryData);
+        }
+
+        [TestMethod]
+        public async Task FHProxy_MissingFact_Generates_MissingRepairFactsException()
+        {
+            var repairFacts = new RepairFacts
+            {
+                ServiceName = "fabric:/foo/bar",
+                // Specifying Source is Required for unit tests.
+                // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+                Source = "fabric:/Test"
+            };
+
+            await Assert.ThrowsExceptionAsync<MissingRepairFactsException>(async () => { await Proxy.Instance.RepairEntityAsync(repairFacts, token); });
+        }
+
+        [TestMethod]
+        public async Task FHProxy_MissingFact_Generates_ServiceNotFoundException()
+        {
+            var repairFacts = new RepairFacts
+            {
+                ServiceName = "fabric:/foo/bar",
+                NodeName = NodeName,
+                // Specifying Source is Required for unit tests.
+                // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+                Source = "fabric:/Test"
+            };
+
+            await Assert.ThrowsExceptionAsync<ServiceNotFoundException>(async () => { await Proxy.Instance.RepairEntityAsync(repairFacts, token); });
+        }
+
+        [TestMethod]
+        public async Task FHProxy_MissingFact_Generates_NodeNotFoundException()
+        {
+            var repairFacts = new RepairFacts
+            {
+                NodeName = "_Node_007x",
+                // No need for Source here as an invalid node will be detected before the Source value matters.
+            };
+
+            await Assert.ThrowsExceptionAsync<NodeNotFoundException>(async () => { await Proxy.Instance.RepairEntityAsync(repairFacts, token); });
         }
     }
 }
