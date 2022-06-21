@@ -67,8 +67,6 @@
         "typeName": "[variables('applicationTypeNameFabricHealer')]",
         "typeVersion": "[parameters('applicationTypeVersionFabricHealer')]",
         "parameters": {
-          // Example to set EnableDiskRepair to true. This requires that FabricHealer be deployed to each node ("instanceCount": "-1").
-          // Reference: https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealerApp/ApplicationPackageRoot/ApplicationManifest.xml
           "EnableDiskRepair": "true"
         },
         "upgradePolicy": {
