@@ -21,8 +21,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		icon.png = icon.png
 		Documentation\LogicWorkflows.md = Documentation\LogicWorkflows.md
 		Documentation\OperationalTelemetry.md = Documentation\OperationalTelemetry.md
-		README.md = README.md
 		Documentation\Using.md = Documentation\Using.md
+		Documentation\Deployment\Deployment.md = Documentation\Deployment\Deployment.md
+		Documentation\Deployment\Deploy-FabricHealer.ps1 = Documentation\Deployment\Deploy-FabricHealer.ps1
+		Documentation\Deployment\service-fabric-healer.json = Documentation\Deployment\service-fabric-healer.json
+		Documentation\Deployment\service-fabric-healer.v1.1.1.parameters.json = Documentation\Deployment\service-fabric-healer.v1.1.1.parameters.json
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FHTest", "FHTest\FHTest.csproj", "{8D9712BF-C026-4A36-B6D1-6345137D3B6F}"
