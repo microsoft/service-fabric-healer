@@ -1,6 +1,6 @@
 ## FabricHealer 1.1.1
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
-### Important: Requires .NET 6.0+ and SF Runtime 9.0+
+### Important: Requires .NET 6 and SF Runtime >= 9.0
 
 FabricHealer (FH) is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
 applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls,
@@ -33,6 +33,60 @@ For VM level repair, the Service Fabric InfrastructureService (IS) service must 
 3. Build. 
 
 ***Note: FabricHealer must be run under the LocalSystem account (see ApplicationManifest.xml) in order to function correctly. This means on Windows, by default, it will run as System user. On Linux, by default, it will run as root user. You do not have to make any changes to ApplicationManifest.xml for this to be the case.*** 
+
+## Deploy FabricHealer 
+You can deploy FabricHealer using Visual Studio (if you build the sources yourself), PowerShell or ARM. ***Please note*** that this version of FabricHealer no longer supports the DefaultServices node in ApplicationManifest.xml. This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
+The StartupServices.xml file you see in the FabricHealerApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio. Your ARM template or PowerShell script will contain all the information necessary for deploying FabricHealer.
+
+### ARM Deployment
+
+For ARM deployment, please see the [ARM documentation](/Documentation/Deployment/Deployment.md). 
+
+### PowerShell Deployment
+
+```PowerShell
+
+#cd to the top level repo directory where you cloned FO sources.
+
+cd C:\Users\me\source\repos\service-fabric-healer
+
+#Build FH (Release)
+
+./Build-FabricHealer
+
+#create a $path variable that points to the build output:
+#E.g., for Windows deployments:
+
+$path = "C:\Users\me\source\repos\service-fabric-healer\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
+
+#For Linux deployments:
+
+#$path = "C:\Users\me\source\repos\service-fabric-healer\bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType"
+
+#Connect to target cluster, for example:
+
+Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloudapp.azure.com:19000') -X509Credential -FindType FindByThumbprint -FindValue '[thumbprint]' -StoreLocation LocalMachine -StoreName 'My'
+
+#Copy $path contents (FO app package) to server:
+
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH111 -TimeoutSec 1800
+
+#Register FO ApplicationType:
+
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH111
+
+#Create FO application (if not already deployed at lesser version):
+
+New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.1.1   
+
+#Create the Service instance:  
+
+New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName fabric:/FabricHealer -ServiceName fabric:/FabricHealer/FabricHealerService -ServiceTypeName FabricHealerType -InstanceCount -1
+
+#OR if updating existing version:  
+
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.1.1 -UnMonitored -FailureAction rollback
+```  
 
 ## Using FabricHealer  
 
