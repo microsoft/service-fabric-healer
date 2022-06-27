@@ -88,7 +88,14 @@ namespace FabricHealer.TelemetryLib
                 var repairDataNames = new Dictionary<string, double>();
                 foreach (var t in repairData.RepairData.Repairs)
                 {
-                    repairDataNames.Add(t.Key, t.Value.Count);
+                    if (!repairDataNames.ContainsKey(t.Key))
+                    {
+                        repairDataNames.Add(t.Key, t.Value.Count);
+                    }
+                    else
+                    {
+                        repairDataNames[t.Key] = t.Value.Count;
+                    }
                 }
                 eventMetrics.Append(repairDataNames);
 
@@ -96,7 +103,14 @@ namespace FabricHealer.TelemetryLib
                 var repairDataSources = new Dictionary<string, double>();
                 foreach (var t in repairData.RepairData.Repairs)
                 {
-                    repairDataSources.Add(t.Value.Source, t.Value.Count);
+                    if (!repairDataSources.ContainsKey(t.Value.Source))
+                    {
+                        repairDataSources.Add(t.Value.Source, t.Value.Count);
+                    }
+                    else
+                    {
+                        repairDataSources[t.Value.Source] = t.Value.Count;
+                    }
                 }
                 eventMetrics.Append(repairDataSources);
 

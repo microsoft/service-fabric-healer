@@ -18,6 +18,8 @@
     <Parameter Name="EnableFabricNodeRepair" DefaultValue="false" />
     <Parameter Name="EnableMachineRepair" DefaultValue="false" />
     <Parameter Name="EnableReplicaRepair" DefaultValue="false" />
+    <!-- This means FH will apply some mitigation (restarts) to all instances of a target service on a node-by-node basis only (rolling). -->
+    <Parameter Name="EnableRollingServiceRestarts" DefaultValue="false" />
     <Parameter Name="EnableSystemServiceRepair" DefaultValue="false" />
     <!-- Logic rule files -->
     <Parameter Name="AppRulesConfigurationFile" DefaultValue="AppRules.guan" />
@@ -43,6 +45,7 @@
             <Parameter Name="EnableTelemetry" Value="[EnableTelemetry]" />
             <Parameter Name="EnableVerboseLogging" Value="[VerboseLoggingEnabled]" />
             <Parameter Name="EnableOperationalTelemetry" Value="[OperationalTelemetryEnabled]" />
+            <Parameter Name="EnableRollingServiceRestarts" Value="[EnableRollingServiceRestarts]" />
             <Parameter Name="LocalLogPath" Value="[LocalLogPath]" />
           </Section>
           <!-- Repair policies -->

@@ -25,10 +25,27 @@ using EntityType = FabricHealer.EntityType;
 
 namespace FHTest
 {
-    /// <summary>
-    /// NOTE: Run these tests on your machine with a local SF dev cluster running.
-    /// TODO: More code coverage.
-    /// </summary>
+    /* 
+    
+    Note: For local testing on your dev machine, you must add RepairManager service to your local SF dev cluster configuration file 
+    (C:\SFDevCluster\Data\clusterManifest.xml) and then run a node configuration update that points to the location of the updated clusterManifest.xml file:
+    
+    Modify your Cluster manifest (e.g., C:\SFDevCluster\Data\clusterManifest.xml):
+     
+    Under the <FabricSettings> node, add:
+
+        <Section Name="RepairManager">
+          <Parameter Name="MinReplicaSetSize" Value="1" />
+          <Parameter Name="TargetReplicaSetSize" Value="1" />
+        </Section>
+
+    Then, open an Admin Powershel console and run
+            
+    Update-ServiceFabricNodeConfiguration -ClusterManifestPath C:\SFDevCluster\Data\clusterManifest.xml
+
+    The cluster will be rebuilt and the RepairManager service will be added to the System services. Then, you can successfully experiment with FH locally 
+    in the way that it will work on an actual cluster in the cloud. And, some of the test below will exercise the right code..
+  */
 
     [TestClass]
     public class FHUnitTests

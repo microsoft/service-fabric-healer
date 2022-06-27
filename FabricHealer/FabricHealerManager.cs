@@ -781,8 +781,8 @@ namespace FabricHealer
             }
 
             var healthEvents = appHealth.HealthEvents.Where(
-                                            s => s.HealthInformation.HealthState == HealthState.Warning
-                                            || s.HealthInformation.HealthState == HealthState.Error);
+                                s => s.HealthInformation.HealthState == HealthState.Warning
+                                || s.HealthInformation.HealthState == HealthState.Error);
 
             foreach (var evt in healthEvents)
             {
@@ -830,12 +830,6 @@ namespace FabricHealer
                     {
                         continue;
                     }
-
-                    // Only FabricObserver can initiate Service Fabric System service repair. FabricHealerProxy does not support this.
-                    /*if (repairData.ObserverName != RepairConstants.FabricSystemObserver)
-                    {
-                        continue;
-                    }*/
 
                     // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
                     var fhRepairTasks = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token);
@@ -1027,12 +1021,13 @@ namespace FabricHealer
                         string telemetryDescription = $"{app.ApplicationName} is upgrading {udText}. Will not attempt service repair at this time.";
 
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                        LogLevel.Info,
-                                                        "MonitorRepairableHealthEventsAsync::AppUpgradeDetected",
-                                                        telemetryDescription,
-                                                        Token,
-                                                        null,
-                                                        ConfigSettings.EnableVerboseLogging);
+                                LogLevel.Info,
+                                "MonitorRepairableHealthEventsAsync::AppUpgradeDetected",
+                                telemetryDescription,
+                                Token,
+                                null,
+                                ConfigSettings.EnableVerboseLogging);
+
                         return;
                     }
                 }
@@ -1082,6 +1077,12 @@ namespace FabricHealer
 
                 // If health data is not a serialized instance of a type that implements ITelemetryData, then move along.
                 if (!JsonSerializationUtility.TryDeserialize(evt.HealthInformation.Description, out TelemetryData repairData))
+                {
+                    continue;
+                }
+
+                // No service name provided. No service.
+                if (string.IsNullOrEmpty(repairData.ServiceName))
                 {
                     continue;
                 }
@@ -1136,8 +1137,9 @@ namespace FabricHealer
 
                     // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
                     var fhRepairTasks = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                                                                    RepairTaskEngine.FabricHealerExecutorName,
-                                                                    Token);
+                                                RepairTaskEngine.FabricHealerExecutorName,
+                                                Token);
+
                     if (fhRepairTasks.Count > 0)
                     {
                         foreach (var repair in fhRepairTasks)
@@ -1151,7 +1153,7 @@ namespace FabricHealer
                             }
 
                             string message = $"A Service Fabric System service repair ({repair.TaskId}) is already in progress in the cluster(state: {repair.State}). " +
-                                                $"Will not attempt repair at this time.";
+                                             $"Will not attempt repair at this time.";
 
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
@@ -1221,26 +1223,51 @@ namespace FabricHealer
                         continue;
                     }
 
-                    string serviceProcessName = $"{repairData.ServiceName?.Replace("fabric:/", "").Replace("/", "")}";
-                    var currentRepairs =
+                    string serviceProcessName = $"{repairData.ServiceName.Replace("fabric:/", "").Replace("/", "")}";
+                    var currentFHRepairs =
                         await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token);
 
                     // This is the way each FH repair is ID'd. This data is stored in the related Repair Task's ExecutorData property.
                     repairId = $"{repairData.NodeName}_{serviceProcessName}_{repairData.Metric?.Replace(" ", string.Empty)}";
 
-                    // Is a repair for the target app service instance already happening in the cluster?
-                    // There can be multiple Warnings emitted by FO for a single app at the same time.
-                    if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
+                    // All FH repairs have serialized instances of RepairExecutorData set as the value for a RepairTask's ExecutorData property.
+                    if (currentFHRepairs?.Count > 0)
                     {
-                        var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(repairId));
-                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                        LogLevel.Info,
-                                                        $"MonitorRepairableHealthEventsAsync::{repairData.ServiceName}",
-                                                        $"{serviceName} already has a repair in progress for service {repairData.ServiceName}(state: {repair.State})",
-                                                        Token,
-                                                        null,
-                                                        ConfigSettings.EnableVerboseLogging);
-                        continue;
+                        if (ConfigSettings.EnableRollingServiceRestarts
+                            && currentFHRepairs.Any(r => JsonSerializationUtility.TryDeserialize(r.ExecutorData, out RepairExecutorData execData)
+                                                      && execData?.RepairData?.ServiceName?.ToLower() == repairData.ServiceName.ToLower()))
+                        {
+                            var repair = currentFHRepairs.FirstOrDefault(r => JsonSerializationUtility.TryDeserialize(r.ExecutorData, out RepairExecutorData execData)
+                                                                           && execData.RepairData.ServiceName.ToLower() == repairData.ServiceName.ToLower());
+
+                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                    LogLevel.Info,
+                                    $"{serviceProcessName}_RollingRepairAlreadyInProgress",
+                                    $"There is already a rolling repair in progress for service {repairData.ServiceName}. Current node: {repair.Target}. Repair State: {repair.State})",
+                                    Token,
+                                    null,
+                                    ConfigSettings.EnableVerboseLogging);
+
+                            return;
+                        }
+                        else if (currentFHRepairs.Any(r => JsonSerializationUtility.TryDeserialize(r.ExecutorData, out RepairExecutorData execData)
+                                                        && execData?.RepairData?.RepairPolicy?.RepairId == repairId))
+                        {
+                            var repair = currentFHRepairs.FirstOrDefault(r => JsonSerializationUtility.TryDeserialize(r.ExecutorData, out RepairExecutorData execData)
+                                                                           && execData.RepairData.RepairPolicy.RepairId == repairId);
+
+                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                    LogLevel.Info,
+                                    $"{serviceProcessName}_RepairAlreadyInProgress",
+                                    $"There is already a repair in progress for service {repairData.ServiceName} on node {repairData.NodeName}(state: {repair.State})",
+                                    Token,
+                                    null,
+                                    ConfigSettings.EnableVerboseLogging);
+
+                            continue;
+                        }
+                        // This means no other service instance will get repaired anywhere in the cluster if a service repair job for the same service is
+                        // already taking place on any node. This only takes effect if config setting EnableRollingServiceRestarts is set to true.
                     }
                 }
 
@@ -1258,19 +1285,19 @@ namespace FabricHealer
                 }
 
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                LogLevel.Info,
-                                                $"MonitorRepairableHealthEventsAsync:{repairId}",
-                                                $"Detected {errOrWarn} state for Service {repairData.ServiceName}{Environment.NewLine}" +
-                                                $"SourceId: {evt.HealthInformation.SourceId}{Environment.NewLine}" +
-                                                $"Property: {evt.HealthInformation.Property}{Environment.NewLine}" +
-                                                $"{system}Application repair policy is enabled. " +
-                                                $"{repairRules.Count} Logic rules found for {system}Service-level repair.",
-                                                Token,
-                                                null,
-                                                ConfigSettings.EnableVerboseLogging);
+                        LogLevel.Info,
+                        $"MonitorRepairableHealthEventsAsync:{repairId}",
+                        $"Detected {errOrWarn} state for Service {repairData.ServiceName}{Environment.NewLine}" +
+                        $"SourceId: {evt.HealthInformation.SourceId}{Environment.NewLine}" +
+                        $"Property: {evt.HealthInformation.Property}{Environment.NewLine}" +
+                        $"{system}Application repair policy is enabled. " +
+                        $"{repairRules.Count} Logic rules found for {system}Service-level repair.",
+                        Token,
+                        null,
+                        ConfigSettings.EnableVerboseLogging);
 
                 // Update the in-memory HealthEvent List.
-                this.repairTaskManager.DetectedHealthEvents.Add(evt);
+                repairTaskManager.DetectedHealthEvents.Add(evt);
 
                 // Start the repair workflow.
                 await repairTaskManager.StartRepairWorkflowAsync((TelemetryData)repairData, repairRules, Token);
@@ -1290,7 +1317,7 @@ namespace FabricHealer
                                             nodeQueryDesc,
                                             ConfigSettings.AsyncTimeout,
                                             Token),
-                                    Token);
+                                     Token);
             
             var supportedNodeHealthStates =
                 nodeHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
@@ -1332,12 +1359,10 @@ namespace FabricHealer
                     // Node/Machine repair not supported in onebox clusters..
                     if (nodes?.Count == 1)
                     {
-                        string message = "Machine/Fabric Node repair is not supported in clusters with 1 Fabric node.";
-
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
                                 $"ProcessNodeHealthAsync::NotSupported",
-                                message,
+                                "Machine/Fabric Node repair is not supported in clusters with 1 Fabric node.",
                                 Token,
                                 null,
                                 ConfigSettings.EnableVerboseLogging);
@@ -1476,12 +1501,13 @@ namespace FabricHealer
             {
                 var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(repairData.NodeType));
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            repairId,
-                            $"There is already a repair in progress for Fabric node {repairData.NodeName}(state: {repair.State})",
-                            Token,
-                            null,
-                            ConfigSettings.EnableVerboseLogging);
+                        LogLevel.Info,
+                        repairId,
+                        $"There is already a repair in progress for Fabric node {repairData.NodeName}(state: {repair.State})",
+                        Token,
+                        null,
+                        ConfigSettings.EnableVerboseLogging);
+
                 return;
             }
 
@@ -1534,10 +1560,7 @@ namespace FabricHealer
 
                 var eval = (ReplicaHealthEvaluation)healthEvaluation;
                 var healthEvent = eval.UnhealthyEvaluations.Cast<EventHealthEvaluation>().FirstOrDefault();
-                var service = await fabricClient.QueryManager.GetServiceNameAsync(
-                                                                eval.PartitionId,
-                                                                ConfigSettings.AsyncTimeout,
-                                                                Token);
+                var service = await fabricClient.QueryManager.GetServiceNameAsync( eval.PartitionId, ConfigSettings.AsyncTimeout, Token);
 
                 /*  Example of repairable problem at Replica level, as health event:
 
@@ -1570,15 +1593,15 @@ namespace FabricHealer
                 }
 
                 var app = await fabricClient.QueryManager.GetApplicationNameAsync(
-                                                            service.ServiceName,
-                                                            ConfigSettings.AsyncTimeout,
-                                                            Token);
+                                    service.ServiceName,
+                                    ConfigSettings.AsyncTimeout,
+                                    Token);
 
                 var replicaList = await fabricClient.QueryManager.GetReplicaListAsync(
-                                                                    eval.PartitionId,
-                                                                    eval.ReplicaOrInstanceId,
-                                                                    ConfigSettings.AsyncTimeout,
-                                                                    Token);
+                                            eval.PartitionId,
+                                            eval.ReplicaOrInstanceId,
+                                            ConfigSettings.AsyncTimeout,
+                                            Token);
                 // Replica still exists?
                 if (replicaList.Count == 0)
                 {
@@ -1808,11 +1831,8 @@ namespace FabricHealer
         {
             try
             {
-                string logicRulesConfigFileName = GetSettingParameterValue(
-                                                     serviceContext,
-                                                     repairPolicySectionName,
-                                                     RepairConstants.LogicRulesConfigurationFile);
-
+                string logicRulesConfigFileName =
+                    GetSettingParameterValue(serviceContext, repairPolicySectionName, RepairConstants.LogicRulesConfigurationFile);
                 var configPath = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Path;
                 var rulesFolderPath = Path.Combine(configPath, RepairConstants.LogicRulesFolderName);
                 var rulesFilePath = Path.Combine(rulesFolderPath, logicRulesConfigFileName);
@@ -1955,15 +1975,15 @@ namespace FabricHealer
                 {
                     string message = $"A newer version of FabricHealer is available: <a href='https://github.com/microsoft/service-fabric-healer/releases' target='_blank'>{latestVersion}</a>";
                     await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                LogLevel.Info,
-                                                RepairConstants.FabricHealer,
-                                                message,
-                                                Token,
-                                                null,
-                                                true, 
-                                                TimeSpan.FromDays(1),
-                                                "NewVersionAvailable",
-                                                EntityType.Application); 
+                            LogLevel.Info,
+                            RepairConstants.FabricHealer,
+                            message,
+                            Token,
+                            null,
+                            true, 
+                            TimeSpan.FromDays(1),
+                            "NewVersionAvailable",
+                            EntityType.Application); 
                 }
             }
             catch (Exception e)
