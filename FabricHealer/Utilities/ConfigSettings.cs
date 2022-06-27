@@ -35,6 +35,12 @@ namespace FabricHealer.Utilities
             private set;
         }
 
+        public bool EnableRollingServiceRestarts
+        {
+            get; 
+            private set;
+        }
+
         public bool TelemetryEnabled
         {
             get; set;
@@ -91,6 +97,12 @@ namespace FabricHealer.Utilities
             private set;
         }
 
+        public bool OperationalTelemetryEnabled
+        {
+            get;
+            private set;
+        }
+
         // RepairPolicy Enablement
         public bool EnableAppRepair
         {
@@ -128,11 +140,6 @@ namespace FabricHealer.Utilities
             private set;
         }
 
-        public bool OperationalTelemetryEnabled 
-        { 
-            get; private set; 
-        }
-
         public ConfigSettings(StatelessServiceContext context)
         {
             this.context = context ?? throw new ArgumentException("Context can't be null.");
@@ -165,6 +172,12 @@ namespace FabricHealer.Utilities
             if (int.TryParse( GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.HealthCheckLoopSleepTimeSeconds), out int execFrequency))
             {
                 ExecutionLoopSleepSeconds = execFrequency;
+            }
+
+            // Rolling service restarts.
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableRollingServiceRestartsParameter), out bool enableRollingRestarts))
+            {
+                EnableRollingServiceRestarts = enableRollingRestarts;
             }
 
             // Telemetry.

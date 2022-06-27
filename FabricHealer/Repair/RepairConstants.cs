@@ -26,6 +26,7 @@ namespace FabricHealer.Repair
         public const string RepairManagerConfigurationSectionName = "RepairManagerConfiguration";
         public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
         public const string EnableTelemetry = "EnableTelemetry";
+        public const string EnableRollingServiceRestartsParameter = "EnableRollingServiceRestarts";
         public const string AppInsightsInstrumentationKeyParameter = "AppInsightsInstrumentationKey";
         public const string EnableETW = "EnableETW";
         public const string HealthCheckLoopSleepTimeSeconds = "HealthCheckLoopSleepTimeSeconds";

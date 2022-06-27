@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using FabricHealer.Utilities.Telemetry;
-using System;
 using System.Runtime.Serialization;
 
 namespace FabricHealer.Repair

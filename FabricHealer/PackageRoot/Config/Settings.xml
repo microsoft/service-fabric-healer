@@ -9,15 +9,15 @@
     <Parameter Name="EnableETW" Value="" MustOverride="true" />
     <Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
     <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
+	<Parameter Name="EnableRollingServiceRestarts" Value="" MustOverride="true" />
     <!-- Folder name for local log output. You can use a full path or just a folder name. -->
     <Parameter Name="LocalLogPath" Value="" MustOverride="true" />
     
-    <!-- ***Non-Overridable Parameters***
-         These must be set in this file. -->
+    <!-- ***Non-Overridable Parameters*** These must be set in this file. -->
+	  
     <!-- Default timeout for async SF API calls. -->
     <Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
-    <!-- Telemetry.
-         Required: Values can be either AzureApplicationInsights or AzureLogAnalytics -->
+    <!-- Required-If EnableTelemetry is set to true in ApplicationManifest. Values can be either AzureApplicationInsights or AzureLogAnalytics -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
     <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
     <Parameter Name="AppInsightsInstrumentationKey" Value="" />
@@ -28,8 +28,8 @@
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
     <Parameter Name="LogAnalyticsLogType" Value="FabricHealer" />
   </Section>
-  <!-- Repair Policies.
-       Overridable Parameters. Must be set in ApplicationManifest.xml. -->
+	
+  <!-- Repair Policies.Overridable Parameters. Must be set in ApplicationManifest.xml. -->
   <Section Name="AppRepairPolicy">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="LogicRulesConfigurationFile" Value="" />
