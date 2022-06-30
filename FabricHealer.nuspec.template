@@ -4,11 +4,10 @@
     <id>%PACKAGE_ID%</id>
     <version>1.1.1</version>
     <releaseNotes>
-		- FabricHealer no longer requires FabricObserver to be deployed in the same cluster.
+		- This version is built for .NET 6 runtime and requires Microsoft.ServiceFabric.Services Versions 6.0.1017 and higher (SF Runtime Version 9.0 and above). Lesser .NET and SF runtime versions are not supported by this release. Use version 1.1.0.
+		- FabricHealer no longer requires FabricObserver to be deployed in the same cluster to be useful (though, it is a good idea to run FabricObserver unless you have your own watchdog service(s)).
 		- Any .NET SF service can now interoperate with FabricHealer using the FabricHealerProxy .NET Standard 2.0 library.
-		- FabricHealer now requires Microsoft.ServiceFabric.Services Version 5.0.516 and higher. Lesser runtime versions than 8.0.516 are no longer supported.
 		- FabricHealer can now be deployed via ARM, directly from the repo.
-		- Requires net6.0+ and SF Runtime 9.0+
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
