@@ -264,9 +264,9 @@ namespace FHTest
 
         private async Task TestInitializeGuanAndRunQuery(TelemetryData repairData, List<string> repairRules, RepairExecutorData executorData)
         {
-            var fabricClient = new FabricClient();
-            var repairTaskManager = new RepairTaskManager(fabricClient, context, token);
-            var repairTaskEngine = new RepairTaskEngine(fabricClient);
+            _ = FabricHealerManager.Instance(context, token);
+            var repairTaskManager = new RepairTaskManager(context, token);
+            var repairTaskEngine = new RepairTaskEngine();
 
             // Add predicate types to functor table. Note that all health information data from FO are automatically passed to all predicates.
             // This enables access to various health state values in any query. See Mitigate() in rules files, for examples.
@@ -314,7 +314,7 @@ namespace FHTest
             compoundTerm.AddArgument(new Constant(repairData.ObserverName), RepairConstants.ObserverName);
             compoundTerm.AddArgument(new Constant(repairData.OS), RepairConstants.OS);
             compoundTerm.AddArgument(new Constant(repairData.ServiceName), RepairConstants.ServiceName);
-            compoundTerm.AddArgument(new Constant(repairData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);
+            compoundTerm.AddArgument(new Constant(repairData.ProcessName), RepairConstants.ProcessName);
             compoundTerm.AddArgument(new Constant(repairData.PartitionId), RepairConstants.PartitionId);
             compoundTerm.AddArgument(new Constant(repairData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
             compoundTerm.AddArgument(new Constant(Convert.ToInt64(repairData.Value)), RepairConstants.MetricValue);

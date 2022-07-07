@@ -13,7 +13,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
-using FabricHealer.Interfaces;
 
 namespace FabricHealer.Repair
 {
@@ -21,11 +20,10 @@ namespace FabricHealer.Repair
     {
         public static async Task<bool> IsRepairTaskInDesiredStateAsync(
                                         string taskId,
-                                        FabricClient fabricClient,
                                         string executorName,
                                         List<RepairTaskState> desiredStates)
         {
-            IList<RepairTask> repairTaskList = await fabricClient.RepairManager.GetRepairTaskListAsync(taskId, RepairTaskStateFilter.All, executorName);
+            IList<RepairTask> repairTaskList = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(taskId, RepairTaskStateFilter.All, executorName);
 
             return desiredStates.Any(desiredState => repairTaskList.Count(rt => rt.State == desiredState) > 0);
         }
@@ -53,7 +51,7 @@ namespace FabricHealer.Repair
                 {
                     try
                     {
-                        _ = await fabricClient.RepairManager.CancelRepairTaskAsync(repairTask.TaskId, repairTask.Version, true);
+                        _ = await FabricHealerManager.FabricClientSingleton.RepairManager.CancelRepairTaskAsync(repairTask.TaskId, repairTask.Version, true);
                     }
                     catch (InvalidOperationException)
                     {
@@ -69,7 +67,7 @@ namespace FabricHealer.Repair
                     repairTask.ResultStatus = RepairTaskResult.Cancelled;
                     try
                     {
-                        _ = await fabricClient.RepairManager.UpdateRepairExecutionStateAsync(repairTask);
+                        _ = await FabricHealerManager.FabricClientSingleton.RepairManager.UpdateRepairExecutionStateAsync(repairTask);
                     }
                     catch (FabricException fe)
                     {
@@ -93,11 +91,10 @@ namespace FabricHealer.Repair
 
         public static async Task<bool> CompleteCustomActionRepairJobAsync(
                                             RepairTask repairTask,
-                                            FabricClient fabricClient,
                                             StatelessServiceContext context,
                                             CancellationToken token)
         {
-            var telemetryUtilities = new TelemetryUtilities(fabricClient, context);
+            var telemetryUtilities = new TelemetryUtilities(context);
 
             try
             {
@@ -111,7 +108,7 @@ namespace FabricHealer.Repair
                 repairTask.State = RepairTaskState.Restoring;
                 repairTask.ResultStatus = RepairTaskResult.Succeeded;
 
-                _ =  await fabricClient.RepairManager.UpdateRepairExecutionStateAsync(
+                _ =  await FabricHealerManager.FabricClientSingleton.RepairManager.UpdateRepairExecutionStateAsync(
                                                             repairTask,
                                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                             token);
@@ -148,10 +145,9 @@ namespace FabricHealer.Repair
                                                 TelemetryData repairData,
                                                 RepairExecutorData executorData,
                                                 string executorName,
-                                                FabricClient fabricClient,
                                                 CancellationToken token)
         {
-            var repairTaskEngine = new RepairTaskEngine(fabricClient);
+            var repairTaskEngine = new RepairTaskEngine();
             RepairActionType repairAction = repairData.RepairPolicy.RepairAction;
             RepairTask repairTask;
 
@@ -188,7 +184,6 @@ namespace FabricHealer.Repair
             }
 
             bool success = await TryCreateRepairTaskAsync(
-                                    fabricClient,
                                     repairTask,
                                     repairData,
                                     repairTaskEngine,
@@ -198,7 +193,6 @@ namespace FabricHealer.Repair
         }
 
         private static async Task<bool> TryCreateRepairTaskAsync(
-                                            FabricClient fabricClient,
                                             RepairTask repairTask,
                                             TelemetryData repairData,
                                             RepairTaskEngine repairTaskEngine,
@@ -218,7 +212,7 @@ namespace FabricHealer.Repair
 
                 if (!isRepairAlreadyInProgress)
                 {
-                    _ = await fabricClient.RepairManager.CreateRepairTaskAsync(repairTask, FabricHealerManager.ConfigSettings.AsyncTimeout, token);
+                    _ = await FabricHealerManager.FabricClientSingleton.RepairManager.CreateRepairTaskAsync(repairTask, FabricHealerManager.ConfigSettings.AsyncTimeout, token);
                     return true;
                 }
             }
@@ -242,23 +236,22 @@ namespace FabricHealer.Repair
                                           RepairTask repairTask,
                                           RepairTaskState repairState,
                                           RepairTaskResult repairResult,
-                                          FabricClient fabricClient,
                                           CancellationToken token)
         {
             repairTask.State = repairState;
             repairTask.ResultStatus = repairResult;
 
-            return await fabricClient.RepairManager.UpdateRepairExecutionStateAsync(
+            return await FabricHealerManager.FabricClientSingleton.RepairManager.UpdateRepairExecutionStateAsync(
                                                           repairTask,
                                                           FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                           token);
         }
 
-        public static async Task<IEnumerable<Service>> GetInfrastructureServiceInstancesAsync(FabricClient fabricClient, CancellationToken cancellationToken)
+        public static async Task<IEnumerable<Service>> GetInfrastructureServiceInstancesAsync(CancellationToken cancellationToken)
         {
             var allSystemServices =
                 await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                               () => fabricClient.QueryManager.GetServiceListAsync(
+                                               () => FabricHealerManager.FabricClientSingleton.QueryManager.GetServiceListAsync(
                                                         new Uri(RepairConstants.SystemAppName),
                                                         null,
                                                         FabricHealerManager.ConfigSettings.AsyncTimeout,
@@ -274,14 +267,13 @@ namespace FabricHealer.Repair
 
         public static async Task<bool> IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
                                          TimeSpan interval,
-                                         FabricClient fabricClient,
                                          TelemetryData repairData,
                                          CancellationToken cancellationToken)
         {
 
             // Repairs where FH or IS is executor.
             var allRecentFHRepairTasksCompleted =
-                            await fabricClient.RepairManager.GetRepairTaskListAsync(
+                            await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                                     RepairTaskEngine.FHTaskIdPrefix,
                                     RepairTaskStateFilter.Completed,
                                     null,
@@ -338,12 +330,11 @@ namespace FabricHealer.Repair
 
         public static async Task<int> GetCompletedRepairCountWithinTimeRangeAsync(
                                          TimeSpan timeWindow,
-                                         FabricClient fabricClient,
                                          TelemetryData repairData,
                                          CancellationToken cancellationToken)
         {
             var allRecentFHRepairTasksCompleted =
-                            await fabricClient.RepairManager.GetRepairTaskListAsync(
+                            await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                                     RepairTaskEngine.FHTaskIdPrefix,
                                     RepairTaskStateFilter.Completed,
                                     null,

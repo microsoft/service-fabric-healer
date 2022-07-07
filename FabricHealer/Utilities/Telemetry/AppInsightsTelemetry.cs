@@ -193,7 +193,7 @@ namespace FabricHealer.Utilities.Telemetry
             {
                 { "Application", telemetryData.ApplicationName ?? string.Empty },
                 { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                { "SystemServiceName", telemetryData.SystemServiceProcessName ?? string.Empty },
+                { "SystemServiceName", telemetryData.ProcessName ?? string.Empty },
                 { "ClusterId", telemetryData.ClusterId ?? string.Empty },
                 { "ErrorCode", telemetryData.Code ?? string.Empty },
                 { "Description", telemetryData.Description ?? string.Empty },

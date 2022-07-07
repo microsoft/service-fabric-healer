@@ -7,9 +7,10 @@
 ## | NodeName                  | Name of the node                                                                                             | 
 ## | NodeType                  | Type of node                                                                                                 |  
 ## | ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                                        | 
-## | MetricName                | Name of the Metric  (e.g., CpuPercent or MemoryMB, etc.)                                                     |   
+## | MetricName                | Name of the Metric (e.g., CpuPercent or MemoryMB, etc.)                                                      |   
 ## | MetricValue               | Corresponding Metric value (e.g. "85" indicating 85% CPU usage)                                              | 
-## | SystemServiceProcessName  | The name of a Fabric system service process supplied in TelemetryData instance                               | 
+## | ProcessName               | The name of a Fabric system service process supplied in TelemetryData instance                               | 
+## | ProcessStartTime          | The time (UTC) the process was created on the machine                                                        |
 ## | OS                        | The name of the OS from which the data was collected (Linux or Windows)                                      |
 ## | HealthState               | The HealthState of the target entity: Error or Warning                                                       |
 
@@ -51,7 +52,7 @@ TimeScopedRestartFabricSystemProcess(?count, ?time) :- GetRepairHistory(?repairC
 
 ## CPU Time - Percent
 
-Mitigate(MetricName="CpuPercent", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
+Mitigate(MetricName="CpuPercent", ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
@@ -59,7 +60,7 @@ Mitigate(MetricName="CpuPercent", SystemServiceProcessName=?SysProcName) :- not(
 
 ## Memory Use - Megabytes in use
 
-Mitigate(MetricName="MemoryMB", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
+Mitigate(MetricName="MemoryMB", ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
@@ -67,7 +68,7 @@ Mitigate(MetricName="MemoryMB", SystemServiceProcessName=?SysProcName) :- not(?S
 
 ## Memory Use - Percent in use
 
-Mitigate(MetricName="MemoryPercent", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
+Mitigate(MetricName="MemoryPercent", ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
@@ -75,7 +76,7 @@ Mitigate(MetricName="MemoryPercent", SystemServiceProcessName=?SysProcName) :- n
 
 ## Ephemeral Ports in Use
 
-Mitigate(MetricName="EphemeralPorts", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
+Mitigate(MetricName="EphemeralPorts", ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
@@ -83,7 +84,7 @@ Mitigate(MetricName="EphemeralPorts", SystemServiceProcessName=?SysProcName) :- 
 
 ## Threads
 
-Mitigate(MetricName="Threads", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
+Mitigate(MetricName="Threads", ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
@@ -93,7 +94,7 @@ Mitigate(MetricName="Threads", SystemServiceProcessName=?SysProcName) :- not(?Sy
 ## that is, different file extensions (.dll, .exe or none, for Linux, for example, and *always* none for Windows (because FO emits just the name, not including the extension, for Windows procs)).
 ## Restart the offending Fabric system process named FabricGateway, regardless of OS.
 
-Mitigate(MetricName="FileHandles", SystemServiceProcessName=?SysProcName) :- match(?SysProcName, "FabricGateway"),
+Mitigate(MetricName="FileHandles", ProcessName=?SysProcName) :- match(?SysProcName, "FabricGateway"),
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(15, 01:00:00).
@@ -102,7 +103,7 @@ Mitigate(MetricName="FileHandles", SystemServiceProcessName=?SysProcName) :- mat
 ## Open File Handles - Linux-only: Any SF system service besides Fabric or FabricHost.
 ## Restart the offending Fabric system process.
 
-Mitigate(MetricName="FileHandles", OS="Linux", SystemServiceProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
+Mitigate(MetricName="FileHandles", OS="Linux", ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
@@ -111,4 +112,4 @@ Mitigate(MetricName="FileHandles", OS="Linux", SystemServiceProcessName=?SysProc
 ## Open File Handles - Linux, Fabric or FabricHost. In these cases, we want a safe (graceful) restart of the Fabric node; not just kill the process, which will restart the node, but not gracefully.
 ## Restart the Fabric node where the offending instance is running.
 
-Mitigate(MetricName="FileHandles", OS="Linux", SystemServiceProcessName="Fabric") :- TimeScopedRestartFabricNode(2, 08:00:00).
+Mitigate(MetricName="FileHandles", OS="Linux", ProcessName="Fabric") :- TimeScopedRestartFabricNode(2, 08:00:00).

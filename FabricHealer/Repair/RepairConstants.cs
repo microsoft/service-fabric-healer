@@ -51,6 +51,7 @@ namespace FabricHealer.Repair
         // Mitigate Argument names.
         public const string AppName = "AppName";
         public const string ServiceName = "ServiceName";
+        public const string ServiceKind = "ServiceKind";
         public const string NodeName = "NodeName";
         public const string NodeType = "NodeType";
         public const string PartitionId = "PartitionId";
@@ -58,8 +59,11 @@ namespace FabricHealer.Repair
         public const string ErrorCode = "ErrorCode";
         public const string MetricName = "MetricName";
         public const string MetricValue = "MetricValue";
+        public const string ObserverName = "ObserverName";
         public const string OS = "OS";
-        public const string SystemServiceProcessName = "SystemServiceProcessName";
+        public const string ProcessId = "ProcessId";
+        public const string ProcessName = "ProcessName";
+        public const string ProcessStartTime = "ProcessStartTime";
         public const string HealthState = "HealthState";
 
         // Repair Actions.
@@ -110,6 +114,5 @@ namespace FabricHealer.Repair
         public const string RepairData = "RepairData";
         public const string RepairPolicy = "RepairPolicy";
         public const string FabricHealer = "FabricHealer";
-        public const string ObserverName = "ObserverName";
     }
 }

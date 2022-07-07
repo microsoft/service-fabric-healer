@@ -70,7 +70,7 @@ namespace FabricHealer.Interfaces
         /// <summary>
         /// Optional. This is required if you are targeting Service Fabric System Service process. In this case, you should also supply the related value for ProcessId.
         /// </summary>
-        string SystemServiceProcessName { get; set; }
+        string ProcessName { get; set; }
         /// <summary>
         /// Optional. The supported resource usage metric value. NOTE: This value must be supplied if you expect to use this fact in related FabricHealer logic rules.
         /// </summary>
