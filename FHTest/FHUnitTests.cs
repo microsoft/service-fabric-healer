@@ -455,7 +455,7 @@ namespace FHTest
         {
             ApplicationName = "fabric:/System",
             NodeName = NodeName,
-            SystemServiceProcessName = "FabricDCA",
+            ProcessName = "FabricDCA",
             ProcessId = 73588,
             Code = SupportedErrorCodes.AppWarningMemoryMB,
             // Specifying Source is Required for unit tests.

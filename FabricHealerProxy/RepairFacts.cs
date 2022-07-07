@@ -95,9 +95,9 @@ namespace FabricHealer
             get; set;
         }
         /// <inheritdoc/>
-        public string SystemServiceProcessName 
-        { 
-            get; set; 
+        public string ProcessName
+        {
+            get;set;
         }
         /// <inheritdoc/>
         public string Property

@@ -113,7 +113,7 @@ namespace Stateless1
             {
                 ApplicationName = "fabric:/System",
                 NodeName = "_Node_0",
-                SystemServiceProcessName = "FabricDCA",
+                ProcessName = "FabricDCA",
                 ProcessId = 73588,
                 Code = SupportedErrorCodes.AppWarningMemoryMB
             };
