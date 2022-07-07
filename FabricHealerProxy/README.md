@@ -100,7 +100,7 @@ namespace Stateless1
                 NodeName = "_Node_0"
             };
 
-            // Initiate a reboot of the machine hosting the specified Fabric node, _Node_4. This will be executed by the InfrastructureService for the related node type.
+            // Initiate a reboot of the machine hosting the specified Fabric node. This will be executed by the InfrastructureService for the related node type.
             // The related logic rules for this repair target are housed in FabricHealer's MachineRules.guan file.
             var RepairFactsMachineTarget = new RepairFacts
             {
