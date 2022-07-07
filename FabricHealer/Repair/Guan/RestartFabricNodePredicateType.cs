@@ -68,7 +68,7 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 // Block attempts to create node-level repair tasks if one is already running in the cluster.
-                var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
+                var repairTaskEngine = new RepairTaskEngine();
                 var isNodeRepairAlreadyInProgress =
                     await repairTaskEngine.IsFHRepairTaskRunningAsync(
                             RepairTaskEngine.FabricHealerExecutorName,
@@ -78,7 +78,7 @@ namespace FabricHealer.Repair.Guan
                 if (isNodeRepairAlreadyInProgress)
                 {
                     string message =
-                    $"A Fabric Node repair, {RepairData.RepairPolicy.RepairId}, is already in progress in the cluster. Will not attempt repair at this time.";
+                    $"A repair for node {RepairData.NodeName} is already in progress in the cluster. Will not node attempt repair at this time.";
 
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,

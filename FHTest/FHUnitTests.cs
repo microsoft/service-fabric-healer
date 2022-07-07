@@ -25,27 +25,10 @@ using EntityType = FabricHealer.EntityType;
 
 namespace FHTest
 {
-    /* 
-    
-    Note: For local testing on your dev machine, you must add RepairManager service to your local SF dev cluster configuration file 
-    (C:\SFDevCluster\Data\clusterManifest.xml) and then run a node configuration update that points to the location of the updated clusterManifest.xml file:
-    
-    Modify your Cluster manifest (e.g., C:\SFDevCluster\Data\clusterManifest.xml):
-     
-    Under the <FabricSettings> node, add:
-
-        <Section Name="RepairManager">
-          <Parameter Name="MinReplicaSetSize" Value="1" />
-          <Parameter Name="TargetReplicaSetSize" Value="1" />
-        </Section>
-
-    Then, open an Admin Powershel console and run
-            
-    Update-ServiceFabricNodeConfiguration -ClusterManifestPath C:\SFDevCluster\Data\clusterManifest.xml
-
-    The cluster will be rebuilt and the RepairManager service will be added to the System services. Then, you can successfully experiment with FH locally 
-    in the way that it will work on an actual cluster in the cloud. And, some of the test below will exercise the right code..
-  */
+    /// <summary>
+    /// NOTE: Run these tests on your machine with a local SF dev cluster running.
+    /// TODO: More code coverage.
+    /// </summary>
 
     [TestClass]
     public class FHUnitTests
@@ -281,9 +264,9 @@ namespace FHTest
 
         private async Task TestInitializeGuanAndRunQuery(TelemetryData repairData, List<string> repairRules, RepairExecutorData executorData)
         {
-            var fabricClient = new FabricClient();
-            var repairTaskManager = new RepairTaskManager(fabricClient, context, token);
-            var repairTaskEngine = new RepairTaskEngine(fabricClient);
+            _ = FabricHealerManager.Instance(context, token);
+            var repairTaskManager = new RepairTaskManager(context, token);
+            var repairTaskEngine = new RepairTaskEngine();
 
             // Add predicate types to functor table. Note that all health information data from FO are automatically passed to all predicates.
             // This enables access to various health state values in any query. See Mitigate() in rules files, for examples.
@@ -331,7 +314,7 @@ namespace FHTest
             compoundTerm.AddArgument(new Constant(repairData.ObserverName), RepairConstants.ObserverName);
             compoundTerm.AddArgument(new Constant(repairData.OS), RepairConstants.OS);
             compoundTerm.AddArgument(new Constant(repairData.ServiceName), RepairConstants.ServiceName);
-            compoundTerm.AddArgument(new Constant(repairData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);
+            compoundTerm.AddArgument(new Constant(repairData.ProcessName), RepairConstants.ProcessName);
             compoundTerm.AddArgument(new Constant(repairData.PartitionId), RepairConstants.PartitionId);
             compoundTerm.AddArgument(new Constant(repairData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
             compoundTerm.AddArgument(new Constant(Convert.ToInt64(repairData.Value)), RepairConstants.MetricValue);
@@ -472,7 +455,7 @@ namespace FHTest
         {
             ApplicationName = "fabric:/System",
             NodeName = NodeName,
-            SystemServiceProcessName = "FabricDCA",
+            ProcessName = "FabricDCA",
             ProcessId = 73588,
             Code = SupportedErrorCodes.AppWarningMemoryMB,
             // Specifying Source is Required for unit tests.
@@ -519,7 +502,7 @@ namespace FHTest
 
             var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, RepairFactsServiceTarget.ServiceName);
             Assert.IsTrue(generatedWarning);
-            Assert.IsTrue(data is not null);
+            Assert.IsTrue(data is TelemetryData);
         }
 
         [TestMethod]
@@ -538,7 +521,7 @@ namespace FHTest
 
             var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, null, NodeName);
             Assert.IsTrue(generatedWarning);
-            Assert.IsTrue(data is not null);
+            Assert.IsTrue(data is TelemetryData);
         }
 
         [TestMethod]
@@ -635,13 +618,13 @@ namespace FHTest
                 {
                     var (generatedWarningService, sdata) = await IsEntityInWarningStateAsync(null, repair.ServiceName);
                     Assert.IsTrue(generatedWarningService);
-                    Assert.IsTrue(sdata is not null);
+                    Assert.IsTrue(sdata is TelemetryData);
                 }
                 else if (repair.EntityType == EntityType.Disk || repair.EntityType == EntityType.Machine || repair.EntityType == EntityType.Node)
                 {
                     var (generatedWarningNode, ndata) = await IsEntityInWarningStateAsync(null, null, NodeName);
                     Assert.IsTrue(generatedWarningNode);
-                    Assert.IsTrue(ndata is not null);
+                    Assert.IsTrue(ndata is TelemetryData);
                 }
 
                 // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");

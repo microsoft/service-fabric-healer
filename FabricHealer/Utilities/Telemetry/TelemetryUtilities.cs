@@ -17,14 +17,12 @@ namespace FabricHealer.Utilities.Telemetry
 {
     public class TelemetryUtilities
     {
-        private readonly FabricClient fabricClient;
         private readonly StatelessServiceContext serviceContext;
         private readonly ITelemetryProvider telemetryClient;
         private readonly Logger logger;
 
-        public TelemetryUtilities(FabricClient fabricClient, StatelessServiceContext serviceContext)
+        public TelemetryUtilities(StatelessServiceContext serviceContext)
         {
-            this.fabricClient = fabricClient;
             this.serviceContext = serviceContext;
             logger = new Logger(RepairConstants.RepairData)
             {
@@ -93,7 +91,7 @@ namespace FabricHealer.Utilities.Telemetry
             }
 
             // Service Fabric health report generation.
-            var healthReporter = new FabricHealthReporter(fabricClient, logger);
+            var healthReporter = new FabricHealthReporter(logger);
             var healthReport = new HealthReport
             {
                 AppName = reportType == EntityType.Application ? new Uri("fabric:/FabricHealer") : null,
@@ -135,7 +133,7 @@ namespace FabricHealer.Utilities.Telemetry
                 RepairPolicy = repairData?.RepairPolicy ?? new RepairPolicy(),
                 ServiceName = repairData?.ServiceName,
                 Source = source,
-                SystemServiceProcessName = repairData?.SystemServiceProcessName,
+                ProcessName = repairData?.ProcessName,
                 Value = repairData != null ? repairData.Value : -1,
             };
 

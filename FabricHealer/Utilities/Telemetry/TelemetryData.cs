@@ -10,6 +10,7 @@ using System.Fabric.Health;
 using System;
 using FabricHealer.Repair;
 using System.Diagnostics.Tracing;
+using System.Fabric.Query;
 
 namespace FabricHealer.Utilities.Telemetry
 {
@@ -95,6 +96,12 @@ namespace FabricHealer.Utilities.Telemetry
             get; set;
         }
 
+        [EventField]
+        public ServiceKind ServiceKind
+        {
+            get; set;
+        }
+
         public string ServiceName
         {
             get; set;
@@ -105,7 +112,12 @@ namespace FabricHealer.Utilities.Telemetry
             get; set;
         }
 
-        public string SystemServiceProcessName
+        public string ProcessName
+        {
+            get; set;
+        }
+
+        public string ProcessStartTime
         {
             get; set;
         }

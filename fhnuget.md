@@ -1,8 +1,6 @@
-## FabricHealer 1.1.0
+## FabricHealer 1.1.1
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
-### Important: Requires Service Fabric version 8.x and higher
-
-### (Requires net6.0+ and SF Runtime 9.0+)
+#### This version is built for .NET 6 and SF Runtime >= 9.0
 
 FabricHealer (FH) is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
 applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls,
@@ -17,7 +15,7 @@ Description value: a serialized instance of a well-known (to FH) type (must impl
 Service Fabric service.
 
 FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster.
-It is a net 6 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04).  
+It is a .NET 6 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04).  
 
 ```
 FabricHealer requires that  RepairManager (RM) service is deployed. 
@@ -29,7 +27,7 @@ For VM level repair, InfrastructureService (IS) service must be deployed.
 ## Build and run  
 
 1. Clone the repo.
-2. Install [.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
+2. Install [.NET 6](https://dotnet.microsoft.com/download/dotnet-core/6.0)
 3. Build. 
 
 ***Note: FabricHealer must be run under the LocalSystem account (see ApplicationManifest.xml) in order to function correctly. This means on Windows, by default, it will run as System user. On Linux, by default, it will run as root user. You do not have to make any changes to ApplicationManifest.xml for this to be the case.*** 

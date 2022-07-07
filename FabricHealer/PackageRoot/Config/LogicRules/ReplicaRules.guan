@@ -1,4 +1,4 @@
-﻿## Experimental Replica repair rules. One type of replica Warning is supported: stuck stateful replicas. They can block application upgrades, so restart them to let the upgrade progress.
+﻿## *Experimental* Replica repair rules. One type of replica Warning is supported: stuck stateful replicas. They can block application upgrades, so restart them to let the upgrade progress.
 
 ## These rules demonstrates a workflow that employs multiple internal and external predicates to get to a solution for a single unhealthy replica scenario:
 ##		[SourceId] ='System.RAP' reported Warning/Error for property...

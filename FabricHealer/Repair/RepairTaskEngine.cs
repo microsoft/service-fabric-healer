@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Fabric;
 using System.Fabric.Repair;
 using System.Linq;
 using System.Threading;
@@ -16,17 +15,11 @@ namespace FabricHealer.Repair
 {
     public sealed class RepairTaskEngine
     {
-        private readonly FabricClient fabricClient;
         public const string HostVMReboot = "System.Reboot";
         public const string FHTaskIdPrefix = "FH";
         public const string AzureTaskIdPrefix = "Azure";
         public const string FabricHealerExecutorName = "FabricHealer";
         public const string InfrastructureServiceName = "fabric:/System/InfrastructureService";
-
-        public RepairTaskEngine(FabricClient fabricClient)
-        {
-            this.fabricClient = fabricClient;
-        }
 
         public async Task<RepairTask> CreateFabricHealerRepairTask(RepairExecutorData executorData, CancellationToken token)
         {
@@ -98,7 +91,7 @@ namespace FabricHealer.Repair
         /// <returns>List of repair tasks in Preparing, Approved, Executing or Restoring state</returns>
         public async Task<RepairTaskList> GetFHRepairTasksCurrentlyProcessingAsync(string executorName, CancellationToken cancellationToken)
         {
-            var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
+            var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                                         FHTaskIdPrefix,
                                         RepairTaskStateFilter.Active |
                                         RepairTaskStateFilter.Approved |
@@ -116,7 +109,7 @@ namespace FabricHealer.Repair
             // Do not allow this to take place in 1-node or 3-node clusters, like a dev cluster.
             // TODO: Block this from running in OneBox (dev machine) environment.
             var nodes = 
-                await fabricClient.QueryManager.GetNodeListAsync(null, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
+                await FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(null, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
             int nodeCount = nodes.Count;
 
             if (nodeCount <= 3)
@@ -150,7 +143,7 @@ namespace FabricHealer.Repair
             // For VM-level repair, RM will create a new task for IS that replaces FH executor data with IS job info, but the original FH repair task will
             // remain in an active state which will block any duplicate scheduling by another FH instance.
             var currentFHRepairTasksInProgress =
-                            await fabricClient.RepairManager.GetRepairTaskListAsync(
+                            await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                                     FHTaskIdPrefix,
                                     RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
                                     executorName,

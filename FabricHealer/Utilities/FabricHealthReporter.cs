@@ -15,18 +15,14 @@ namespace FabricHealer.Utilities
     /// </summary>
     public class FabricHealthReporter
     {
-        private readonly FabricClient fabricClient;
         private readonly Logger _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricHealthReporter"/> class.
         /// </summary>
         /// <param name="fabricClient"></param>
-        public FabricHealthReporter(FabricClient fabricClient, Logger logger)
+        public FabricHealthReporter(Logger logger)
         {
-            this.fabricClient = fabricClient ?? throw new ArgumentException("FabricClient can't be null");
-            this.fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
-            this.fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
             _logger = logger;
         }
 
@@ -77,36 +73,36 @@ namespace FabricHealer.Utilities
                 case EntityType.Application when healthReport.AppName != null:
 
                     var appHealthReport = new ApplicationHealthReport(healthReport.AppName, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(appHealthReport, sendOptions);
                     break;
 
                 case EntityType.Service when healthReport.ServiceName != null:
 
                     var serviceHealthReport = new ServiceHealthReport(healthReport.ServiceName, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
                     break;
 
                 case EntityType.StatefulService when healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0:
 
                     var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
                     break;
 
                 case EntityType.StatelessService when healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0:
 
                     var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
                     break;
 
                 case EntityType.Partition when healthReport.PartitionId != Guid.Empty:
                     var partitionHealthReport = new PartitionHealthReport(healthReport.PartitionId, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                     break;
 
                 case EntityType.DeployedApplication when healthReport.AppName != null:
 
                     var deployedApplicationHealthReport = new DeployedApplicationHealthReport(healthReport.AppName, healthReport.NodeName, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
                     break;
 
                 case EntityType.Disk:
@@ -114,7 +110,7 @@ namespace FabricHealer.Utilities
                 case EntityType.Node:
 
                     var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                     break;
             }
         }

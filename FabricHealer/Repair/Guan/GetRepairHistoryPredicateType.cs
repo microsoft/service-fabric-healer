@@ -32,11 +32,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (timeWindow > TimeSpan.MinValue)
                 {
-                    repairCount = await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(
-                                        timeWindow,
-                                        RepairTaskManager.FabricClientInstance,
-                                        RepairData,
-                                        RepairTaskManager.Token);
+                    repairCount = await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(timeWindow, RepairData, RepairTaskManager.Token);
                 }
                 else
                 {

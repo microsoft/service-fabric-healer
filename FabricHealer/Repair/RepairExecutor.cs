@@ -23,14 +23,12 @@ using System.Runtime.InteropServices;
 using System.ComponentModel;
 using Newtonsoft.Json;
 using System.Fabric.Description;
-using System.Reflection.Metadata.Ecma335;
 
 namespace FabricHealer.Repair
 {
     public class RepairExecutor
     {
         private const double MaxWaitTimeMinutesForNodeOperation = 60.0;
-        private readonly FabricClient fabricClient;
         private readonly TelemetryUtilities telemetryUtilities;
         private readonly StatelessServiceContext serviceContext;
 
@@ -39,11 +37,10 @@ namespace FabricHealer.Repair
             get;
         }
 
-        public RepairExecutor(FabricClient fabricClient, StatelessServiceContext context, CancellationToken token)
+        public RepairExecutor(StatelessServiceContext context, CancellationToken token)
         {
             serviceContext = context;
-            this.fabricClient = fabricClient;
-            telemetryUtilities = new TelemetryUtilities(fabricClient, context);
+            telemetryUtilities = new TelemetryUtilities(context);
 
             try
             {
@@ -52,8 +49,8 @@ namespace FabricHealer.Repair
                     return;
                 }
 
-                IsOneNodeCluster = 
-                        this.fabricClient.QueryManager.GetNodeListAsync(null, FabricHealerManager.ConfigSettings.AsyncTimeout, token).GetAwaiter().GetResult().Count == 1;
+                IsOneNodeCluster =
+                        FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(null, FabricHealerManager.ConfigSettings.AsyncTimeout, token).GetAwaiter().GetResult().Count == 1;
             }
             catch (FabricException fe)
             {
@@ -83,7 +80,7 @@ namespace FabricHealer.Repair
                 Replica replica = null;
 
                 // Verify target replica still exists.
-                var replicaList = await fabricClient.QueryManager.GetReplicaListAsync(
+                var replicaList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
                                             (Guid)repairData.PartitionId,
                                             replicaId,
                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
@@ -120,7 +117,7 @@ namespace FabricHealer.Repair
 
                 var restartCodePackageResult = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                         () =>
-                                                        fabricClient.FaultManager.RestartDeployedCodePackageAsync(
+                                                        FabricHealerManager.FabricClientSingleton.FaultManager.RestartDeployedCodePackageAsync(
                                                             new Uri(repairData.ApplicationName),
                                                             replicaSelector,
                                                             completionMode, 
@@ -238,7 +235,7 @@ namespace FabricHealer.Repair
             };
 
             NodeList nodeList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => fabricClient.QueryManager.GetNodePagedListAsync(
+                                        () => FabricHealerManager.FabricClientSingleton.QueryManager.GetNodePagedListAsync(
                                                 nodeQueryDesc,
                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                 cancellationToken),
@@ -261,7 +258,7 @@ namespace FabricHealer.Repair
             }
 
             ServiceDescription serviceDesc =
-               await fabricClient.ServiceManager.GetServiceDescriptionAsync(serviceContext.ServiceName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
+               await FabricHealerManager.FabricClientSingleton.ServiceManager.GetServiceDescriptionAsync(serviceContext.ServiceName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
 
             int instanceCount = (serviceDesc as StatelessServiceDescription).InstanceCount;
 
@@ -329,12 +326,12 @@ namespace FabricHealer.Repair
                         return false;
                     }
 
-                    await fabricClient.RepairManager.UpdateRepairExecutionStateAsync(repairTask, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
+                    await FabricHealerManager.FabricClientSingleton.RepairManager.UpdateRepairExecutionStateAsync(repairTask, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
 
                     // Deactivate the node with intent to restart. Several health checks will 
                     // take place to ensure safe deactivation, which includes giving services a
                     // chance to gracefully shut down, should they override OnAbort/OnClose.
-                    await fabricClient.ClusterManager.DeactivateNodeAsync(
+                    await FabricHealerManager.FabricClientSingleton.ClusterManager.DeactivateNodeAsync(
                             repairData.NodeName,
                             NodeDeactivationIntent.Restart,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
@@ -347,7 +344,7 @@ namespace FabricHealer.Repair
                     {
                         var nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                             () =>
-                                            fabricClient.QueryManager.GetNodeListAsync(
+                                            FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(
                                                 repairData.NodeName,
                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                 cancellationToken), 
@@ -386,7 +383,7 @@ namespace FabricHealer.Repair
                         return false;
                     }
 
-                    await fabricClient.RepairManager.UpdateRepairExecutionStateAsync(repairTask, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
+                    await FabricHealerManager.FabricClientSingleton.RepairManager.UpdateRepairExecutionStateAsync(repairTask, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
 
                     actionMessage = $"In Step Restart Node.{Environment.NewLine}{repairTask.ExecutorData}";
 
@@ -401,7 +398,7 @@ namespace FabricHealer.Repair
                     // Now, restart node.
                     _ = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                 () =>
-                                fabricClient.FaultManager.RestartNodeAsync(
+                                FabricHealerManager.FabricClientSingleton.FaultManager.RestartNodeAsync(
                                     repairData.NodeName,
                                     nodeInstanceId,
                                     FabricHealerManager.ConfigSettings.AsyncTimeout,
@@ -415,7 +412,7 @@ namespace FabricHealer.Repair
                     {
                         var nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                             () =>
-                                            fabricClient.QueryManager.GetNodeListAsync(
+                                            FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(
                                                 repairData.NodeName,
                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                 cancellationToken), 
@@ -449,16 +446,16 @@ namespace FabricHealer.Repair
                         return false;
                     }
 
-                    await fabricClient.RepairManager.UpdateRepairExecutionStateAsync(repairTask, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
+                    await FabricHealerManager.FabricClientSingleton.RepairManager.UpdateRepairExecutionStateAsync(repairTask, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
 
                     // Now, enable the node. 
-                    await fabricClient.ClusterManager.ActivateNodeAsync(repairData.NodeName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
+                    await FabricHealerManager.FabricClientSingleton.ClusterManager.ActivateNodeAsync(repairData.NodeName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
 
                     await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
 
                     var nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () =>
-                                        fabricClient.QueryManager.GetNodeListAsync(
+                                        FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(
                                             repairData.NodeName,
                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                             cancellationToken), 
@@ -469,7 +466,7 @@ namespace FabricHealer.Repair
                     // Make sure activation request went through.
                     if (targetNode.NodeStatus == NodeStatus.Disabled && targetNode.HealthState == HealthState.Ok)
                     {
-                        await fabricClient.ClusterManager.ActivateNodeAsync(repairData.NodeName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
+                        await FabricHealerManager.FabricClientSingleton.ClusterManager.ActivateNodeAsync(repairData.NodeName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
                     }
 
                     await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
@@ -520,7 +517,7 @@ namespace FabricHealer.Repair
             {
                 // Make sure the replica still exists. \\
 
-                var replicaList = await fabricClient.QueryManager.GetReplicaListAsync(
+                var replicaList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
                                             (Guid)repairData.PartitionId,
                                             repairData.ReplicaId,
                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
@@ -542,7 +539,7 @@ namespace FabricHealer.Repair
 
                 try
                 {
-                    await fabricClient.ServiceManager.RestartReplicaAsync(
+                    await FabricHealerManager.FabricClientSingleton.ServiceManager.RestartReplicaAsync(
                             repairData.NodeName,
                             (Guid)repairData.PartitionId,
                             repairData.ReplicaId,
@@ -614,19 +611,19 @@ namespace FabricHealer.Repair
                 {
                     Process[] ps;
 
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && repairData.SystemServiceProcessName.EndsWith(".dll"))
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && repairData.ProcessName.EndsWith(".dll"))
                     {
-                        ps = GetDotnetProcessesByFirstArgument(repairData.SystemServiceProcessName);
+                        ps = GetDotnetProcessesByFirstArgument(repairData.ProcessName);
                     }
                     else
                     {
-                        ps = Process.GetProcessesByName(repairData.SystemServiceProcessName);
+                        ps = Process.GetProcessesByName(repairData.ProcessName);
                     }
 
                     if (ps == null || ps.Length == 0)
                     {
                         string err =
-                          $"Exception in RestartSystemServiceProcessAsync: Unable to restart process {repairData.SystemServiceProcessName}. ps is null or empty";
+                          $"Exception in RestartSystemServiceProcessAsync: Unable to restart process {repairData.ProcessName}. ps is null or empty";
 
                         await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Warning,
@@ -652,7 +649,7 @@ namespace FabricHealer.Repair
             {
                 FabricHealerManager.RepairHistory.FailedRepairs++;
                 string err =
-                   $"Exception in RestartSystemServiceProcessAsync: Unable to restart process {repairData.SystemServiceProcessName} " +
+                   $"Exception in RestartSystemServiceProcessAsync: Unable to restart process {repairData.ProcessName} " +
                    $"on node {repairData.NodeName}.{Environment.NewLine}" +
                    $"Exception Info:{Environment.NewLine}{e}";
 
@@ -669,7 +666,7 @@ namespace FabricHealer.Repair
             catch (Exception e)
             {
                 string err =
-                   $"Unhandled Exception in RestartSystemServiceProcessAsync: Unable to restart process {repairData.SystemServiceProcessName} " +
+                   $"Unhandled Exception in RestartSystemServiceProcessAsync: Unable to restart process {repairData.ProcessName} " +
                    $"on node {repairData.NodeName}.{Environment.NewLine}" +
                    $"Exception Info:{Environment.NewLine}{e}";
 
@@ -756,7 +753,7 @@ namespace FabricHealer.Repair
             {
                 // Make sure the replica still exists. \\
 
-                var replicaList = await fabricClient.QueryManager.GetReplicaListAsync(
+                var replicaList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
                                             (Guid)repairData.PartitionId,
                                             repairData.ReplicaId,
                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
@@ -776,7 +773,7 @@ namespace FabricHealer.Repair
                     return false;
                 }
 
-                await fabricClient.ServiceManager.RemoveReplicaAsync(
+                await FabricHealerManager.FabricClientSingleton.ServiceManager.RemoveReplicaAsync(
                         repairData.NodeName,
                         (Guid)repairData.PartitionId,
                         repairData.ReplicaId,
@@ -970,7 +967,7 @@ namespace FabricHealer.Repair
         {
             try
             {
-                var nodes = await fabricClient.QueryManager.GetNodeListAsync(
+                var nodes = await FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(
                                    nodeName,
                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
                                    cancellationToken);
@@ -1020,36 +1017,36 @@ namespace FabricHealer.Repair
                     case EntityType.Application when repairData.ApplicationName != null:
 
                         var appHealthReport = new ApplicationHealthReport(new Uri(repairData.ApplicationName), healthInformation);
-                        fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
+                        FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(appHealthReport, sendOptions);
                         break;
 
                     case EntityType.Service when repairData.ServiceName != null:
 
                         var serviceHealthReport = new ServiceHealthReport(new Uri(repairData.ServiceName), healthInformation);
-                        fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
+                        FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
                         break;
 
                     case EntityType.StatefulService when repairData.PartitionId != null && repairData.ReplicaId > 0:
 
                         var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport((Guid)repairData.PartitionId, repairData.ReplicaId, healthInformation);
-                        fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
+                        FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
                         break;
 
                     case EntityType.StatelessService when repairData.PartitionId != null && repairData.ReplicaId > 0:
 
                         var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport((Guid)repairData.PartitionId, repairData.ReplicaId, healthInformation);
-                        fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
+                        FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
                         break;
 
                     case EntityType.Partition when repairData.PartitionId != null:
                         var partitionHealthReport = new PartitionHealthReport((Guid)repairData.PartitionId, healthInformation);
-                        fabricClient.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
+                        FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                         break;
 
                     case EntityType.DeployedApplication when repairData != null && !string.IsNullOrWhiteSpace(repairData.NodeName):
 
                         var deployedApplicationHealthReport = new DeployedApplicationHealthReport(new Uri(repairData.ApplicationName), repairData.NodeName, healthInformation);
-                        fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
+                        FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
                         break;
 
                     case EntityType.Disk when !string.IsNullOrWhiteSpace(repairData.NodeName):
@@ -1057,7 +1054,7 @@ namespace FabricHealer.Repair
                     case EntityType.Node when !string.IsNullOrWhiteSpace(repairData.NodeName):
                    
                         var nodeHealthReport = new NodeHealthReport(repairData.NodeName, healthInformation);
-                        fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
+                        FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                         break;
                 }
             }
