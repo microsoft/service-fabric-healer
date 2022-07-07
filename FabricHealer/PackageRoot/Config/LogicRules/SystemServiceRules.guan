@@ -113,3 +113,8 @@ Mitigate(MetricName="FileHandles", OS="Linux", ProcessName=?SysProcName) :- not(
 ## Restart the Fabric node where the offending instance is running.
 
 Mitigate(MetricName="FileHandles", OS="Linux", ProcessName="Fabric") :- TimeScopedRestartFabricNode(2, 08:00:00).
+
+## Generic catch-all.
+## Doesn't matter what the problem is, just restart the service process if it is not Fabric or FabricHost (for hopefully obvious reasons).
+
+Mitigate(ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), TimeScopedRestartFabricSystemProcess(2, 08:00:00).

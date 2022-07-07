@@ -600,12 +600,10 @@ namespace FabricHealer.Repair
 
             try
             {
-                // FO provided the offending process id in TelemetryData instance. Chances are good it will still be running.
-                // If the process with this id is no longer running, then we can assume it makes no sense to try to restart it:
-                // Just let the ArgumentException bubble out to the catch.
+                // FO/FHProxy provided the offending process id and (or, in the case of FHProxy) name in TelemetryData instance.
                 if (repairData.ProcessId > 0)
                 {
-                    p = Process.GetProcessById((int)repairData.ProcessId);  
+                    p = Process.GetProcessById((int)repairData.ProcessId);
                 }
                 else // We need to figure out the procId from the FO-supplied proc name.
                 {
