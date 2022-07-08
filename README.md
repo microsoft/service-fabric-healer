@@ -1,4 +1,4 @@
-## FabricHealer 1.1.1
+## FabricHealer 2.0.9.60
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
 #### This version is built for .NET 6 and SF Runtime >= 9.0
 
@@ -77,7 +77,7 @@ Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH111
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.1.1   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 2.0.9.60   
 
 #Create the Service instance:  
 
@@ -85,7 +85,7 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.1.1 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 2.0.9.60 -Monitored -FailureAction rollback
 ```  
 
 ## Using FabricHealer  

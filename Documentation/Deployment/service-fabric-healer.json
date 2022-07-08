@@ -13,14 +13,14 @@
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Provide the app version number of FabricHealer. This must be identical with the version provided for the parameter appPackageUrl. Example: '1.1.1'"
+        "description": "Provide the app version number of FabricHealer. This must be identical with the version provided for the parameter appPackageUrl. Example: '2.0.9.60'"
       }
     },
     "packageUrlFabricHealer": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "This has to be a public accessible URL for the sfpkg file which contains the FabricHealer app package. Example: https://github.com/microsoft/service-fabric-healer/releases/download/48361039/Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.1.1.1.sfpkg"
+        "description": "This has to be a public accessible URL for the sfpkg file which contains the FabricHealer app package. Example: https://github.com/microsoft/service-fabric-healer/releases/download/48361039/Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.2.0.9.60.sfpkg"
       }
     }
   },

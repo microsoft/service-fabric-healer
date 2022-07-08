@@ -1,4 +1,4 @@
-## FabricHealer 1.1.1
+## FabricHealer 2.0.9.60
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
 #### This version is built for .NET 6 and SF Runtime >= 9.0
 
