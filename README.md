@@ -1,6 +1,6 @@
 ## FabricHealer 2.0.9.60
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
-#### This version is built for .NET 6 and SF Runtime >= 9.0
+#### Requires Service Fabric runtime version 9.0 and higher. Built for .NET 6
 
 FabricHealer (FH) is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
 applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls,
@@ -69,11 +69,11 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH111 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH20960 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH111
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH20960
 
 #Create FO application (if not already deployed at lesser version):
 
