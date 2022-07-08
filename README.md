@@ -1,6 +1,6 @@
-## FabricHealer 1.1.0
+## FabricHealer 2.0.8.31
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
-#### Requires .NET Core 3.1 and Service Fabric version >= 8.0
+#### Requires Service Fabric runtime version 8.0 and higher. Built for .NET Core 3.1
 
 FabricHealer (FH) is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
 applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls,
@@ -15,7 +15,7 @@ Description value: a serialized instance of a well-known (to FH) type (must impl
 Service Fabric service.
 
 FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster.
-It is a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04). Note that this version (1.1.0) will be the last version that supports .NET Core 3.1. 
+It is a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04). Note that this version (2.0.8.31) will be the last version that supports .NET Core 3.1. 
 
 All warning and error health reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) and subsequently repaired by FabricHealer are user-configured
  - developer control extends from unhealthy event source to related healing operations. 
@@ -76,15 +76,15 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH110 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH20831 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH110
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH20831
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.1.0   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 2.0.8.31   
 
 #Create the Service instance:  
 
@@ -92,7 +92,7 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.1.0 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 2.0.8.31 -Monitored -FailureAction rollback
 ```  
 
 ## Using FabricHealer  

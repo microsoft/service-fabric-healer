@@ -37,20 +37,21 @@ Here is a full example of exactly what is sent in one of these telemetry events,
 
 ```JSON
 {
-    "EventName": "OperationalEvent",
-    "TaskName": "FabricHealer",
-    "EventRunInterval": "1.00:00:00",
-    "ClusterId": "00000000-1111-1111-0000-00f00d000d",
-    "ClusterType": "SFRP",
-    "NodeNameHash": "3e83569d4c6aad78083cd081215dafc81e5218556b6a46cb8dd2b183ed0095ad",
-    "FHVersion": "1.0.0",
-    "UpTime": "00:00:00.1956784",
-    "Timestamp": "2021-12-11T03:12:47.0410613Z",
-    "OS": "Windows",
-    "EnabledRepairCount": 2,
-    "TotalRepairAttempts": 5,
-    "SuccessfulRepairs": 5,
-    "FailedRepairs": 0
+  "EventName": "OperationalEvent",
+  "TaskName": "FabricHealer",
+  "EventRunInterval": "1.00:00:00",
+  "SFRuntimeVersion": "8.2.1620.9590",
+  "ClusterId": "00000000-1111-1111-0000-00f00d000d",
+  "ClusterType": "SFRP",
+  "NodeNameHash": "3e83569d4c6aad78083cd081215dafc81e5218556b6a46cb8dd2b183ed0095ad",
+  "FHVersion": "2.0.8.31",
+  "UpTime": "00:00:00.2164523",
+  "Timestamp": "2022-07-08T21:45:25.2443014Z",
+  "OS": "Windows",
+  "EnabledRepairCount": 1,
+  "TotalRepairAttempts": 0,
+  "SuccessfulRepairs": 0,
+  "FailedRepairs": 0
 }
 ```
 
@@ -58,6 +59,7 @@ Let's take a look at the data and why we think it is useful to share with us. We
 -	**EventName** - this is the name of the telemetry event.
 -	**TaskName** - this specifies that the event is from FabricHealer.
 -	**EventRunInterval** - this is how often this telemetry is sent from a node in a cluster.
+-   **SFRuntimeVersion** - this is the Service Fabric runtime version installed on the machine.
 -	**ClusterId** - this is used to both uniquely identify a telemetry event and to correlate data that comes from a cluster.
 -	**ClusterType** - this is the type of cluster: Standalone or SFRP.
 -	**NodeNameHash** - this is a sha256 hash of the name of the Fabric node from where the data originates. It is used to correlate data from specific nodes in a cluster (the hashed node name will be known to be part of the cluster with a specific cluster id).

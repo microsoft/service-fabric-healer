@@ -9,7 +9,7 @@ Try {
 
 $resourceGroup = "<YOUR-CLUSTER-RESOURCE-NAME>"
 $armTemplate = "service-fabric-healer.json"
-$armTemplateParameters = "service-fabric-healer.v1.1.0.parameters.json"
+$armTemplateParameters = "service-fabric-healer.v2.0.8.31.parameters.json"
 
 cd "<LOCAL-FH-REPO-PATH>\Documentation\Deployment"
 

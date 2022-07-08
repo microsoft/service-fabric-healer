@@ -1,6 +1,6 @@
-## FabricHealer 1.1.0
+## FabricHealer 2.0.8.31
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
-### Important: Requires Service Fabric version 8.x and higher
+#### Requires Service Fabric runtime version 8.0 and higher. Built for .NET Core 3.1
 
 FabricHealer (FH) is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
 applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls,
@@ -15,7 +15,7 @@ Description value: a serialized instance of a well-known (to FH) type (must impl
 Service Fabric service.
 
 FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster.
-It is a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04). Note that this version (1.1.0) will be the last version that supports .NET Core 3.1. 
+It is a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04). Note that this version (2.0.8.31) will be the last version that supports .NET Core 3.1. 
 Please use version 1.1.1 if you are already running Service Fabric 9.0. FH 1.1.1 targets .NET 6 and SF 9.x.
 
 All warning and error health reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) or [FabricHealerProxy](https://github.com/microsoft/service-fabric-healer/tree/develop/FabricHealerProxy) and subsequently repaired by FabricHealer are user-configured - developer control extends from unhealthy event source to related healing operations. 
