@@ -1286,6 +1286,7 @@ namespace FabricHealer
                         // This prevents starting creating a new repair if another service running on a different node needs to be resarted, for example.
                         // Thing of this as a UD Walk across nodes of service instances in need of repair.
                         if (ConfigSettings.EnableRollingServiceRestarts
+                            && nodeList.Count > 1
                             && currentFHRepairs.Any(r => JsonSerializationUtility.TryDeserialize(r.ExecutorData, out RepairExecutorData execData)
                                                       && execData?.RepairData?.ServiceName?.ToLower() == repairData.ServiceName.ToLower()))
                         {
