@@ -30,7 +30,7 @@ namespace FabricHealer
         internal static RepairData RepairHistory;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "2.0.8.31";
+        private const string InternalVersionNumber = "2.0.0.831";
         private static FabricHealerManager singleton;
         private static FabricClient _fabricClient;
         private bool disposedValue;

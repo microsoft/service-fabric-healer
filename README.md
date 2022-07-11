@@ -1,4 +1,4 @@
-## FabricHealer 2.0.8.31
+## FabricHealer 2.0.0.831
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
 #### Requires Service Fabric runtime version 8.0 and higher. Built for .NET Core 3.1
 
@@ -15,7 +15,7 @@ Description value: a serialized instance of a well-known (to FH) type (must impl
 Service Fabric service.
 
 FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster.
-It is a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04). Note that this version (2.0.8.31) will be the last version that supports .NET Core 3.1. 
+It is a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04). Note that this version (2.0.0.831) will be the last version that supports .NET Core 3.1. 
 
 All warning and error health reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) and subsequently repaired by FabricHealer are user-configured
  - developer control extends from unhealthy event source to related healing operations. 
@@ -84,7 +84,7 @@ Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH20831
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 2.0.8.31   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 2.0.0.831   
 
 #Create the Service instance:  
 
@@ -92,7 +92,7 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 2.0.8.31 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 2.0.0.831 -Monitored -FailureAction rollback
 ```  
 
 ## Using FabricHealer  
