@@ -1027,7 +1027,18 @@ namespace FabricHealer
 
         private async Task ProcessServiceHealthAsync(ServiceHealthState serviceHealthState)
         {
-            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, Token);
+            // This is just used to make sure there is more than 1 node in the cluster. We don't need a list of all nodes.
+            var nodeQueryDesc = new NodeQueryDescription
+            {
+                MaxResults = 3,
+            };
+
+            NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                    () => FabricClientSingleton.QueryManager.GetNodePagedListAsync(
+                                            nodeQueryDesc,
+                                            ConfigSettings.AsyncTimeout,
+                                            Token),
+                                     Token);
             ServiceHealth serviceHealth;
             Uri appName;
             Uri serviceName = serviceHealthState.ServiceName;
@@ -1286,7 +1297,7 @@ namespace FabricHealer
                         // This prevents starting creating a new repair if another service running on a different node needs to be resarted, for example.
                         // Thing of this as a UD Walk across nodes of service instances in need of repair.
                         if (ConfigSettings.EnableRollingServiceRestarts
-                            && nodeList.Count > 1
+                            && nodes?.Count > 1
                             && currentFHRepairs.Any(r => JsonSerializationUtility.TryDeserialize(r.ExecutorData, out RepairExecutorData execData)
                                                       && execData?.RepairData?.ServiceName?.ToLower() == repairData.ServiceName.ToLower()))
                         {
