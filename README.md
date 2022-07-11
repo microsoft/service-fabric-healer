@@ -1,6 +1,6 @@
 ## FabricHealer 1.1.0.960
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
-#### Requires Service Fabric runtime version 9.0 and higher and .NET 6
+#### This version targets .NET 6 and requires SF Runtime >= 9.0
 
 FabricHealer (FH) is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
 applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls,
