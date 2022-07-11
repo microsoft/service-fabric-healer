@@ -1,4 +1,4 @@
-## FabricHealer 2.0.0.831
+## FabricHealer 1.1.0.831
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
 #### Requires Service Fabric runtime version 8.0 and higher. Built for .NET Core 3.1
 
