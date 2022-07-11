@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>2.0.9.60</version>
+    <version>1.1.0.960</version>
     <releaseNotes>
 		- This version is built for .NET 6 runtime and requires Microsoft.ServiceFabric.Services Versions 6.0.1017 and higher (SF Runtime Version 9.0 and above). Lesser .NET and SF runtime versions are not supported by this release. Use version 1.1.0 for SF Runtime 8.x and .NET Core 3.1.
 		- FabricHealer no longer requires FabricObserver to be deployed in the same cluster to be useful (though, it is a good idea to run FabricObserver unless you have your own watchdog service(s)).
@@ -18,7 +18,7 @@
     <icon>icon.png</icon>
 	<readme>fhnuget.md</readme>
     <language>en-US</language>
-    <description>FabricHealer 2.0.9.60 is a Service Fabric service (built for .NET 6, requires SF runtime version 9.0 and above) that schedules and safely executes automatic repairs in Linux and Windows Service Fabric clusters after inspecting unhealthy events created by FabricObserver (FO) instances running in the same cluster. It employs a novel Configuration-as-Logic model to express repair workflows using Prolog-like semantics/syntax in text-based configuration files.</description>
+    <description>FabricHealer 1.1.0.960 is a Service Fabric service (built for .NET 6, requires SF runtime version 9.0 and above) that schedules and safely executes automatic repairs in Linux and Windows Service Fabric clusters after inspecting unhealthy events created by FabricObserver (FO) instances running in the same cluster. It employs a novel Configuration-as-Logic model to express repair workflows using Prolog-like semantics/syntax in text-based configuration files.</description>
     <contentFiles>
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>
