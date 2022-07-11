@@ -48,7 +48,7 @@ contain all the information necessary for deploying FabricHealer.
 ### ARM Deployment
 
 For ARM deployment, please see the [ARM documentation](/Documentation/Deployment/Deployment.md). 
-<a name="psanchor"></a>
+
 ### PowerShell Deployment
 
 ```PowerShell

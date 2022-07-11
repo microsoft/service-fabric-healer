@@ -4,7 +4,7 @@ FabricHealerProxy is a .NET Standard 2.0 library that provides a very simple and
 
 ### How to use FabricHealerProxy
 
-- Deploy FabricHealer ([ARM](/Documentation/Deployment/Deployment.md), [PowerShell](/README.md#psanchor)) to your cluster (Do note that if you deploy FabricHealer as a singleton partition 1 (versus -1), then FH will only conduct SF-related repairs).
+- Deploy FabricHealer ([ARM](/Documentation/Deployment/Deployment.md), [PowerShell](/README.md#PowerShell-Deployment)) to your cluster (Do note that if you deploy FabricHealer as a singleton partition 1 (versus -1), then FH will only conduct SF-related repairs).
 - Install FabricHealerProxy nupkg into your own service from where you want to initiate repair of SF entities (stateful/stateless services, Fabric nodes).
 
 FabricHealer will execute entity-related logic rules (housed in it's FabricNodeRules.guan file in this case), and if any of the rules succeed, then FH will create a Repair Job with pre and post safety checks (default),
