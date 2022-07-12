@@ -37,8 +37,6 @@ For VM level repair, InfrastructureService (IS) service must be deployed.
 2. Install [.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
 3. Build. 
 
-***Note: FabricHealer must be run under the LocalSystem account (see ApplicationManifest.xml) in order to function correctly. This means on Windows, by default, it will run as System user. On Linux, by default, it will run as root user. You do not have to make any changes to ApplicationManifest.xml for this to be the case.*** 
-
 ## Deploy FabricHealer 
 You can deploy FabricHealer using Visual Studio (if you build the sources yourself), PowerShell or ARM. ***Please note*** that this version of FabricHealer no longer supports the DefaultServices node in ApplicationManifest.xml. This means that should you deploy using PowerShell,
 you must create an instance of the service as the last command in your script.
