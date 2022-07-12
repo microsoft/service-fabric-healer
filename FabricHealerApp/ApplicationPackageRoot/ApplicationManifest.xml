@@ -76,7 +76,7 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-	<!--
+    <!--
 	Because of certain actions FabricHealer takes in a cluster (deleting files created by or restarting services running at higher elevation, for example), 
     it may need to run as System user on Windows and root on Linux. Note that you should test FH out NOT running as System and validate that it works for your scenarios.
 	For user service-level SF API mitigations (RestartCodePackage, RestartReplica, etc), it can (and therefore should) run as default (Network Service on Windows, sfappsuser on Linux). 
@@ -86,9 +86,9 @@
     </Policies> -->
   </ServiceManifestImport>
   <Principals>
-	  <Users>
-		  <!-- LocalSystem AccountType maps to System on Windows and root on Linux. -->
-		  <User Name="SystemUser" AccountType="LocalSystem" />
-	  </Users>
+    <Users>
+      <!-- LocalSystem AccountType maps to System on Windows and root on Linux. -->
+      <User Name="SystemUser" AccountType="LocalSystem" />
+    </Users>
   </Principals>
 </ApplicationManifest>
