@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric;
+using System.Fabric.Repair;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -52,7 +53,7 @@ namespace FabricHealer.TelemetryLib
             {
                 _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out string nodeHashString);
 
-                IDictionary<string, string> eventProperties = new Dictionary<string, string>
+                var eventProperties = new Dictionary<string, string>
                 {
                     { "EventName", OperationalEventName},
                     { "TaskName", TaskName},
@@ -75,7 +76,7 @@ namespace FabricHealer.TelemetryLib
                     }
                 }
 
-                Dictionary<string, double> eventMetrics = new Dictionary<string, double>
+                var eventMetrics = new Dictionary<string, double>
                 {
                     { "EnabledRepairCount", repairData.RepairData.EnabledRepairCount },
                     { "TotalRepairAttempts", repairData.RepairData.RepairCount },
@@ -83,8 +84,35 @@ namespace FabricHealer.TelemetryLib
                     { "FailedRepairs", repairData.RepairData.FailedRepairs },
                 };
 
-                Dictionary<string, double> repairs = repairData.RepairData.Repairs;
-                eventMetrics.Append(repairs);
+                // Add RepairData (repair name, count).
+                var repairDataNames = new Dictionary<string, double>();
+                foreach (var t in repairData.RepairData.Repairs)
+                {
+                    if (!repairDataNames.ContainsKey(t.Key))
+                    {
+                        repairDataNames.Add(t.Key, t.Value.Count);
+                    }
+                    else
+                    {
+                        repairDataNames[t.Key] = t.Value.Count;
+                    }
+                }
+                eventMetrics.Append(repairDataNames);
+
+                // Add RepairData (source name, count).
+                var repairDataSources = new Dictionary<string, double>();
+                foreach (var t in repairData.RepairData.Repairs)
+                {
+                    if (!repairDataSources.ContainsKey(t.Value.Source))
+                    {
+                        repairDataSources.Add(t.Value.Source, t.Value.Count);
+                    }
+                    else
+                    {
+                        repairDataSources[t.Value.Source] = t.Value.Count;
+                    }
+                }
+                eventMetrics.Append(repairDataSources);
 
                 telemetryClient?.TrackEvent($"{TaskName}.{OperationalEventName}", eventProperties, eventMetrics);
                 telemetryClient?.Flush();

@@ -50,7 +50,7 @@ namespace FabricHealer.Interfaces
         /// <summary>
         /// Calls telemetry provider to report health.
         /// </summary>
-        /// <param name="scope">Scope of health evaluation (Cluster, Node, etc.).</param>
+        /// <param name="entityType">Scope of health evaluation (Cluster, Node, etc.).</param>
         /// <param name="propertyName">Value of the property.</param>
         /// <param name="state">Health state.</param>
         /// <param name="unhealthyEvaluations">Unhealthy evaluations aggregated description.</param>
@@ -60,7 +60,7 @@ namespace FabricHealer.Interfaces
         /// <param name="instanceName">Optional: TraceTelemetry context cloud instance name.</param>
         /// <returns>a Task.</returns>
         Task ReportHealthAsync(
-            HealthScope scope,
+            EntityType entityType,
             string propertyName,
             HealthState state,
             string unhealthyEvaluations,
@@ -88,9 +88,7 @@ namespace FabricHealer.Interfaces
         /// </summary>
         /// <param name="telemetryData">TelemetryData instance.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
-        Task ReportMetricAsync(
-          TelemetryData telemetryData,
-          CancellationToken cancellationToken);
+        Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken);
 
         /// <summary>
         /// Calls telemetry provider to report a metric.

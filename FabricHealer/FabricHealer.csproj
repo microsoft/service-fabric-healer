@@ -12,8 +12,8 @@
          <RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 	<Product>FabricHealer</Product>
-	<Version>1.0.15</Version>
-    <FileVersion>1.0.15</FileVersion>
+	<Version>1.1.0.831</Version>
+    <FileVersion>1.1.0.831</FileVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
     <StartupObject>FabricHealer.Program</StartupObject>
@@ -24,17 +24,16 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.17.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.20.0" />
     <PackageReference Include="Microsoft.Logic.Guan" Version="1.0.4" />
-    <PackageReference Include="Microsoft.ServiceFabric" Version="7.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="4.2.452" />
+	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="NLog" Version="4.7.9" />
-    <PackageReference Include="Octokit" Version="0.50.0" />
+    <PackageReference Include="NLog" Version="5.0.0" />
+    <PackageReference Include="Octokit" Version="0.51.0" />
     <PackageReference Include="System.Configuration.Abstractions" Version="2.0.2.45" />
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
@@ -52,10 +51,10 @@
     <None Update="PackageRoot\Config\LogicRules\ReplicaRules.guan">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
-    <None Update="PackageRoot\Config\LogicRules\SystemAppRules.guan">
+    <None Update="PackageRoot\Config\LogicRules\SystemServiceRules.guan">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
-    <None Update="PackageRoot\Config\LogicRules\VmRules.guan">
+    <None Update="PackageRoot\Config\LogicRules\MachineRules.guan">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
   </ItemGroup>

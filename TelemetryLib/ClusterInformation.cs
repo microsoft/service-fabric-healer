@@ -26,7 +26,6 @@ namespace FabricHealer.TelemetryLib
         private static string diagnosticsClusterId;
         private static XmlDocument clusterManifestXdoc;
         private static readonly object _lock = new object();
-        private static readonly object _lock2 = new object();
         private static (string ClusterId, string ClusterType, string TenantId) _clusterInfoTuple;
 
         public static (string ClusterId, string ClusterType, string TenantId) ClusterInfoTuple
@@ -78,15 +77,11 @@ namespace FabricHealer.TelemetryLib
                     {
                         using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
                         {
-                            // TODO: This is not necessary as the only caller is a property getter, where a lock is already in place around the call to this function.
-                            lock (_lock2)
-                            {
-                                clusterManifestXdoc?.Load(xreader);
+                            clusterManifestXdoc?.Load(xreader);
 
-                                // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
-                                GetValuesFromClusterManifest();
-                            }
-
+                            // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
+                            GetValuesFromClusterManifest();
+                            
                             if (paasClusterId != null)
                             {
                                 clusterId = paasClusterId;

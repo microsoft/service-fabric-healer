@@ -17,37 +17,20 @@ namespace FabricHealer.Repair.Guan
         private static RepairTaskManager RepairTaskManager;
         private static RepairExecutorData RepairExecutorData;
         private static RepairTaskEngine RepairTaskEngine;
-        private static TelemetryData FOHealthData;
+        private static TelemetryData RepairData;
         private static RestartFabricNodePredicateType Instance;
 
         private class Resolver : BooleanPredicateResolver
         {
-            private readonly RepairConfiguration repairConfiguration;
-
             public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
                     : base(input, constraint, context)
             {
-                repairConfiguration = new RepairConfiguration
-                {
-                    AppName = !string.IsNullOrWhiteSpace(FOHealthData.ApplicationName) ? new Uri(FOHealthData.ApplicationName) : null,
-                    FOErrorCode = FOHealthData.Code,
-                    NodeName = FOHealthData.NodeName,
-                    NodeType = FOHealthData.NodeType,
-                    PartitionId = !string.IsNullOrWhiteSpace(FOHealthData.PartitionId) ? new Guid(FOHealthData.PartitionId) : default,
-                    ReplicaOrInstanceId = FOHealthData.ReplicaId > 0 ? FOHealthData.ReplicaId : 0,
-                    ServiceName = (!string.IsNullOrWhiteSpace(FOHealthData.ServiceName) && FOHealthData.ServiceName.Contains("fabric:/")) ? new Uri(FOHealthData.ServiceName) : null,
-                    FOHealthMetricValue = FOHealthData.Value,
-                    RepairPolicy = new RepairPolicy()
-                };
+
             }
 
             protected override async Task<bool> CheckAsync()
             {
-                // Repair Policy
-                repairConfiguration.RepairPolicy.RepairAction = RepairActionType.RestartFabricNode;
-                repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
-                repairConfiguration.RepairPolicy.TargetType = FOHealthData.ApplicationName == RepairConstants.SystemAppName ? RepairTargetType.Application : RepairTargetType.Node;
-
+                RepairData.RepairPolicy.RepairAction = RepairActionType.RestartFabricNode;
                 int count = Input.Arguments.Count;
 
                 for (int i = 0; i < count; i++)
@@ -56,11 +39,11 @@ namespace FabricHealer.Repair.Guan
                     switch (typeString)
                     {
                         case "TimeSpan":
-                            repairConfiguration.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
                         case "Boolean":
-                            repairConfiguration.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
                         default:
@@ -78,39 +61,40 @@ namespace FabricHealer.Repair.Guan
                     // executordata instance.
                     repairTask = await RepairTaskEngine.CreateFabricHealerRepairTask(RepairExecutorData, RepairTaskManager.Token);
                     success = await RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
-                                                    repairTask,
-                                                    repairConfiguration,
-                                                    RepairTaskManager.Token).ConfigureAwait(false);
+                                        repairTask,
+                                        RepairData,
+                                        RepairTaskManager.Token);
                     return success;
                 }
 
                 // Block attempts to create node-level repair tasks if one is already running in the cluster.
-                var repairTaskEngine = new RepairTaskEngine(RepairTaskManager.FabricClientInstance);
+                var repairTaskEngine = new RepairTaskEngine();
                 var isNodeRepairAlreadyInProgress =
                     await repairTaskEngine.IsFHRepairTaskRunningAsync(
-                                            RepairTaskEngine.FabricHealerExecutorName,
-                                            repairConfiguration,
-                                            RepairTaskManager.Token).ConfigureAwait(false);
+                            RepairTaskEngine.FabricHealerExecutorName,
+                            RepairData,
+                            RepairTaskManager.Token);
 
                 if (isNodeRepairAlreadyInProgress)
                 {
                     string message =
-                    $"A Fabric Node repair, {FOHealthData.RepairId}, is already in progress in the cluster. Will not attempt repair at this time.";
+                    $"A repair for node {RepairData.NodeName} is already in progress in the cluster. Will not node attempt repair at this time.";
 
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                                LogLevel.Info,
-                                                                $"RestartFabricNodePredicateType::{FOHealthData.RepairId}",
-                                                                message,
-                                                                RepairTaskManager.Token).ConfigureAwait(false);
+                            LogLevel.Info,
+                            $"RestartFabricNodePredicateType::{RepairData.RepairPolicy.RepairId}",
+                            message,
+                            RepairTaskManager.Token);
+
                     return false;
                 }
 
                 // Try to schedule repair with RM.
                 repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                          () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                                                                    repairConfiguration,
-                                                                                    RepairTaskManager.Token),
-                                                           RepairTaskManager.Token).ConfigureAwait(false);
+                                    () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
+                                            RepairData,
+                                            RepairTaskManager.Token),
+                                    RepairTaskManager.Token);
 
                 if (repairTask == null)
                 {
@@ -119,26 +103,26 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to execute custom repair (FH executor).
                 success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                       () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
-                                                                                repairTask,
-                                                                                repairConfiguration,
-                                                                                RepairTaskManager.Token),
-                                                        RepairTaskManager.Token).ConfigureAwait(false);
+                                    () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                                            repairTask,
+                                            RepairData,
+                                            RepairTaskManager.Token),
+                                    RepairTaskManager.Token);
                 return success;
             }
         }
 
         public static RestartFabricNodePredicateType Singleton(
-                                                        string name,
-                                                        RepairTaskManager repairTaskManager,
-                                                        RepairExecutorData repairExecutorData,
-                                                        RepairTaskEngine repairTaskEngine,
-                                                        TelemetryData foHealthData)
+                        string name,
+                        RepairTaskManager repairTaskManager,
+                        RepairExecutorData repairExecutorData,
+                        RepairTaskEngine repairTaskEngine,
+                        TelemetryData repairData)
         {
             RepairTaskManager = repairTaskManager;
             RepairExecutorData = repairExecutorData;
             RepairTaskEngine = repairTaskEngine;
-            FOHealthData = foHealthData;
+            RepairData = repairData;
             
             return Instance ??= new RestartFabricNodePredicateType(name);
         }

@@ -35,6 +35,12 @@ namespace FabricHealer.Utilities
             private set;
         }
 
+        public bool EnableRollingServiceRestarts
+        {
+            get; 
+            private set;
+        }
+
         public bool TelemetryEnabled
         {
             get; set;
@@ -91,6 +97,12 @@ namespace FabricHealer.Utilities
             private set;
         }
 
+        public bool OperationalTelemetryEnabled
+        {
+            get;
+            private set;
+        }
+
         // RepairPolicy Enablement
         public bool EnableAppRepair
         {
@@ -104,7 +116,7 @@ namespace FabricHealer.Utilities
             private set;
         }
 
-        public bool EnableNodeRepair
+        public bool EnableFabricNodeRepair
         {
             get;
             private set;
@@ -122,15 +134,10 @@ namespace FabricHealer.Utilities
             private set;
         }
 
-        public bool EnableVmRepair
+        public bool EnableMachineRepair
         {
             get;
             private set;
-        }
-
-        public bool OperationalTelemetryEnabled 
-        { 
-            get; private set; 
         }
 
         public ConfigSettings(StatelessServiceContext context)
@@ -167,8 +174,14 @@ namespace FabricHealer.Utilities
                 ExecutionLoopSleepSeconds = execFrequency;
             }
 
+            // Rolling service restarts.
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableRollingServiceRestartsParameter), out bool enableRollingRestarts))
+            {
+                EnableRollingServiceRestarts = enableRollingRestarts;
+            }
+
             // Telemetry.
-            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AppInsightsTelemetryEnabled), out bool telemEnabled))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableTelemetry), out bool telemEnabled))
             {
                 TelemetryEnabled = telemEnabled;
 
@@ -200,8 +213,8 @@ namespace FabricHealer.Utilities
                 }
             }
 
-            // FabricHealer ETW telemetry.
-            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableEventSourceProvider), out bool etwEnabled))
+            // ETW.
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableETW), out bool etwEnabled))
             {
                 EtwEnabled = etwEnabled;
             }
@@ -225,7 +238,7 @@ namespace FabricHealer.Utilities
 
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.FabricNodeRepairPolicySectionName, RepairConstants.Enabled), out bool nodeRepairEnabled))
             {
-                EnableNodeRepair = nodeRepairEnabled;
+                EnableFabricNodeRepair = nodeRepairEnabled;
             }
 
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.ReplicaRepairPolicySectionName, RepairConstants.Enabled), out bool replicaRepairEnabled))
@@ -233,14 +246,14 @@ namespace FabricHealer.Utilities
                 EnableReplicaRepair = replicaRepairEnabled;
             }
 
-            if (bool.TryParse(GetConfigSettingValue(RepairConstants.SystemAppRepairPolicySectionName, RepairConstants.Enabled), out bool systemAppRepairEnabled))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.SystemServiceRepairPolicySectionName, RepairConstants.Enabled), out bool systemAppRepairEnabled))
             {
                 EnableSystemAppRepair = systemAppRepairEnabled;
             }
 
-            if (bool.TryParse(GetConfigSettingValue(RepairConstants.VmRepairPolicySectionName, RepairConstants.Enabled), out bool vmRepairEnabled))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.Enabled), out bool vmRepairEnabled))
             {
-                EnableVmRepair = vmRepairEnabled;
+                EnableMachineRepair = vmRepairEnabled;
             }
         }
 

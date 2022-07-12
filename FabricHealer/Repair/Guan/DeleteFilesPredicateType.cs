@@ -16,38 +16,26 @@ namespace FabricHealer.Repair.Guan
     public class DeleteFilesPredicateType : PredicateType
     {
         private static RepairTaskManager RepairTaskManager;
-        private static TelemetryData FOHealthData;
+        private static TelemetryData RepairData;
         private static DeleteFilesPredicateType Instance;
 
         private class Resolver : BooleanPredicateResolver
         {
-            private readonly RepairConfiguration repairConfiguration;
-
             public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
                     : base(input, constraint, context)
             {
-                repairConfiguration = new RepairConfiguration
-                {
-                    AppName = !string.IsNullOrWhiteSpace(FOHealthData.ApplicationName) ? new Uri(FOHealthData.ApplicationName) : null,
-                    FOErrorCode = FOHealthData.Code,
-                    NodeName = FOHealthData.NodeName,
-                    NodeType = FOHealthData.NodeType,
-                    PartitionId = !string.IsNullOrWhiteSpace(FOHealthData.PartitionId) ? new Guid(FOHealthData.PartitionId) : default,
-                    ReplicaOrInstanceId = FOHealthData.ReplicaId > 0 ? FOHealthData.ReplicaId : 0,
-                    ServiceName = !string.IsNullOrWhiteSpace(FOHealthData.ServiceName) ? new Uri(FOHealthData.ServiceName) : null,
-                    FOHealthMetricValue = FOHealthData.Value,
-                    RepairPolicy = new DiskRepairPolicy()
-                };
+
             }
 
             protected override async Task<bool> CheckAsync()
             {
                 // Can only delete files on the same VM where the FH instance that took the job is running.
-                if (repairConfiguration.NodeName != RepairTaskManager.Context.NodeContext.NodeName)
+                if (RepairData.NodeName != RepairTaskManager.Context.NodeContext.NodeName)
                 {
                     return false;
                 }
 
+                RepairData.RepairPolicy.RepairAction = RepairActionType.DeleteFiles;
                 bool recurseSubDirectories = false;
                 string path = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue();
                 
@@ -106,32 +94,41 @@ namespace FabricHealer.Repair.Guan
                     if (!ValidateFileSearchPattern(searchPattern, path, recurseSubDirectories))
                     {
                         await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                        LogLevel.Info,
-                                                        "DeleteFilesPredicateType::NoFilesMatchSearchPattern",
-                                                        $"Specified search pattern, {searchPattern}, does not match any files in {path}.",
-                                                        RepairTaskManager.Token).ConfigureAwait(false);
+                                LogLevel.Info,
+                                "DeleteFilesPredicateType::NoFilesMatchSearchPattern",
+                                $"Specified search pattern, {searchPattern}, does not match any files in {path}.",
+                                RepairTaskManager.Token);
+
                         return false;
                     }
                 }
 
-                // RepairPolicy (base)
-                repairConfiguration.RepairPolicy.RepairAction = RepairActionType.DeleteFiles;
-                repairConfiguration.RepairPolicy.TargetType = RepairTargetType.VirtualMachine;
-                repairConfiguration.RepairPolicy.RepairId = FOHealthData.RepairId;
-                
-                // DiskRepairPolicy (derives from RepairPolicy)
-                (repairConfiguration.RepairPolicy as DiskRepairPolicy).FolderPath = path;
-                (repairConfiguration.RepairPolicy as DiskRepairPolicy).MaxNumberOfFilesToDelete = maxFilesToDelete;
-                (repairConfiguration.RepairPolicy as DiskRepairPolicy).FileAgeSortOrder = direction;
-                (repairConfiguration.RepairPolicy as DiskRepairPolicy).RecurseSubdirectories = recurseSubDirectories;
-                (repairConfiguration.RepairPolicy as DiskRepairPolicy).FileSearchPattern = !string.IsNullOrWhiteSpace(searchPattern) ? searchPattern : "*";
+                string id = RepairData.RepairPolicy.RepairId;
+                TimeSpan maxTimePostRepairHealthCheck = RepairData.RepairPolicy.MaxTimePostRepairHealthCheck;
+                bool doHealthChecks = RepairData.RepairPolicy.DoHealthChecks;
+
+                // DiskRepairPolicy
+                var diskRepairPolicy = new DiskRepairPolicy
+                {
+                    FolderPath = path,
+                    MaxNumberOfFilesToDelete = maxFilesToDelete,
+                    FileAgeSortOrder = direction,
+                    RecurseSubdirectories = recurseSubDirectories,
+                    FileSearchPattern = !string.IsNullOrWhiteSpace(searchPattern) ? searchPattern : "*",
+                    RepairId = id,
+                    MaxTimePostRepairHealthCheck = maxTimePostRepairHealthCheck,
+                    DoHealthChecks = doHealthChecks,
+                    RepairAction = RepairActionType.DeleteFiles
+                };
+
+                RepairData.RepairPolicy = diskRepairPolicy;
 
                 // Try to schedule repair with RM.
                 var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                              () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                                                                        repairConfiguration,
-                                                                                        RepairTaskManager.Token),
-                                                               RepairTaskManager.Token).ConfigureAwait(false);
+                                          () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
+                                                  RepairData,
+                                                  RepairTaskManager.Token),
+                                           RepairTaskManager.Token);
 
                 if (repairTask == null)
                 {
@@ -140,18 +137,18 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to execute repair (FH executor does this work and manages repair state through RM, as always).
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                            () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
-                                                                                        repairTask,
-                                                                                        repairConfiguration,
-                                                                                        RepairTaskManager.Token),
-                                                             RepairTaskManager.Token).ConfigureAwait(false);
+                                        () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                                                repairTask,
+                                                RepairData,
+                                                RepairTaskManager.Token),
+                                         RepairTaskManager.Token);
                 return success;
             }
         }
 
-        public static DeleteFilesPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData foHealthData)
+        public static DeleteFilesPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
         {
-            FOHealthData = foHealthData;
+            RepairData = repairData;
             RepairTaskManager = repairTaskManager;
 
             return Instance ??= new DeleteFilesPredicateType(name);

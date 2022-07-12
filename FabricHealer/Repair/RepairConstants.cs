@@ -25,9 +25,10 @@ namespace FabricHealer.Repair
         // RepairManager Settings Parameters.
         public const string RepairManagerConfigurationSectionName = "RepairManagerConfiguration";
         public const string EnableVerboseLoggingParameter = "EnableVerboseLogging";
-        public const string AppInsightsTelemetryEnabled = "EnableTelemetryProvider";
+        public const string EnableTelemetry = "EnableTelemetry";
+        public const string EnableRollingServiceRestartsParameter = "EnableRollingServiceRestarts";
         public const string AppInsightsInstrumentationKeyParameter = "AppInsightsInstrumentationKey";
-        public const string EnableEventSourceProvider = "EnableEventSourceProvider";
+        public const string EnableETW = "EnableETW";
         public const string HealthCheckLoopSleepTimeSeconds = "HealthCheckLoopSleepTimeSeconds";
         public const string LocalLogPathParameter = "LocalLogPath";
         public const string AsyncOperationTimeout = "AsyncOperationTimeoutSeconds";
@@ -41,24 +42,29 @@ namespace FabricHealer.Repair
         public const string ReplicaRepairPolicySectionName = "ReplicaRepairPolicy";
         public const string AppRepairPolicySectionName = "AppRepairPolicy";
         public const string DiskRepairPolicySectionName = "DiskRepairPolicy";
-        public const string SystemAppRepairPolicySectionName = "SystemAppRepairPolicy";
-        public const string VmRepairPolicySectionName = "VMRepairPolicy";
+        public const string SystemServiceRepairPolicySectionName = "SystemServiceRepairPolicy";
+        public const string MachineRepairPolicySectionName = "MachineRepairPolicy";
 
-        // RepairPolicy Settings Parameters.
+        // RepairPolicy
         public const string Enabled = "Enabled";
 
         // Mitigate Argument names.
         public const string AppName = "AppName";
         public const string ServiceName = "ServiceName";
+        public const string ServiceKind = "ServiceKind";
         public const string NodeName = "NodeName";
         public const string NodeType = "NodeType";
         public const string PartitionId = "PartitionId";
         public const string ReplicaOrInstanceId = "ReplicaOrInstanceId";
-        public const string FOErrorCode = "FOErrorCode";
+        public const string ErrorCode = "ErrorCode";
         public const string MetricName = "MetricName";
         public const string MetricValue = "MetricValue";
+        public const string ObserverName = "ObserverName";
         public const string OS = "OS";
-        public const string SystemServiceProcessName = "SystemServiceProcessName";
+        public const string ProcessId = "ProcessId";
+        public const string ProcessName = "ProcessName";
+        public const string ProcessStartTime = "ProcessStartTime";
+        public const string HealthState = "HealthState";
 
         // Repair Actions.
         public const string DeleteFiles = "DeleteFiles";
@@ -94,7 +100,7 @@ namespace FabricHealer.Repair
         public const string FileHandlesPercent = "FileHandlesPercent";
         public const string Threads = "Threads";
 
-        // Supported Observer Names
+        // Supported FabricObserver Observer Names
         public const string AppObserver = "AppObserver";
         public const string ContainerObserver = "ContainerObserver";
         public const string DiskObserver = "DiskObserver";
@@ -108,6 +114,5 @@ namespace FabricHealer.Repair
         public const string RepairData = "RepairData";
         public const string RepairPolicy = "RepairPolicy";
         public const string FabricHealer = "FabricHealer";
-        public const string ObserverName = "ObserverName";
     }
 }

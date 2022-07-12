@@ -25,7 +25,7 @@ namespace FabricHealer.Repair
         /// <param name="token">CancellationToken</param>
         /// <param name="appName" type="optional">Application Name (Uri)</param>
         /// <returns>List of integers representing UDs</returns>
-        internal static async Task<List<int>> GetUdsWhereApplicationUpgradeInProgressAsync(FabricClient fabricClient, Uri appName, CancellationToken token)
+        internal static async Task<List<int>> GetUdsWhereApplicationUpgradeInProgressAsync(Uri appName, CancellationToken token)
         {
             try
             {
@@ -38,15 +38,15 @@ namespace FabricHealer.Repair
                 var upgradeDomainsInProgress = new List<int>();
 
 
-                var appList = await fabricClient.QueryManager.GetApplicationListAsync(appName, FabricHealerManager.ConfigSettings.AsyncTimeout, token).ConfigureAwait(false);
+                var appList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetApplicationListAsync(appName, FabricHealerManager.ConfigSettings.AsyncTimeout, token);
 
                 foreach (var application in appList)
                 {
                     var upgradeProgress =
-                        await fabricClient.ApplicationManager.GetApplicationUpgradeProgressAsync(
-                                                                application.ApplicationName, 
-                                                                TimeSpan.FromMinutes(1), 
-                                                                token).ConfigureAwait(false);
+                        await FabricHealerManager.FabricClientSingleton.ApplicationManager.GetApplicationUpgradeProgressAsync(
+                                application.ApplicationName, 
+                                TimeSpan.FromMinutes(1), 
+                                token);
 
                     if (!upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingBackInProgress) &&
                         !upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingForwardInProgress) &&
@@ -91,15 +91,15 @@ namespace FabricHealer.Repair
         /// <param name="fabricClient">FabricClient</param>
         /// <param name="token"></param>
         /// <returns>UD in progress</returns>
-        public static async Task<int> GetUdsWhereFabricUpgradeInProgressAsync(FabricClient fabricClient, CancellationToken token)
+        public static async Task<int> GetUdsWhereFabricUpgradeInProgressAsync(CancellationToken token)
         {
             try
             {
                 FabricUpgradeProgress fabricUpgradeProgress =
                     await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                    () => fabricClient.ClusterManager.GetFabricUpgradeProgressAsync(
-                                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                    token), token).ConfigureAwait(false);
+                            () => FabricHealerManager.FabricClientSingleton.ClusterManager.GetFabricUpgradeProgressAsync(
+                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            token), token);
 
                 if (!fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingBackInProgress) &&
                     !fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingForwardInProgress) &&
@@ -123,14 +123,14 @@ namespace FabricHealer.Repair
         /// <param name="nodeType">NodeType string</param>
         /// <param name="token">CancellationToken instance</param>
         /// <returns>true if tenant update is in progress, false otherwise</returns>
-        public static async Task<bool> IsAzureTenantUpdateInProgress(FabricClient fabricClient, string nodeType, CancellationToken token)
+        public static async Task<bool> IsAzureTenantUpdateInProgress(string nodeType, CancellationToken token)
         {
-            var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                                                "Azure",
-                                                                System.Fabric.Repair.RepairTaskStateFilter.Active | System.Fabric.Repair.RepairTaskStateFilter.Executing,
-                                                                $"fabric:/System/InfrastructureService/{nodeType}",
-                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                token).ConfigureAwait(false);
+            var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                                        "Azure",
+                                        System.Fabric.Repair.RepairTaskStateFilter.Active | System.Fabric.Repair.RepairTaskStateFilter.Executing,
+                                        $"fabric:/System/InfrastructureService/{nodeType}",
+                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                        token);
 
             bool isAzureTenantRepairInProgress = repairTasks.Count > 0;
 
@@ -139,13 +139,14 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            string message = "Azure Tenant Update in progress. Will not attempt repairs at this time.";
+            string message = "Azure Platform or Tenant Update in progress. Will not attempt repairs at this time.";
 
             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                            LogLevel.Info,
-                                                            "AzureTenantUpdateInProgress",
-                                                            message,
-                                                            token).ConfigureAwait(false);
+                    LogLevel.Info,
+                    "AzurePlatformOrTenantUpdateInProgress",
+                    message,
+                    token);
+
             return true;
         }
     }

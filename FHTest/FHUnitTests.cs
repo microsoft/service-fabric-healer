@@ -19,6 +19,9 @@ using FabricHealer.Utilities;
 using FabricHealer;
 using System.Fabric.Repair;
 using System.Diagnostics;
+using System.Fabric.Health;
+using SupportedErrorCodes = FabricHealer.Utilities.SupportedErrorCodes;
+using EntityType = FabricHealer.EntityType;
 
 namespace FHTest
 {
@@ -26,7 +29,7 @@ namespace FHTest
     /// NOTE: Run these tests on your machine with a local SF dev cluster running.
     /// TODO: More code coverage.
     /// </summary>
-    
+
     [TestClass]
     public class FHUnitTests
     {
@@ -56,6 +59,10 @@ namespace FHTest
                                 long.MaxValue);
 
         private readonly CancellationToken token = new CancellationToken();
+
+        // This is the name of the node used on your local dev machine's SF cluster. If you customize this, then change it.
+        private const string NodeName = "_Node_0";
+        private const string FHProxyId = "FabricHealerProxy";
 
         // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
         // e.g., if developing on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\LogicRules\";
@@ -104,6 +111,9 @@ namespace FHTest
         public static async Task TestClassCleanupAsync()
         {
             await CleanupTestRepairJobsAsync();
+
+            // Ensure FHProxy cleans up its health reports.
+            FabricHealerProxy.Instance.Close();
         }
 
         /* GuanLogic Tests */
@@ -124,20 +134,24 @@ namespace FHTest
                 TelemetryEnabled = false
             };
 
-            // This will be the mock data used to create a repair task.
-            var foHealthData = new TelemetryData
+            // This will be the data used to create a repair task.
+            var repairData = new TelemetryData
             {
                 ApplicationName = "fabric:/test",
                 NodeName = "TEST_0",
-                RepairId = "Test42",
-                Code = FOErrorWarningCodes.AppErrorMemoryMB,
+                Code = SupportedErrorCodes.AppErrorMemoryMB,
+                HealthState = HealthState.Warning,
                 ServiceName = "fabric:/test0/service0",
-                Value = 1024.0
+                Value = 1024.0,
+                RepairPolicy = new RepairPolicy
+                {
+                    RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}"
+                }
             };
 
             var executorData = new RepairExecutorData
             {
-                RepairPolicy = new RepairPolicy(),
+                RepairData = repairData
             };
 
             foreach (var file in Directory.GetFiles(FHRulesDirectory))
@@ -146,7 +160,7 @@ namespace FHTest
 
                 try
                 {
-                    await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData);
+                    await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
                 }
                 catch (GuanException ge)
                 {
@@ -170,29 +184,33 @@ namespace FHTest
             };
 
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed");
-            string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token).ConfigureAwait(true);
+            string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
             List<string> repairRules = ParseRulesFile(rules);
-            var foHealthData = new TelemetryData
+            var repairData = new TelemetryData
             {
                 ApplicationName = "fabric:/test0",
                 NodeName = "TEST_0",
                 Metric = "Memory",
-                RepairId = "Test42",
-                Code = FOErrorWarningCodes.AppErrorMemoryMB,
+                HealthState = HealthState.Warning,
+                Code = SupportedErrorCodes.AppErrorMemoryMB,
                 ServiceName = "fabric:/test0/service0",
                 Value = 42,
                 ReplicaId = default,
-                PartitionId = default(Guid).ToString(),
+                PartitionId = default,
+                RepairPolicy = new RepairPolicy
+                {
+                    RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}"
+                }
             };
 
             var executorData = new RepairExecutorData
             {
-                RepairPolicy = new RepairPolicy { RepairAction = RepairActionType.RestartCodePackage },
+                RepairData = repairData
             };
 
             try
             {
-                await TestInitializeGuanAndRunQuery(foHealthData, repairRules, executorData);
+                await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
             }
             catch (GuanException ge)
             {
@@ -214,56 +232,60 @@ namespace FHTest
                 TelemetryEnabled = false
             };
 
-            string[] rules = await File.ReadAllLinesAsync(Path.Combine(Environment.CurrentDirectory, "testrules_malformed"), token).ConfigureAwait(true);
+            string[] rules = await File.ReadAllLinesAsync(Path.Combine(Environment.CurrentDirectory, "testrules_malformed"), token);
             List<string> repairAction = ParseRulesFile(rules);
 
-            var foHealthData = new TelemetryData
+            var repairData = new TelemetryData
             {
                 ApplicationName = "fabric:/test0",
                 NodeName = "TEST_0",
                 Metric = "Memory",
-                RepairId = "Test42",
-                Code = FOErrorWarningCodes.AppErrorMemoryMB,
+                HealthState = HealthState.Warning,
+                Code = SupportedErrorCodes.AppErrorMemoryMB,
                 ServiceName = "fabric:/test0/service0",
                 Value = 42,
                 ReplicaId = default,
-                PartitionId = default(Guid).ToString(),
+                PartitionId = default,
+                RepairPolicy = new RepairPolicy
+                {
+                    RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}"
+                }
             };
 
             var executorData = new RepairExecutorData
             {
-                RepairPolicy = new RepairPolicy { RepairAction = RepairActionType.RestartCodePackage },
+                RepairData = repairData
             };
 
-            await Assert.ThrowsExceptionAsync<GuanException>(async () => { await TestInitializeGuanAndRunQuery(foHealthData, repairAction, executorData); });
+            await Assert.ThrowsExceptionAsync<GuanException>(async () => { await TestInitializeGuanAndRunQuery(repairData, repairAction, executorData); });
         }
 
         /* private Helpers */
 
-        private async Task TestInitializeGuanAndRunQuery(TelemetryData foHealthData, List<string> repairRules, RepairExecutorData executorData)
+        private async Task TestInitializeGuanAndRunQuery(TelemetryData repairData, List<string> repairRules, RepairExecutorData executorData)
         {
-            var fabricClient = new FabricClient();
-            var repairTaskManager = new RepairTaskManager(fabricClient, context, token);
-            var repairTaskEngine = new RepairTaskEngine(fabricClient);
+            _ = FabricHealerManager.Instance(context, token);
+            var repairTaskManager = new RepairTaskManager(context, token);
+            var repairTaskEngine = new RepairTaskEngine();
 
             // Add predicate types to functor table. Note that all health information data from FO are automatically passed to all predicates.
             // This enables access to various health state values in any query. See Mitigate() in rules files, for examples.
             FunctorTable functorTable = new FunctorTable();
 
             // Add external helper predicates.
-            functorTable.Add(CheckFolderSizePredicateType.Singleton(RepairConstants.CheckFolderSize, repairTaskManager, foHealthData));
-            functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairTaskManager, foHealthData));
-            functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, repairTaskManager, foHealthData));
-            functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, repairTaskManager, foHealthData));
+            functorTable.Add(CheckFolderSizePredicateType.Singleton(RepairConstants.CheckFolderSize, repairTaskManager, repairData));
+            functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairTaskManager, repairData));
+            functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, repairTaskManager, repairData));
+            functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, repairTaskManager, repairData));
             functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage, repairTaskManager));
 
             // Add external repair predicates.
-            functorTable.Add(DeleteFilesPredicateType.Singleton(RepairConstants.DeleteFiles, repairTaskManager, foHealthData));
-            functorTable.Add(RestartCodePackagePredicateType.Singleton(RepairConstants.RestartCodePackage, repairTaskManager, foHealthData));
-            functorTable.Add(RestartFabricNodePredicateType.Singleton(RepairConstants.RestartFabricNode, repairTaskManager, executorData, repairTaskEngine, foHealthData));
-            functorTable.Add(RestartFabricSystemProcessPredicateType.Singleton(RepairConstants.RestartFabricSystemProcess, repairTaskManager, foHealthData));
-            functorTable.Add(RestartReplicaPredicateType.Singleton(RepairConstants.RestartReplica, repairTaskManager, foHealthData));
-            functorTable.Add(RestartVMPredicateType.Singleton(RepairConstants.RestartVM, repairTaskManager, foHealthData));
+            functorTable.Add(DeleteFilesPredicateType.Singleton(RepairConstants.DeleteFiles, repairTaskManager, repairData));
+            functorTable.Add(RestartCodePackagePredicateType.Singleton(RepairConstants.RestartCodePackage, repairTaskManager, repairData));
+            functorTable.Add(RestartFabricNodePredicateType.Singleton(RepairConstants.RestartFabricNode, repairTaskManager, executorData, repairTaskEngine, repairData));
+            functorTable.Add(RestartFabricSystemProcessPredicateType.Singleton(RepairConstants.RestartFabricSystemProcess, repairTaskManager, repairData));
+            functorTable.Add(RestartReplicaPredicateType.Singleton(RepairConstants.RestartReplica, repairTaskManager, repairData));
+            functorTable.Add(RestartMachinePredicateType.Singleton(RepairConstants.RestartVM, repairTaskManager, repairData));
 
             // Parse rules
             Module module = Module.Parse("external", repairRules, functorTable);
@@ -280,23 +302,25 @@ namespace FHTest
 
             // The type of metric that led FO to generate the unhealthy evaluation for the entity (App, Node, VM, Replica, etc).
             // We rename these for brevity for simplified use in logic rule composition (e;g., MetricName="Threads" instead of MetricName="Total Thread Count").
-            foHealthData.Metric = FOErrorWarningCodes.GetMetricNameFromCode(foHealthData.Code);
+            repairData.Metric = SupportedErrorCodes.GetMetricNameFromErrorCode(repairData.Code);
 
             // These args hold the related values supplied by FO and are available anywhere Mitigate is used as a rule head.
-            compoundTerm.AddArgument(new Constant(foHealthData.ApplicationName), RepairConstants.AppName);
-            compoundTerm.AddArgument(new Constant(foHealthData.Code), RepairConstants.FOErrorCode);
-            compoundTerm.AddArgument(new Constant(foHealthData.Metric), RepairConstants.MetricName);
-            compoundTerm.AddArgument(new Constant(foHealthData.NodeName), RepairConstants.NodeName);
-            compoundTerm.AddArgument(new Constant(foHealthData.NodeType), RepairConstants.NodeType);
-            compoundTerm.AddArgument(new Constant(foHealthData.OS), RepairConstants.OS);
-            compoundTerm.AddArgument(new Constant(foHealthData.ServiceName), RepairConstants.ServiceName);
-            compoundTerm.AddArgument(new Constant(foHealthData.SystemServiceProcessName), RepairConstants.SystemServiceProcessName);
-            compoundTerm.AddArgument(new Constant(foHealthData.PartitionId), RepairConstants.PartitionId);
-            compoundTerm.AddArgument(new Constant(foHealthData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
-            compoundTerm.AddArgument(new Constant(Convert.ToInt64(foHealthData.Value)), RepairConstants.MetricValue);
+            compoundTerm.AddArgument(new Constant(repairData.ApplicationName), RepairConstants.AppName);
+            compoundTerm.AddArgument(new Constant(repairData.Code), RepairConstants.ErrorCode);
+            compoundTerm.AddArgument(new Constant(Enum.GetName(typeof(HealthState), repairData.HealthState)), RepairConstants.HealthState);
+            compoundTerm.AddArgument(new Constant(repairData.Metric), RepairConstants.MetricName);
+            compoundTerm.AddArgument(new Constant(repairData.NodeName), RepairConstants.NodeName);
+            compoundTerm.AddArgument(new Constant(repairData.NodeType), RepairConstants.NodeType);
+            compoundTerm.AddArgument(new Constant(repairData.ObserverName), RepairConstants.ObserverName);
+            compoundTerm.AddArgument(new Constant(repairData.OS), RepairConstants.OS);
+            compoundTerm.AddArgument(new Constant(repairData.ServiceName), RepairConstants.ServiceName);
+            compoundTerm.AddArgument(new Constant(repairData.ProcessName), RepairConstants.ProcessName);
+            compoundTerm.AddArgument(new Constant(repairData.PartitionId), RepairConstants.PartitionId);
+            compoundTerm.AddArgument(new Constant(repairData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
+            compoundTerm.AddArgument(new Constant(Convert.ToInt64(repairData.Value)), RepairConstants.MetricValue);
             compoundTerms.Add(compoundTerm);
 
-            await queryDispatcher.RunQueryAsync(compoundTerms).ConfigureAwait(false);
+            await queryDispatcher.RunQueryAsync(compoundTerms);
         }
 
         private static List<string> ParseRulesFile(string[] rules)
@@ -342,6 +366,270 @@ namespace FHTest
             }
 
             return repairRules;
+        }
+
+        private static async Task<(bool, TelemetryData data)> 
+            IsEntityInWarningStateAsync(string appName = null, string serviceName = null, string nodeName = null)
+        {
+            EntityHealth healthData = null;
+
+            if (appName != null)
+            {
+                healthData = await fabricClient.HealthManager.GetApplicationHealthAsync(new Uri(appName));
+            }
+            else if (serviceName != null)
+            {
+                healthData = await fabricClient.HealthManager.GetServiceHealthAsync(new Uri(serviceName));
+            }
+            else if (nodeName != null)
+            {
+                healthData = await fabricClient.HealthManager.GetNodeHealthAsync(nodeName);
+            }
+            else
+            {
+                return (false, null);
+            }
+
+            if (healthData == null)
+            {
+                return (false, null);
+            }
+
+            bool isInWarning = healthData.HealthEvents.Any(h => h?.HealthInformation?.HealthState == HealthState.Warning);
+
+            if (!isInWarning)
+            {
+                return (false, null);
+            }
+
+            HealthEvent healthEventWarning = healthData.HealthEvents.FirstOrDefault(h => h.HealthInformation?.HealthState == HealthState.Warning);
+            _ = JsonSerializationUtility.TryDeserialize(healthEventWarning.HealthInformation.Description, out TelemetryData data);
+
+            return (true, data);
+        }
+
+        // FabricHealearProxy tests \\
+
+        // This specifies that you want FabricHealer to repair a service instance deployed to a Fabric node named NodeName.
+        // FabricHealer supports both Replica and CodePackage restarts of services. The logic rules will dictate which one of these happens,
+        // so make sure to craft a specific logic rule that makes sense for you (and use some logic!).
+        // Note that, out of the box, FabricHealer's AppRules.guan file located in the FabricHealer project's PackageRoot/Config/LogicRules folder
+        // already has a restart replica catch-all (applies to any service) rule that will restart the primary replica of
+        // the specified service below, deployed to the a specified Fabric node. 
+        // By default, if you only supply NodeName and ServiceName, then FabricHealerProxy assumes the target EntityType is Service. This is a convience to limit how many facts
+        // you must supply in a RepairFacts instance. For any type of repair, NodeName is always required.
+
+        static readonly RepairFacts RepairFactsServiceTarget = new RepairFacts
+        {
+            ServiceName = "fabric:/GettingStartedApplication/MyActorService",
+            NodeName = NodeName,
+            // Specifying Source is Required for unit tests.
+            // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+            Source = "fabric:/test"
+        };
+
+        // This specifies that you want FabricHealer to repair a Fabric node named _Node_0. The only supported Fabric node repair in FabricHealer is a Restart.
+        // Related rules can be found in FabricNodeRules.guan file in the FabricHealer project's PackageRoot/Config/LogicRules folder.
+        // So, implicitly, this means you want FabricHealer to restart _Node_0. By default, if you only supply NodeName, then FabricHealerProxy assumes the target EntityType is Node.
+        static readonly RepairFacts RepairFactsNodeTarget = new RepairFacts
+        {
+            NodeName = NodeName,
+            // Specifying Source is Required for unit tests.
+            // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+            Source = "fabric:/Test"
+        };
+
+        // Initiate a reboot of the machine hosting the specified Fabric node, _Node_4. This will be executed by the InfrastructureService for the related node type.
+        // The related logic rules for this repair target are housed in FabricHealer's MachineRules.guan file.
+        static readonly RepairFacts RepairFactsMachineTarget = new RepairFacts
+        {
+            NodeName = NodeName,
+            EntityType = EntityType.Machine,
+            // Specifying Source is Required for unit tests.
+            // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+            Source = "fabric:/Test"
+        };
+
+        // Restart system service process.
+        static readonly RepairFacts SystemServiceRepairFacts = new RepairFacts
+        {
+            ApplicationName = "fabric:/System",
+            NodeName = NodeName,
+            ProcessName = "FabricDCA",
+            ProcessId = 73588,
+            Code = SupportedErrorCodes.AppWarningMemoryMB,
+            // Specifying Source is Required for unit tests.
+            // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+            Source = "fabric:/Test"
+        };
+
+        // Disk - Delete files. This only works if FabricHealer instance is present on the same target node.
+        // Note the rules in FabricHealer\PackageRoot\LogicRules\DiskRules.guan file in the FabricHealer project.
+        static readonly RepairFacts DiskRepairFacts = new RepairFacts
+        {
+            NodeName = NodeName,
+            EntityType = EntityType.Disk,
+            Metric = SupportedMetricNames.DiskSpaceUsageMb,
+            Code = SupportedErrorCodes.NodeWarningDiskSpaceMB,
+            // Specifying Source is Required for unit tests.
+            // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+            Source = "fabric:/Test"
+        };
+
+        // For use in the IEnumerable<RepairFacts> RepairEntityAsync overload.
+        static readonly List<RepairFacts> RepairFactsList = new List<RepairFacts>
+        {
+            DiskRepairFacts,
+            RepairFactsMachineTarget,
+            RepairFactsNodeTarget,
+            RepairFactsServiceTarget,
+            SystemServiceRepairFacts
+        };
+
+        [TestMethod]
+        public async Task FHProxy_Service_Facts_Generate_Entity_Health_Warning()
+        {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
+            // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
+            await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsServiceTarget, token);
+
+            // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");
+            Assert.IsTrue(RepairFactsServiceTarget.Source.EndsWith(FHProxyId));
+
+            var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, RepairFactsServiceTarget.ServiceName);
+            Assert.IsTrue(generatedWarning);
+            Assert.IsTrue(data is TelemetryData);
+        }
+
+        [TestMethod]
+        public async Task FHProxy_Node_Facts_Generates_Entity_Health_Warning()
+        {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
+            // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
+            await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsNodeTarget, token);
+
+            // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");
+            Assert.IsTrue(RepairFactsNodeTarget.Source.EndsWith(FHProxyId));
+
+            var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, null, NodeName);
+            Assert.IsTrue(generatedWarning);
+            Assert.IsTrue(data is TelemetryData);
+        }
+
+        [TestMethod]
+        public async Task FHProxy_Missing_Fact_Generates_MissingRepairFactsException()
+        {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
+            var repairFacts = new RepairFacts
+            {
+                ServiceName = "fabric:/foo/bar",
+                // Specifying Source is Required for unit tests.
+                // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+                Source = "fabric:/Test"
+            };
+
+            await Assert.ThrowsExceptionAsync<MissingRepairFactsException>(async () =>
+            {
+                try
+                {
+                    await FabricHealerProxy.Instance.RepairEntityAsync(repairFacts, token);
+                }
+                finally
+                {
+                    // Ensure FHProxy cleans up its health reports.
+                    FabricHealerProxy.Instance.Close();
+                }
+            });
+        }
+
+        [TestMethod]
+        public async Task FHProxy_Missing_Fact_Generates_ServiceNotFoundException()
+        {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
+            var repairFacts = new RepairFacts
+            {
+                ServiceName = "fabric:/foo/bar",
+                NodeName = NodeName,
+                // Specifying Source is Required for unit tests.
+                // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+                Source = "fabric:/Test"
+            };
+
+            await Assert.ThrowsExceptionAsync<ServiceNotFoundException>(async () => 
+            {
+                
+                    await FabricHealerProxy.Instance.RepairEntityAsync(repairFacts, token);
+                
+            });
+        }
+
+        [TestMethod]
+        public async Task FHProxy_Missing_Fact_Generates_NodeNotFoundException()
+        {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
+            var repairFacts = new RepairFacts
+            {
+                NodeName = "_Node_007x",
+                // No need for Source here as an invalid node will be detected before the Source value matters.
+            };
+
+            await Assert.ThrowsExceptionAsync<NodeNotFoundException>(async () => 
+            { 
+                
+                    await FabricHealerProxy.Instance.RepairEntityAsync(repairFacts, token); 
+                
+            });
+        }
+
+        [TestMethod]
+        public async Task FHProxy_Multiple_Entity_Repair_Facts_Generate_Warnings()
+        {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
+            // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
+            await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsList, token);
+
+            foreach (var repair in RepairFactsList)
+            {
+                if (repair.ServiceName != null)
+                {
+                    var (generatedWarningService, sdata) = await IsEntityInWarningStateAsync(null, repair.ServiceName);
+                    Assert.IsTrue(generatedWarningService);
+                    Assert.IsTrue(sdata is TelemetryData);
+                }
+                else if (repair.EntityType == EntityType.Disk || repair.EntityType == EntityType.Machine || repair.EntityType == EntityType.Node)
+                {
+                    var (generatedWarningNode, ndata) = await IsEntityInWarningStateAsync(null, null, NodeName);
+                    Assert.IsTrue(generatedWarningNode);
+                    Assert.IsTrue(ndata is TelemetryData);
+                }
+
+                // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");
+                Assert.IsTrue(repair.Source.EndsWith(FHProxyId));
+            }
         }
     }
 }

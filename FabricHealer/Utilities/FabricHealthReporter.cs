@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using FabricHealer.Utilities.Telemetry;
 using System;
 using System.Fabric;
 using System.Fabric.Health;
@@ -14,17 +15,15 @@ namespace FabricHealer.Utilities
     /// </summary>
     public class FabricHealthReporter
     {
-        private readonly FabricClient fabricClient;
+        private readonly Logger _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricHealthReporter"/> class.
         /// </summary>
         /// <param name="fabricClient"></param>
-        public FabricHealthReporter(FabricClient fabricClient)
+        public FabricHealthReporter(Logger logger)
         {
-            this.fabricClient = fabricClient ?? throw new ArgumentException("FabricClient can't be null");
-            this.fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
-            this.fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
+            _logger = logger;
         }
 
         public void ReportHealthToServiceFabric(HealthReport healthReport)
@@ -49,43 +48,71 @@ namespace FabricHealer.Utilities
                 timeToLive = healthReport.HealthReportTimeToLive;
             }
 
-            var healthInformation = new HealthInformation(
-                                            healthReport.SourceId,
-                                            healthReport.Code ?? healthReport.Property,
-                                            healthReport.State)
+            var healthInformation = new HealthInformation(healthReport.SourceId, healthReport.Code ?? healthReport.Property, healthReport.State)
             {
                 Description = healthReport.HealthMessage,
                 TimeToLive = timeToLive,
                 RemoveWhenExpired = true,
             };
 
-            switch (healthReport.ReportType)
+            // Local file logging.
+            if (healthReport.EmitLogEvent)
             {
-                case HealthReportType.Application when healthReport.AppName != null:
-                
+                if (healthReport.State == HealthState.Ok)
+                {
+                    _logger.LogInfo(healthReport.HealthMessage);
+                }
+                else
+                {
+                    _logger.LogWarning(healthReport.HealthMessage);
+                }
+            }
+
+            switch (healthReport.EntityType)
+            {
+                case EntityType.Application when healthReport.AppName != null:
+
                     var appHealthReport = new ApplicationHealthReport(healthReport.AppName, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(appHealthReport, sendOptions);
                     break;
-                
-                case HealthReportType.Node when healthReport.NodeName != null:
-                
-                    var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
-                    break;
-                
-                case HealthReportType.Service when healthReport.ServiceName != null:
-                
+
+                case EntityType.Service when healthReport.ServiceName != null:
+
                     var serviceHealthReport = new ServiceHealthReport(healthReport.ServiceName, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
+                    break;
+
+                case EntityType.StatefulService when healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0:
+
+                    var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
+                    break;
+
+                case EntityType.StatelessService when healthReport.PartitionId != Guid.Empty && healthReport.ReplicaOrInstanceId > 0:
+
+                    var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(healthReport.PartitionId, healthReport.ReplicaOrInstanceId, healthInformation);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
+                    break;
+
+                case EntityType.Partition when healthReport.PartitionId != Guid.Empty:
+                    var partitionHealthReport = new PartitionHealthReport(healthReport.PartitionId, healthInformation);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
+                    break;
+
+                case EntityType.DeployedApplication when healthReport.AppName != null:
+
+                    var deployedApplicationHealthReport = new DeployedApplicationHealthReport(healthReport.AppName, healthReport.NodeName, healthInformation);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
+                    break;
+
+                case EntityType.Disk:
+                case EntityType.Machine:
+                case EntityType.Node:
+
+                    var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
+                    FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                     break;
             }
         }
-    }
-
-    public enum HealthReportType
-    {
-        Application,
-        Node,
-        Service
     }
 }

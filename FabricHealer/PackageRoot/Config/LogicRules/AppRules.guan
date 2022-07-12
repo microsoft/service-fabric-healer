@@ -3,17 +3,21 @@
 ## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
 ## |---------------------------|----------------------------------------------------------------------------------------------|
-## | AppName                   | Name of the SF application, format is fabric:/SomeApp                                        |
-## | ServiceName               | Name of the SF service, format is fabric:/SomeApp/SomeService                                |
+## | AppName                   | Name of the SF application, format is "fabric:/SomeApp" (Quotes are required)                |
+## | ServiceName               | Name of the SF service, format is "fabric:/SomeApp/SomeService" (Quotes are required)        |
+## | ServiceKind               | The state kind of SF service: Stateful or Stateless                                          |
 ## | NodeName                  | Name of the node                                                                             | 
 ## | NodeType                  | Type of node                                                                                 |  
-## | ObserverName              | Name of Observer that generated the event.                                                   |
+## | ObserverName              | Name of Observer that generated the event (if the data comes from FabricObserver service)    |
 ## | PartitionId               | Id of the partition                                                                          |
 ## | ReplicaOrInstanceId       | Id of the replica or instance                                                                |
-## | FOErrorCode               | Error Code emitted by FO (e.g. "FO002")                                                      | 
-## | MetricName                | Name of the resource supplied by FO (e.g., CpuPercent or MemoryMB, etc.)                     |   
-## | MetricValue               | Corresponding Metric Value supplied by FO (e.g. "85" indicating 85% CPU usage)               | 
-## | OS                        | The name of the OS from which the FO data was collected (Linux or Windows)                   |
+## | ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                        | 
+## | MetricName                | Name of the metric (e.g., CpuPercent or MemoryMB, etc.)                                      |   
+## | MetricValue               | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)                              | 
+## | OS                        | The name of the OS from which the data was collected (Linux or Windows)                      |
+## | ProcessName               | The name of the service process                                                              |
+## | ProcessStartTime          | The time (UTC) the process was created on the machine                                        |
+## | HealthState               | The HealthState of the target entity: Error or Warning                                       |
  
 ## Application-related Metric Names.
 ## | Name                      |                                                                                    
@@ -36,7 +40,7 @@
 ## | RestartCodePackage        | Safely ends the code package process, which restarts all of the user service replicas hosted in that process. |
 ## | RestartReplica            | Restarts the offending stateful/stateless service replica without safety checks.                              |
 
-## Note that restarting a code package is considered a more aggressive mitigation than restarting/removing a single replica.
+## Note that restarting a code package is considered a more aggressive mitigation than restarting a single replica.
 ## However, RestartCodePackage is generally a safer operation. It just depends on the target service, which you will understand well (since you wrote the service). 
 ## If the target service is stateless, then restarting the replica (aka instance) should be fine without safety checks. 
 ## The RestartReplica predicate applies to both stateful and stateless service replicas since FH will do the right thing: 
@@ -57,12 +61,12 @@
 ## *Note*:  you must wrap the date string in quotes to make it explicit to Guan that the arg is a string as it contains mathematical operators (in this case a /).
 ## The rule below reads: If any of the specified (set in Mitigate) app's service processes have put it into Warning due to CPU over-consumption and today's date is later than the supplied end date, emit a message, stop processing rules (!).
 
-Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("03/30/2022"),
-	EmitMessage("Exceeded specified end date for repair of fabric:/MyApp CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("11/30/2021"), time()), !.
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("12/30/2022"),
+	EmitMessage("Exceeded specified end date for repair of fabric:/MyApp CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("12/30/2022"), time()), !.
 
 ## Alternatively, you could enforce repair end dates inline (as a subgoal) to any rule, e.g.,
 
-Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- time() < DateTime("03/30/2022"),
+Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- time() < DateTime("12/30/2022"),
 	?MetricValue >= 8500,
 	TimeScopedRestartCodePackage(4, 01:00:00).
 
@@ -116,7 +120,7 @@ Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?M
 	TimeScopedRestartCodePackage(3, 00:10:00).
 
 ## Memory - Megabytes In Use for Any SF Service Process belonging to the specified SF Applications. 5 repairs within 5 hour window.
-Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
+Mitigate(AppName="fabric:/Voting", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
@@ -133,8 +137,9 @@ Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 102
 Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Local Ports in Dynamic Range (aka Ephemeral Ports)
-## Percentage in use or Total Ephemeral ports - Any app service. 5 repairs within 5 hour window. This means if FO warns on Ephemeral ports usage, then heal.
-Mitigate(MetricName=?MetricName) :- match(?MetricName, "EphemeralPorts"), TimeScopedRestartCodePackage(5, 05:00:00).
+## Percentage in use or Total Ephemeral ports - Any app service. 5 repairs within 5 hour window. This means if FO or FHProxy supplies repair facts related to Ephemeral ports,
+## then restart the offending service by simulating process failure (RestartCodePackage). This will free all TCP ports held by the process.
+Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(15, 05:00:00).
 
 ## Total Ephemeral Ports - Specific Application: any of its services, constrained on number of local ephemeral ports open. 
 ## 5 repairs within 5 hour window.
@@ -153,6 +158,9 @@ Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?A
 ## Threads - Any app service. 5 repairs within 5 hour window. This means if FO warns on Thread count, then heal. There are no conditional checks (on MetricValue) to take place.
 ## Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
+## Generic rule for restarting any service in Warning or Error. This means any service that is in Error or Warning state and
+## also specified in the serialized TelemetryData instance that forms the Description of the related Service level Health Event will be restarted.
+Mitigate() :- TimeScopedRestartReplica(10, 05:00:00).
 
 ## Internal Predicates
 
@@ -172,4 +180,4 @@ TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, ?time)
 ## See below for an example using both optional arguments (named arguments are just used for clarity; you could also just specify RestartCodePackage(true, 00:10:00), for example).
 
 TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).
-TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).
+TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:01:00).

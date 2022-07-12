@@ -18,7 +18,7 @@ namespace FabricHealer.Repair.Guan
     {
         private static CheckFolderSizePredicateType Instance;
         private static RepairTaskManager RepairTaskManager;
-        private static TelemetryData FOHealthData;
+        private static TelemetryData RepairData;
 
         private class Resolver : BooleanPredicateResolver
         {
@@ -71,20 +71,22 @@ namespace FabricHealer.Repair.Guan
                 if (!Directory.Exists(folderPath))
                 {
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                                LogLevel.Info,
-                                                                "CheckFolderSizePredicate::DirectoryNotFound",
-                                                                $"Directory {folderPath} does not exist.",
-                                                                RepairTaskManager.Token).ConfigureAwait(false);
+                            LogLevel.Info,
+                            "CheckFolderSizePredicate::DirectoryNotFound",
+                            $"Directory {folderPath} does not exist.",
+                            RepairTaskManager.Token);
+
                     return false;
                 }
 
                 if (Directory.GetFiles(folderPath, "*", new EnumerationOptions { RecurseSubdirectories = true }).Length == 0)
                 {
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                                LogLevel.Info,
-                                                                "CheckFolderSizePredicate::NoFilesFound",
-                                                                $"Directory {folderPath} does not contain any files.",
-                                                                RepairTaskManager.Token).ConfigureAwait(false);
+                            LogLevel.Info,
+                            "CheckFolderSizePredicate::NoFilesFound",
+                            $"Directory {folderPath} does not contain any files.",
+                            RepairTaskManager.Token);
+
                         return false;
                 }
 
@@ -110,15 +112,16 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 string message =
-                        $"Repair {FOHealthData.RepairId}: Supplied Maximum folder size value ({(maxFolderSizeGB > 0 ? maxFolderSizeGB + "GB" : maxFolderSizeMB + "MB")}) " +
+                        $"Repair {RepairData.RepairPolicy.RepairId}: Supplied Maximum folder size value ({(maxFolderSizeGB > 0 ? maxFolderSizeGB + "GB" : maxFolderSizeMB + "MB")}) " +
                         $"for path {folderPath} is less than computed folder size ({size}{(maxFolderSizeGB > 0 ? "GB" : "MB")}). " +
                         "Will not attempt repair.";
 
                 await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                            LogLevel.Info,
-                                                            "CheckFolderSizePredicate",
-                                                            message,
-                                                            RepairTaskManager.Token).ConfigureAwait(false);
+                        LogLevel.Info,
+                        "CheckFolderSizePredicate",
+                        message,
+                        RepairTaskManager.Token);
+
                 return false;
             }
             
@@ -128,10 +131,11 @@ namespace FabricHealer.Repair.Guan
                 double folderSizeInBytes = Convert.ToDouble(dir.EnumerateFiles("*", SearchOption.AllDirectories).Sum(fi => fi.Length));
 
                 await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                            LogLevel.Info,
-                                                            "CheckFolderSizePredicate::Size",
-                                                            $"Directory {path} size: {folderSizeInBytes} bytes.",
-                                                            RepairTaskManager.Token).ConfigureAwait(false);
+                        LogLevel.Info,
+                        "CheckFolderSizePredicate::Size",
+                        $"Directory {path} size: {folderSizeInBytes} bytes.",
+                        RepairTaskManager.Token);
+
                 if (unit == SizeUnit.GB)
                 {
                     return folderSizeInBytes / 1024 / 1024 / 1024;
@@ -141,9 +145,9 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static CheckFolderSizePredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData foHealthData)
+        public static CheckFolderSizePredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
         {
-            FOHealthData = foHealthData;
+            RepairData = repairData;
             RepairTaskManager = repairTaskManager;
 
             return Instance ??= new CheckFolderSizePredicateType(name);

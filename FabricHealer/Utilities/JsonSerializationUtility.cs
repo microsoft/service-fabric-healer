@@ -16,6 +16,12 @@ namespace FabricHealer.Utilities
     {
         public static bool TrySerialize<T>(T objTarget, out string obj)
         {
+            if (objTarget == null)
+            {
+                obj = default;
+                return false;
+            }
+
             try
             {
                 obj = JsonConvert.SerializeObject(objTarget);
@@ -30,6 +36,12 @@ namespace FabricHealer.Utilities
 
         public static bool TryDeserialize<T>(string serializedObj, out T obj)
         {
+            if (string.IsNullOrWhiteSpace(serializedObj))
+            {
+                obj = default;
+                return false;
+            }
+
             try
             {
                 if (!serializedObj.StartsWith("{") && !serializedObj.EndsWith("}"))

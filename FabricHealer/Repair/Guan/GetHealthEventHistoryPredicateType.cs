@@ -14,7 +14,7 @@ namespace FabricHealer.Repair.Guan
     public class GetHealthEventHistoryPredicateType : PredicateType
     {
         private static RepairTaskManager RepairTaskManager;
-        private static TelemetryData FOHealthData;
+        private static TelemetryData RepairData;
         private static GetHealthEventHistoryPredicateType Instance;
 
         private class Resolver : GroundPredicateResolver
@@ -32,7 +32,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (timeRange > TimeSpan.MinValue)
                 {
-                    eventCount = RepairTaskManager.GetEntityHealthEventCountWithinTimeRange(FOHealthData.HealthEventProperty, timeRange);
+                    eventCount = RepairTaskManager.GetEntityHealthEventCountWithinTimeRange(RepairData.Property, timeRange);
                 }
                 else
                 {
@@ -40,10 +40,10 @@ namespace FabricHealer.Repair.Guan
                                      "Default result has been supplied (0).";
 
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                            LogLevel.Info,
-                                                            $"GetHealthEventHistoryPredicateType::{FOHealthData.HealthEventProperty}",
-                                                            message,
-                                                            RepairTaskManager.Token).ConfigureAwait(false);
+                            LogLevel.Info,
+                            $"GetHealthEventHistoryPredicateType::{RepairData.Property}",
+                            message,
+                            RepairTaskManager.Token);
                 }
 
                 var result = new CompoundTerm(this.Input.Functor);
@@ -52,10 +52,10 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static GetHealthEventHistoryPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData foHealthData)
+        public static GetHealthEventHistoryPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
         {
             RepairTaskManager = repairTaskManager;
-            FOHealthData = foHealthData;
+            RepairData = repairData;
 
             return Instance ??= new GetHealthEventHistoryPredicateType(name);
         }

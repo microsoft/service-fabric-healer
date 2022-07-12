@@ -10,15 +10,23 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 		.gitignore = .gitignore
 		Build-FabricHealer.ps1 = Build-FabricHealer.ps1
+		Build-FHProxy.ps1 = Build-FHProxy.ps1
+		Build-FHProxyNupkg.ps1 = Build-FHProxyNupkg.ps1
 		Build-NugetPackages.ps1 = Build-NugetPackages.ps1
 		Build-SFPKGs.ps1 = Build-SFPKGs.ps1
+		Documentation\Deployment\Deploy-FabricHealer.ps1 = Documentation\Deployment\Deploy-FabricHealer.ps1
+		Documentation\Deployment\Deployment.md = Documentation\Deployment\Deployment.md
 		FabricHealer.nuspec.template = FabricHealer.nuspec.template
+		FabricHealerProxy.md = FabricHealerProxy.md
+		FabricHealerProxy.nuspec.template = FabricHealerProxy.nuspec.template
 		fhnuget.md = fhnuget.md
 		icon.png = icon.png
 		Documentation\LogicWorkflows.md = Documentation\LogicWorkflows.md
 		Documentation\OperationalTelemetry.md = Documentation\OperationalTelemetry.md
 		README.md = README.md
+		Documentation\Deployment\service-fabric-healer.json = Documentation\Deployment\service-fabric-healer.json
 		Documentation\Using.md = Documentation\Using.md
+		Documentation\Deployment\service-fabric-healer.v1.1.0.831.parameters.json = Documentation\Deployment\service-fabric-healer.v1.1.0.831.parameters.json
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FHTest", "FHTest\FHTest.csproj", "{8D9712BF-C026-4A36-B6D1-6345137D3B6F}"
@@ -26,6 +34,8 @@ EndProject
 Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "FabricHealerApp", "FabricHealerApp\FabricHealerApp.sfproj", "{A977C8E0-2183-4845-95EA-7F3C3E795310}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TelemetryLib", "TelemetryLib\TelemetryLib.csproj", "{7BC6991F-C840-413E-B1CD-4025947CF5FA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FabricHealerProxy", "FabricHealerProxy\FabricHealerProxy.csproj", "{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -71,6 +81,14 @@ Global
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|x64.ActiveCfg = Release|x64
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|x64.Build.0 = Release|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Debug|Any CPU.Build.0 = Debug|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Debug|x64.ActiveCfg = Debug|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Debug|x64.Build.0 = Debug|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|Any CPU.ActiveCfg = Release|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|Any CPU.Build.0 = Release|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|x64.ActiveCfg = Release|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

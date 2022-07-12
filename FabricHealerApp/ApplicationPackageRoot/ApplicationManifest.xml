@@ -1,12 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.0.15" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.1.0.831" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
-    <Parameter Name="FabricHealer_InstanceCount" DefaultValue="-1" />
     <!-- FabricHealerManager Settings  -->
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
-    <Parameter Name="EventSourceProviderEnabled" DefaultValue="true" />
+    <Parameter Name="EnableETW" DefaultValue="true" />
     <Parameter Name="MonitorLoopSleepSeconds" DefaultValue="5" />
-    <Parameter Name="TelemetryProviderEnabled" DefaultValue="true" />
+    <Parameter Name="EnableTelemetry" DefaultValue="true" />
     <!-- Set VerboseLoggingEnabled to true if you want detailed local logging and telemetry/ETW with repair data. 
          This data will live in a folder named RepairData, which will be created in your LocalLogPath directory.
          Default is true. This is not noisy. Keep this enabled if you want a record of repair workflow steps. -->
@@ -16,16 +15,25 @@
     <!-- Repair Policy Enablement -->
     <Parameter Name="EnableAppRepair" DefaultValue="true" />
     <Parameter Name="EnableDiskRepair" DefaultValue="false" />
-    <Parameter Name="EnableNodeRepair" DefaultValue="false" />
+    <Parameter Name="EnableFabricNodeRepair" DefaultValue="false" />
+    <Parameter Name="EnableMachineRepair" DefaultValue="false" />
     <Parameter Name="EnableReplicaRepair" DefaultValue="false" />
-    <Parameter Name="EnableSystemAppRepair" DefaultValue="false" />
-    <Parameter Name="EnableVMRepair" DefaultValue="false" />
+    <!-- This means FH will apply some mitigation (restarts) to all instances of a target service on a node-by-node basis only (rolling). -->
+    <Parameter Name="EnableRollingServiceRestarts" DefaultValue="true" />
+    <Parameter Name="EnableSystemServiceRepair" DefaultValue="false" />
+    <!-- Logic rule files -->
+    <Parameter Name="AppRulesConfigurationFile" DefaultValue="AppRules.guan" />
+    <Parameter Name="DiskRulesConfigurationFile" DefaultValue="DiskRules.guan" />
+    <Parameter Name="FabricNodeRulesConfigurationFile" DefaultValue="FabricNodeRules.guan" />
+    <Parameter Name="MachineRulesConfigurationFile" DefaultValue="MachineRules.guan" />
+    <Parameter Name="ReplicaRulesConfigurationFile" DefaultValue="ReplicaRules.guan" />
+    <Parameter Name="SystemServiceRulesConfigurationFile" DefaultValue="SystemServiceRules.guan" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.0.15" />
+    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.1.0.831" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -33,55 +41,54 @@
           <Section Name="RepairManagerConfiguration">
             <Parameter Name="HealthCheckLoopSleepTimeSeconds" Value="[MonitorLoopSleepSeconds]" />
             <Parameter Name="EnableAutoMitigation" Value="[AutoMitigationEnabled]" />
-            <Parameter Name="EnableEventSourceProvider" Value="[EventSourceProviderEnabled]" />
-            <Parameter Name="EnableTelemetryProvider" Value="[TelemetryProviderEnabled]" />
+            <Parameter Name="EnableETW" Value="[EnableETW]" />
+            <Parameter Name="EnableTelemetry" Value="[EnableTelemetry]" />
             <Parameter Name="EnableVerboseLogging" Value="[VerboseLoggingEnabled]" />
             <Parameter Name="EnableOperationalTelemetry" Value="[OperationalTelemetryEnabled]" />
+            <Parameter Name="EnableRollingServiceRestarts" Value="[EnableRollingServiceRestarts]" />
             <Parameter Name="LocalLogPath" Value="[LocalLogPath]" />
           </Section>
           <!-- Repair policies -->
           <Section Name="AppRepairPolicy">
             <Parameter Name="Enabled" Value="[EnableAppRepair]" />
+            <Parameter Name="LogicRulesConfigurationFile" Value="[AppRulesConfigurationFile]" />
           </Section>
           <Section Name="DiskRepairPolicy">
             <Parameter Name="Enabled" Value="[EnableDiskRepair]" />
+            <Parameter Name="LogicRulesConfigurationFile" Value="[DiskRulesConfigurationFile]" />
           </Section>
           <Section Name="FabricNodeRepairPolicy">
-            <Parameter Name="Enabled" Value="[EnableNodeRepair]" />
+            <Parameter Name="Enabled" Value="[EnableFabricNodeRepair]" />
+            <Parameter Name="LogicRulesConfigurationFile" Value="[FabricNodeRulesConfigurationFile]" />
           </Section>
           <Section Name="ReplicaRepairPolicy">
             <Parameter Name="Enabled" Value="[EnableReplicaRepair]" />
+            <Parameter Name="LogicRulesConfigurationFile" Value="[ReplicaRulesConfigurationFile]" />
           </Section>
-          <Section Name="SystemAppRepairPolicy">
-            <Parameter Name="Enabled" Value="[EnableSystemAppRepair]" />
+          <Section Name="SystemServiceRepairPolicy">
+            <Parameter Name="Enabled" Value="[EnableSystemServiceRepair]" />
+            <Parameter Name="LogicRulesConfigurationFile" Value="[SystemServiceRulesConfigurationFile]" />
           </Section>
-          <Section Name="VMRepairPolicy">
-            <Parameter Name="Enabled" Value="[EnableVMRepair]" />
+          <Section Name="MachineRepairPolicy">
+            <Parameter Name="Enabled" Value="[EnableMachineRepair]" />
+            <Parameter Name="LogicRulesConfigurationFile" Value="[MachineRulesConfigurationFile]" />
           </Section>
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-    <Policies>
+	<!--
+	Because of certain actions FabricHealer takes in a cluster (deleting files created by or restarting services running at higher elevation, for example), 
+    it may need to run as System user on Windows and root on Linux. Note that you should test FH out NOT running as System and validate that it works for your scenarios.
+	For user service-level SF API mitigations (RestartCodePackage, RestartReplica, etc), it can (and therefore should) run as default (Network Service on Windows, sfappsuser on Linux). 
+	Test it out and do what works best for your security configuration. Keep in mind that running as System or root is non-optimal and should be thoughtfully considered.
+	<Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
-    </Policies>
+    </Policies> -->
   </ServiceManifestImport>
-  <DefaultServices>
-    <!-- The section below creates instances of service types, when an instance of this 
-         application type is created. You can also create one or more instances of service type using the 
-         ServiceFabric PowerShell module.
-         
-         The attribute ServiceTypeName below must match the name defined in the imported ServiceManifest.xml file. -->
-    <Service Name="FabricHealer" ServicePackageActivationMode="ExclusiveProcess">
-      <StatelessService ServiceTypeName="FabricHealerType" InstanceCount="[FabricHealer_InstanceCount]">
-        <SingletonPartition />
-      </StatelessService>
-    </Service>
-  </DefaultServices>
-  <!-- Because of the actions FabricHealer takes in a cluster, it must run as Admin user on Windows and root on Linux. 
-       LocalSystem AccountType maps to System on Windows and root on Linux. -->
   <Principals>
-    <Users>
-      <User Name="SystemUser" AccountType="LocalSystem" />
-    </Users>
+	  <Users>
+		  <!-- LocalSystem AccountType maps to System on Windows and root on Linux. -->
+		  <User Name="SystemUser" AccountType="LocalSystem" />
+	  </Users>
   </Principals>
 </ApplicationManifest>

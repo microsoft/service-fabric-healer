@@ -96,7 +96,7 @@ namespace FabricHealer.Utilities.Telemetry
         /// <summary>
         /// Calls AI to report health.
         /// </summary>
-        /// <param name="scope">Scope of health evaluation (Cluster, Node, etc.).</param>
+        /// <param name="entityType">Scope of health evaluation (Cluster, Node, etc.).</param>
         /// <param name="propertyName">Value of the property.</param>
         /// <param name="state">Health state.</param>
         /// <param name="unhealthyEvaluations">Unhealthy evaluations aggregated description.</param>
@@ -106,7 +106,7 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="instanceName">Optional: TraceTelemetry context cloud instance name.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public Task ReportHealthAsync(
-                        HealthScope scope,
+                        EntityType entityType,
                         string propertyName,
                         HealthState state,
                         string unhealthyEvaluations,
@@ -134,7 +134,7 @@ namespace FabricHealer.Utilities.Telemetry
                     healthInfo += $"{Environment.NewLine}{unhealthyEvaluations}";
                 }
 
-                var tt = new TraceTelemetry($"Service Fabric Health report - {Enum.GetName(typeof(HealthScope), scope)}: {Enum.GetName(typeof(HealthState), state)} -> {source}:{propertyName}{healthInfo}", sev);
+                var tt = new TraceTelemetry($"Service Fabric Health report - {Enum.GetName(typeof(EntityType), entityType)}: {Enum.GetName(typeof(HealthState), state)} -> {source}:{propertyName}{healthInfo}", sev);
                 tt.Context.Cloud.RoleName = serviceName;
                 tt.Context.Cloud.RoleInstance = instanceName;
 
@@ -173,7 +173,7 @@ namespace FabricHealer.Utilities.Telemetry
 
             telemetryClient?.TrackTrace(tt);
 
-            return await Task.FromResult(true).ConfigureAwait(false);
+            return await Task.FromResult(true);
         }
 
         /// <summary>
@@ -193,15 +193,15 @@ namespace FabricHealer.Utilities.Telemetry
             {
                 { "Application", telemetryData.ApplicationName ?? string.Empty },
                 { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                { "SystemServiceName", telemetryData.SystemServiceProcessName ?? string.Empty },
+                { "SystemServiceName", telemetryData.ProcessName ?? string.Empty },
                 { "ClusterId", telemetryData.ClusterId ?? string.Empty },
                 { "ErrorCode", telemetryData.Code ?? string.Empty },
                 { "Description", telemetryData.Description ?? string.Empty },
-                { "HealthState", telemetryData.HealthState ?? string.Empty },
+                { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
                 { "Metric", telemetryData.Metric ?? string.Empty },
                 { "NodeName", telemetryData.NodeName ?? string.Empty },
                 { "ObserverName", telemetryData.ObserverName ?? string.Empty },
-                { "Partition", telemetryData.PartitionId ?? string.Empty },
+                { "Partition", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
                 { "Replica", telemetryData.ReplicaId.ToString() },
                 { "Source", telemetryData.Source ?? string.Empty },
                 { "Value", telemetryData.Value.ToString() },
@@ -270,7 +270,7 @@ namespace FabricHealer.Utilities.Telemetry
                             long value,
                             CancellationToken cancellationToken)
         {
-            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
+            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
         }
 
         /// <summary>

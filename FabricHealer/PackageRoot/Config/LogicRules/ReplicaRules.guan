@@ -1,13 +1,13 @@
-﻿## Experimental.
+﻿## *Experimental* Replica repair rules. One type of replica Warning is supported: stuck stateful replicas. They can block application upgrades, so restart them to let the upgrade progress.
 
 ## These rules demonstrates a workflow that employs multiple internal and external predicates to get to a solution for a single unhealthy replica scenario:
 ##		[SourceId] ='System.RAP' reported Warning/Error for property...
 ##		[Property] = 'IStatefulServiceReplica.ChangeRole(N)Duration'.
 ##		[Description] = The api IStatefulServiceReplica.ChangeRole(N) on node [NodeName] is stuck. 
-##		Start Time (UTC): 2020-04-26 19:22:55.492.
+##		Start Time (UTC): 2022-04-26 19:22:55.492.
 
 ## First, check if we are inside run interval. If so, then cut (!), which effectively means stop processing rules (no backtracking to subsequent rules in the file).
-## This is commented out by default. Just uncomment and set the global run interval for app level repairs to suit your needs.
+## This is commented out by default. Just uncomment and set the global run interval for replica level repairs to suit your needs.
 
 ## Mitigate() :- CheckInsideRunInterval(00:15:00), !.
 
@@ -27,10 +27,10 @@ Mitigate() :- GetRepairHistory(?repairCount, 01:00:00), _mitigate(?repairCount).
 ## This means that these predicates either succeed (pass true back) or fail (pass false back) as the result of their execution. So, if one fails, then the next rule will be run, etc.
 
 ## Try this.
-_mitigate(?count) :- ?count < 4, RestartReplica().
+_mitigate(?count) :- ?count < 2, RestartReplica().
 
 ## Else, try this.
-_mitigate(?count) :- ?count < 4, RestartCodePackage().
+_mitigate(?count) :- ?count < 2, RestartCodePackage().
 
 ## Else, try this.
 _mitigate(?count) :- ?count < 2, RestartFabricNode().

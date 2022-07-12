@@ -57,7 +57,7 @@ namespace FabricHealer.Utilities.Telemetry
         }
 
         public async Task ReportHealthAsync(
-                            HealthScope scope,
+                            EntityType entityType,
                             string propertyName,
                             HealthState state,
                             string unhealthyEvaluations,
@@ -67,21 +67,21 @@ namespace FabricHealer.Utilities.Telemetry
                             string instanceName = null)
         {
             string jsonPayload = JsonConvert.SerializeObject(
-                                                new
-                                                {
-                                                    id = $"FH_{Guid.NewGuid()}",
-                                                    datetime = DateTime.UtcNow,
-                                                    source = "FabricHealer",
-                                                    property = propertyName,
-                                                    healthScope = scope.ToString(),
-                                                    healthState = state.ToString(),
-                                                    healthEvaluation = unhealthyEvaluations,
-                                                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
-                                                    serviceName = serviceName ?? string.Empty,
-                                                    instanceName = instanceName ?? string.Empty,
-                                                });
+                    new
+                    {
+                        id = $"FH_{Guid.NewGuid()}",
+                        datetime = DateTime.UtcNow,
+                        source = "FabricHealer",
+                        property = propertyName,
+                        healthScope = entityType.ToString(),
+                        healthState = state.ToString(),
+                        healthEvaluation = unhealthyEvaluations,
+                        osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                        serviceName = serviceName ?? string.Empty,
+                        instanceName = instanceName ?? string.Empty,
+                    });
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken);
         }
 
         public async Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
@@ -96,7 +96,7 @@ namespace FabricHealer.Utilities.Telemetry
                 return;
             }
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken);
         }
 
         public async Task<bool> ReportMetricAsync<T>(
@@ -106,19 +106,19 @@ namespace FabricHealer.Utilities.Telemetry
                                     CancellationToken cancellationToken)
         {
             string jsonPayload = JsonConvert.SerializeObject(
-                                                new
-                                                {
-                                                    id = $"FH_{Guid.NewGuid()}",
-                                                    datetime = DateTime.UtcNow,
-                                                    source,
-                                                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
-                                                    property = name,
-                                                    value,
-                                                });
+                    new
+                    {
+                        id = $"FH_{Guid.NewGuid()}",
+                        datetime = DateTime.UtcNow,
+                        source,
+                        osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                        property = name,
+                        value,
+                    });
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(false);
+            await SendTelemetryAsync(jsonPayload, cancellationToken);
 
-            return await Task.FromResult(true).ConfigureAwait(false);
+            return await Task.FromResult(true);
         }
 
         // Implement functions below as you need.
@@ -253,8 +253,8 @@ namespace FabricHealer.Utilities.Telemetry
                 }
 
                 retries++;
-                await Task.Delay(1000).ConfigureAwait(false);
-                await SendTelemetryAsync(payload, token).ConfigureAwait(false);
+                await Task.Delay(1000);
+                await SendTelemetryAsync(payload, token);
             }
             else
             {

@@ -14,7 +14,7 @@ namespace FabricHealer.Repair.Guan
     public class GetRepairHistoryPredicateType : PredicateType
     {
         private static RepairTaskManager RepairTaskManager;
-        private static TelemetryData FOHealthData;
+        private static TelemetryData RepairData;
         private static GetRepairHistoryPredicateType Instance;
 
         private class Resolver : GroundPredicateResolver
@@ -32,11 +32,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (timeWindow > TimeSpan.MinValue)
                 {
-                    repairCount = await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(
-                                        timeWindow,
-                                        RepairTaskManager.FabricClientInstance,
-                                        FOHealthData,
-                                        RepairTaskManager.Token).ConfigureAwait(false);
+                    repairCount = await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(timeWindow, RepairData, RepairTaskManager.Token);
                 }
                 else
                 {
@@ -45,10 +41,10 @@ namespace FabricHealer.Repair.Guan
                         "Default result has been supplied (0).";
 
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                                            LogLevel.Info,
-                                                            $"GetRepairHistoryPredicate::{FOHealthData.RepairId}",
-                                                            message,
-                                                            RepairTaskManager.Token).ConfigureAwait(false);
+                            LogLevel.Info,
+                            $"GetRepairHistoryPredicate::{RepairData.RepairPolicy.RepairId}",
+                            message,
+                            RepairTaskManager.Token);
                 }
 
                 var result = new CompoundTerm(this.Input.Functor);
@@ -57,10 +53,10 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static GetRepairHistoryPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData foHealthData)
+        public static GetRepairHistoryPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
         {
             RepairTaskManager = repairTaskManager;
-            FOHealthData = foHealthData;
+            RepairData = repairData;
 
             return Instance ??= new GetRepairHistoryPredicateType(name);
         }

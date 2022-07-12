@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using FabricHealer.Utilities.Telemetry;
 using System;
 using System.Fabric.Health;
 
@@ -30,7 +31,12 @@ namespace FabricHealer.Utilities
             get; set;
         }
 
-        public HealthReportType ReportType
+        public bool EmitLogEvent
+        {
+            get; set;
+        }
+
+        public EntityType EntityType
         {
             get; set;
         }
@@ -45,12 +51,7 @@ namespace FabricHealer.Utilities
             get; set;
         }
 
-        public string SourceId
-        {
-            get; set;
-        }
-
-        public Guid PartitionId
+        public string Observer
         {
             get; set;
         }
@@ -60,17 +61,32 @@ namespace FabricHealer.Utilities
             get; set;
         }
 
-        public long ReplicaId
-        {
-            get; set;
-        }
-
         public string ResourceUsageDataProperty
         {
             get; set;
         }
 
+        public string SourceId
+        {
+            get; set;
+        }
+
+        public TelemetryData HealthData
+        {
+            get; set;
+        }
+
         public Uri ServiceName
+        {
+            get; set;
+        }
+
+        public Guid PartitionId
+        {
+            get; set;
+        }
+
+        public long ReplicaOrInstanceId
         {
             get; set;
         }

@@ -1,20 +1,31 @@
-## FabricHealer 1.0.15
+## FabricHealer 1.1.0.831
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
+#### This version targets .NET Core 3.1 and requires SF Runtime >= 8.0
 
-FabricHealer (FH) is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls, but can also be fully customizable (like Disk repair). All repairs are safely orchestrated through the Service Fabric RepairManager system service. Repair workflow configuration is written as [Prolog](http://www.let.rug.nl/bos/lpn//lpnpage.php?pageid=online)-like [logic](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/PackageRoot/Config/LogicRules) with [supporting external predicates](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/Repair/Guan) written in C#. 
+FabricHealer (FH) is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
+applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls,
+but can also be fully customizable (like Disk repair). All repairs are safely orchestrated through the Service Fabric RepairManager system service.
+Repair workflow configuration is written as [Prolog](http://www.let.rug.nl/bos/lpn//lpnpage.php?pageid=online)-like [logic](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/PackageRoot/Config/LogicRules) with [supporting external predicates](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/Repair/Guan) written in C#. 
 
-FabricHealer's Configuration-as-Logic feature is made possible by a new logic programming library for .NET, [Guan](https://github.com/microsoft/guan). The fun starts when FabricHealer detects supported error or warning health events reported by [FabricObserver](https://github.com/microsoft/service-fabric-observer).
+FabricHealer's Configuration-as-Logic feature is made possible by a new logic programming library for .NET, [Guan](https://github.com/microsoft/guan).
+The fun starts when FabricHealer detects supported error or warning health events reported by [FabricObserver](https://github.com/microsoft/service-fabric-observer), for example.
+You can use FabricHealer if you don't also deploy FabricObserver. Just install FabricHealerProxy into your .NET Service Fabric project and you can leverage the power of FH from there.
+There is a very simple "interface" to FabricHealer that begins with some service generating a Service Fabric Health Report. This health report must contain a specially-crafted
+Description value: a serialized instance of a well-known (to FH) type (must implement ITelemetryData). As mentioned above, just use FabricHealerProxy to push FH into motion from your
+Service Fabric service.
 
-FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster. It is a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04).  
+FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster.
+It is a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04). Note that this version (1.1.0.831) will be the last version that supports .NET Core 3.1. 
 
-All warning and error health reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) and subsequently repaired by FabricHealer are user-configured - developer control extends from unhealthy event source to related healing operations. 
+All warning and error health reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) and subsequently repaired by FabricHealer are user-configured
+ - developer control extends from unhealthy event source to related healing operations. 
 
 FabricObserver and FabricHealer are part of a family of highly configurable Service Fabric observability tools that work together to keep your clusters green.
 
 To learn more about FabricHealer's configuration-as-logic model, [click here.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/LogicWorkflows.md)  
 
 ```
-FabricHealer requires that FabricObserver and RepairManager (RM) service are deployed. 
+FabricHealer requires that RepairManager (RM) service is deployed. 
 ```
 ```
 For VM level repair, InfrastructureService (IS) service must be deployed.
@@ -26,7 +37,61 @@ For VM level repair, InfrastructureService (IS) service must be deployed.
 2. Install [.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
 3. Build. 
 
-***Note: FabricHealer must be run under the LocalSystem account (see ApplicationManifest.xml) in order to function correctly. This means on Windows, by default, it will run as System user. On Linux, by default, it will run as root user. You do not have to make any changes to ApplicationManifest.xml for this to be the case.*** 
+## Deploy FabricHealer 
+You can deploy FabricHealer using Visual Studio (if you build the sources yourself), PowerShell or ARM. ***Please note*** that this version of FabricHealer no longer supports the DefaultServices node in ApplicationManifest.xml. This means that should you deploy using PowerShell,
+you must create an instance of the service as the last command in your script.
+This was done to support ARM deployment, specifically. The StartupServices.xml file you see in the FabricHealerApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio. Your ARM template or PowerShell script will
+contain all the information necessary for deploying FabricHealer.
+
+### ARM Deployment
+
+For ARM deployment, please see the [ARM documentation](/Documentation/Deployment/Deployment.md). 
+
+### PowerShell Deployment
+
+```PowerShell
+
+#cd to the top level repo directory where you cloned FO sources.
+
+cd C:\Users\me\source\repos\service-fabric-healer
+
+#Build FH (Release)
+
+./Build-FabricHealer
+
+#create a $path variable that points to the build output:
+#E.g., for Windows deployments:
+
+$path = "C:\Users\me\source\repos\service-fabric-healer\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
+
+#For Linux deployments:
+
+#$path = "C:\Users\me\source\repos\service-fabric-healer\bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType"
+
+#Connect to target cluster, for example:
+
+Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloudapp.azure.com:19000') -X509Credential -FindType FindByThumbprint -FindValue '[thumbprint]' -StoreLocation LocalMachine -StoreName 'My'
+
+#Copy $path contents (FO app package) to server:
+
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH11831 -TimeoutSec 1800
+
+#Register FO ApplicationType:
+
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH11831
+
+#Create FO application (if not already deployed at lesser version):
+
+New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.1.0.831   
+
+#Create the Service instance:  
+
+New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName fabric:/FabricHealer -ServiceName fabric:/FabricHealer/FabricHealerService -ServiceTypeName FabricHealerType -InstanceCount -1
+
+#OR if updating existing version:  
+
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.1.0.831 -Monitored -FailureAction rollback
+```  
 
 ## Using FabricHealer  
 

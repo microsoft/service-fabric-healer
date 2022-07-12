@@ -25,7 +25,7 @@ namespace Guan.Logic
             QueryContext queryContext = new QueryContext(moduleProvider);
             queryContext.SetDirection(null, order);
             Query query = Query.Create(queryExpression, queryContext);
-            await query.GetNextAsync().ConfigureAwait(false);
+            await query.GetNextAsync();
         }
 
         public async Task RunQueryAsync(List<CompoundTerm> queryExpressions)
@@ -36,7 +36,7 @@ namespace Guan.Logic
             QueryContext queryContext = new QueryContext(moduleProvider);
             queryContext.SetDirection(null, order);
             Query query = Query.Create(queryExpressions, queryContext, moduleProvider);
-            await query.GetNextAsync().ConfigureAwait(false);
+            await query.GetNextAsync();
         }
     }
 }

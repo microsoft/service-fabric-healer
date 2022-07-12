@@ -9,10 +9,10 @@ namespace FabricHealer.TelemetryLib
 {
     public class RepairData
     {
-        public Dictionary<string, double> Repairs
+        public Dictionary<string, (string Source, double Count)> Repairs
         {
             get; set;
-        } = new Dictionary<string, double>();
+        } = new Dictionary<string, (string Source, double Count)>();
 
         public double RepairCount
         {
