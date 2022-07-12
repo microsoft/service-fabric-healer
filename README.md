@@ -32,8 +32,6 @@ For VM level repair, the Service Fabric InfrastructureService (IS) service must 
 2. Install [.NET 6](https://dotnet.microsoft.com/download/dotnet-core/6.0)
 3. Build. 
 
-***Note: FabricHealer must be run under the LocalSystem account (see ApplicationManifest.xml) in order to function correctly. This means on Windows, by default, it will run as System user. On Linux, by default, it will run as root user. You do not have to make any changes to ApplicationManifest.xml for this to be the case.*** 
-
 ## Deploy FabricHealer 
 You can deploy FabricHealer using Visual Studio (if you build the sources yourself), PowerShell or ARM. ***Please note*** that this version of FabricHealer no longer supports the DefaultServices node in ApplicationManifest.xml. This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
 The StartupServices.xml file you see in the FabricHealerApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio. Your ARM template or PowerShell script will contain all the information necessary for deploying FabricHealer.
