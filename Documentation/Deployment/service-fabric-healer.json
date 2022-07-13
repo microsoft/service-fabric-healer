@@ -11,16 +11,16 @@
     },
     "applicationTypeVersionFabricHealer": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "1.1.0.831",
       "metadata": {
-        "description": "Provide the app version number of FabricHealer. This must be identical with the version provided for the parameter appPackageUrl. Example: '1.1.0.831'"
+        "description": "Provide the app version number of FabricHealer. This must be identical with the version provided for the parameter appPackageUrl."
       }
     },
     "packageUrlFabricHealer": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "This has to be a public accessible URL for the sfpkg file which contains the FabricHealer app package. Example: https://github.com/microsoft/service-fabric-healer/releases/download/48361039/Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.1.1.0.831.sfpkg"
+        "description": "This has to be a public accessible URL for the sfpkg file which contains the FabricHealer app package. Example: https://github.com/microsoft/service-fabric-healer/releases/download/57636592/Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.1.1.0.831.sfpkg"
       }
     }
   },
@@ -67,7 +67,7 @@
         "typeName": "[variables('applicationTypeNameFabricHealer')]",
         "typeVersion": "[parameters('applicationTypeVersionFabricHealer')]",
         "parameters": {
-          "EnableDiskRepair": "true"
+          "MonitorLoopSleepSeconds": "15"
         },
         "upgradePolicy": {
           "upgradeReplicaSetCheckTimeout": "01:00:00.0",
