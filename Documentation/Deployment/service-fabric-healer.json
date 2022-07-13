@@ -11,9 +11,9 @@
     },
     "applicationTypeVersionFabricHealer": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "1.1.0.960",
       "metadata": {
-        "description": "Provide the app version number of FabricHealer. This must be identical with the version provided for the parameter appPackageUrl. Example: '1.1.0.960'"
+        "description": "Provide the app version number of FabricHealer. This must be identical to the version specified in the sfpkg."
       }
     },
     "packageUrlFabricHealer": {
@@ -67,7 +67,7 @@
         "typeName": "[variables('applicationTypeNameFabricHealer')]",
         "typeVersion": "[parameters('applicationTypeVersionFabricHealer')]",
         "parameters": {
-          "EnableDiskRepair": "true"
+          "MonitorLoopSleepSeconds": "15"
         },
         "upgradePolicy": {
           "upgradeReplicaSetCheckTimeout": "01:00:00.0",
