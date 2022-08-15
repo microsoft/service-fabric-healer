@@ -589,7 +589,7 @@ namespace FabricHealer.Repair
                         repairData,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-                await FabricRepairTasks.CancelRepairTaskAsync(repairTask, FabricHealerManager.FabricClientSingleton);
+                await FabricRepairTasks.CancelRepairTaskAsync(repairTask);
                 return false;
             }
 
@@ -961,7 +961,7 @@ namespace FabricHealer.Repair
                     repairData,
                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-            await FabricRepairTasks.CancelRepairTaskAsync(repairTask, FabricHealerManager.FabricClientSingleton);
+            await FabricRepairTasks.CancelRepairTaskAsync(repairTask);
             return false;
         }
 

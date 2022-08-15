@@ -30,7 +30,7 @@ namespace FabricHealer
         internal static RepairData RepairHistory;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.1.0.960";
+        private const string InternalVersionNumber = "1.1.1.960";
         private static FabricHealerManager singleton;
         private static FabricClient _fabricClient;
         private bool disposedValue;
@@ -514,7 +514,7 @@ namespace FabricHealer
                     // The repair state could change to Completed after this call is made, for example, and before RM API call.
                     if (repair.State != RepairTaskState.Completed)
                     {
-                        await FabricRepairTasks.CancelRepairTaskAsync(repair, FabricClientSingleton);
+                        await FabricRepairTasks.CancelRepairTaskAsync(repair);
                     }
 
                     /* Resume interrupted Fabric Node restart repairs */
@@ -717,31 +717,6 @@ namespace FabricHealer
                                         ConfigSettings.EnableVerboseLogging);
 #endif
                             }
-                        }
-                    }
-                    // FYI: FH currently only supports the case where a replica is stuck.
-                    else if (kind != null && kind.Contains("Replica"))
-                    {
-                        if (!ConfigSettings.EnableReplicaRepair)
-                        {
-                            continue;
-                        }
-
-                        try
-                        {
-                            await ProcessReplicaHealthAsync(evaluation);
-                        }
-                        catch (Exception e) when (e is FabricException || e is TimeoutException)
-                        {
-#if DEBUG
-                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                    LogLevel.Info,
-                                    "MonitorHealthEventsAsync::HandledException",
-                                    $"Failure in MonitorHealthEventsAsync::Replica:{Environment.NewLine}{e}",
-                                    Token,
-                                    null,
-                                    ConfigSettings.EnableVerboseLogging);
-#endif
                         }
                     }
                 }
@@ -1043,14 +1018,14 @@ namespace FabricHealer
             Uri appName;
             Uri serviceName = serviceHealthState.ServiceName;
 
-            // System service target? Do not proceed if system app repair is not enabled.
-            if (serviceName.OriginalString.Contains(RepairConstants.SystemAppName) && !ConfigSettings.EnableSystemAppRepair)
+            // User service target? Do not proceed if App repair is not enabled.
+            if (!serviceName.OriginalString.Contains(RepairConstants.SystemAppName) && !ConfigSettings.EnableAppRepair)
             {
                 return;
             }
 
-            // User service target? Do not proceed if App repair is not enabled.
-            if (!serviceName.OriginalString.Contains(RepairConstants.SystemAppName) && !ConfigSettings.EnableAppRepair)
+            // System service target? Do not proceed if system app repair is not enabled.
+            if (serviceName.OriginalString.Contains(RepairConstants.SystemAppName) && !ConfigSettings.EnableSystemAppRepair)
             {
                 return;
             }
@@ -1059,7 +1034,8 @@ namespace FabricHealer
             var name = await FabricClientSingleton.QueryManager.GetApplicationNameAsync(serviceName, ConfigSettings.AsyncTimeout, Token);
             appName = name.ApplicationName;
 
-            if (!serviceName.OriginalString.Contains(RepairConstants.SystemAppName))
+            // user service - upgrade check.
+            if (!appName.OriginalString.Contains(RepairConstants.SystemAppName) && !serviceName.OriginalString.Contains(RepairConstants.SystemAppName))
             {
                 try
                 {
@@ -1098,32 +1074,19 @@ namespace FabricHealer
                 }
             }
 
-            var healthEvents = serviceHealth.HealthEvents;
+            var healthEvents = serviceHealth.HealthEvents.Where(
+                e => e.HealthInformation.HealthState == HealthState.Warning || e.HealthInformation.HealthState == HealthState.Error);
 
-            if (!healthEvents.Any(h => h.HealthInformation.HealthState == HealthState.Error || h.HealthInformation.HealthState == HealthState.Warning))
+            // Replica repair. This only makes sense if a partition is in Error or Warning state (and Replica repair is still experimental for FH).
+            if (ConfigSettings.EnableReplicaRepair)
             {
-                var partitionHealthStates = serviceHealth.PartitionHealthStates.Where(p => p.AggregatedHealthState == HealthState.Warning);
+                var partitionHealthStates = serviceHealth.PartitionHealthStates.Where(
+                    p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error);
 
-                foreach (var partitionHealthState in partitionHealthStates)
+                if (partitionHealthStates.Any())
                 {
-                    var partitionHealth = await FabricClientSingleton.HealthManager.GetPartitionHealthAsync(partitionHealthState.PartitionId, ConfigSettings.AsyncTimeout, Token);
-                    var replicaHealthStates = partitionHealth.ReplicaHealthStates.Where(p => p.AggregatedHealthState == HealthState.Warning).ToList();
-
-                    if (replicaHealthStates != null && replicaHealthStates.Count > 0)
-                    {
-                        foreach (var replica in replicaHealthStates)
-                        {
-                            var replicaHealth =
-                                await FabricClientSingleton.HealthManager.GetReplicaHealthAsync(partitionHealthState.PartitionId, replica.Id, ConfigSettings.AsyncTimeout, Token);
-
-                            if (replicaHealth != null)
-                            {
-                                healthEvents = replicaHealth.HealthEvents.Where(h => h.HealthInformation.HealthState == HealthState.Warning).ToList();
-                                break;
-                            }
-                        }
-                        break;
-                    }
+                    await ProcessReplicaHealthAsync(serviceHealth);
+                    return;
                 }
             }
 
@@ -1635,140 +1598,140 @@ namespace FabricHealer
         // This is an example of a repair for a non-FO-originating health event. This function needs some work, but you get the basic idea here.
         // FO does not support replica monitoring and as such it does not emit specific error codes that FH recognizes.
         // *This is an experimental function/workflow in need of more testing.*
-        private async Task ProcessReplicaHealthAsync(HealthEvaluation evaluation)
+        private async Task ProcessReplicaHealthAsync(ServiceHealth serviceHealth)
         {
-            if (evaluation.Kind != HealthEvaluationKind.Replica)
-            {
-                return;
-            }
-
-            var repUnhealthyEvaluations = ((ReplicaHealthEvaluation)evaluation).UnhealthyEvaluations;
-
-            foreach (var healthEvaluation in repUnhealthyEvaluations)
-            {
-                Token.ThrowIfCancellationRequested();
-
                 // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-                await RandomWaitAsync(); 
+                await RandomWaitAsync();
 
-                var eval = (ReplicaHealthEvaluation)healthEvaluation;
-                var healthEvent = eval.UnhealthyEvaluations.Cast<EventHealthEvaluation>().FirstOrDefault();
-                var service = await FabricClientSingleton.QueryManager.GetServiceNameAsync( eval.PartitionId, ConfigSettings.AsyncTimeout, Token);
+            /*  Example of repairable problem at Replica level, as health event:
 
-                /*  Example of repairable problem at Replica level, as health event:
+                [SourceId] ='System.RAP' reported Warning/Error for property...
+                [Property] = 'IStatefulServiceReplica.ChangeRole(N)Duration'.
+                [Description] = The api IStatefulServiceReplica.ChangeRole(N) on node [NodeName] is stuck. 
 
-                    [SourceId] ='System.RAP' reported Warning/Error for property...
-                    [Property] = 'IStatefulServiceReplica.ChangeRole(N)Duration'.
-                    [Description] = The api IStatefulServiceReplica.ChangeRole(N) on node [NodeName] is stuck. 
+                Start Time (UTC): 2020-04-26 19:22:55.492. 
+            */
 
-                    Start Time (UTC): 2020-04-26 19:22:55.492. 
-                */
+            List<HealthEvent> healthEvents = new List<HealthEvent>();
+            var partitionHealthStates = serviceHealth.PartitionHealthStates.Where(
+                p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error);
 
-                if (string.IsNullOrWhiteSpace(healthEvent.UnhealthyEvent.HealthInformation.Description))
+            foreach (var partitionHealthState in partitionHealthStates)
+            {
+                var partitionHealth = await FabricClientSingleton.HealthManager.GetPartitionHealthAsync(partitionHealthState.PartitionId, ConfigSettings.AsyncTimeout, Token);
+                var replicaHealthStates = partitionHealth.ReplicaHealthStates.Where(
+                    p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error).ToList();
+
+                if (replicaHealthStates != null && replicaHealthStates.Count > 0)
                 {
-                    continue;
+                    foreach (var rep in replicaHealthStates)
+                    {
+                        var replicaHealth =
+                            await FabricClientSingleton.HealthManager.GetReplicaHealthAsync(partitionHealthState.PartitionId, rep.Id, ConfigSettings.AsyncTimeout, Token);
+
+                        if (replicaHealth != null)
+                        {
+                            healthEvents = replicaHealth.HealthEvents.Where(
+                                h => h.HealthInformation.HealthState == HealthState.Warning || h.HealthInformation.HealthState == HealthState.Error).ToList();
+                            
+                            foreach (HealthEvent healthEvent in healthEvents)
+                            {
+                                if (!healthEvent.HealthInformation.SourceId.Contains("System.RAP"))
+                                {
+                                    continue;
+                                }
+
+                                if (!healthEvent.HealthInformation.Property.Contains("IStatefulServiceReplica.ChangeRole") &&
+                                    !healthEvent.HealthInformation.Property.Contains("IReplicator.BuildReplica"))
+                                {
+                                    continue;
+                                }
+
+                                if (!healthEvent.HealthInformation.Description.Contains("is stuck"))
+                                {
+                                    continue;
+                                }
+
+                                var app = await FabricClientSingleton.QueryManager.GetApplicationNameAsync(
+                                                    serviceHealth.ServiceName,
+                                                    ConfigSettings.AsyncTimeout,
+                                                    Token);
+
+                                var replicaList = await FabricClientSingleton.QueryManager.GetReplicaListAsync(
+                                                            rep.PartitionId,
+                                                            rep.Id,
+                                                            ConfigSettings.AsyncTimeout,
+                                                            Token);
+                                // Replica still exists?
+                                if (replicaList.Count == 0)
+                                {
+                                    continue;
+                                }
+
+                                var appName = app?.ApplicationName?.OriginalString;
+                                var replica = replicaList[0];
+                                var nodeName = replica?.NodeName;
+
+                                // Get configuration settings related to Replica repair. 
+                                var repairRules = GetRepairRulesFromConfiguration(RepairConstants.ReplicaRepairPolicySectionName);
+
+                                if (repairRules == null || !repairRules.Any())
+                                {
+                                    continue;
+                                }
+
+                                var repairData = new TelemetryData
+                                {
+                                    ApplicationName = appName,
+                                    EntityType = EntityType.Replica,
+                                    HealthState = healthEvent.HealthInformation.HealthState,
+                                    NodeName = nodeName,
+                                    ReplicaId = rep.Id,
+                                    PartitionId = rep.PartitionId,
+                                    ServiceName = serviceHealth.ServiceName.OriginalString,
+                                    Source = RepairConstants.FabricHealerAppName
+                                };
+
+                                string errOrWarn = "Error";
+
+                                if (healthEvent.HealthInformation.HealthState == HealthState.Warning)
+                                {
+                                    errOrWarn = "Warning";
+                                }
+
+                                string repairId = $"{nodeName}_{serviceHealth.ServiceName.OriginalString.Remove(0, appName.Length + 1)}_{repairData.PartitionId}";
+                                repairData.RepairPolicy = new RepairPolicy
+                                {
+                                    RepairId = repairId
+                                };
+
+                                // Repair already in progress?
+                                var currentRepairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token);
+
+                                if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
+                                {
+                                    continue;
+                                }
+
+                                /* Start repair workflow */
+
+                                await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                        LogLevel.Info,
+                                        $"MonitorRepairableHealthEventsAsync:Replica_{rep.Id}_{errOrWarn}",
+                                        $"Detected Replica {rep.Id} on Partition " +
+                                        $"{rep.PartitionId} is in {errOrWarn}.{Environment.NewLine}" +
+                                        $"Replica repair policy is enabled. " +
+                                        $"{repairRules.Count} Logic rules found for Replica repair.",
+                                        Token,
+                                        null,
+                                        ConfigSettings.EnableVerboseLogging);
+
+                                // Start the repair workflow.
+                                await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
+                            }
+                        }
+                    }
                 }
-
-                if (!healthEvent.UnhealthyEvent.HealthInformation.SourceId.Contains("System.RAP"))
-                {
-                    continue;
-                }
-
-                if (!healthEvent.UnhealthyEvent.HealthInformation.Property.Contains("IStatefulServiceReplica.ChangeRole") ||
-                    !healthEvent.UnhealthyEvent.HealthInformation.Property.Contains("IReplicator.BuildReplica"))
-                {
-                    continue;
-                }
-
-                if (!healthEvent.UnhealthyEvent.HealthInformation.Description.Contains("is stuck"))
-                {
-                    continue;
-                }
-
-                var app = await FabricClientSingleton.QueryManager.GetApplicationNameAsync(
-                                    service.ServiceName,
-                                    ConfigSettings.AsyncTimeout,
-                                    Token);
-
-                var replicaList = await FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                            eval.PartitionId,
-                                            eval.ReplicaOrInstanceId,
-                                            ConfigSettings.AsyncTimeout,
-                                            Token);
-                // Replica still exists?
-                if (replicaList.Count == 0)
-                {
-                    continue;
-                }
-
-                var appName = app?.ApplicationName?.OriginalString;
-                var replica = replicaList[0];
-                var nodeName = replica?.NodeName;
-
-                // Since FH runs on each node, have FH only try to repair services that are also running on the same node.
-                // This removes the need to try and orchestrate repairs across nodes. The node that is running the target service will also be 
-                // running FH.
-                if (nodeName != serviceContext.NodeContext.NodeName)
-                {
-                    continue;
-                }
-
-                // Get configuration settings related to Replica repair. 
-                var repairRules = GetRepairRulesFromConfiguration(RepairConstants.ReplicaRepairPolicySectionName);
-
-                if (repairRules == null || !repairRules.Any())
-                {
-                    continue;
-                }
-
-                var repairData = new TelemetryData
-                {
-                    ApplicationName = appName,
-                    EntityType = EntityType.Replica,
-                    HealthState = healthEvent.AggregatedHealthState,
-                    NodeName = nodeName,
-                    ReplicaId = eval.ReplicaOrInstanceId,
-                    PartitionId = eval.PartitionId,
-                    ServiceName = service.ServiceName.OriginalString,
-                    Source = RepairConstants.FabricHealerAppName
-                };
-
-                string errOrWarn = "Error";
-
-                if (healthEvent.AggregatedHealthState == HealthState.Warning)
-                {
-                    errOrWarn = "Warning";
-                }
-
-                string repairId = $"{nodeName}_{service.ServiceName.OriginalString.Remove(0, appName.Length + 1)}_{repairData.PartitionId}";
-                repairData.RepairPolicy = new RepairPolicy
-                {
-                    RepairId = repairId
-                };
-
-                // Repair already in progress?
-                var currentRepairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token);
-                
-                if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
-                {
-                    continue;
-                }
-
-                /* Start repair workflow */
-
-                await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        $"MonitorRepairableHealthEventsAsync:Replica_{eval.ReplicaOrInstanceId}_{errOrWarn}",
-                        $"Detected Replica {eval.ReplicaOrInstanceId} on Partition " +
-                        $"{eval.PartitionId} is in {errOrWarn}.{Environment.NewLine}" +
-                        $"Replica repair policy is enabled. " +
-                        $"{repairRules.Count} Logic rules found for Replica repair.",
-                        Token,
-                        null,
-                        ConfigSettings.EnableVerboseLogging);
-
-                // Start the repair workflow.
-                await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
             }
         }
         

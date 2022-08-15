@@ -15,8 +15,8 @@
          <RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 	<Product>FabricHealer</Product>
-	<Version>1.1.0.960</Version>
-    <FileVersion>1.1.0.960</FileVersion>
+	<Version>1.1.1.960</Version>
+    <FileVersion>1.1.1.960</FileVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <StartupObject>FabricHealer.Program</StartupObject>
     <SignAssembly>false</SignAssembly>

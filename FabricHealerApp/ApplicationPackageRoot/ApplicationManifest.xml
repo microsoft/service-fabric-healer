@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.1.0.960" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.1.1.960" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- FabricHealerManager Settings  -->
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
@@ -17,7 +17,7 @@
     <Parameter Name="EnableDiskRepair" DefaultValue="false" />
     <Parameter Name="EnableFabricNodeRepair" DefaultValue="false" />
     <Parameter Name="EnableMachineRepair" DefaultValue="false" />
-    <Parameter Name="EnableReplicaRepair" DefaultValue="false" />
+    <Parameter Name="EnableReplicaRepair" DefaultValue="true" />
     <!-- This means FH will apply some mitigation (restarts) to all instances of a target service on a node-by-node basis only (rolling). -->
     <Parameter Name="EnableRollingServiceRestarts" DefaultValue="true" />
     <Parameter Name="EnableSystemServiceRepair" DefaultValue="false" />
@@ -33,7 +33,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.1.0.960" />
+    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.1.1.960" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
