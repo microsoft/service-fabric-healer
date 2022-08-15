@@ -97,7 +97,7 @@ namespace FHTest
                 {
                     if (repairTask.State != RepairTaskState.Completed)
                     {
-                        await FabricRepairTasks.CancelRepairTaskAsync(repairTask, fabricClient);
+                        await FabricRepairTasks.CancelRepairTaskAsync(repairTask);
                     }
                 }
             }

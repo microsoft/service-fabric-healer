@@ -34,7 +34,7 @@ namespace FabricHealer.Repair
         /// <param name="repairTask"><see cref="RepairTask"/> to be cancelled</param>
         /// <param name="fabricClient">FabricClient instance.</param>
         /// <returns></returns>
-        public static async Task CancelRepairTaskAsync(RepairTask repairTask, FabricClient fabricClient)
+        public static async Task CancelRepairTaskAsync(RepairTask repairTask)
         {
             await Task.Delay(1000);
 
@@ -48,7 +48,7 @@ namespace FabricHealer.Repair
                 case RepairTaskState.Created:
                 case RepairTaskState.Claimed:
                 case RepairTaskState.Preparing:
-                {
+                
                     try
                     {
                         _ = await FabricHealerManager.FabricClientSingleton.RepairManager.CancelRepairTaskAsync(repairTask.TaskId, repairTask.Version, true);
@@ -59,12 +59,13 @@ namespace FabricHealer.Repair
                     }
 
                     break;
-                }
+                
                 case RepairTaskState.Approved:
                 case RepairTaskState.Executing:
 
                     repairTask.State = RepairTaskState.Restoring;
                     repairTask.ResultStatus = RepairTaskResult.Cancelled;
+
                     try
                     {
                         _ = await FabricHealerManager.FabricClientSingleton.RepairManager.UpdateRepairExecutionStateAsync(repairTask);

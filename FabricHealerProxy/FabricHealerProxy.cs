@@ -46,8 +46,9 @@ namespace FabricHealer
         // Instance tuple that stores RepairData objects for a specified duration (defaultHealthReportTtl).
         private ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairData)> repairDataHistory =
                  new ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairData)>();
-        CancellationTokenRegistration tokenRegistration;
-        CancellationTokenSource cts = null;
+        private CancellationTokenRegistration tokenRegistration;
+        private CancellationTokenSource cts = null;
+        private readonly Logger logger;
 
         private FabricHealerProxy()
         {
@@ -55,6 +56,8 @@ namespace FabricHealer
             {
                 repairDataHistory = new ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairFacts)>();
             }
+
+            logger = new Logger(FHProxyId);
         }
 
         /// <summary>
@@ -116,12 +119,16 @@ namespace FabricHealer
 
             if (repairFacts == null)
             {
-                throw new ArgumentNullException("Supplied null for repairData argument. You must supply an instance of RepairData.");
+                string msg = "Supplied null for repairData argument. You must supply an instance of RepairData.";
+                logger.LogWarning(msg);
+                throw new ArgumentNullException(msg);
             }
 
             if (string.IsNullOrEmpty(repairFacts.NodeName))
             {
-                throw new MissingRepairFactsException("RepairData.NodeName is a required field.");
+                string msg = "RepairData.NodeName is a required field.";
+                logger.LogWarning(msg);
+                throw new MissingRepairFactsException(msg);
             }
 
             try
@@ -145,11 +152,11 @@ namespace FabricHealer
                                             fabricClient,
                                             cancellationToken)).ConfigureAwait(false);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException ioe)
             {
                 // This can happen when the internal ExecuteAsync impl calls LINQ's First() on a zero-sized collection, for example.
                 // This should not crash the containing process, so just capture it here.
-                // TODO: Add a file logger so folks can debug issues they run into with the library..
+                logger.LogWarning($"Unexpected exception in Policy.Handle{Environment.NewLine}{ioe}");
             }
         }
 
@@ -221,7 +228,9 @@ namespace FabricHealer
 
                     if (nodes == null || nodes.Count == 0)
                     {
-                        throw new NodeNotFoundException($"NodeName {repairData.NodeName} does not exist in this cluster.");
+                        string msg = $"NodeName {repairData.NodeName} does not exist in this cluster.";
+                        logger.LogWarning(msg);
+                        throw new NodeNotFoundException(msg);
                     }
 
                     repairData.NodeType = nodes[0].NodeType;
@@ -257,7 +266,9 @@ namespace FabricHealer
                         {
                             if (!TryValidateFixFabricUriString(repairData.ServiceName, out serviceName))
                             {
-                                throw new UriFormatException($"Specified ServiceName, {repairData.ServiceName}, is invalid.");
+                                string msg = $"Specified ServiceName, {repairData.ServiceName}, is invalid.";
+                                logger.LogWarning(msg);
+                                throw new UriFormatException(msg);
                             }
 
                             ApplicationNameResult appNameResult =
@@ -270,7 +281,9 @@ namespace FabricHealer
                         {
                             if (!TryValidateFixFabricUriString(repairData.ApplicationName, out appName))
                             {
-                                throw new UriFormatException($"Specified ApplicationName, {repairData.ApplicationName}, is invalid.");
+                                string msg = $"Specified ApplicationName, {repairData.ApplicationName}, is invalid.";
+                                logger.LogWarning(msg);
+                                throw new UriFormatException(msg);
                             }
                         }
 
@@ -370,7 +383,9 @@ namespace FabricHealer
             }
             catch (Exception e) when (e is FabricServiceNotFoundException)
             {
-                throw new ServiceNotFoundException($"Specified ServiceName {repairData.ServiceName} does not exist in the cluster.");
+                string msg = $"Specified ServiceName {repairData.ServiceName} does not exist in the cluster.";
+                logger.LogWarning(msg);
+                throw new ServiceNotFoundException(msg);
             }
             catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
             {
@@ -403,6 +418,11 @@ namespace FabricHealer
                 catch (Exception e) when (e is ArgumentException || e is IndexOutOfRangeException)
                 {
 
+                }
+                catch (Exception e)
+                {
+                    logger.LogError($"Unhandled exception in ManageRepairDataHistory:{Environment.NewLine}{e}");
+                    throw;
                 }
             }
         }
@@ -489,6 +509,11 @@ namespace FabricHealer
                 {
                     return false;
                 }
+                catch (Exception e)
+                {
+                    logger.LogError($"Unhandled exception in VerifyHealthReportExistsAsync:{Environment.NewLine}{e}");
+                    throw;
+                }
             }
             else if (!string.IsNullOrWhiteSpace(repairFacts.ServiceName))
             {
@@ -507,6 +532,11 @@ namespace FabricHealer
                 catch (FabricException)
                 {
                     return false;
+                }
+                catch (Exception e)
+                {
+                    logger.LogError($"Unhandled exception in VerifyHealthReportExistsAsync:{Environment.NewLine}{e}");
+                    throw;
                 }
             }
             else if (!string.IsNullOrWhiteSpace(repairFacts.NodeName))
@@ -528,6 +558,11 @@ namespace FabricHealer
                 catch (FabricException)
                 {
                     return false;
+                }
+                catch (Exception e)
+                {
+                    logger.LogError($"Unhandled exception in VerifyHealthReportExistsAsync:{Environment.NewLine}{e}");
+                    throw;
                 }
             }
 
@@ -662,6 +697,11 @@ namespace FabricHealer
                 catch (Exception e) when (e is ArgumentException || e is IndexOutOfRangeException)
                 {
 
+                }
+                catch (Exception e)
+                {
+                    logger.LogError($"Unhandled exception in ClearHealthReportsInternal:{Environment.NewLine}{e}");
+                    throw;
                 }
             }
         }

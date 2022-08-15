@@ -2,15 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.1.0.831</version>
+    <version>1.1.1.831</version>
     <releaseNotes>
-		- This is a major release with several improvements.
-		- FabricHealer (FH) no longer requires FabricObserver (FO) to be deployed in the same cluster.
-		- Any .NET SF service can now interoperate with FH using the FabricHealerProxy .NET Standard 2.0 library (nupkg available on the nuget.org gallery).
-		- This version requires Microsoft.ServiceFabric.Services Version 5.0.516 and higher (SF Runtime 8.0 and above) and .NET Core 3.1. Lesser .NET Core and SF runtime versions are not supported. For SF Runtime 9.0 and .NET 6, use version 2.0.9.60.
-		- FabricHealer can now be deployed via ARM, directly from the repo.
-		- Important bug fixes and several code improvements.
-		- This is the last major version of FH to support .NET Core 3.1.
+
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

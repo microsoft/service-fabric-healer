@@ -34,12 +34,13 @@ namespace FabricHealer.TelemetryLib
         {
             serviceContext = context;
             appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
-            appInsightsTelemetryConf.InstrumentationKey = TelemetryConstants.AIKey;
+            appInsightsTelemetryConf.ConnectionString = TelemetryConstants.ConnectionString;
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
-            var (ClusterId, TenantId, ClusterType) = ClusterInformation.ClusterInfoTuple;
-            clusterId = ClusterId;
-            tenantId = TenantId;
-            clusterType = ClusterType;
+            
+            // Set instance fields.
+            clusterId = ClusterInformation.ClusterInfoTuple.ClusterId;
+            tenantId = ClusterInformation.ClusterInfoTuple.TenantId;
+            clusterType = ClusterInformation.ClusterInfoTuple.ClusterType;
         }
 
         public bool EmitFabricHealerOperationalEvent(FabricHealerOperationalEventData repairData, TimeSpan runInterval, string logFilePath)

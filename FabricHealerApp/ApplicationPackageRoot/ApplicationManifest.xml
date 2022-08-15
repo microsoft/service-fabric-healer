@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.1.0.831" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.1.1.831" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- FabricHealerManager Settings  -->
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
@@ -33,7 +33,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.1.0.831" />
+    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.1.1.831" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -76,7 +76,7 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-	<!--
+    <!--
 	Because of certain actions FabricHealer takes in a cluster (deleting files created by or restarting services running at higher elevation, for example), 
     it may need to run as System user on Windows and root on Linux. Note that you should test FH out NOT running as System and validate that it works for your scenarios.
 	For user service-level SF API mitigations (RestartCodePackage, RestartReplica, etc), it can (and therefore should) run as default (Network Service on Windows, sfappsuser on Linux). 
@@ -86,9 +86,9 @@
     </Policies> -->
   </ServiceManifestImport>
   <Principals>
-	  <Users>
-		  <!-- LocalSystem AccountType maps to System on Windows and root on Linux. -->
-		  <User Name="SystemUser" AccountType="LocalSystem" />
-	  </Users>
+    <Users>
+      <!-- LocalSystem AccountType maps to System on Windows and root on Linux. -->
+      <User Name="SystemUser" AccountType="LocalSystem" />
+    </Users>
   </Principals>
 </ApplicationManifest>
