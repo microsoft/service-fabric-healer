@@ -4,12 +4,15 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Fabric.Description;
+using System.Fabric.Query;
 using System.Fabric.Repair;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using Newtonsoft.Json.Linq;
 
 namespace FabricHealer.Repair
 {
@@ -63,8 +66,7 @@ namespace FabricHealer.Repair
             }
 
             // Error health state on target SF entity can block RM from approving the job to repair it (which is the whole point of doing the job).
-            // So, do not do health checks if customer configures FO to emit Error health reports.
-            // In general, FO should *not* be configured to emit Error events. See FO documentation.
+            // So, do not do health checks if customer configures FO to emit Error health level reports.
             if (executorData.RepairData.HealthState == System.Fabric.Health.HealthState.Error)
             {
                 doHealthChecks = false;
@@ -106,13 +108,20 @@ namespace FabricHealer.Repair
         // This allows InfrastructureService to schedule and run reboot im concert with VMSS over MR.
         public async Task<RepairTask> CreateVmRebootISRepairTaskAsync(TelemetryData repairData, string executorName, CancellationToken cancellationToken)
         {
-            // Do not allow this to take place in 1-node or 3-node clusters, like a dev cluster.
-            // TODO: Block this from running in OneBox (dev machine) environment.
-            var nodes = 
-                await FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(null, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
-            int nodeCount = nodes.Count;
+            // This constraint (MaxResults) is used just to make sure there is more 1 node in the cluster. We don't need a list of all nodes.
+            var nodeQueryDesc = new NodeQueryDescription
+            {
+                MaxResults = 3,
+            };
 
-            if (nodeCount <= 3)
+            NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                    () => FabricHealerManager.FabricClientSingleton.QueryManager.GetNodePagedListAsync(
+                                            nodeQueryDesc,
+                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                            cancellationToken),
+                                     cancellationToken);
+
+            if (nodes?.Count == 1)
             {
                 return null;
             }
