@@ -1014,6 +1014,7 @@ namespace FabricHealer
                                             ConfigSettings.AsyncTimeout,
                                             Token),
                                      Token);
+
             ServiceHealth serviceHealth;
             Uri appName;
             Uri serviceName = serviceHealthState.ServiceName;
@@ -1515,7 +1516,7 @@ namespace FabricHealer
             // This is just used to make sure there is more than 1 node in the cluster. We don't need a list of all nodes.
             var nodeQueryDesc = new NodeQueryDescription
             {
-                MaxResults = 3,
+                MaxResults = 2,
             };
 
             NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(

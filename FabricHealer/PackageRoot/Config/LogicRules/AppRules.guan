@@ -116,16 +116,22 @@ Mitigate(AppName="fabric:/MyApp", MetricName="FileHandles") :- TimeScopedRestart
 ## Memory
 
 ## Memory - Percent In Use for Any SF Service Process belonging to the specified SF Application. 3 repairs within 10 minute window.
-Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
+Mitigate(AppName="fabric:/MemoryStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
 	TimeScopedRestartCodePackage(3, 00:10:00).
 
 ## Memory - Megabytes In Use for Any SF Service Process belonging to the specified SF Applications. 5 repairs within 5 hour window.
-Mitigate(AppName="fabric:/Voting", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
-## Any app service that exceeds 1GB private workingset, restart code package if warning data is provided at least 3 times within 15 minute window. 1 repair per hour.
-Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 1024,
+## Note the constraint on HealthState in the head of the rule below, which only applies to one service, fabric:/Voting/VotingData, in this example (just change the fabric Uri for your target). 
+## This is important when you have both Warning and Error thresholds specified for some service for some metric in FabricObserver. You would do that 
+## to enable FabricObserver to dump the offending service process in the Error case, for example. Then, have FabricHealer restart the code package.
+## This is important to call out as you do not want to have a repair task already in flight for the Warning case when what you
+## really want to do is conduct restart repair only in the Error case (and after FO has dumped the process already, which will always be the case).
+Mitigate(ServiceName="fabric:/Voting/VotingData", MetricName="MemoryMB", HealthState="Error") :- TimeScopedRestartCodePackage(5, 05:00:00).
+
+## Any app service that exceeds 2GB private workingset, restart code package if warning data is provided at least 3 times within 15 minute window. 1 repair per hour.
+Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 2048,
 	GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartCodePackage(1, 01:00:00).
@@ -160,7 +166,7 @@ Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?A
 
 ## Generic rule for restarting any service in Warning or Error. This means any service that is in Error or Warning state and
 ## also specified in the serialized TelemetryData instance that forms the Description of the related Service level Health Event will be restarted.
-Mitigate() :- TimeScopedRestartReplica(10, 05:00:00).
+##Mitigate() :- TimeScopedRestartReplica(10, 05:00:00).
 
 ## Internal Predicates
 
@@ -177,7 +183,8 @@ TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, ?time)
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
 ## Note you can add up to two optional arguments to RestartCodePackage/RestartReplica, name them whatever you want or omit the names, it just has to be either a TimeSpan value for how long to wait 
 ## for the repair target to become healthy and/or a bool for whether or not RM should do health checks before and after the repair executes. 
-## See below for an example using both optional arguments (named arguments are just used for clarity; you could also just specify RestartCodePackage(true, 00:10:00), for example).
+## See below for an example using both optional arguments. Named arguments are just used for clarity below; you could also just specify RestartCodePackage(true, 00:10:00), for example.
+## Note: It's up to you to decide if you want RepairManager to conduct pre and post health checks.
 
 TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).
 TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:01:00).

@@ -289,8 +289,14 @@ namespace FabricHealer
 
                         if (repairData.ApplicationName != "fabric:/System" && (repairData.PartitionId == null || repairData.ReplicaId == 0))
                         {
-                            var depReplicas = await fabricClient.QueryManager.GetDeployedReplicaListAsync(repairData.NodeName, appName);
-                            var depReplica =
+                            DeployedServiceReplicaList depReplicas = await fabricClient.QueryManager.GetDeployedReplicaListAsync(repairData.NodeName, appName);
+                            
+                            if (!depReplicas.Any(r => r.ServiceName.OriginalString.ToLower() == repairData.ServiceName.ToLower() && r.ReplicaStatus == ServiceReplicaStatus.Ready))
+                            {
+                                throw new FabricServiceNotFoundException();
+                            }
+
+                            DeployedServiceReplica depReplica =
                                 depReplicas.First(r => r.ServiceName.OriginalString.ToLower() == repairData.ServiceName.ToLower() && r.ReplicaStatus == ServiceReplicaStatus.Ready);
                             Guid partitionId = depReplica.Partitionid;
                             long replicaId;
@@ -383,7 +389,7 @@ namespace FabricHealer
             }
             catch (Exception e) when (e is FabricServiceNotFoundException)
             {
-                string msg = $"Specified ServiceName {repairData.ServiceName} does not exist in the cluster.";
+                string msg = $"Specified ServiceName {repairData.ServiceName} does not exist in the cluster or has no replicas in Ready state.";
                 logger.LogWarning(msg);
                 throw new ServiceNotFoundException(msg);
             }
