@@ -23,7 +23,7 @@ namespace FabricHealer.Utilities
             private set;
         }
 
-        public int ExecutionLoopSleepSeconds
+        public int HealthCheckIntervalInSeconds
         {
             get;
             private set;
@@ -169,9 +169,9 @@ namespace FabricHealer.Utilities
 
             LocalLogPathParameter = GetConfigSettingValue( RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LocalLogPathParameter);
 
-            if (int.TryParse( GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.HealthCheckLoopSleepTimeSeconds), out int execFrequency))
+            if (int.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.HealthCheckIntervalInSeconds), out int execFrequency))
             {
-                ExecutionLoopSleepSeconds = execFrequency;
+                HealthCheckIntervalInSeconds = execFrequency;
             }
 
             // Rolling service restarts.

@@ -1,6 +1,6 @@
-﻿## Logic rules for Machine level repairs in the cluster. Only OS reboot is supported today.
+﻿## Logic rules for Machine level repairs in the cluster. Only OS reboot is supported today for VMSS-managed clusters.
 
-## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
+## Applicable Named Arguments for Mitigate. Corresponding facts are supplied by FabricObserver or FabricHealerProxy, Renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
 ## |---------------------------|----------------------------------------------------------------------------------------------|
 ## | NodeName                  | Name of the node                                                                             | 
@@ -22,37 +22,75 @@
 ## | FileHandles (Linux)       | 
 ## | FileHandlesPercent (Linux)| 
 
+## Supported repair action names.
+## | Name                         |
+## |------------------------------|
+## | System.Reboot                |
+## | System.ReimageOS             |
+## | System.FullReimage           |
+## | System.Azure.HostReboot      |
+## | System.Azure.HostRepaveData  |
+
 ## First, check if we are inside run interval. If so, then cut (!).
 ## This is commented out by default. Just uncomment and set the global run interval for VM level repairs to suit your needs.
 
 ## Mitigate() :- CheckInsideRunInterval(02:00:00), !.
 
-## TimeScopedRestartVM is an internal predicate to check for the number of times a VM reboot repair has run to completion within a supplied time window. 
+## TimeScopedRebootMachine is an internal predicate to check for the number of times a VM reboot repair has run to completion within a supplied time window. 
 ## If Completed VM Repair count is less then supplied value, then run RestartVM mitigation.
 
-TimeScopedRestartVM(?count, ?time) :- GetRepairHistory(?repairCount, ?time),
+TimeScopedRebootMachine(?count, ?time) :- GetRepairHistory(?repairCount, ?time),
     ?repairCount < ?count, 
-    RestartVM().
+    ScheduleMachineRepair("System.Reboot").
 
 ## Percent Memory in Use (of total physical).
 
-Mitigate(MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 95,
+Mitigate(MetricName=MemoryPercent, MetricValue=?MetricValue) :- ?MetricValue >= 95,
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
-    TimeScopedRestartVM(4, 08:00:00).
-
+    TimeScopedRebootMachine(4, 08:00:00).
 
 ## File Handles/FDs. Linux-only.
 ## Percent Allocated, System-wide.
 
-Mitigate(MetricName="FileHandlesPercent", MetricValue=?MetricValue, OS="Linux") :- ?MetricValue >= 95,
+Mitigate(MetricName=FileHandlesPercent, MetricValue=?MetricValue, OS=Linux) :- ?MetricValue >= 95,
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
-    TimeScopedRestartVM(2, 08:00:00).
+    TimeScopedRebootMachine(2, 08:00:00).
 
 ## Total Allocated, System-wide.
 
-Mitigate(MetricName="FileHandles", MetricValue=?MetricValue, OS="Linux") :- ?MetricValue >= 1000000,
+Mitigate(MetricName=FileHandles, MetricValue=?MetricValue, OS=Linux) :- ?MetricValue >= 1000000,
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
-    TimeScopedRestartVM(2, 08:00:00).
+    TimeScopedRebootMachine(2, 08:00:00). 
+
+## Reboot/Reimage. The rules below satisfy the following requirements: 
+## Repair throttling (MaxOutstandingRepairTasks), time-in-Error checking (pre-probation - GetCurrentEntityHealthStateDuration), 
+## cap repair job attempts within time intervals (how many times to try a repair before trying something else, for example, escalation..), 
+## time-to-wait after repair completes (post-probation - ProbationToHealthyWaitDurationPostRepair), 
+## attempt scheduling disk reimage if rebooting didn't work (user-configured repair escalation).
+
+## Logic workflow. Note: Since we are in this rule file, the context is already known to be Machine. FH has already determined what the facts are.
+## If Health State is Error, then proceed. This constraint is in the head of the rule for convenience and readability.
+## How long has the node been in Error state (probation)? 
+## If at least 2 hours, then continue. Else, stop processing rules (end cut (!)).
+## How many times has this machine repair been run in the last 4 hours? If less than twice, continue. This is added logic, does not exist in RPE. Like all of this, customer owns the configuration.
+## Only schedule the repair if there are less than 2 machine-level repairs currently in flight in the cluster.
+## "Currently in flight" means RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing.
+## Wait 30 mins for green node after IS completes execution and RM has restored node (no health checks for Error state, by default. Only safety checks.)
+## If any of the sub-rules do not succeed, then Guan will go to the next rule, which in this case will attempt to schedule a Disk reimage repair job with the same logical constraints/workflow.
+
+Mitigate(NodeName=?NodeName, HealthState=Error) :- GetCurrentEntityHealthStateDuration(?HealthStateDuration, Entity=Machine, Target=?NodeName, State=Error),
+    ?HealthStateDuration <= 02:00:00, !.
+
+Mitigate(NodeName=?NodeName, HealthState=Error) :- GetRepairHistory(?repairCount, 04:00:00),
+	?repairCount < 2,
+	ScheduleMachineRepair("System.Azure.HostReboot", MaxOutstandingRepairTasks=2, ProbationToHealthyWaitDurationPostRepair=00:30:00).
+
+## Data disk reimage. Not supported on VMSS-managed virtual machines.
+Mitigate(NodeName=?NodeName, HealthState=Error) :- GetRepairHistory(?repairCount, 04:00:00),
+	?repairCount < 2,
+	ScheduleMachineRepair("System.Azure.HostRepaveData", MaxOutstandingRepairTasks=2, ProbationToHealthyWaitDurationPostRepair=00:30:00).
+
+## Human intervention is required (Triage)

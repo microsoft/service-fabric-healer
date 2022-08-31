@@ -10,7 +10,6 @@ using System.Fabric.Health;
 using System;
 using FabricHealer.Repair;
 using System.Diagnostics.Tracing;
-using System.Fabric.Query;
 
 namespace FabricHealer.Utilities.Telemetry
 {
@@ -96,8 +95,7 @@ namespace FabricHealer.Utilities.Telemetry
             get; set;
         }
 
-        [EventField]
-        public ServiceKind ServiceKind
+        public string ServiceKind
         {
             get; set;
         }

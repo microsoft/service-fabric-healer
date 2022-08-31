@@ -1,57 +1,110 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
-  <Section Name="RepairManagerConfiguration">
-    <!-- ***Overridable Parameters***
-         These must be set in ApplicationManifest.xml -->
-    <Parameter Name="HealthCheckLoopSleepTimeSeconds" Value="" MustOverride="true" />
-    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
-    <Parameter Name="EnableETW" Value="" MustOverride="true" />
-    <Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
-    <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
-	<Parameter Name="EnableRollingServiceRestarts" Value="" MustOverride="true" />
-    <!-- Folder name for local log output. You can use a full path or just a folder name. -->
-    <Parameter Name="LocalLogPath" Value="" MustOverride="true" />
+	<Section Name="RepairManagerConfiguration">
+	<!-- ***Overridable Parameters*** These must be set in ApplicationManifest.xml -->
+		<!-- Interval in seconds for how often FabricHealer wakes up and scans health states to schedule repairs. -->
+		<Parameter Name="HealthCheckIntervalInSeconds" Value="" MustOverride="true" />
+		<Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+		<Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+		<Parameter Name="EnableETW" Value="" MustOverride="true" />
+		<!-- Big Red Button: You can turn FabricHealer on and off with a versionless parameter-only application upgrade. -->
+		<Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
+		<Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
+		<Parameter Name="EnableRollingServiceRestarts" Value="" MustOverride="true" />
+		<!-- Folder name for local log output. You can use a full path or just a folder name. -->
+		<Parameter Name="LocalLogPath" Value="" MustOverride="true" />
     
-    <!-- ***Non-Overridable Parameters*** These must be set in this file. -->
+		<!-- ***Non-Overridable Parameters*** These must be set in this file. -->
 	  
-    <!-- Default timeout for async SF API calls. -->
-    <Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
-    <!-- Required-If EnableTelemetry is set to true in ApplicationManifest. Values can be either AzureApplicationInsights or AzureLogAnalytics -->
-    <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
-    <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
-    <Parameter Name="AppInsightsInstrumentationKey" Value="" />
-    <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
-    <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
-    <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
-    <Parameter Name="LogAnalyticsSharedKey" Value="" />
-    <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
-    <Parameter Name="LogAnalyticsLogType" Value="FabricHealer" />
-  </Section>
+		<!-- Default timeout for async SF API calls. -->
+		<Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
+		<!-- Required-If EnableTelemetry is set to true in ApplicationManifest. Values can be either AzureApplicationInsights or AzureLogAnalytics -->
+		<Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
+		<!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
+		<Parameter Name="AppInsightsInstrumentationKey" Value="" />
+		<!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
+		<Parameter Name="LogAnalyticsWorkspaceId" Value="" />
+		<!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
+		<Parameter Name="LogAnalyticsSharedKey" Value="" />
+		<!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
+		<Parameter Name="LogAnalyticsLogType" Value="FabricHealer" />
+	</Section>
+
+	<!-- Repair Policies - Overridable Parameters. Must be set in ApplicationManifest.xml. -->
+	<Section Name="AppRepairPolicy">
+		<Parameter Name="Enabled" Value="" MustOverride="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="" />
+	</Section>
+	<Section Name="DiskRepairPolicy">
+		<Parameter Name="Enabled" Value="" MustOverride="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+	</Section>
+	<Section Name="FabricNodeRepairPolicy">
+		<Parameter Name="Enabled" Value="" MustOverride="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+	</Section>
+	<Section Name="ReplicaRepairPolicy">
+		<Parameter Name="Enabled" Value="" MustOverride="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+	</Section>
+	<Section Name="SystemServiceRepairPolicy">
+		<Parameter Name="Enabled" Value="" MustOverride="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+	</Section>
 	
-  <!-- Repair Policies.Overridable Parameters. Must be set in ApplicationManifest.xml. -->
-  <Section Name="AppRepairPolicy">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="" />
-  </Section>
-  <Section Name="DiskRepairPolicy">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
-  </Section>
-  <Section Name="FabricNodeRepairPolicy">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
-  </Section>
-  <Section Name="ReplicaRepairPolicy">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
-  </Section>
-  <Section Name="SystemServiceRepairPolicy">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
-  </Section>
-  <Section Name="MachineRepairPolicy">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
-  </Section>
+	<!-- Machine Repair. -->
+	<Section Name="MachineRepairPolicy">
+		<!-- FabricHealer is not allowed to schedule a machine repair more often than this interval.
+             This is to prevent the FabricHealer from scheduling too many machine repairs in a short time. -->
+		<Parameter Name="ActionSchedulingIntervalInSeconds" Value="600" />
+		<Parameter Name="ProbationToFailingWaitDurationInSeconds" Value="7200" />
+		<Parameter Name="ProbationToHealthyWaitDurationInSeconds" Value="1800" />
+		<Parameter Name="MinimumHealthyDurationInSeconds" Value="300" />
+		<Parameter Name="Enabled" Value="" MustOverride="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+	</Section>
+	<!-- Supported Machine level repair actions. -->
+	<!-- RM Repair action strings (built into RM).
+		========================================================================
+		Alias               VM (default)             Host 
+        ========================================================================
+		System.Reboot       System.Azure.Reboot      System.Azure.HostReboot 
+		System.ReimageOS    System.Azure.ReimageOS 
+		System.FullReimage  System.Azure.RepaveData  System.Azure.HostRepaveData
+		========================================================================-->
+	<Section Name="NodeRepairActionList">
+		<!-- This is the name of the repair that will be provided to RM by FH when scheduling the repair. -->
+		<Parameter Name="System.Azure.HostReboot" Value="RepairPolicyHostReboot" />
+		<!-- This is not supported for VMSS-based machine clusters. -->
+		<!--<Parameter Name="System.Azure.HostRepaveData" Value="RepairPolicyHostRepaveData" />-->
+		<Parameter Name="ManualTriageNeeded" Value="RepairPolicyTriage" />
+	</Section>
+	<Section Name="RepairPolicyHostReboot">
+		<!-- Required - How many repair tasks of this kind be scheduled concurrently.  -->
+		<Parameter Name="MaxOutstandingRepairTasks" Value="2"  />
+		<!-- Required - Probationary period to failing after this repair -->
+		<Parameter Name="ProbationToFailingWaitDurationPostRepairInSeconds" Value="7200" />
+		<!-- Required - Probationary period to healthy after this repair -->
+		<Parameter Name="ProbationToHealthyWaitDurationPostRepairInSeconds" Value="1800" />
+		<!-- Required - Minimum time of error state before this repair is applied -->
+		<Parameter Name="PolicyActionTimeInSeconds" Value="7200" />
+		<!-- This is optional and defaults to true -->
+		<Parameter Name="IsEnabled" Value="true"  />
+	</Section>
+	<!-- This is not supported for VMSS-based machine clusters. -->
+	<Section Name="RepairPolicyHostRepaveData">
+		<Parameter Name="MaxOutstandingRepairTasks" Value="2" />
+		<Parameter Name="ProbationToFailingWaitDurationPostRepairInSeconds" Value="7200" />
+		<Parameter Name="ProbationToHealthyWaitDurationPostRepairInSeconds" Value="1800" />
+		<Parameter Name="PolicyActionTimeInSeconds" Value="14400" />
+		<Parameter Name="IsEnabled" Value="false" />
+	</Section>
+	<Section Name="RepairPolicyTriage">
+		<Parameter Name="MaxOutstandingRepairTasks" Value="2" MustOverride="false" />
+		<Parameter Name="ProbationToFailingWaitDurationPostRepairInSeconds" Value="7200" />
+		<Parameter Name="ProbationToHealthyWaitDurationPostRepairInSeconds" Value="1800" />
+		<Parameter Name="PolicyActionTimeInSeconds" Value="9000" />
+		<Parameter Name="IsEnabled" Value="true" />
+	</Section>
+	<!-- End Machine Repair -->
 </Settings>

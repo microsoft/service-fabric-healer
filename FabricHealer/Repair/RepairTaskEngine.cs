@@ -4,7 +4,9 @@
 // ------------------------------------------------------------
 
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Fabric.Description;
+using System.Fabric.Health;
 using System.Fabric.Query;
 using System.Fabric.Repair;
 using System.Linq;
@@ -12,13 +14,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
-using Newtonsoft.Json.Linq;
 
 namespace FabricHealer.Repair
 {
     public sealed class RepairTaskEngine
     {
-        public const string HostVMReboot = "System.Reboot";
+        public const string HostMachineReboot = "System.Reboot";
         public const string FHTaskIdPrefix = "FH";
         public const string AzureTaskIdPrefix = "Azure";
         public const string FabricHealerExecutorName = "FabricHealer";
@@ -105,14 +106,27 @@ namespace FabricHealer.Repair
             return repairTasks;
         }
 
-        // This allows InfrastructureService to schedule and run reboot im concert with VMSS over MR.
-        public async Task<RepairTask> CreateVmRebootISRepairTaskAsync(TelemetryData repairData, string executorName, CancellationToken cancellationToken)
+        /// <summary>
+        /// This schedules a repair task where SF's InfrastructureService will reboot the target machine safely.
+        /// </summary>
+        /// <param name="repairData"></param>
+        /// <param name="executorName"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async Task<RepairTask> CreateMachineRepairTaskAsync(TelemetryData repairData, string executorName, CancellationToken cancellationToken)
         {
             // This constraint (MaxResults) is used just to make sure there is more 1 node in the cluster. We don't need a list of all nodes.
             var nodeQueryDesc = new NodeQueryDescription
             {
                 MaxResults = 3,
             };
+
+            string repairActionName = HostMachineReboot;
+
+            if (!string.IsNullOrWhiteSpace(repairData.RepairPolicy.InfrastructureRepairName))
+            {
+                repairActionName = repairData.RepairPolicy.InfrastructureRepairName;
+            }
 
             NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                     () => FabricHealerManager.FabricClientSingleton.QueryManager.GetNodePagedListAsync(
@@ -126,14 +140,14 @@ namespace FabricHealer.Repair
                 return null;
             }
 
-            string taskId = $"{FHTaskIdPrefix}/{HostVMReboot}/{(uint)repairData.NodeName.GetHashCode()}/{repairData.NodeType}";
-            bool doHealthChecks = !SupportedErrorCodes.GetCodeNameFromErrorCode(repairData.Code).Contains("Error");
+            string taskId = $"{FHTaskIdPrefix}/{repairActionName}/{(uint)repairData.NodeName.GetHashCode()}/{repairData.NodeType}";
+            bool doHealthChecks = repairData.HealthState != HealthState.Error;
 
             // Error health state on target SF entity can block RM from approving the job to repair it (which is the whole point of doing the job).
             // So, do not do health checks if customer configures FO to emit Error health reports.
             // In general, FO should *not* be configured to emit Error events. See FO documentation.
 
-            var repairTask = new ClusterRepairTask(taskId, HostVMReboot)
+            var repairTask = new ClusterRepairTask(taskId, repairActionName)
             {
                 Target = new NodeRepairTargetDescription(repairData.NodeName),
                 Description = $"{repairData.RepairPolicy.RepairId}",
@@ -146,25 +160,40 @@ namespace FabricHealer.Repair
             return repairTask;
         }
 
-        public async Task<bool> IsFHRepairTaskRunningAsync(string executorName, TelemetryData repairdData, CancellationToken token)
+        /// <summary>
+        /// Determines if a repair task is already in flight or if the max number of concurrent repairs has been reached for the target using the information specified in repairData instance.
+        /// </summary>
+        /// <param name="executorName">Name of the repair executor.</param>
+        /// <param name="repairData">TelemetryData instance.</param>
+        /// <param name="token">CancellationToken.</param>
+        /// <param name="maxConcurrentRepairs">Optional: Number of max concurrent repairs for the entity type specified in repairData. Default is 0 which means no concurrent repairs.</param>
+        /// <returns></returns>
+        public async Task<bool> IsRepairInProgressAsync(string executorName, TelemetryData repairData, CancellationToken token, long maxConcurrentRepairs = 0)
         {
-            // All RepairTasks are prefixed with FH, regardless of repair target type (VM, fabric node, system service process, codepackage, replica).
-            // For VM-level repair, RM will create a new task for IS that replaces FH executor data with IS job info, but the original FH repair task will
-            // remain in an active state which will block any duplicate scheduling by another FH instance.
-            var currentFHRepairTasksInProgress =
-                            await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                                    FHTaskIdPrefix,
-                                    RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
-                                    executorName,
-                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                    token);
+            // All RepairTasks are prefixed with FH, regardless of repair target type (VM/Machine, Fabric node, system service process, code package, replica).
+            // For VM-level repairs, RM will create a new task for IS that replaces FH executor data with IS job info.
+            RepairTaskList repairTasksInProgress =
+                    await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                            FHTaskIdPrefix,
+                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                            executorName,
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            token);
 
-            if (currentFHRepairTasksInProgress == null || currentFHRepairTasksInProgress.Count == 0)
+            if (repairTasksInProgress == null || repairTasksInProgress.Count == 0)
             {
                 return false;
             }
 
-            foreach (var repair in currentFHRepairTasksInProgress)
+            // Throttling machine level repairs.
+            if (executorName == $"{InfrastructureServiceName}/{repairData.NodeType}" && 
+                maxConcurrentRepairs > 0 &&
+                repairTasksInProgress.Count(r => r.Executor == executorName) >= maxConcurrentRepairs)
+            {
+                return true;
+            }
+
+            foreach (var repair in repairTasksInProgress)
             {
                 // This check is to see if there are any FH-as-executor repairs in flight.
                 if (executorName == FabricHealerExecutorName)
@@ -179,19 +208,17 @@ namespace FabricHealer.Repair
                         return false;
                     }
 
-                    // The node repair check ensures that only one node-level repair can take place in a cluster (no concurrent node restarts), by default.
-                    // FH is conservative, by design.
-                    if (repairdData.RepairPolicy.RepairId == executorData.RepairData.RepairPolicy.RepairId ||
-                        executorData.RepairData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)
+                    // This check ensures that only one repair can be scheduled at a time for the same target.
+                    if (repairData.RepairPolicy.RepairId == executorData.RepairData.RepairPolicy.RepairId)
                     {
                         return true;
                     }
                 }
-                else if (repair.Executor == $"{InfrastructureServiceName}/{repairdData.NodeType}")
+                else if (repair.Executor == $"{InfrastructureServiceName}/{repairData.NodeType}")
                 {
-                    // This would block scheduling any VM level operation (reboot) already in flight.
-                    // For IS repairs, unique id is stored in the repair task's Description property.
-                    if (repair.Description == repairdData.RepairPolicy.RepairId)
+                    // This would block rescheduling any VM level operation (reboot) that is already in flight.
+                    // NOTE: For Infrastructure-level repairs (IS is executor), unique id is stored in the repair task's Description property.
+                    if (repair.Description == repairData.RepairPolicy.RepairId)
                     {
                         return true;
                     }

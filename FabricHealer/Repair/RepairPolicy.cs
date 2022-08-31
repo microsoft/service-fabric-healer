@@ -33,6 +33,14 @@ namespace FabricHealer.Repair
         }
 
         /// <summary>
+        /// The name of the infrastucture repair to provide to RM that IS will execute.
+        /// </summary>
+        public string InfrastructureRepairName
+        {
+            get; set;
+        }
+
+        /// <summary>
         /// Maximum amount of time to check if health state of repaired target entity is Ok.
         /// </summary>
         [EventField]

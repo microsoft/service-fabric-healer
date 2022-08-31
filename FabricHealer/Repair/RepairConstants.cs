@@ -29,7 +29,7 @@ namespace FabricHealer.Repair
         public const string EnableRollingServiceRestartsParameter = "EnableRollingServiceRestarts";
         public const string AppInsightsInstrumentationKeyParameter = "AppInsightsInstrumentationKey";
         public const string EnableETW = "EnableETW";
-        public const string HealthCheckLoopSleepTimeSeconds = "HealthCheckLoopSleepTimeSeconds";
+        public const string HealthCheckIntervalInSeconds = "HealthCheckIntervalInSeconds";
         public const string LocalLogPathParameter = "LocalLogPath";
         public const string AsyncOperationTimeout = "AsyncOperationTimeoutSeconds";
         public const string EnableFabricHealerOperationalTelemetry = "EnableOperationalTelemetry";
@@ -72,7 +72,15 @@ namespace FabricHealer.Repair
         public const string RestartFabricNode = "RestartFabricNode";
         public const string RestartFabricSystemProcess = "RestartFabricSystemProcess";
         public const string RestartReplica = "RestartReplica";
-        public const string RestartVM = "RestartVM";
+        public const string ScheduleMachineRepair = "ScheduleMachineRepair";
+        public const string ScheduleDiskReimage = "ScheduleDiskReimage";
+
+        // Infra repair names (RM "commands").
+        public const string SystemReboot = "System.Reboot";
+        public const string SystemReimageOS = "System.ReimageOS ";
+        public const string SystemFullReimage = "System.FullReimage";
+        public const string SystemHostReboot = "System.Azure.HostReboot";
+        public const string SystemHostRepaveData = "System.Azure.HostRepaveData";
 
         // Helper Predicates.
         public const string CheckInsideRunInterval = "CheckInsideRunInterval";

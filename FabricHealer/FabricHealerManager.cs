@@ -356,7 +356,7 @@ namespace FabricHealer
 
                     await Task.Delay(
                         TimeSpan.FromSeconds(
-                            ConfigSettings.ExecutionLoopSleepSeconds > 0 ? ConfigSettings.ExecutionLoopSleepSeconds : 10), Token);      
+                            ConfigSettings.HealthCheckIntervalInSeconds > 0 ? ConfigSettings.HealthCheckIntervalInSeconds : 10), Token);      
                 }
 
                 RepairLogger.LogInfo("Shutdown signaled. Stopping.");
@@ -1330,7 +1330,7 @@ namespace FabricHealer
                 repairTaskManager.DetectedHealthEvents.Add(evt);
 
                 // Start the repair workflow.
-                await repairTaskManager.StartRepairWorkflowAsync((TelemetryData)repairData, repairRules, Token);
+                await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
             }
         }
 
@@ -1357,11 +1357,11 @@ namespace FabricHealer
                 Token.ThrowIfCancellationRequested();
             
                 var nodeHealth = await FabricClientSingleton.HealthManager.GetNodeHealthAsync(node.NodeName);
-                var observerHealthEvents =
+                var nodeHealthEvents =
                     nodeHealth.HealthEvents.Where(
                                 s => (s.HealthInformation.HealthState == HealthState.Warning || s.HealthInformation.HealthState == HealthState.Error));
                 
-                foreach (var evt in observerHealthEvents)
+                foreach (var evt in nodeHealthEvents)
                 {
                     Token.ThrowIfCancellationRequested();
 
@@ -1373,7 +1373,11 @@ namespace FabricHealer
                         continue;
                     }
 
+                    // TODO: Remove this hard requirement (TelemetryData-only). FH can just read health event data and learn what the problem is if FO/FH Proxy did not generate the health event. This is important
+                    // for cases where customers are not using FO or FHProxy, but want to use FH.
                     // Check to see if the event Description is a serialized instance of TelemetryData, which would mean the health report was generated in a supported way.
+                    // In the case where there is no TelemetryData involved, create a new TelemtryData and set it with the minimum number of facts required to accomplish the goal. 
+                    // This is trivial for the Machine repair case, but will get more complicated for other entities. That said, it is very doable.
                     if (!JsonSerializationUtility.TryDeserialize(evt.HealthInformation.Description, out TelemetryData repairData))
                     {
                         continue;
@@ -1423,7 +1427,7 @@ namespace FabricHealer
                         continue;
                     }
 
-                    // Get repair rules for supported source Observer.
+                    // Get repair rules for supplied facts (TelemetryData).
                     var repairRules = GetRepairRulesForTelemetryData(repairData);
 
                     if (repairRules == null || repairRules.Count == 0)

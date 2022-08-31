@@ -12,6 +12,7 @@ using System.Fabric.Health;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace FabricHealer.Utilities.Telemetry
 {
@@ -146,17 +147,22 @@ namespace FabricHealer.Utilities.Telemetry
             // ETW.
             if (FabricHealerManager.ConfigSettings.EtwEnabled)
             {
-                if (healthState == HealthState.Ok || healthState == HealthState.Unknown || healthState == HealthState.Invalid)
+                if (JsonSerializationUtility.TrySerialize(telemData, out string tData))
                 {
-                    ServiceEventSource.Current.DataTypeWriteInfo(RepairConstants.EventSourceEventName, telemData);
-                }
-                else if (healthState == HealthState.Warning)
-                {
-                    ServiceEventSource.Current.DataTypeWriteWarning(RepairConstants.EventSourceEventName, telemData);
-                }
-                else
-                {
-                    ServiceEventSource.Current.DataTypeWriteError(RepairConstants.EventSourceEventName, telemData);
+                    var data = new { tData };
+
+                    if (healthState == HealthState.Ok || healthState == HealthState.Unknown || healthState == HealthState.Invalid)
+                    {
+                        ServiceEventSource.Current.DataTypeWriteInfo(RepairConstants.EventSourceEventName, data);
+                    }
+                    else if (healthState == HealthState.Warning)
+                    {
+                        ServiceEventSource.Current.DataTypeWriteWarning(RepairConstants.EventSourceEventName, data);
+                    }
+                    else
+                    {
+                        ServiceEventSource.Current.DataTypeWriteError(RepairConstants.EventSourceEventName, data);
+                    }
                 }
             }
         }

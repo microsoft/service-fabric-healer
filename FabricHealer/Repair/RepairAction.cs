@@ -22,6 +22,8 @@ namespace FabricHealer.Repair
         RestartFabricNode,
         RestartProcess,
         RestartReplica,
-        RestartVM,
+        RebootMachine,
+        ReimageDisk,
+        ReimageOS
     }
 }

@@ -957,42 +957,6 @@ namespace FabricHealer.Repair
         }
 
         /// <summary>
-        /// Returns a machine name string, given a fabric node name.
-        /// </summary>
-        /// <param name="nodeName">Fabric node name</param>
-        /// <param name="cancellationToken"></param>
-        internal async Task<string> GetMachineHostNameFromFabricNodeNameAsync(string nodeName, CancellationToken cancellationToken)
-        {
-            try
-            {
-                var nodes = await FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(
-                                   nodeName,
-                                   FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                   cancellationToken);
-
-                Node targetNode = nodes.Count > 0 ? nodes[0] : null;
-
-                if (targetNode == null)
-                {
-                    return null;
-                }
-
-                string ipOrDnsName = targetNode.IpAddressOrFQDN;
-                var hostEntry = await Dns.GetHostEntryAsync(ipOrDnsName);
-                var machineName = hostEntry.HostName;
-
-                return machineName;
-            }
-            catch (Exception e) when (e is ArgumentException|| e is SocketException|| e is OperationCanceledException || e is TimeoutException)
-            {
-                FabricHealerManager.RepairLogger.LogWarning(
-                    $"Unable to determine machine host name from Fabric node name {nodeName}:{Environment.NewLine}{e}");
-            }
-
-            return null;
-        }
-
-        /// <summary>
         /// Clears existing health warnings for target repair entity. This should only be called after a repair operation succeeds.
         /// </summary>
         /// <param name="repairData">repairData instance.</param>
