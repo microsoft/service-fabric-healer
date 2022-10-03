@@ -2,8 +2,8 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.0.1</version>
-	<releaseNotes>Initial Release</releaseNotes>
+    <version>1.0.2</version>
+	<releaseNotes></releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
@@ -16,13 +16,11 @@
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>
     <dependencies>
-		<group targetFramework="netstandard2.0">
-			<dependency id="Newtonsoft.Json" version="13.0.1" />
-			<dependency id="Polly" version="7.2.3" />
-		    <dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
-		</group>
+	    <dependency id="Newtonsoft.Json" version="13.0.1" />
+	    <dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
+		<dependency id="Polly" version="7.2.3" />
     </dependencies>
-    <projectUrl>https://github.com/microsoft/FabricHealerProxy</projectUrl>
+    <projectUrl>https://github.com/microsoft/service-fabric-healer/tree/main/FabricHealerProxy</projectUrl>
     <tags>FabricHealerProxy service-fabric netstandard20 netcore csharp</tags>
     <copyright>© Microsoft Corporation. All rights reserved.</copyright>
   </metadata>

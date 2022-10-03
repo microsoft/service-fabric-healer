@@ -23,7 +23,7 @@ namespace FabricHealer.Utilities
             private set;
         }
 
-        public int ExecutionLoopSleepSeconds
+        public int HealthCheckIntervalInSeconds
         {
             get;
             private set;
@@ -37,7 +37,7 @@ namespace FabricHealer.Utilities
 
         public bool EnableRollingServiceRestarts
         {
-            get; 
+            get;
             private set;
         }
 
@@ -155,7 +155,7 @@ namespace FabricHealer.Utilities
             {
                 EnableAutoMitigation = enableAutoMitigation;
             }
-            
+
             if (int.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AsyncOperationTimeout), out int timeout))
             {
                 AsyncTimeout = TimeSpan.FromSeconds(timeout);
@@ -167,11 +167,11 @@ namespace FabricHealer.Utilities
                 EnableVerboseLogging = enableVerboseLogging;
             }
 
-            LocalLogPathParameter = GetConfigSettingValue( RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LocalLogPathParameter);
+            LocalLogPathParameter = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LocalLogPathParameter);
 
-            if (int.TryParse( GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.HealthCheckLoopSleepTimeSeconds), out int execFrequency))
+            if (int.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.HealthCheckIntervalInSeconds), out int execFrequency))
             {
-                ExecutionLoopSleepSeconds = execFrequency;
+                HealthCheckIntervalInSeconds = execFrequency;
             }
 
             // Rolling service restarts.
@@ -188,7 +188,7 @@ namespace FabricHealer.Utilities
                 if (TelemetryEnabled)
                 {
                     string telemetryProviderType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.TelemetryProviderType);
-                    
+
                     if (string.IsNullOrWhiteSpace(telemetryProviderType))
                     {
                         TelemetryEnabled = false;
@@ -267,7 +267,7 @@ namespace FabricHealer.Utilities
                 if (settings == null)
                 {
                     settings = context.CodePackageActivationContext?.GetConfigurationPackageObject("Config")?.Settings;
-                    
+
                     if (settings == null)
                     {
                         return null;
@@ -280,7 +280,7 @@ namespace FabricHealer.Utilities
                 // reset.
                 configSettings = null;
 
-                return parameter.Value;  
+                return parameter.Value;
             }
             catch (Exception e) when (e is KeyNotFoundException || e is FabricElementNotFoundException)
             {

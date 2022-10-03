@@ -11,6 +11,7 @@
 ## | ObserverName              | Name of Observer that generated the event (if the data comes from FabricObserver service)    |
 ## | PartitionId               | Id of the partition                                                                          |
 ## | ReplicaOrInstanceId       | Id of the replica or instance                                                                |
+## | ReplicaRole               | Role of replica: Primary or ActiveSecondary. Or None (e.g., Stateless replica)               |
 ## | ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                        | 
 ## | MetricName                | Name of the metric (e.g., CpuPercent or MemoryMB, etc.)                                      |   
 ## | MetricValue               | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)                              | 
@@ -79,8 +80,10 @@ Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue
 ## and where at least 3 health events identifying this problem were produced in the last 15 minutes. This is useful to ensure you don't mitigate a transient (short-lived)
 ## problem as they will self-correct.
 
-Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 15,
-	GetHealthEventHistory(?HealthEventCount, 00:15:00),
+## How long has it been in unhealthy state and how long has it not been in unhealthy state (healthy state).
+
+Mitigate(ServiceName="fabric:/CpuStress/CpuStressor", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 85,
+	GetHealthEventHistory(?HealthEventCount, 00:30:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartCodePackage(1, 00:15:00).
 
@@ -145,7 +148,7 @@ Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 05:00:0
 ## Local Ports in Dynamic Range (aka Ephemeral Ports)
 ## Percentage in use or Total Ephemeral ports - Any app service. 5 repairs within 5 hour window. This means if FO or FHProxy supplies repair facts related to Ephemeral ports,
 ## then restart the offending service by simulating process failure (RestartCodePackage). This will free all TCP ports held by the process.
-Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(15, 05:00:00).
+Mitigate(MetricName="EphemeralPorts", HealthState="Error") :- TimeScopedRestartCodePackage(15, 05:00:00).
 
 ## Total Ephemeral Ports - Specific Application: any of its services, constrained on number of local ephemeral ports open. 
 ## 5 repairs within 5 hour window.
@@ -162,7 +165,7 @@ Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPortsPercent", MetricVa
 Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?AppName != "fabric:/FabricObserver", ?MetricValue >= 400, TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Threads - Any app service. 5 repairs within 5 hour window. This means if FO warns on Thread count, then heal. There are no conditional checks (on MetricValue) to take place.
-## Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
+Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Generic rule for restarting any service in Warning or Error. This means any service that is in Error or Warning state and
 ## also specified in the serialized TelemetryData instance that forms the Description of the related Service level Health Event will be restarted.
@@ -186,5 +189,5 @@ TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, ?time)
 ## See below for an example using both optional arguments. Named arguments are just used for clarity below; you could also just specify RestartCodePackage(true, 00:10:00), for example.
 ## Note: It's up to you to decide if you want RepairManager to conduct pre and post health checks.
 
-TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).
+TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:10:00).
 TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:01:00).

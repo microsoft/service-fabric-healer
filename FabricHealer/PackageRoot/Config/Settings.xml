@@ -1,57 +1,61 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
-  <Section Name="RepairManagerConfiguration">
-    <!-- ***Overridable Parameters***
-         These must be set in ApplicationManifest.xml -->
-    <Parameter Name="HealthCheckLoopSleepTimeSeconds" Value="" MustOverride="true" />
-    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
-    <Parameter Name="EnableETW" Value="" MustOverride="true" />
-    <Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
-    <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
-	<Parameter Name="EnableRollingServiceRestarts" Value="" MustOverride="true" />
-    <!-- Folder name for local log output. You can use a full path or just a folder name. -->
-    <Parameter Name="LocalLogPath" Value="" MustOverride="true" />
+	<Section Name="RepairManagerConfiguration">
+	<!-- ***Overridable Parameters*** These must be set in ApplicationManifest.xml -->
+		<!-- Interval in seconds for how often FabricHealer wakes up and scans health states to schedule repairs. -->
+		<Parameter Name="HealthCheckIntervalInSeconds" Value="" MustOverride="true" />
+		<Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+		<Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+		<Parameter Name="EnableETW" Value="" MustOverride="true" />
+		<!-- Big Red Button: You can turn FabricHealer on and off with a versionless parameter-only application upgrade. -->
+		<Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
+		<Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
+		<Parameter Name="EnableRollingServiceRestarts" Value="" MustOverride="true" />
+		<!-- Folder name for local log output. You can use a full path or just a folder name. -->
+		<Parameter Name="LocalLogPath" Value="" MustOverride="true" />
     
-    <!-- ***Non-Overridable Parameters*** These must be set in this file. -->
+		<!-- ***Non-Overridable Parameters*** These must be set in this file. -->
 	  
-    <!-- Default timeout for async SF API calls. -->
-    <Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
-    <!-- Required-If EnableTelemetry is set to true in ApplicationManifest. Values can be either AzureApplicationInsights or AzureLogAnalytics -->
-    <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
-    <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
-    <Parameter Name="AppInsightsInstrumentationKey" Value="" />
-    <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
-    <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
-    <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
-    <Parameter Name="LogAnalyticsSharedKey" Value="" />
-    <!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
-    <Parameter Name="LogAnalyticsLogType" Value="FabricHealer" />
-  </Section>
+		<!-- Default timeout for async SF API calls. -->
+		<Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
+		<!-- Required-If EnableTelemetry is set to true in ApplicationManifest. Values can be either AzureApplicationInsights or AzureLogAnalytics -->
+		<Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
+		<!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
+		<Parameter Name="AppInsightsInstrumentationKey" Value="" />
+		<!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
+		<Parameter Name="LogAnalyticsWorkspaceId" Value="" />
+		<!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
+		<Parameter Name="LogAnalyticsSharedKey" Value="" />
+		<!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
+		<Parameter Name="LogAnalyticsLogType" Value="FabricHealer" />
+	</Section>
+
+	<!-- Repair Policies - Overridable Parameters. Must be set in ApplicationManifest.xml. -->
+	<Section Name="AppRepairPolicy">
+		<Parameter Name="Enabled" Value="" MustOverride="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="" />
+	</Section>
+	<Section Name="DiskRepairPolicy">
+		<Parameter Name="Enabled" Value="" MustOverride="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+	</Section>
+	<Section Name="FabricNodeRepairPolicy">
+		<Parameter Name="Enabled" Value="" MustOverride="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+	</Section>
+	<Section Name="ReplicaRepairPolicy">
+		<Parameter Name="Enabled" Value="" MustOverride="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+	</Section>
+	<Section Name="SystemServiceRepairPolicy">
+		<Parameter Name="Enabled" Value="" MustOverride="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+	</Section>
 	
-  <!-- Repair Policies.Overridable Parameters. Must be set in ApplicationManifest.xml. -->
-  <Section Name="AppRepairPolicy">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="" />
-  </Section>
-  <Section Name="DiskRepairPolicy">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
-  </Section>
-  <Section Name="FabricNodeRepairPolicy">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
-  </Section>
-  <Section Name="ReplicaRepairPolicy">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
-  </Section>
-  <Section Name="SystemServiceRepairPolicy">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
-  </Section>
-  <Section Name="MachineRepairPolicy">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-    <Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
-  </Section>
+	<!-- Machine Repair. -->
+	<Section Name="MachineRepairPolicy">
+		<Parameter Name="MinimumHealthyDurationInSeconds" Value="300" />
+		<Parameter Name="Enabled" Value="" MustOverride="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+	</Section>
 </Settings>

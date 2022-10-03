@@ -18,9 +18,9 @@ namespace FabricHealer.Repair
         /// <summary>
         /// The unique ID of a FabricHealer Repair.
         /// </summary>
-        public string RepairId 
-        { 
-            get; set; 
+        public string RepairId
+        {
+            get; set;
         }
 
         /// <summary>
@@ -28,6 +28,14 @@ namespace FabricHealer.Repair
         /// </summary>
         [EventField]
         public RepairActionType RepairAction
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// The name of the infrastucture repair to provide to RM that IS will execute.
+        /// </summary>
+        public string InfrastructureRepairName
         {
             get; set;
         }
