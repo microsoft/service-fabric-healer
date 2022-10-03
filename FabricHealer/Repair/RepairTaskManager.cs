@@ -144,6 +144,7 @@ namespace FabricHealer.Repair
             functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, this, repairData));
             functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, this, repairData));
             functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage, this));
+            functorTable.Add(GetEntityHealthStateDurationPredicateType.Singleton(RepairConstants.GetEntityHealthStateDuration, this, repairData));
 
             // Add external repair predicates.
             functorTable.Add(DeleteFilesPredicateType.Singleton(RepairConstants.DeleteFiles, this, repairData));
@@ -174,7 +175,7 @@ namespace FabricHealer.Repair
             // Think of these as facts from FabricObserver.
             compoundTerm.AddArgument(new Constant(repairData.ApplicationName), RepairConstants.AppName);
             compoundTerm.AddArgument(new Constant(repairData.Code), RepairConstants.ErrorCode);
-            compoundTerm.AddArgument(new Constant(Enum.GetName(typeof(HealthState), repairData.HealthState)), RepairConstants.HealthState);
+            compoundTerm.AddArgument(new Constant(repairData.HealthState.ToString()), RepairConstants.HealthState);
             compoundTerm.AddArgument(new Constant(repairData.Metric), RepairConstants.MetricName);
             compoundTerm.AddArgument(new Constant(Convert.ToInt64(repairData.Value)), RepairConstants.MetricValue);
             compoundTerm.AddArgument(new Constant(repairData.NodeName), RepairConstants.NodeName);
@@ -188,6 +189,7 @@ namespace FabricHealer.Repair
             compoundTerm.AddArgument(new Constant(repairData.ProcessStartTime), RepairConstants.ProcessStartTime);
             compoundTerm.AddArgument(new Constant(repairData.PartitionId), RepairConstants.PartitionId);
             compoundTerm.AddArgument(new Constant(repairData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
+            compoundTerm.AddArgument(new Constant(repairData.ReplicaRole), RepairConstants.ReplicaRole);
             compoundTerms.Add(compoundTerm);
 
             // Run Guan query.

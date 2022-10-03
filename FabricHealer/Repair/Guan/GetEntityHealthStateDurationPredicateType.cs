@@ -11,10 +11,11 @@ using System.Fabric.Health;
 
 namespace FabricHealer.Repair.Guan
 {
-    public class GetCurrentEntityHealthStateDurationPredicateType : PredicateType
+    public class GetEntityHealthStateDurationPredicateType : PredicateType
     {
         private static RepairTaskManager RepairTaskManager;
-        private static GetCurrentEntityHealthStateDurationPredicateType Instance;
+        private static TelemetryData RepairData;
+        private static GetEntityHealthStateDurationPredicateType Instance;
 
         private class Resolver : GroundPredicateResolver
         {
@@ -24,12 +25,12 @@ namespace FabricHealer.Repair.Guan
 
             }
 
-            // GetCurrentEntityHealthStateDuration(?HealthStateDuration, Machine, ?NodeName, State=Error)
+            // GetEntityHealthStateDuration(?HealthStateDuration, Machine, State=Error)
             protected override async Task<Term> GetNextTermAsync()
             {
-                if (Input.Arguments.Count != 4)
+                if (Input.Arguments.Count != 3)
                 {
-                    throw new GuanException("GetCurrentEntityHealthStateDuration predicate requires 4 arguments.");
+                    throw new GuanException("GetCurrentEntityHealthStateDuration predicate requires 3 arguments.");
                 }
 
                 TimeSpan duration;
@@ -43,11 +44,8 @@ namespace FabricHealer.Repair.Guan
                 {
                     throw new GuanException("The third argument of GetCurrentEntityHealthStateDuration must be a valid HealthState value (Error, Warning, etc..)");
                 }
-
-                string nodeName = (string)Input.Arguments[2].Value.GetEffectiveTerm().GetObjectValue();
                 
-                
-                duration = await FabricRepairTasks.GetEntityCurrentHealthStateDurationAsync(entityType, nodeName, state, RepairTaskManager.Token);
+                duration = await FabricRepairTasks.GetEntityCurrentHealthStateDurationAsync(entityType, RepairData.NodeName, state, RepairTaskManager.Token);
 
                 var result = new CompoundTerm(this.Input.Functor);
                 result.AddArgument(new Constant(duration), "0");
@@ -55,13 +53,14 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static GetCurrentEntityHealthStateDurationPredicateType Singleton(string name, RepairTaskManager repairTaskManager)
+        public static GetEntityHealthStateDurationPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
         {
             RepairTaskManager = repairTaskManager;
-            return Instance ??= new GetCurrentEntityHealthStateDurationPredicateType(name);
+            RepairData = repairData;
+            return Instance ??= new GetEntityHealthStateDurationPredicateType(name);
         }
 
-        private GetCurrentEntityHealthStateDurationPredicateType(string name)
+        private GetEntityHealthStateDurationPredicateType(string name)
                  : base(name, true, 1)
         {
 

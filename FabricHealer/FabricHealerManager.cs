@@ -600,14 +600,15 @@ namespace FabricHealer
                 }
 
                 // Check cluster upgrade status. If the cluster is upgrading to a new version (or rolling back)
-                // then do not attempt repairs.
+                // then do not attempt any repairs.
                 try
                 {
-                    int udInClusterUpgrade = await UpgradeChecker.GetUdsWhereFabricUpgradeInProgressAsync(Token);
+                    string udInClusterUpgrade = await UpgradeChecker.GetCurrentUDWhereFabricUpgradeInProgressAsync(Token);
 
-                    if (udInClusterUpgrade > -1)
+                    if (!string.IsNullOrWhiteSpace(udInClusterUpgrade))
                     {
-                        string telemetryDescription = $"Cluster is currently upgrading in UD {udInClusterUpgrade}. Will not schedule or execute repairs at this time.";
+                        string telemetryDescription = $"Cluster is currently upgrading in UD \"{udInClusterUpgrade}\". Will not schedule or execute repairs at this time.";
+
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
                                 "MonitorHealthEventsAsync::ClusterUpgradeDetected",
@@ -615,13 +616,6 @@ namespace FabricHealer
                                 Token,
                                 null,
                                 ConfigSettings.EnableVerboseLogging);
-
-                        return;
-                    }
-
-                    // Check to see if an Azure tenant update is in progress. Do not conduct repairs if so.
-                    if (await UpgradeChecker.IsAzureTenantUpdateInProgress(serviceContext.NodeContext.NodeType, Token))
-                    {
                         return;
                     }
                 }
@@ -749,7 +743,6 @@ namespace FabricHealer
         /// <returns>A task.</returns>
         private async Task ProcessApplicationHealthAsync(ApplicationHealthState appHealthState)
         {
-            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, Token);
             ApplicationHealth appHealth = null;
             Uri appName = appHealthState.ApplicationName;
 
@@ -1339,7 +1332,7 @@ namespace FabricHealer
             // This is just used to make sure there is more than 1 node in the cluster. We don't need a list of all nodes.
             var nodeQueryDesc = new NodeQueryDescription
             {
-                MaxResults = 3,
+                MaxResults = 2,
             };
 
             NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -1348,19 +1341,75 @@ namespace FabricHealer
                                             ConfigSettings.AsyncTimeout,
                                             Token),
                                      Token);
-            
+
+            // Node/Machine repair not supported in onebox clusters..
+            if (nodes?.Count == 1)
+            {
+                await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        $"ProcessMachineHealth::NotSupported",
+                        "Machine/Fabric Node repair is not supported in clusters with 1 Fabric node.",
+                        Token,
+                        null,
+                        ConfigSettings.EnableVerboseLogging);
+
+                return;
+            }
+
             var supportedNodeHealthStates =
                 nodeHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
 
             foreach (var node in supportedNodeHealthStates)
             {
                 Token.ThrowIfCancellationRequested();
-            
+
+                var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync(node.NodeName);
+                string nodeType = nodeList[0].NodeName;
+                string nodeUD = nodeList[0].UpgradeDomain;
                 var nodeHealth = await FabricClientSingleton.HealthManager.GetNodeHealthAsync(node.NodeName);
                 var nodeHealthEvents =
                     nodeHealth.HealthEvents.Where(
                                 s => (s.HealthInformation.HealthState == HealthState.Warning || s.HealthInformation.HealthState == HealthState.Error));
-                
+
+                // Ensure a node in Error is not in error due to being down as part of a cluster upgrade or infra update in its UD.
+                if (node.AggregatedHealthState == HealthState.Error)
+                {
+                    string udInClusterUpgrade = await UpgradeChecker.GetCurrentUDWhereFabricUpgradeInProgressAsync(Token);
+
+                    if (!string.IsNullOrWhiteSpace(udInClusterUpgrade) && udInClusterUpgrade == nodeUD)
+                    {
+                        string telemetryDescription =
+                            $"Cluster is currently upgrading in UD \"{udInClusterUpgrade}\", which is the UD for node {node.NodeName}, which is down. " +
+                            "Will not schedule or execute node-level repair at this time.";
+
+                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                $"{node.NodeName}_down_ClusterUpgrade({nodeUD})",
+                                telemetryDescription,
+                                Token,
+                                null,
+                                ConfigSettings.EnableVerboseLogging);
+
+                        continue;
+                    }
+
+                    // Check to see if an Azure tenant/platform update is in progress for target node. Do not conduct repairs if so.
+                    if (await UpgradeChecker.IsAzureUpdateInProgress(nodeType, node.NodeName, Token))
+                    {
+                        string telemetryDescription = $"{node.NodeName} is down due to Infra repair job (UD = {nodeUD}). Will not attempt node repair at this time.";
+
+                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                $"{node.NodeName}_down_InfraRepair",
+                                telemetryDescription,
+                                Token,
+                                null,
+                                ConfigSettings.EnableVerboseLogging);
+
+                        continue;
+                    }
+                }
+
                 foreach (var evt in nodeHealthEvents)
                 {
                     Token.ThrowIfCancellationRequested();
@@ -1368,48 +1417,36 @@ namespace FabricHealer
                     // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
                     await RandomWaitAsync();
 
-                    if (string.IsNullOrWhiteSpace(evt.HealthInformation.Description))
-                    {
-                        continue;
-                    }
-
-                    // TODO: Remove this hard requirement (TelemetryData-only). FH can just read health event data and learn what the problem is if FO/FH Proxy did not generate the health event. This is important
-                    // for cases where customers are not using FO or FHProxy, but want to use FH.
-                    // Check to see if the event Description is a serialized instance of TelemetryData, which would mean the health report was generated in a supported way.
-                    // In the case where there is no TelemetryData involved, create a new TelemtryData and set it with the minimum number of facts required to accomplish the goal. 
-                    // This is trivial for the Machine repair case, but will get more complicated for other entities. That said, it is very doable.
+                    // Was health event generated by FO or FHProxy?
                     if (!JsonSerializationUtility.TryDeserialize(evt.HealthInformation.Description, out TelemetryData repairData))
                     {
-                        continue;
+                        // This will enable Machine level repair (reboot, reimage) based on detected SF Node Health Event not generated by FO/FHProxy.
+                        repairData = new TelemetryData
+                        {
+                            NodeName = node.NodeName,
+                            NodeType = nodeType,
+                            EntityType = EntityType.Machine,
+                            Description = evt.HealthInformation.Description,
+                            HealthState = evt.HealthInformation.HealthState,
+                            Source = RepairConstants.FabricHealer
+                        };
                     }
-
-                    // Disk?
-                    if (repairData.EntityType == EntityType.Disk && ConfigSettings.EnableDiskRepair)
+                    else
                     {
-                        await ProcessDiskHealthAsync(evt, repairData);
-                        continue;
-                    }
+                        // Disk?
+                        if (repairData.EntityType == EntityType.Disk && ConfigSettings.EnableDiskRepair)
+                        {
+                            await ProcessDiskHealthAsync(evt, repairData);
+                            continue;
+                        }
 
-                    // Node/Machine repair not supported in onebox clusters..
-                    if (nodes?.Count == 1)
-                    {
-                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                LogLevel.Info,
-                                $"ProcessMachineHealth::NotSupported",
-                                "Machine/Fabric Node repair is not supported in clusters with 1 Fabric node.",
-                                Token,
-                                null,
-                                ConfigSettings.EnableVerboseLogging);
-
-                        return;
-                    }
-
-                    // Fabric node?
-                    if (repairData.EntityType == EntityType.Node && ConfigSettings.EnableFabricNodeRepair)
-                    {
-                        // FabricHealerProxy-generated report, so a restart fabric node request, for example.
-                        await ProcessFabricNodeHealthAsync(evt, repairData);
-                        continue;
+                        // Fabric node?
+                        if (repairData.EntityType == EntityType.Node && ConfigSettings.EnableFabricNodeRepair)
+                        {
+                            // FabricHealerProxy-generated report, so a restart fabric node request, for example.
+                            await ProcessFabricNodeHealthAsync(evt, repairData);
+                            continue;
+                        }
                     }
 
                     // Machine repair \\
@@ -1422,7 +1459,7 @@ namespace FabricHealer
                     // If there are mulitple instances of FH deployed to the cluster (like -1 InstanceCount), then don't do machine repairs if this instance of FH 
                     // detects a need to do so. Another instance on a different node will take the job. Only DiskObserver-generated repair data has to be done on the node
                     // where FO's DiskObserver emitted the related information, for example (like Disk space issues and the need to clean specified (in logic rules) folders).
-                    if (_instanceCount == -1 && repairData.NodeName == serviceContext.NodeContext.NodeName)
+                    if ((_instanceCount == -1 || _instanceCount > 2) && repairData.NodeName == serviceContext.NodeContext.NodeName)
                     {
                         continue;
                     }
@@ -1437,7 +1474,7 @@ namespace FabricHealer
 
                     /* Start repair workflow */
 
-                    string repairId = $"Machine_Repair_{repairData.NodeName}_Reboot";
+                    string repairId = $"Machine_Repair_{nodeType}_{repairData.NodeName}";
                     repairData.RepairPolicy = new RepairPolicy
                     {
                         RepairId = repairId
@@ -1517,33 +1554,6 @@ namespace FabricHealer
 
         private async Task ProcessFabricNodeHealthAsync(HealthEvent healthEvent, TelemetryData repairData)
         {
-            // This is just used to make sure there is more than 1 node in the cluster. We don't need a list of all nodes.
-            var nodeQueryDesc = new NodeQueryDescription
-            {
-                MaxResults = 2,
-            };
-
-            NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientSingleton.QueryManager.GetNodePagedListAsync(
-                                            nodeQueryDesc,
-                                            ConfigSettings.AsyncTimeout,
-                                            Token),
-                                     Token);
-
-            // Node/Machine repair not supported in onebox clusters..
-            if (nodes?.Count == 1)
-            {
-                await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        $"ProcessFabricNodeHealthAsync::NotSupported",
-                        "Fabric Node repair is not supported in clusters with 1 Fabric node.",
-                        Token,
-                        null,
-                        ConfigSettings.EnableVerboseLogging);
-
-                return;
-            }
-
             var repairRules = GetRepairRulesForTelemetryData(repairData);
 
             if (repairRules == null || repairRules?.Count == 0)
@@ -1605,8 +1615,8 @@ namespace FabricHealer
         // *This is an experimental function/workflow in need of more testing.*
         private async Task ProcessReplicaHealthAsync(ServiceHealth serviceHealth)
         {
-                // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-                await RandomWaitAsync();
+            // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
+            await RandomWaitAsync();
 
             /*  Example of repairable problem at Replica level, as health event:
 
@@ -1623,8 +1633,10 @@ namespace FabricHealer
 
             foreach (var partitionHealthState in partitionHealthStates)
             {
-                var partitionHealth = await FabricClientSingleton.HealthManager.GetPartitionHealthAsync(partitionHealthState.PartitionId, ConfigSettings.AsyncTimeout, Token);
-                var replicaHealthStates = partitionHealth.ReplicaHealthStates.Where(
+                PartitionHealth partitionHealth = 
+                    await FabricClientSingleton.HealthManager.GetPartitionHealthAsync(partitionHealthState.PartitionId, ConfigSettings.AsyncTimeout, Token);
+                
+                List<ReplicaHealthState> replicaHealthStates = partitionHealth.ReplicaHealthStates.Where(
                     p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error).ToList();
 
                 if (replicaHealthStates != null && replicaHealthStates.Count > 0)
@@ -1709,6 +1721,7 @@ namespace FabricHealer
                                 {
                                     RepairId = repairId
                                 };
+                                repairData.Property = healthEvent.HealthInformation.Property;
 
                                 // Repair already in progress?
                                 var currentRepairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, Token);
@@ -1768,7 +1781,8 @@ namespace FabricHealer
                 case SupportedErrorCodes.AppWarningTooManyOpenFileHandles:
                 case SupportedErrorCodes.AppWarningTooManyThreads:
 
-                    repairPolicySectionName = app == RepairConstants.SystemAppName ? RepairConstants.SystemServiceRepairPolicySectionName : RepairConstants.AppRepairPolicySectionName;
+                    repairPolicySectionName = 
+                        app == RepairConstants.SystemAppName ? RepairConstants.SystemServiceRepairPolicySectionName : RepairConstants.AppRepairPolicySectionName;
                     break;
 
                 // VM repair.
@@ -1976,19 +1990,19 @@ namespace FabricHealer
                     continue;
                 }
 
-                if (rules[ptr2].EndsWith("."))
+                if (rules[ptr2].TrimEnd().EndsWith("."))
                 {
                     if (ptr1 == ptr2)
                     {
-                        repairRules.Add(rules[ptr2].Remove(rules[ptr2].Length - 1, 1));
+                        repairRules.Add(rules[ptr2].TrimEnd().Remove(rules[ptr2].Length - 1, 1));
                     }
                     else
                     {
-                        string rule = rules[ptr1].TrimEnd(' ');
+                        string rule = rules[ptr1].Trim();
 
                         for (int i = ptr1 + 1; i <= ptr2; i++)
                         {
-                            rule = rule + ' ' + rules[i].Replace('\t', ' ').TrimStart(' ');
+                            rule = rule + ' ' + rules[i].Replace('\t', ' ').Trim();
                         }
 
                         repairRules.Add(rule.Remove(rule.Length - 1, 1));

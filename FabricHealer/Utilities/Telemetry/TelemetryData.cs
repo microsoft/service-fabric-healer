@@ -95,6 +95,11 @@ namespace FabricHealer.Utilities.Telemetry
             get; set;
         }
 
+        public string ReplicaRole
+        {
+            get; set;
+        }
+
         public string ServiceKind
         {
             get; set;

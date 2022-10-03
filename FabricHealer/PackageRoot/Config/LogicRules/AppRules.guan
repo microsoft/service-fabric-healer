@@ -11,6 +11,7 @@
 ## | ObserverName              | Name of Observer that generated the event (if the data comes from FabricObserver service)    |
 ## | PartitionId               | Id of the partition                                                                          |
 ## | ReplicaOrInstanceId       | Id of the replica or instance                                                                |
+## | ReplicaRole               | Role of replica: Primary or ActiveSecondary. Or None (e.g., Stateless replica)               |
 ## | ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                        | 
 ## | MetricName                | Name of the metric (e.g., CpuPercent or MemoryMB, etc.)                                      |   
 ## | MetricValue               | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)                              | 
@@ -147,7 +148,7 @@ Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 05:00:0
 ## Local Ports in Dynamic Range (aka Ephemeral Ports)
 ## Percentage in use or Total Ephemeral ports - Any app service. 5 repairs within 5 hour window. This means if FO or FHProxy supplies repair facts related to Ephemeral ports,
 ## then restart the offending service by simulating process failure (RestartCodePackage). This will free all TCP ports held by the process.
-Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(15, 05:00:00).
+Mitigate(MetricName="EphemeralPorts", HealthState="Error") :- TimeScopedRestartCodePackage(15, 05:00:00).
 
 ## Total Ephemeral Ports - Specific Application: any of its services, constrained on number of local ephemeral ports open. 
 ## 5 repairs within 5 hour window.

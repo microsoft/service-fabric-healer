@@ -278,6 +278,7 @@ namespace FHTest
             functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, repairTaskManager, repairData));
             functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, repairTaskManager, repairData));
             functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage, repairTaskManager));
+            functorTable.Add(GetEntityHealthStateDurationPredicateType.Singleton(RepairConstants.GetEntityHealthStateDuration, repairTaskManager, repairData));
 
             // Add external repair predicates.
             functorTable.Add(DeleteFilesPredicateType.Singleton(RepairConstants.DeleteFiles, repairTaskManager, repairData));
@@ -307,17 +308,21 @@ namespace FHTest
             // These args hold the related values supplied by FO and are available anywhere Mitigate is used as a rule head.
             compoundTerm.AddArgument(new Constant(repairData.ApplicationName), RepairConstants.AppName);
             compoundTerm.AddArgument(new Constant(repairData.Code), RepairConstants.ErrorCode);
-            compoundTerm.AddArgument(new Constant(Enum.GetName(typeof(HealthState), repairData.HealthState)), RepairConstants.HealthState);
+            compoundTerm.AddArgument(new Constant(repairData.HealthState.ToString()), RepairConstants.HealthState);
             compoundTerm.AddArgument(new Constant(repairData.Metric), RepairConstants.MetricName);
+            compoundTerm.AddArgument(new Constant(Convert.ToInt64(repairData.Value)), RepairConstants.MetricValue);
             compoundTerm.AddArgument(new Constant(repairData.NodeName), RepairConstants.NodeName);
             compoundTerm.AddArgument(new Constant(repairData.NodeType), RepairConstants.NodeType);
             compoundTerm.AddArgument(new Constant(repairData.ObserverName), RepairConstants.ObserverName);
             compoundTerm.AddArgument(new Constant(repairData.OS), RepairConstants.OS);
+            compoundTerm.AddArgument(new Constant(repairData.ServiceKind), RepairConstants.ServiceKind);
             compoundTerm.AddArgument(new Constant(repairData.ServiceName), RepairConstants.ServiceName);
+            compoundTerm.AddArgument(new Constant(repairData.ProcessId), RepairConstants.ProcessId);
             compoundTerm.AddArgument(new Constant(repairData.ProcessName), RepairConstants.ProcessName);
+            compoundTerm.AddArgument(new Constant(repairData.ProcessStartTime), RepairConstants.ProcessStartTime);
             compoundTerm.AddArgument(new Constant(repairData.PartitionId), RepairConstants.PartitionId);
             compoundTerm.AddArgument(new Constant(repairData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
-            compoundTerm.AddArgument(new Constant(Convert.ToInt64(repairData.Value)), RepairConstants.MetricValue);
+            compoundTerm.AddArgument(new Constant(repairData.ReplicaRole), RepairConstants.ReplicaRole);
             compoundTerms.Add(compoundTerm);
 
             await queryDispatcher.RunQueryAsync(compoundTerms);
@@ -339,19 +344,19 @@ namespace FHTest
                     continue;
                 }
 
-                if (rules[ptr2].EndsWith("."))
+                if (rules[ptr2].TrimEnd().EndsWith("."))
                 {
                     if (ptr1 == ptr2)
                     {
-                        repairRules.Add(rules[ptr2].Remove(rules[ptr2].Length - 1, 1));
+                        repairRules.Add(rules[ptr2].TrimEnd().Remove(rules[ptr2].Length - 1, 1));
                     }
                     else
                     {
-                        string rule = rules[ptr1].TrimEnd(' ');
+                        string rule = rules[ptr1].Trim();
 
                         for (int i = ptr1 + 1; i <= ptr2; i++)
                         {
-                            rule = rule + ' ' + rules[i].Replace('\t', ' ').TrimStart(' ');
+                            rule = rule + ' ' + rules[i].Replace('\t', ' ').Trim();
                         }
 
                         repairRules.Add(rule.Remove(rule.Length - 1, 1));

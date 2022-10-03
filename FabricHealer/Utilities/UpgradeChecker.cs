@@ -91,7 +91,7 @@ namespace FabricHealer.Repair
         /// <param name="fabricClient">FabricClient</param>
         /// <param name="token"></param>
         /// <returns>UD in progress</returns>
-        public static async Task<int> GetUdsWhereFabricUpgradeInProgressAsync(CancellationToken token)
+        public static async Task<string> GetCurrentUDWhereFabricUpgradeInProgressAsync(CancellationToken token)
         {
             try
             {
@@ -105,49 +105,56 @@ namespace FabricHealer.Repair
                     !fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingForwardInProgress) &&
                     !fabricUpgradeProgress.UpgradeState.Equals(FabricUpgradeState.RollingForwardPending))
                 {
-                    return -1;
+                    return null;
                 }
 
-                return int.TryParse(fabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName, out int currentUpgradeDomainInProgress) ? currentUpgradeDomainInProgress : -1;
+                return fabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName;
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException)
             {
-                return -1;
+                return null;
             }
         }
 
         /// <summary>
         /// Determines if an Azure tenant update is in progress for cluster VMs.
         /// </summary>
-        /// <param name="fabricClient">FabricClient instance</param>
         /// <param name="nodeType">NodeType string</param>
         /// <param name="token">CancellationToken instance</param>
         /// <returns>true if tenant update is in progress, false otherwise</returns>
-        public static async Task<bool> IsAzureTenantUpdateInProgress(string nodeType, CancellationToken token)
+        public static async Task<bool> IsAzureUpdateInProgress(string nodeType, string nodeName, CancellationToken token)
         {
             var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                                        "Azure",
-                                        System.Fabric.Repair.RepairTaskStateFilter.Active | System.Fabric.Repair.RepairTaskStateFilter.Executing,
+                                        null,
+                                        System.Fabric.Repair.RepairTaskStateFilter.Approved |
+                                        System.Fabric.Repair.RepairTaskStateFilter.Active |
+                                        System.Fabric.Repair.RepairTaskStateFilter.Executing,
                                         $"fabric:/System/InfrastructureService/{nodeType}",
                                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                                         token);
 
-            bool isAzureTenantRepairInProgress = repairTasks.Count > 0;
+            bool isAzureTenantRepairInProgress = repairTasks?.Count > 0;
 
             if (!isAzureTenantRepairInProgress)
             {
                 return false;
             }
 
-            string message = "Azure Platform or Tenant Update in progress. Will not attempt repairs at this time.";
+            if (repairTasks.ToList().Any(
+                n => JsonSerializationUtility.TryDeserialize(n.ExecutorData, out ISExecutorData data) && data.JobId == nodeName))
+            {
+                string message = $"Azure Platform or Tenant Update in progress for {nodeType}. Will not attempt repairs at this time.";
 
-            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "AzurePlatformOrTenantUpdateInProgress",
-                    message,
-                    token);
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        "AzurePlatformOrTenantUpdateInProgress",
+                        message,
+                        token);
 
-            return true;
+                return true;
+            }
+
+            return false;
         }
     }
 }

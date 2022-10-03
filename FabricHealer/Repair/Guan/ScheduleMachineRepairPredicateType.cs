@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace FabricHealer.Repair.Guan
 {
+    /// <summary>
+    /// impl for Guan ScheduleMachineRepair predicate. Schedules repairs for machines.
+    /// </summary>
     public class ScheduleMachineRepairPredicateType : PredicateType
     {
         private static RepairTaskManager RepairTaskManager;
@@ -37,7 +40,7 @@ namespace FabricHealer.Repair.Guan
 
                 /*
                     public const string SystemReboot = "System.Reboot";
-                    public const string SystemReimageOS = "System.ReimageOS ";
+                    public const string SystemReimageOS = "System.ReimageOS";
                     public const string SystemFullReimage = "System.FullReimage";
                     public const string SystemHostReboot = "System.Azure.HostReboot";
                     public const string SystemHostRepaveData = "System.Azure.HostRepaveData";
@@ -100,12 +103,12 @@ namespace FabricHealer.Repair.Guan
                 if (isRepairAlreadyInProgress)
                 {
                     string message = $"VM Repair {RepairData.RepairPolicy.RepairId} is already in progress" +
-                                     $"{(maxConcurrentRepairs > 0 ? " or max number of concurrent machine repairs has been reached" : "")}. " +
+                                     $"{(maxConcurrentRepairs > 0 ? $" or max number of concurrent machine repairs ({maxConcurrentRepairs}) has been reached" : "")}. " +
                                      $"Will not attempt repair at this time.";
 
                     await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            $"RestartMachinePredicateType::{RepairData.RepairPolicy.RepairId}",
+                            $"ScheduleMachineRepairPredicateType::{RepairData.RepairPolicy.RepairId}",
                             message,
                             RepairTaskManager.Token);
 

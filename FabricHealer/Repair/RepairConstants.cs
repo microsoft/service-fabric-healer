@@ -56,6 +56,7 @@ namespace FabricHealer.Repair
         public const string NodeType = "NodeType";
         public const string PartitionId = "PartitionId";
         public const string ReplicaOrInstanceId = "ReplicaOrInstanceId";
+        public const string ReplicaRole = "ReplicaRole";
         public const string ErrorCode = "ErrorCode";
         public const string MetricName = "MetricName";
         public const string MetricValue = "MetricValue";
@@ -85,6 +86,7 @@ namespace FabricHealer.Repair
         // Helper Predicates.
         public const string CheckInsideRunInterval = "CheckInsideRunInterval";
         public const string CheckFolderSize = "CheckFolderSize";
+        public const string GetEntityHealthStateDuration = "GetEntityHealthStateDuration";
         public const string GetHealthEventHistory = "GetHealthEventHistory";
         public const string GetRepairHistory = "GetRepairHistory";
         public const string EmitMessage = "EmitMessage";
@@ -117,6 +119,7 @@ namespace FabricHealer.Repair
 
         // General
         public const string SystemAppName = "fabric:/System";
+        public const string InfrastructureServiceName = "fabric:/System/InfrastructureService";
         public const string FabricHealerAppName = "fabric:/FabricHealer";
         public const string RepairManagerAppName = "fabric:/System/RepairManagerService";
         public const string RepairData = "RepairData";

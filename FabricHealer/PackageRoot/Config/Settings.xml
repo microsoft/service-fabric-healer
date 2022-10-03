@@ -54,57 +54,8 @@
 	
 	<!-- Machine Repair. -->
 	<Section Name="MachineRepairPolicy">
-		<!-- FabricHealer is not allowed to schedule a machine repair more often than this interval.
-             This is to prevent the FabricHealer from scheduling too many machine repairs in a short time. -->
-		<Parameter Name="ActionSchedulingIntervalInSeconds" Value="600" />
-		<Parameter Name="ProbationToFailingWaitDurationInSeconds" Value="7200" />
-		<Parameter Name="ProbationToHealthyWaitDurationInSeconds" Value="1800" />
 		<Parameter Name="MinimumHealthyDurationInSeconds" Value="300" />
 		<Parameter Name="Enabled" Value="" MustOverride="true" />
 		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
 	</Section>
-	<!-- Supported Machine level repair actions. -->
-	<!-- RM Repair action strings (built into RM).
-		========================================================================
-		Alias               VM (default)             Host 
-        ========================================================================
-		System.Reboot       System.Azure.Reboot      System.Azure.HostReboot 
-		System.ReimageOS    System.Azure.ReimageOS 
-		System.FullReimage  System.Azure.RepaveData  System.Azure.HostRepaveData
-		========================================================================-->
-	<Section Name="NodeRepairActionList">
-		<!-- This is the name of the repair that will be provided to RM by FH when scheduling the repair. -->
-		<Parameter Name="System.Azure.HostReboot" Value="RepairPolicyHostReboot" />
-		<!-- This is not supported for VMSS-based machine clusters. -->
-		<!--<Parameter Name="System.Azure.HostRepaveData" Value="RepairPolicyHostRepaveData" />-->
-		<Parameter Name="ManualTriageNeeded" Value="RepairPolicyTriage" />
-	</Section>
-	<Section Name="RepairPolicyHostReboot">
-		<!-- Required - How many repair tasks of this kind be scheduled concurrently.  -->
-		<Parameter Name="MaxOutstandingRepairTasks" Value="2"  />
-		<!-- Required - Probationary period to failing after this repair -->
-		<Parameter Name="ProbationToFailingWaitDurationPostRepairInSeconds" Value="7200" />
-		<!-- Required - Probationary period to healthy after this repair -->
-		<Parameter Name="ProbationToHealthyWaitDurationPostRepairInSeconds" Value="1800" />
-		<!-- Required - Minimum time of error state before this repair is applied -->
-		<Parameter Name="PolicyActionTimeInSeconds" Value="7200" />
-		<!-- This is optional and defaults to true -->
-		<Parameter Name="IsEnabled" Value="true"  />
-	</Section>
-	<!-- This is not supported for VMSS-based machine clusters. -->
-	<Section Name="RepairPolicyHostRepaveData">
-		<Parameter Name="MaxOutstandingRepairTasks" Value="2" />
-		<Parameter Name="ProbationToFailingWaitDurationPostRepairInSeconds" Value="7200" />
-		<Parameter Name="ProbationToHealthyWaitDurationPostRepairInSeconds" Value="1800" />
-		<Parameter Name="PolicyActionTimeInSeconds" Value="14400" />
-		<Parameter Name="IsEnabled" Value="false" />
-	</Section>
-	<Section Name="RepairPolicyTriage">
-		<Parameter Name="MaxOutstandingRepairTasks" Value="2" MustOverride="false" />
-		<Parameter Name="ProbationToFailingWaitDurationPostRepairInSeconds" Value="7200" />
-		<Parameter Name="ProbationToHealthyWaitDurationPostRepairInSeconds" Value="1800" />
-		<Parameter Name="PolicyActionTimeInSeconds" Value="9000" />
-		<Parameter Name="IsEnabled" Value="true" />
-	</Section>
-	<!-- End Machine Repair -->
 </Settings>
