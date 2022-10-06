@@ -5,11 +5,9 @@
 
 using FabricHealer.Interfaces;
 using FabricHealer.Repair;
-using FabricHealer.TelemetryLib;
 using System;
 using System.Fabric;
 using System.Fabric.Health;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -34,14 +32,14 @@ namespace FabricHealer.Utilities.Telemetry
                 return;
             }
 
-            telemetryClient = FabricHealerManager.ConfigSettings.TelemetryProvider switch
+            telemetryClient = FabricHealerManager.ConfigSettings.TelemetryProviderType switch
             {
                 TelemetryProviderType.AzureApplicationInsights => new AppInsightsTelemetry(FabricHealerManager.ConfigSettings.AppInsightsInstrumentationKey),
                 TelemetryProviderType.AzureLogAnalytics => new LogAnalyticsTelemetry(
                                                                 FabricHealerManager.ConfigSettings.LogAnalyticsWorkspaceId,
                                                                 FabricHealerManager.ConfigSettings.LogAnalyticsSharedKey,
                                                                 FabricHealerManager.ConfigSettings.LogAnalyticsLogType),
-                _ => telemetryClient
+                _ => null
             };
         }
 
@@ -53,26 +51,28 @@ namespace FabricHealer.Utilities.Telemetry
         /// <param name="source">Err/Warning source id.</param>
         /// <param name="description">Message.</param>
         /// <param name="token">Cancellation token.</param>
-        /// <param name="repairData">repairData instance.</param>
+        /// <param name="telemetryData">repairData instance.</param>
         /// <returns></returns>
         public async Task EmitTelemetryEtwHealthEventAsync(
                             LogLevel level,
                             string source,
                             string description,
                             CancellationToken token,
-                            TelemetryData repairData = null,
+                            TelemetryData telemetryData = null,
                             bool verboseLogging = true,
                             TimeSpan ttl = default,
                             string property = "RepairStateInformation",
-                            EntityType reportType = EntityType.Node)
+                            EntityType entityType = EntityType.Node)
         {
-            bool hasRepairInfo = repairData != null;
-            string repairAction = string.Empty;
-            source = source != "FabricHealer" ? source?.Insert(0, "FabricHealer.") : "FabricHealer";
+            bool isTelemetryDataEvent = string.IsNullOrWhiteSpace(description) && telemetryData != null;
 
-            if (hasRepairInfo)
+            if (source != null && source != "FabricHealer")
             {
-                repairAction = Enum.GetName(typeof(RepairActionType), repairData.RepairPolicy.RepairAction);
+                source = source.Insert(0, "FabricHealer.");
+            }
+            else
+            {
+                source = "FabricHealer";
             }
 
             HealthState healthState = level switch
@@ -94,11 +94,11 @@ namespace FabricHealer.Utilities.Telemetry
             var healthReporter = new FabricHealthReporter(logger);
             var healthReport = new HealthReport
             {
-                AppName = reportType == EntityType.Application ? new Uri("fabric:/FabricHealer") : null,
-                Code = repairData?.RepairPolicy?.RepairId,
+                AppName = entityType == EntityType.Application ? new Uri("fabric:/FabricHealer") : null,
+                Code = telemetryData?.RepairPolicy?.RepairId,
                 HealthMessage = description,
                 NodeName = serviceContext.NodeContext.NodeName,
-                EntityType = reportType,
+                EntityType = entityType,
                 State = healthState,
                 HealthReportTimeToLive = ttl == default ? TimeSpan.FromMinutes(5) : ttl,
                 Property = property,
@@ -113,50 +113,41 @@ namespace FabricHealer.Utilities.Telemetry
                 return;
             }
 
-            var telemData = new TelemetryData()
+            // TelemetryData
+            if (isTelemetryDataEvent)
             {
-                ApplicationName = repairData?.ApplicationName,
-                ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
-                Code = repairData?.Code,
-                ContainerId = repairData?.ContainerId,
-                Description = description,
-                EntityType = reportType,
-                HealthState = healthState,
-                Metric = repairAction,
-                NodeName = repairData?.NodeName,
-                NodeType = repairData?.NodeType,
-                ObserverName = repairData?.ObserverName,
-                PartitionId = repairData?.PartitionId,
-                ProcessId = repairData != null ? repairData.ProcessId : -1,
-                Property = property,
-                ReplicaId = repairData != null ? repairData.ReplicaId : 0,
-                RepairPolicy = repairData?.RepairPolicy ?? new RepairPolicy(),
-                ServiceName = repairData?.ServiceName,
-                Source = source,
-                ProcessName = repairData?.ProcessName,
-                Value = repairData != null ? repairData.Value : -1,
-            };
+                // Telemetry.
+                if (FabricHealerManager.ConfigSettings.TelemetryEnabled && telemetryClient != null)
+                {
+                    await telemetryClient.ReportMetricAsync(telemetryData, token);
+                }
 
-            // Telemetry.
-            if (FabricHealerManager.ConfigSettings.TelemetryEnabled)
-            {
-                await telemetryClient?.ReportMetricAsync(telemData, token);
+                // ETW.
+                if (FabricHealerManager.ConfigSettings.EtwEnabled)
+                {
+                    logger.LogEtw(RepairConstants.FabricHealerDataEvent, telemetryData);
+                }
             }
-
-            // ETW.
-            if (FabricHealerManager.ConfigSettings.EtwEnabled)
+            else // Untyped or anonymous-typed operational data.
             {
-                if (healthState == HealthState.Ok || healthState == HealthState.Unknown || healthState == HealthState.Invalid)
+                if (FabricHealerManager.ConfigSettings.TelemetryEnabled && telemetryClient != null)
                 {
-                    ServiceEventSource.Current.DataTypeWriteInfo(RepairConstants.EventSourceEventName, telemData);
+                    await telemetryClient?.ReportMetricAsync($"FabicHealerDataEvent.{level}", description, RepairConstants.FabricHealer, token);
                 }
-                else if (healthState == HealthState.Warning)
+
+                if (FabricHealerManager.ConfigSettings.EtwEnabled)
                 {
-                    ServiceEventSource.Current.DataTypeWriteWarning(RepairConstants.EventSourceEventName, telemData);
-                }
-                else
-                {
-                    ServiceEventSource.Current.DataTypeWriteError(RepairConstants.EventSourceEventName, telemData);
+                    // Anonymous types are supported by FH's ETW impl.
+                    var anonType = new
+                    {
+                        LogLevel = level,
+                        Source = source,
+                        Message = description,
+                        Property = property,
+                        EntityType = entityType
+                    };
+
+                    logger.LogEtw(RepairConstants.FabricHealerDataEvent, anonType);
                 }
             }
         }

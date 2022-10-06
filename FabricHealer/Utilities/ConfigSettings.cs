@@ -46,7 +46,7 @@ namespace FabricHealer.Utilities
             get; set;
         }
 
-        public TelemetryProviderType TelemetryProvider
+        public TelemetryProviderType TelemetryProviderType
         {
             get;
             private set;
@@ -84,7 +84,7 @@ namespace FabricHealer.Utilities
             private set;
         } = TimeSpan.FromSeconds(120);
 
-        // For EventSource Telemetry
+        // For EventSource ETW
         public bool EtwEnabled
         {
             get;
@@ -103,7 +103,8 @@ namespace FabricHealer.Utilities
             private set;
         }
 
-        // RepairPolicy Enablement
+        // RepairPolicy Enablement\\
+
         public bool EnableAppRepair
         {
             get;
@@ -142,7 +143,7 @@ namespace FabricHealer.Utilities
 
         public ConfigSettings(StatelessServiceContext context)
         {
-            this.context = context ?? throw new ArgumentException("Context can't be null.");
+            this.context = context ?? throw new ArgumentException("ServiceContext can't be null.");
             UpdateConfigSettings();
         }
 
@@ -178,39 +179,6 @@ namespace FabricHealer.Utilities
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableRollingServiceRestartsParameter), out bool enableRollingRestarts))
             {
                 EnableRollingServiceRestarts = enableRollingRestarts;
-            }
-
-            // Telemetry.
-            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableTelemetry), out bool telemEnabled))
-            {
-                TelemetryEnabled = telemEnabled;
-
-                if (TelemetryEnabled)
-                {
-                    string telemetryProviderType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.TelemetryProviderType);
-
-                    if (string.IsNullOrWhiteSpace(telemetryProviderType))
-                    {
-                        TelemetryEnabled = false;
-                        return;
-                    }
-
-                    if (Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
-                    {
-                        TelemetryProvider = telemetryProvider;
-
-                        if (telemetryProvider == TelemetryProviderType.AzureLogAnalytics)
-                        {
-                            LogAnalyticsLogType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsLogTypeParameter);
-                            LogAnalyticsSharedKey = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsSharedKeyParameter);
-                            LogAnalyticsWorkspaceId = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsWorkspaceIdParameter);
-                        }
-                        else
-                        {
-                            AppInsightsInstrumentationKey = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AppInsightsInstrumentationKeyParameter);
-                        }
-                    }
-                }
             }
 
             // ETW.
@@ -254,6 +222,54 @@ namespace FabricHealer.Utilities
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.Enabled), out bool vmRepairEnabled))
             {
                 EnableMachineRepair = vmRepairEnabled;
+            }
+
+            // Telemetry. Add any new settings above this (note the returns below..).
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableTelemetry), out bool telemEnabled))
+            {
+                TelemetryEnabled = telemEnabled;
+
+                if (TelemetryEnabled)
+                {
+                    string telemetryProviderType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.TelemetryProviderType);
+
+                    if (string.IsNullOrWhiteSpace(telemetryProviderType))
+                    {
+                        TelemetryEnabled = false;
+                        return;
+                    }
+
+                    if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
+                    {
+                        TelemetryEnabled = false;
+                        return;
+                    }
+
+                    TelemetryProviderType = telemetryProvider;
+
+                    if (telemetryProvider == TelemetryProviderType.AzureLogAnalytics)
+                    {
+                        LogAnalyticsLogType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsLogTypeParameter);
+                        LogAnalyticsSharedKey = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsSharedKeyParameter);
+                        LogAnalyticsWorkspaceId = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsWorkspaceIdParameter);
+
+                        if (string.IsNullOrWhiteSpace(LogAnalyticsSharedKey) || string.IsNullOrWhiteSpace(LogAnalyticsSharedKey))
+                        {
+                            TelemetryEnabled = false;
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        AppInsightsInstrumentationKey = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AppInsightsInstrumentationKeyParameter);
+
+                        if (string.IsNullOrWhiteSpace(AppInsightsInstrumentationKey))
+                        {
+                            TelemetryEnabled = false;
+                            return;
+                        }
+                    }
+                }
             }
         }
 

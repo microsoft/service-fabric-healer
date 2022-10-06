@@ -30,13 +30,7 @@ namespace FabricHealer.Utilities.Telemetry
 
         public AppInsightsTelemetry(string key)
         {
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                throw new ArgumentException("Argument is empty", nameof(key));
-            }
-
             logger = new Logger("TelemetryLog");
-
             telemetryClient = new TelemetryClient(new TelemetryConfiguration() { InstrumentationKey = key });
         }
 
@@ -193,7 +187,7 @@ namespace FabricHealer.Utilities.Telemetry
             {
                 { "Application", telemetryData.ApplicationName ?? string.Empty },
                 { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                { "SystemServiceName", telemetryData.ProcessName ?? string.Empty },
+                { "SystemServiceProcessName", telemetryData.ProcessName ?? string.Empty },
                 { "ClusterId", telemetryData.ClusterId ?? string.Empty },
                 { "ErrorCode", telemetryData.Code ?? string.Empty },
                 { "Description", telemetryData.Description ?? string.Empty },

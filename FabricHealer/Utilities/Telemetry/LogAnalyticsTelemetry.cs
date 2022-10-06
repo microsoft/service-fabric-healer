@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -16,7 +15,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Interfaces;
 using Newtonsoft.Json;
-using Octokit;
 
 namespace FabricHealer.Utilities.Telemetry
 {
@@ -94,7 +92,7 @@ namespace FabricHealer.Utilities.Telemetry
                 return;
             }
 
-            if (!JsonSerializationUtility.TrySerialize(telemetryData, out string jsonPayload))
+            if (!JsonSerializationUtility.TrySerializeObject(telemetryData, out string jsonPayload))
             {
                 return;
             }
@@ -191,7 +189,7 @@ namespace FabricHealer.Utilities.Telemetry
         /// <returns>A completed task or task containing exception info.</returns>
         private async Task SendTelemetryAsync(string payload, CancellationToken token)
         {
-            if (string.IsNullOrEmpty(WorkspaceId))
+            if (string.IsNullOrEmpty(WorkspaceId) || string.IsNullOrWhiteSpace(Key))
             {
                 return;
             }

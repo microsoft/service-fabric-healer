@@ -83,14 +83,16 @@ Mitigate(HealthState=Error) :- GetEntityHealthStateDuration(?duration, Entity=Ma
 ## Outside of Probationary period for Error health state.
 ## Try to schedule a machine repair if there are currently less than 2 outstanding repairs for machines in the cluster (MaxOutstandingRepairs).
 ## Wait 30 mins for green state post repair job completion (ProbationWaitDurationPost) to determine success.
+## Optional: Don't schedule a repair if 2 have already been run in the last 4 hours (see GetRepairHistory). Remove if too stringent.
 Mitigate(HealthState=Error) :- GetRepairHistory(?repairCount, 04:00:00), ?repairCount < 2,
-	ScheduleMachineRepair("System.Azure.HostReboot", MaxOutstandingRepairs=2, ProbationWaitDurationPost=00:30:00).
+	ScheduleMachineRepair("System.Reboot", MaxOutstandingRepairs=2, ProbationWaitDurationPost=00:30:00, DoHealthChecks=false).
 
 ## NOTE: Reimage repairs are not supported on VMSS-managed virtual machines, so the scheduling of said repairs will not yield any action by RM/IS in these types of clusters.
 ## Outside of Probationary period for Error health state. Previous reboot repairs did not work.
 ## Try to schedule a HostRepaveData repair job if there are currently less than 2 outstanding repairs for machines in the cluster.
 ## Wait 30 mins for green state post repair job completion (ProbationWaitDurationPost).
+## Optional: Don't schedule a repair if 2 have already been run in the last 4 hours (see GetRepairHistory). Remove if too stringent.
 Mitigate(HealthState=Error) :- GetRepairHistory(?repairCount, 04:00:00), ?repairCount < 2,
-	ScheduleMachineRepair("System.Azure.HostRepaveData", MaxOutstandingRepairs=2, ProbationWaitDurationPost=00:30:00).
+	ScheduleMachineRepair("System.ReimageOS", MaxOutstandingRepairs=2, ProbationWaitDurationPost=00:30:00, DoHealthChecks=false).
 
 ## If we end up here, then human intervention is required (Triage).

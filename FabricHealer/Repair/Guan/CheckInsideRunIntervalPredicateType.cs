@@ -44,26 +44,27 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                bool insideRunInterval = await FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
-                        interval,
-                        RepairData,
-                        RepairTaskManager.Token,
-                        RepairData.EntityType == EntityType.Machine ? $"{RepairConstants.InfrastructureServiceName}/{RepairData.NodeType}" : RepairConstants.FabricHealer);
+                bool insideRunInterval = 
+                    await FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
+                            interval,
+                            RepairData,
+                            RepairData.EntityType == EntityType.Machine ? $"{RepairConstants.InfrastructureServiceName}/{RepairData.NodeType}" : RepairConstants.FabricHealer,
+                            FabricHealerManager.Token);
                 
                 if (!insideRunInterval)
                 {
                     return false;
                 }
 
-                string message = $"Repair with ID {RepairData.RepairPolicy.RepairId} has already run once within the specified run interval " +
+                string message = $"{RepairData.RepairPolicy.RepairAction} job has already been scheduled/executed at least once within the specified run interval " +
                                  $"({(runInterval > TimeSpan.MinValue ? runInterval : interval)}).{Environment.NewLine}" +
-                                 "Will not attempt repair at this time.";
+                                 $"Will not attempt {RepairData.EntityType} repair at this time.";
 
-                await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        $"CheckInsideRunInterval::{RepairData.RepairPolicy.RepairId}",
+                        $"CheckInsideRunInterval::{RepairData.RepairPolicy.RepairAction}",
                         message,
-                        RepairTaskManager.Token);
+                        FabricHealerManager.Token);
 
                 return true;
             }

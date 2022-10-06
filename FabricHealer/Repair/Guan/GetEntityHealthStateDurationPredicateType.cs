@@ -40,12 +40,12 @@ namespace FabricHealer.Repair.Guan
                     throw new GuanException("The second argument of GetCurrentEntityHealthStateDuration must be a valid EntityType value (Application, Service, Node, Machine, etc..)");
                 }
 
-                if (!Enum.TryParse((string)Input.Arguments[3].Value.GetEffectiveTerm().GetObjectValue(), out HealthState state))
+                if (!Enum.TryParse((string)Input.Arguments[2].Value.GetEffectiveTerm().GetObjectValue(), out HealthState state))
                 {
                     throw new GuanException("The third argument of GetCurrentEntityHealthStateDuration must be a valid HealthState value (Error, Warning, etc..)");
                 }
                 
-                duration = await FabricRepairTasks.GetEntityCurrentHealthStateDurationAsync(entityType, RepairData.NodeName, state, RepairTaskManager.Token);
+                duration = await FabricRepairTasks.GetEntityCurrentHealthStateDurationAsync(entityType, RepairData.NodeName, state, FabricHealerManager.Token);
 
                 var result = new CompoundTerm(this.Input.Functor);
                 result.AddArgument(new Constant(duration), "0");

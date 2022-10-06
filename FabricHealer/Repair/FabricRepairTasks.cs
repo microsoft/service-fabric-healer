@@ -92,13 +92,8 @@ namespace FabricHealer.Repair
             }
         }
 
-        public static async Task<bool> CompleteCustomActionRepairJobAsync(
-                                            RepairTask repairTask,
-                                            StatelessServiceContext context,
-                                            CancellationToken token)
+        public static async Task<bool> CompleteCustomActionRepairJobAsync(RepairTask repairTask, CancellationToken token)
         {
-            var telemetryUtilities = new TelemetryUtilities(context);
-
             try
             {
                 if (repairTask.ResultStatus == RepairTaskResult.Succeeded
@@ -122,7 +117,7 @@ namespace FabricHealer.Repair
             }
             catch (InvalidOperationException e)
             {
-                await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "FabricRepairTasks.CompleteCustomActionRepairJobAsync",
                         $"Failed to Complete Repair Job {repairTask.TaskId} due to invalid state transition.{Environment.NewLine}:{e}",
@@ -132,7 +127,7 @@ namespace FabricHealer.Repair
             }
             catch (Exception e)
             {
-                await telemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "FabricRepairTasks.CompleteCustomActionRepairJobAsync",
                         $"Failed to Complete Repair Job {repairTask.TaskId} with unhandled exception:{Environment.NewLine}{e}",
@@ -144,7 +139,7 @@ namespace FabricHealer.Repair
             return true;
         }
 
-        public static async Task<RepairTask> ScheduleRepairTaskAsync(
+        public static async Task<RepairTask> CreateRepairTaskAsync(
                                                 TelemetryData repairData,
                                                 RepairExecutorData executorData,
                                                 string executorName,
@@ -153,10 +148,8 @@ namespace FabricHealer.Repair
             var repairTaskEngine = new RepairTaskEngine();
             RepairActionType repairAction = repairData.RepairPolicy.RepairAction;
             RepairTask repairTask;
-
-            await Task.Delay(new Random().Next(100, 1500));
-
-            bool isRepairInProgress = await repairTaskEngine.IsRepairInProgressAsync(executorName, repairData, token);
+            await Task.Delay(new Random().Next(100, 1500), token);
+            bool isRepairInProgress = await repairTaskEngine.IsRepairInProgressOrMaxRepairsReachedAsync(executorName, repairData, token);
 
             if (isRepairInProgress)
             {
@@ -169,7 +162,7 @@ namespace FabricHealer.Repair
                 case RepairActionType.ReimageDisk:
                 case RepairActionType.ReimageOS:
 
-                    repairTask = await repairTaskEngine.CreateMachineRepairTaskAsync(repairData, executorName, token);
+                    repairTask = await repairTaskEngine.ScheduleInfrastructureRepairTaskAsync(repairData, executorName, token);
                     break;
 
                 case RepairActionType.DeleteFiles:
@@ -178,7 +171,7 @@ namespace FabricHealer.Repair
                 case RepairActionType.RestartProcess:
                 case RepairActionType.RestartReplica:
 
-                    repairTask = await repairTaskEngine.CreateFabricHealerRepairTask(executorData, token);
+                    repairTask = await repairTaskEngine.ScheduleFabricHealerRepairTask(executorData, token);
                     break;
 
                 default:
@@ -207,12 +200,12 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            await Task.Delay(new Random().Next(100, 1500));
+            await Task.Delay(new Random().Next(100, 1500), token);
 
             try
             {
                 var isRepairAlreadyInProgress =
-                    await repairTaskEngine.IsRepairInProgressAsync(repairTask.Executor, repairData, token);
+                    await repairTaskEngine.IsRepairInProgressOrMaxRepairsReachedAsync(repairTask.Executor, repairData, token);
 
                 if (!isRepairAlreadyInProgress)
                 {
@@ -273,8 +266,8 @@ namespace FabricHealer.Repair
         public static async Task<bool> IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
                                          TimeSpan interval,
                                          TelemetryData repairData,
-                                         CancellationToken cancellationToken,
-                                         string executorName)
+                                         string executorName,
+                                         CancellationToken cancellationToken)
         {
 
             // Repairs where specified executorName executor.
@@ -316,7 +309,7 @@ namespace FabricHealer.Repair
                 // VM repairs - IS is executor, ExecutorData is supplied by IS. Custom FH repair id supplied as repair Description.
                 foreach (var repair in orderedRepairList.Where(r => r.ResultStatus == RepairTaskResult.Succeeded))
                 {
-                    if (repair.Executor != $"fabric:/System/InfrastructureService/{repairData.NodeType}" ||
+                    if (repair.Executor != $"{RepairConstants.InfrastructureServiceName}/{repairData.NodeType}" ||
                         repair.Description != repairData.RepairPolicy.RepairId)
                     {
                         continue;
@@ -345,14 +338,14 @@ namespace FabricHealer.Repair
                                          CancellationToken cancellationToken)
         {
             var allRecentFHRepairTasksCompleted =
-                            await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                                    RepairTaskEngine.FHTaskIdPrefix,
-                                    RepairTaskStateFilter.Completed,
-                                    null,
-                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                    cancellationToken);
+                    await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                            RepairTaskEngine.FHTaskIdPrefix,
+                            RepairTaskStateFilter.Completed,
+                            null,
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            cancellationToken);
 
-            if (!allRecentFHRepairTasksCompleted.Any())
+            if (allRecentFHRepairTasksCompleted?.Count == 0)
             {
                 return 0;
             }
@@ -363,10 +356,10 @@ namespace FabricHealer.Repair
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // Non-VM repairs (FH is executor, custom repair ExecutorData supplied by FH.)
+                // Non-Machine repairs (FH is executor, custom repair ExecutorData supplied by FH.)
                 if (repair.Executor == RepairTaskEngine.FabricHealerExecutorName)
                 {
-                    var fhExecutorData = JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
+                    var fhExecutorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
                     if (fhExecutorData == null || fhExecutorData.RepairData?.RepairPolicy == null || repair.CompletedTimestamp == null || !repair.CompletedTimestamp.HasValue)
                     {
@@ -385,7 +378,7 @@ namespace FabricHealer.Repair
                         count++;
                     }
                 }
-                // VM repairs (IS is executor, ExecutorData supplied by IS. Custom FH repair id supplied as repair Description.)
+                // Machine repairs (IS is executor, ExecutorData supplied by IS. Custom FH repair id supplied as repair Description.)
                 else if (repair.Executor == $"{RepairTaskEngine.InfrastructureServiceName}/{repairData.NodeType}" && repair.Description == repairData.RepairPolicy.RepairId)
                 {
                     if (repair.CompletedTimestamp == null || !repair.CompletedTimestamp.HasValue)
