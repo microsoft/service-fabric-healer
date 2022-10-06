@@ -65,6 +65,10 @@ Mitigate(MetricName="MemoryMB", ProcessName=?SysProcName) :- not(?SysProcName ==
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
+Mitigate(MetricName="MemoryMB", ProcessName="Fabric", MetricValue=?Value) :- ?Value >= 1500, GetHealthEventHistory(?HealthEventCount, 00:15:00),
+	?HealthEventCount >= 3,
+	TimeScopedRestartFabricNode(1, 01:00:00).
+
 
 ## Memory Use - Percent in use
 

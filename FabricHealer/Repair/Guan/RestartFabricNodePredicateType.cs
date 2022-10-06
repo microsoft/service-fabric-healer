@@ -59,32 +59,32 @@ namespace FabricHealer.Repair.Guan
                 {
                     // Historical info, like what step the healer was in when the node went down, is contained in the
                     // executordata instance.
-                    repairTask = await RepairTaskEngine.CreateFabricHealerRepairTask(RepairExecutorData, RepairTaskManager.Token);
+                    repairTask = await RepairTaskEngine.ScheduleFabricHealerRepairTask(RepairExecutorData, FabricHealerManager.Token);
                     success = await RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                                         repairTask,
                                         RepairData,
-                                        RepairTaskManager.Token);
+                                        FabricHealerManager.Token);
                     return success;
                 }
 
                 // Block attempts to create node-level repair tasks if one is already running in the cluster.
                 var repairTaskEngine = new RepairTaskEngine();
                 var isNodeRepairAlreadyInProgress =
-                    await repairTaskEngine.IsRepairInProgressAsync(
+                    await repairTaskEngine.IsRepairInProgressOrMaxRepairsReachedAsync(
                             RepairTaskEngine.FabricHealerExecutorName,
                             RepairData,
-                            RepairTaskManager.Token);
+                            FabricHealerManager.Token);
 
                 if (isNodeRepairAlreadyInProgress)
                 {
                     string message =
                     $"A repair for node {RepairData.NodeName} is already in progress in the cluster. Will not node attempt repair at this time.";
 
-                    await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
                             $"RestartFabricNodePredicateType::{RepairData.RepairPolicy.RepairId}",
                             message,
-                            RepairTaskManager.Token);
+                            FabricHealerManager.Token);
 
                     return false;
                 }
@@ -93,8 +93,8 @@ namespace FabricHealer.Repair.Guan
                 repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                     () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
                                             RepairData,
-                                            RepairTaskManager.Token),
-                                    RepairTaskManager.Token);
+                                            FabricHealerManager.Token),
+                                    FabricHealerManager.Token);
 
                 if (repairTask == null)
                 {
@@ -106,8 +106,8 @@ namespace FabricHealer.Repair.Guan
                                     () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                                             repairTask,
                                             RepairData,
-                                            RepairTaskManager.Token),
-                                    RepairTaskManager.Token);
+                                            FabricHealerManager.Token),
+                                    FabricHealerManager.Token);
                 return success;
             }
         }
@@ -123,7 +123,7 @@ namespace FabricHealer.Repair.Guan
             RepairExecutorData = repairExecutorData;
             RepairTaskEngine = repairTaskEngine;
             RepairData = repairData;
-            
+
             return Instance ??= new RestartFabricNodePredicateType(name);
         }
 

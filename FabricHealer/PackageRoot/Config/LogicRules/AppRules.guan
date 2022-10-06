@@ -169,7 +169,7 @@ Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Generic rule for restarting any service in Warning or Error. This means any service that is in Error or Warning state and
 ## also specified in the serialized TelemetryData instance that forms the Description of the related Service level Health Event will be restarted.
-##Mitigate() :- TimeScopedRestartReplica(10, 05:00:00).
+Mitigate() :- TimeScopedRestartReplica(10, 05:00:00).
 
 ## Internal Predicates
 

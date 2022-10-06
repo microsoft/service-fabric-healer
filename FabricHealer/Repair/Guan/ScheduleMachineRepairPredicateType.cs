@@ -35,40 +35,11 @@ namespace FabricHealer.Repair.Guan
                     throw new GuanException("You must provide a repair action name for Infrastructure-level repairs as first argument.");
                 }
 
-                // Repair action name is required.
-                string repairAction = (string)Input.Arguments[0].Value.GetObjectValue();
-
-                /*
-                    public const string SystemReboot = "System.Reboot";
-                    public const string SystemReimageOS = "System.ReimageOS";
-                    public const string SystemFullReimage = "System.FullReimage";
-                    public const string SystemHostReboot = "System.Azure.HostReboot";
-                    public const string SystemHostRepaveData = "System.Azure.HostRepaveData";
-                */
-
-                switch (repairAction)
-                {
-                    case RepairConstants.SystemReboot:
-                    case RepairConstants.SystemHostReboot:
-                        RepairData.RepairPolicy.RepairAction = RepairActionType.RebootMachine;
-                        break;
-
-                    case RepairConstants.SystemReimageOS:
-                    case RepairConstants.SystemFullReimage:
-                    case RepairConstants.SystemHostRepaveData:
-                        RepairData.RepairPolicy.RepairAction = RepairActionType.ReimageOS;
-                        break;
-
-                    default:
-                        throw new GuanException($"Unrecognized repair action name: {repairAction}. Repair actions are case sensitive.");
-                }
-
                 // FH does not execute repairs for VM level mitigation. InfrastructureService (IS) does,
                 // so, FH schedules VM repairs via RM and the execution is taken care of by IS (the executor).
                 // Block attempts to create duplicate repair tasks or more than specified concurrent machine-level repairs.
                 var repairTaskEngine = new RepairTaskEngine();
                 int count = Input.Arguments.Count;
-                long maxConcurrentRepairs = 0;
 
                 for (int i = 0; i < count; i++)
                 {
@@ -76,6 +47,34 @@ namespace FabricHealer.Repair.Guan
 
                     switch (typeString)
                     {
+                        case "String":
+                            // Repair action name is required.
+                            string repairAction = (string)Input.Arguments[0].Value.GetObjectValue();
+
+                            /*
+                                public const string SystemReboot = "System.Reboot";
+                                public const string SystemReimageOS = "System.ReimageOS";
+                                public const string SystemFullReimage = "System.FullReimage";
+                                public const string SystemHostReboot = "System.Azure.HostReboot";
+                                public const string SystemHostRepaveData = "System.Azure.HostRepaveData";
+                            */
+
+                            // Machine Repair type (for FabricHealer). 
+                            RepairData.RepairPolicy.RepairAction = repairAction switch
+                            {
+                                RepairConstants.SystemReboot => RepairActionType.RebootMachine,
+                                RepairConstants.SystemHostReboot => RepairActionType.RebootMachine,
+                                RepairConstants.SystemReimageOS => RepairActionType.ReimageOS,
+                                RepairConstants.SystemFullReimage => RepairActionType.ReimageOS,
+                                RepairConstants.SystemHostRepaveData => RepairActionType.ReimageOS,
+
+                                _ => throw new GuanException($"Unrecognized repair action name: {repairAction}. Repair actions are case sensitive."),
+                            };
+
+                            // Infrastructure Repair Action string (for RepairManager service).
+                            RepairData.RepairPolicy.InfrastructureRepairName = repairAction;
+                            break;
+
                         case "TimeSpan":
                             RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
                             break;
@@ -85,7 +84,7 @@ namespace FabricHealer.Repair.Guan
                             break;
 
                         case "Int64":
-                            maxConcurrentRepairs = (long)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.MaxConcurrentRepairs = (long)Input.Arguments[i].Value.GetObjectValue();
                             break;
 
                         default:
@@ -93,33 +92,54 @@ namespace FabricHealer.Repair.Guan
                     }
                 }
 
-                var isRepairAlreadyInProgress =
-                        await repairTaskEngine.IsRepairInProgressAsync(
+                bool isRepairAlreadyInProgress =
+                        await repairTaskEngine.IsRepairInProgressOrMaxRepairsReachedAsync(
                                 $"{RepairTaskEngine.InfrastructureServiceName}/{RepairData.NodeType}",
                                 RepairData,
-                                RepairTaskManager.Token,
-                                maxConcurrentRepairs);
+                                FabricHealerManager.Token);
 
                 if (isRepairAlreadyInProgress)
                 {
-                    string message = $"VM Repair {RepairData.RepairPolicy.RepairId} is already in progress" +
-                                     $"{(maxConcurrentRepairs > 0 ? $" or max number of concurrent machine repairs ({maxConcurrentRepairs}) has been reached" : "")}. " +
+                    string message = $"Machine Repair {RepairData.RepairPolicy.RepairId} is already in progress" +
+                                     $"{(RepairData.RepairPolicy.MaxConcurrentRepairs > 0 ? $" or the number of outstanding machine repairs is currently {RepairData.RepairPolicy.MaxConcurrentRepairs}" : "")}. " +
                                      $"Will not attempt repair at this time.";
 
-                    await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
                             $"ScheduleMachineRepairPredicateType::{RepairData.RepairPolicy.RepairId}",
                             message,
-                            RepairTaskManager.Token);
+                            FabricHealerManager.Token);
 
                     return false;
                 }
 
+                bool isWithinPostProbationPeriod =
+                       await FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
+                           RepairData.RepairPolicy.MaxTimePostRepairHealthCheck,
+                           RepairData,
+                           $"{RepairConstants.InfrastructureServiceName}/{RepairData.NodeType}",
+                           FabricHealerManager.Token);
+
+                if (isWithinPostProbationPeriod)
+                {
+                    string message = $"{RepairData.NodeName} is currently in post-repair probation ({RepairData.RepairPolicy.MaxTimePostRepairHealthCheck}). " +
+                                     $"Will not attempt another repair at this time.";
+
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            $"ScheduleMachineRepairPredicateType::{RepairData.NodeName}_PostRepairProbationOngoing",
+                            message,
+                            FabricHealerManager.Token);
+
+                    return false;
+                }
+
+                // Attempt to schedule an Infrastructure Repair Job (where IS is the executor).
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => RepairTaskManager.ScheduleInfrastructureRepairTask(
                                                 RepairData,
-                                                RepairTaskManager.Token),
-                                        RepairTaskManager.Token);
+                                                FabricHealerManager.Token),
+                                        FabricHealerManager.Token);
                 return success;
             }
         }
@@ -128,7 +148,6 @@ namespace FabricHealer.Repair.Guan
         {
             RepairTaskManager = repairTaskManager;
             RepairData = repairData;
-
             return Instance ??= new ScheduleMachineRepairPredicateType(name);
         }
 

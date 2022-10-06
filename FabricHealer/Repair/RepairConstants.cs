@@ -78,7 +78,7 @@ namespace FabricHealer.Repair
 
         // Infra repair names (RM "commands").
         public const string SystemReboot = "System.Reboot";
-        public const string SystemReimageOS = "System.ReimageOS ";
+        public const string SystemReimageOS = "System.ReimageOS";
         public const string SystemFullReimage = "System.FullReimage";
         public const string SystemHostReboot = "System.Azure.HostReboot";
         public const string SystemHostRepaveData = "System.Azure.HostRepaveData";
@@ -125,5 +125,7 @@ namespace FabricHealer.Repair
         public const string RepairData = "RepairData";
         public const string RepairPolicy = "RepairPolicy";
         public const string FabricHealer = "FabricHealer";
+        public const string FabricHealerDataEvent = "FabricHealerDataEvent";
+        public const string FabricHealerETWProvider = "FabricHealerETWProvider";
     }
 }

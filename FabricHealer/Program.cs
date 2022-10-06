@@ -4,10 +4,10 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Diagnostics;
 using System.Threading;
 using FabricHealer.Utilities.Telemetry;
 using Microsoft.ServiceFabric.Services.Runtime;
+using System.Diagnostics;
 
 namespace FabricHealer
 {
@@ -24,7 +24,6 @@ namespace FabricHealer
                 // Registering a service maps a service type name to a .NET type.
                 // When Service Fabric creates an instance of this service type,
                 // an instance of the class is created in this host process.
-
                 ServiceRuntime.RegisterServiceAsync("FabricHealerType", context => new FabricHealer(context)).GetAwaiter().GetResult();
                 ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(FabricHealer).Name);
 

@@ -141,7 +141,7 @@ namespace FabricHealer.Repair
             }
 
             if (repairTasks.ToList().Any(
-                n => JsonSerializationUtility.TryDeserialize(n.ExecutorData, out ISExecutorData data) && data.JobId == nodeName))
+                n => JsonSerializationUtility.TryDeserializeObject(n.ExecutorData, out ISExecutorData data) && data.JobId == nodeName))
             {
                 string message = $"Azure Platform or Tenant Update in progress for {nodeType}. Will not attempt repairs at this time.";
 

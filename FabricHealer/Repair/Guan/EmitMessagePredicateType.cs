@@ -60,11 +60,11 @@ namespace FabricHealer.Repair.Guan
                     output = format;
                 }
 
-                await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "EmitMessagePredicate",
                         output,
-                        RepairTaskManager.Token);
+                        FabricHealerManager.Token);
 
                 return true;
             }

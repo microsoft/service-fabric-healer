@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Net;
+using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -91,7 +92,7 @@ namespace FabricHealer.Utilities.Telemetry
                 return;
             }
 
-            if (!JsonSerializationUtility.TrySerialize(telemetryData, out string jsonPayload))
+            if (!JsonSerializationUtility.TrySerializeObject(telemetryData, out string jsonPayload))
             {
                 return;
             }
@@ -188,7 +189,12 @@ namespace FabricHealer.Utilities.Telemetry
         /// <returns>A completed task or task containing exception info.</returns>
         private async Task SendTelemetryAsync(string payload, CancellationToken token)
         {
-            if (string.IsNullOrEmpty(WorkspaceId))
+            if (string.IsNullOrEmpty(WorkspaceId) || string.IsNullOrWhiteSpace(Key))
+            {
+                return;
+            }
+
+            if (token.IsCancellationRequested)
             {
                 return;
             }
@@ -196,14 +202,18 @@ namespace FabricHealer.Utilities.Telemetry
             var requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
             string date = DateTime.UtcNow.ToString("r");
             string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
-
-            var request = (HttpWebRequest)WebRequest.Create(requestUri);
-            request.ContentType = "application/json";
-            request.Method = "POST";
-            request.Headers["Log-Type"] = LogType;
-            request.Headers["x-ms-date"] = date;
-            request.Headers["Authorization"] = signature;
             byte[] content = Encoding.UTF8.GetBytes(payload);
+            var httpClient = new HttpClient();
+            var message = new HttpRequestMessage
+            {
+                Content = new ByteArrayContent(content),
+                Method = HttpMethod.Post,
+                RequestUri = requestUri,
+            };
+            httpClient.DefaultRequestHeaders.Add("ContentType", "application/json");
+            httpClient.DefaultRequestHeaders.Add("Log-Type", LogType);
+            httpClient.DefaultRequestHeaders.Add("x-ms-date", date);
+            httpClient.DefaultRequestHeaders.Add("Authorization", signature);
 
             if (token.IsCancellationRequested)
             {
@@ -212,24 +222,9 @@ namespace FabricHealer.Utilities.Telemetry
 
             try
             {
-                using (var requestStreamAsync = await request.GetRequestStreamAsync())
-                {
-                    if (token.IsCancellationRequested)
-                    {
-                        return;
-                    }
+                using HttpResponseMessage response = await httpClient.SendAsync(message, token);
 
-                    await requestStreamAsync.WriteAsync(content, 0, content.Length);
-                }
-
-                using var responseAsync = await request.GetResponseAsync() as HttpWebResponse;
-
-                if (token.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                if (responseAsync.StatusCode == HttpStatusCode.OK ||responseAsync.StatusCode == HttpStatusCode.Accepted)
+                if (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.Accepted)
                 {
                     retries = 0;
                     return;
@@ -237,7 +232,7 @@ namespace FabricHealer.Utilities.Telemetry
 
                 logger.LogWarning(
                     $"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}" +
-                    $"{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
+                    $"{response.StatusCode}: {response.ReasonPhrase}");
             }
             catch (Exception e)
             {
@@ -253,7 +248,7 @@ namespace FabricHealer.Utilities.Telemetry
                 }
 
                 retries++;
-                await Task.Delay(1000);
+                await Task.Delay(1000, token);
                 await SendTelemetryAsync(payload, token);
             }
             else

@@ -4,9 +4,12 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Diagnostics.Tracing;
+using System.Fabric.Health;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using FabricHealer.Utilities.Telemetry;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
@@ -161,6 +164,37 @@ namespace FabricHealer.Utilities
         public void LogWarning(string format, params object[] parameters)
         {
             OLogger.Warn(format, parameters);
+        }
+
+        /// <summary>
+        /// Logs EventSource events as specified event name using T data as payload.
+        /// </summary>
+        /// <typeparam name="T">Generic type. Must be a class or struct attributed as EventData (EventSource.EventDataAttribute).</typeparam>
+        /// <param name="eventName">The name of the ETW event. This corresponds to the table name in Kusto.</param>
+        /// <param name="eventData">The data of generic type that will be the event Payload.</param>
+        public void LogEtw<T>(string eventName, T eventData)
+        {
+            if (eventData == null || string.IsNullOrWhiteSpace(eventName))
+            {
+                return;
+            }
+
+            if (!JsonSerializationUtility.TrySerializeObject(eventData, out string data))
+            {
+                return;
+            }
+
+            EventKeywords keywords = ServiceEventSource.Keywords.InternalData;
+
+            if (eventData is TelemetryData telemData)
+            {
+                if (telemData.HealthState == HealthState.Error || telemData.HealthState == HealthState.Warning)
+                {
+                    keywords = ServiceEventSource.Keywords.ErrorOrWarning;
+                }
+            }
+
+            ServiceEventSource.Current.Write(new { data }, eventName, keywords);
         }
 
         public static bool TryWriteLogFile(string path, string content)

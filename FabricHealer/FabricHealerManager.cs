@@ -54,9 +54,10 @@ namespace FabricHealer
         }
 
         // CancellationToken from FabricHealer.RunAsync.
-        private CancellationToken Token
+        internal static CancellationToken Token
         {
             get;
+            private set;
         }
 
         private DateTime LastTelemetrySendDate
@@ -67,11 +68,6 @@ namespace FabricHealer
         private DateTime LastVersionCheckDateTime
         {
             get; set;
-        }
-
-        private bool EtwEnabled 
-        { 
-            get; set; 
         }
 
         public static ConfigSettings ConfigSettings
@@ -150,13 +146,13 @@ namespace FabricHealer
         /// This is the static singleton instance of FabricHealerManager type. FabricHealerManager does not support
         /// multiple instantiations. It does not provide a public constructor.
         /// </summary>
-        /// <param name="context">StatefulService context instance.</param>
-        /// <param name="token">Cancellation token.</param>
+        /// <param name="context">StatelessServiceContext instance.</param>
+        /// <param name="token">CancellationToken instance.</param>
         /// <returns>The singleton instance of FabricHealerManager.</returns>
         public static FabricHealerManager Instance(StatelessServiceContext context, CancellationToken token)
         {
             _fabricClient = new FabricClient();
-            return singleton ??= new FabricHealerManager(context ?? throw new ArgumentException(nameof(context)), token);
+            return singleton ??= new FabricHealerManager(context ?? throw new ArgumentException("ServiceContext can't be null..", nameof(context)), token);
         }
 
         /// <summary>
@@ -498,7 +494,7 @@ namespace FabricHealer
                         continue;
                     }
 
-                    if (!JsonSerializationUtility.TryDeserialize(executorData, out RepairExecutorData repairExecutorData))
+                    if (!JsonSerializationUtility.TryDeserializeObject(executorData, out RepairExecutorData repairExecutorData))
                     {
                         continue;
                     }
@@ -812,7 +808,7 @@ namespace FabricHealer
                 }
 
                 // If health data is not a serialized TelemetryData instance, then move along.
-                if (!JsonSerializationUtility.TryDeserialize(evt.HealthInformation.Description, out TelemetryData repairData))
+                if (!JsonSerializationUtility.TryDeserializeObject(evt.HealthInformation.Description, out TelemetryData repairData))
                 {
                     continue;
                 }
@@ -856,7 +852,7 @@ namespace FabricHealer
                     {
                         foreach (var repair in fhRepairTasks)
                         {
-                            var executorData = JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
+                            var executorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
                             if (executorData?.RepairData?.RepairPolicy?.RepairAction != RepairActionType.RestartFabricNode &&
                                 executorData?.RepairData?.RepairPolicy?.RepairAction != RepairActionType.RestartProcess)
@@ -1094,7 +1090,7 @@ namespace FabricHealer
                 }
 
                 // If health data is not a serialized instance of a type that implements ITelemetryData, then move along.
-                if (!JsonSerializationUtility.TryDeserialize(evt.HealthInformation.Description, out TelemetryData repairData))
+                if (!JsonSerializationUtility.TryDeserializeObject(evt.HealthInformation.Description, out TelemetryData repairData))
                 {
                     continue;
                 }
@@ -1162,7 +1158,7 @@ namespace FabricHealer
                     {
                         foreach (var repair in fhRepairTasks)
                         {
-                            var executorData = JsonSerializationUtility.TryDeserialize(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
+                            var executorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
                             if (executorData?.RepairData?.RepairPolicy?.RepairAction != RepairActionType.RestartFabricNode &&
                                 executorData?.RepairData?.RepairPolicy?.RepairAction != RepairActionType.RestartProcess)
@@ -1255,10 +1251,10 @@ namespace FabricHealer
                         // Thing of this as a UD Walk across nodes of service instances in need of repair.
                         if (ConfigSettings.EnableRollingServiceRestarts
                             && nodes?.Count > 1
-                            && currentFHRepairs.Any(r => JsonSerializationUtility.TryDeserialize(r.ExecutorData, out RepairExecutorData execData)
+                            && currentFHRepairs.Any(r => JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
                                                       && execData?.RepairData?.ServiceName?.ToLower() == repairData.ServiceName.ToLower()))
                         {
-                            var repair = currentFHRepairs.FirstOrDefault(r => JsonSerializationUtility.TryDeserialize(r.ExecutorData, out RepairExecutorData execData)
+                            var repair = currentFHRepairs.FirstOrDefault(r => JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
                                                                            && execData.RepairData.ServiceName.ToLower() == repairData.ServiceName.ToLower());
 
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -1273,10 +1269,10 @@ namespace FabricHealer
                         }
                         // For the case where a service repair is still not Completed (e.g., the repair status is Restoring, which would happen after the repair executor has completed
                         // its work, but RM is performing post safety checks (safety checks can be enabled/disabled in logic rules).
-                        else if (currentFHRepairs.Any(r => JsonSerializationUtility.TryDeserialize(r.ExecutorData, out RepairExecutorData execData)
+                        else if (currentFHRepairs.Any(r => JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
                                                         && execData?.RepairData?.RepairPolicy?.RepairId == repairId))
                         {
-                            var repair = currentFHRepairs.FirstOrDefault(r => JsonSerializationUtility.TryDeserialize(r.ExecutorData, out RepairExecutorData execData)
+                            var repair = currentFHRepairs.FirstOrDefault(r => JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
                                                                            && execData.RepairData.RepairPolicy.RepairId == repairId);
 
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -1332,7 +1328,7 @@ namespace FabricHealer
             // This is just used to make sure there is more than 1 node in the cluster. We don't need a list of all nodes.
             var nodeQueryDesc = new NodeQueryDescription
             {
-                MaxResults = 2,
+                MaxResults = 3,
             };
 
             NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -1353,7 +1349,7 @@ namespace FabricHealer
                         null,
                         ConfigSettings.EnableVerboseLogging);
 
-                return;
+               return;
             }
 
             var supportedNodeHealthStates =
@@ -1363,10 +1359,10 @@ namespace FabricHealer
             {
                 Token.ThrowIfCancellationRequested();
 
-                var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync(node.NodeName);
-                string nodeType = nodeList[0].NodeName;
+                var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync(node.NodeName, ConfigSettings.AsyncTimeout, Token);
+                string nodeType = nodeList[0].NodeType;
                 string nodeUD = nodeList[0].UpgradeDomain;
-                var nodeHealth = await FabricClientSingleton.HealthManager.GetNodeHealthAsync(node.NodeName);
+                var nodeHealth = await FabricClientSingleton.HealthManager.GetNodeHealthAsync(node.NodeName, ConfigSettings.AsyncTimeout, Token);
                 var nodeHealthEvents =
                     nodeHealth.HealthEvents.Where(
                                 s => (s.HealthInformation.HealthState == HealthState.Warning || s.HealthInformation.HealthState == HealthState.Error));
@@ -1418,7 +1414,7 @@ namespace FabricHealer
                     await RandomWaitAsync();
 
                     // Was health event generated by FO or FHProxy?
-                    if (!JsonSerializationUtility.TryDeserialize(evt.HealthInformation.Description, out TelemetryData repairData))
+                    if (!JsonSerializationUtility.TryDeserializeObject(evt.HealthInformation.Description, out TelemetryData repairData))
                     {
                         // This will enable Machine level repair (reboot, reimage) based on detected SF Node Health Event not generated by FO/FHProxy.
                         repairData = new TelemetryData
@@ -1459,9 +1455,31 @@ namespace FabricHealer
                     // If there are mulitple instances of FH deployed to the cluster (like -1 InstanceCount), then don't do machine repairs if this instance of FH 
                     // detects a need to do so. Another instance on a different node will take the job. Only DiskObserver-generated repair data has to be done on the node
                     // where FO's DiskObserver emitted the related information, for example (like Disk space issues and the need to clean specified (in logic rules) folders).
-                    if ((_instanceCount == -1 || _instanceCount > 2) && repairData.NodeName == serviceContext.NodeContext.NodeName)
+                    if ((_instanceCount == -1 || _instanceCount > 2) && node.NodeName == serviceContext.NodeContext.NodeName)
                     {
                         continue;
+                    }
+
+                    // Make sure that there is not already an Infra repair in progress for the target node.
+                    var currentISRepairs =
+                        await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync($"{RepairConstants.InfrastructureServiceName}/{nodeType}", Token);
+
+                    if (currentISRepairs?.Count > 0)
+                    {
+                        if (currentISRepairs.Any(r => r.Description.Contains(node.NodeName)))
+                        {
+                            var repair = currentISRepairs.FirstOrDefault(r => r.Description.Contains(node.NodeName));
+
+                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                    LogLevel.Info,
+                                    $"{node.NodeName}_MachineRepairAlreadyInProgress",
+                                    $"There is currently a Machine repair in progress for node {node.NodeName}. Repair State: {repair.State}.",
+                                    Token,
+                                    null,
+                                    ConfigSettings.EnableVerboseLogging);
+
+                            return;
+                        }
                     }
 
                     // Get repair rules for supplied facts (TelemetryData).
@@ -1490,8 +1508,8 @@ namespace FabricHealer
                     await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
                             repairId,
-                            $"Detected machine hosting {repairData.NodeName} is in {errOrWarn}.{Environment.NewLine}" +
-                            $"Machine repair is enabled. {repairRules.Count} logic rules found for Machine repair.",
+                            $"Detected Fabric node {repairData.NodeName} is in {errOrWarn}.{Environment.NewLine}" +
+                            $"Machine repair target specified. {repairRules.Count} logic rules found for Machine repair.",
                             Token,
                             null,
                             ConfigSettings.EnableVerboseLogging);
@@ -1885,7 +1903,7 @@ namespace FabricHealer
                     repairPolicySectionName = RepairConstants.DiskRepairPolicySectionName;
                     break;
 
-                // VM repair.
+                // Machine repair.
                 case EntityType.Machine:
                     repairPolicySectionName = RepairConstants.MachineRepairPolicySectionName;
                     break;

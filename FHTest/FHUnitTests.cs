@@ -408,7 +408,7 @@ namespace FHTest
             }
 
             HealthEvent healthEventWarning = healthData.HealthEvents.FirstOrDefault(h => h.HealthInformation?.HealthState == HealthState.Warning);
-            _ = JsonSerializationUtility.TryDeserialize(healthEventWarning.HealthInformation.Description, out TelemetryData data);
+            _ = JsonSerializationUtility.TryDeserializeObject(healthEventWarning.HealthInformation.Description, out TelemetryData data);
 
             return (true, data);
         }

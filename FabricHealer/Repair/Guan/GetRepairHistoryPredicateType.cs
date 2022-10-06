@@ -32,7 +32,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (timeWindow > TimeSpan.MinValue)
                 {
-                    repairCount = await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(timeWindow, RepairData, RepairTaskManager.Token);
+                    repairCount = await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(timeWindow, RepairData, FabricHealerManager.Token);
                 }
                 else
                 {
@@ -40,11 +40,11 @@ namespace FabricHealer.Repair.Guan
                         "You must supply a valid TimeSpan string for TimeWindow argument of GetRepairHistoryPredicate. " +
                         "Default result has been supplied (0).";
 
-                    await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
                             $"GetRepairHistoryPredicate::{RepairData.RepairPolicy.RepairId}",
                             message,
-                            RepairTaskManager.Token);
+                            FabricHealerManager.Token);
                 }
 
                 var result = new CompoundTerm(this.Input.Functor);

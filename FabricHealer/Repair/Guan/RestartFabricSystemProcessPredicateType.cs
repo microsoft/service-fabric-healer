@@ -58,8 +58,8 @@ namespace FabricHealer.Repair.Guan
                 var repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                     () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
                                             RepairData,
-                                            RepairTaskManager.Token),
-                                    RepairTaskManager.Token).GetAwaiter().GetResult();
+                                            FabricHealerManager.Token),
+                                    FabricHealerManager.Token).GetAwaiter().GetResult();
 
                 if (repairTask == null)
                 {
@@ -71,8 +71,8 @@ namespace FabricHealer.Repair.Guan
                                         () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
                                                 repairTask,
                                                 RepairData,
-                                                RepairTaskManager.Token),
-                                            RepairTaskManager.Token);
+                                                FabricHealerManager.Token),
+                                            FabricHealerManager.Token);
                 return success;
             }
         }
