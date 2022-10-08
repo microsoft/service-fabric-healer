@@ -510,7 +510,7 @@ namespace FHTest
 
             var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, RepairFactsServiceTarget.ServiceName);
             Assert.IsTrue(generatedWarning);
-            Assert.IsTrue(data is TelemetryData);
+            Assert.IsTrue(data != null);
         }
 
         [TestMethod]
@@ -529,7 +529,7 @@ namespace FHTest
 
             var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, null, NodeName);
             Assert.IsTrue(generatedWarning);
-            Assert.IsTrue(data is TelemetryData);
+            Assert.IsTrue(data != null);
         }
 
         [TestMethod]
@@ -624,13 +624,13 @@ namespace FHTest
                 {
                     var (generatedWarningService, sdata) = await IsEntityInWarningStateAsync(null, repair.ServiceName);
                     Assert.IsTrue(generatedWarningService);
-                    Assert.IsTrue(sdata is TelemetryData);
+                    Assert.IsTrue(sdata != null);
                 }
                 else if (repair.EntityType == EntityType.Disk || repair.EntityType == EntityType.Machine || repair.EntityType == EntityType.Node)
                 {
                     var (generatedWarningNode, ndata) = await IsEntityInWarningStateAsync(null, null, NodeName);
                     Assert.IsTrue(generatedWarningNode);
-                    Assert.IsTrue(ndata is TelemetryData);
+                    Assert.IsTrue(ndata != null);
                 }
 
                 // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");

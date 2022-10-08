@@ -11,9 +11,9 @@ namespace FabricHealer
     public enum EntityType
     {
         /// <summary>
-        /// Invalid (default value).
+        /// Unknown (default value).
         /// </summary>
-        Invalid,
+        Unknown,
         /// <summary>
         /// Application type.
         /// </summary>

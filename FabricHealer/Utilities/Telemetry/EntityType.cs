@@ -11,9 +11,9 @@ namespace FabricHealer.Utilities.Telemetry
     public enum EntityType
     {
         /// <summary>
-        /// Invalid (default value).
+        /// Unknown (default).
         /// </summary>
-        Invalid,
+        Unknown,
         /// <summary>
         /// Application type.
         /// </summary>

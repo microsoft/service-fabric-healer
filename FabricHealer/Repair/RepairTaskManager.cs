@@ -522,7 +522,8 @@ namespace FabricHealer.Repair
             Stopwatch stopWatch = Stopwatch.StartNew();
             bool isApproved = false;
 
-            var repairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, cancellationToken);
+            var repairs = 
+                await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, cancellationToken);
 
             if (repairs.All(repair => repair.TaskId != repairTask.TaskId))
             {
@@ -687,7 +688,7 @@ namespace FabricHealer.Repair
                         if (repairData.PartitionId == null)
                         {
                             success = false;
-                           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
                                     "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoPartition",
                                     $"No partition specified.",
@@ -707,7 +708,7 @@ namespace FabricHealer.Repair
                         if (repList.Count == 0)
                         {
                             success = false;
-                           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
                                     "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoReplica",
                                     $"Stateless Instance {repairData.ReplicaId} not found on partition " +
@@ -732,7 +733,7 @@ namespace FabricHealer.Repair
                         if (repairData.PartitionId == null)
                         {
                             success = false;
-                           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
                                     "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoPartition",
                                     $"No partition specified.",
@@ -818,8 +819,9 @@ namespace FabricHealer.Repair
 
             switch (repairData.EntityType)
             {
-                // Try and handle the case where EntityType is not specified or is set to Invalid for some reason.
-                case EntityType.Invalid:
+                // Try and handle the case where EntityType is not specified (facts from FHProxy, for example)
+                // or is explicitly set to Invalid for some reason.
+                case EntityType.Unknown:
 
                     if (!string.IsNullOrWhiteSpace(repairData.ServiceName))
                     {
@@ -833,7 +835,18 @@ namespace FabricHealer.Repair
                     {
                         goto case EntityType.Node;
                     }
-                    break;
+                    else if (repairData.ReplicaId > 0)
+                    {
+                        goto case EntityType.Replica;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(repairData.ProcessName) || repairData.ProcessId > 0)
+                    {
+                        goto case EntityType.Process;
+                    }
+                    else
+                    {
+                        return false;
+                    }
 
                 case EntityType.Application:
 

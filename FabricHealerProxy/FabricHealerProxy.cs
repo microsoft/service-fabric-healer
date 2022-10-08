@@ -254,22 +254,22 @@ namespace FabricHealer
             ManageRepairDataHistory(cancellationToken);
 
             // Support not specifying EntityType.
-            if (!string.IsNullOrWhiteSpace(repairData.ServiceName) && repairData.EntityType == EntityType.Invalid)
+            if (!string.IsNullOrWhiteSpace(repairData.ServiceName) && repairData.EntityType == EntityType.Unknown)
             {
                 repairData.EntityType = EntityType.Service;
             }
-            else if (repairData.ReplicaId > 0 && repairData.EntityType == EntityType.Invalid)
+            else if (repairData.ReplicaId > 0 && repairData.EntityType == EntityType.Unknown)
             {
                 repairData.EntityType = EntityType.Replica;
             }
-            else if ((repairData.ProcessId > 0 || !string.IsNullOrWhiteSpace(repairData.ProcessName)) && repairData.EntityType == EntityType.Invalid)
+            else if ((repairData.ProcessId > 0 || !string.IsNullOrWhiteSpace(repairData.ProcessName)) && repairData.EntityType == EntityType.Unknown)
             {
                 repairData.EntityType = EntityType.Process;
             }
             else if (!string.IsNullOrEmpty(repairData.NodeName) &&
                      string.IsNullOrWhiteSpace(repairData.ApplicationName) && 
                      string.IsNullOrWhiteSpace(repairData.ServiceName) && 
-                     repairData.EntityType == EntityType.Invalid || repairData.EntityType == EntityType.Machine)
+                     repairData.EntityType == EntityType.Unknown || repairData.EntityType == EntityType.Machine)
             {
                 repairData.EntityType = repairData.EntityType == EntityType.Machine ? EntityType.Machine : EntityType.Node;
 
