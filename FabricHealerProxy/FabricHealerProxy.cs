@@ -14,6 +14,8 @@ using System.Fabric.Query;
 using Polly;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
+using static System.Fabric.Query.ReplicaStatus;
 
 namespace FabricHealer
 {
@@ -28,36 +30,76 @@ namespace FabricHealer
     public sealed class FabricHealerProxy
     {
         private const string FHProxyId = "FabricHealerProxy";
-        private static FabricHealerProxy instance;
-
-        private static readonly FabricClientSettings settings = new FabricClientSettings
+        private static readonly FabricClientSettings _fcsettings = new FabricClientSettings
         {
             HealthOperationTimeout = TimeSpan.FromSeconds(60),
             HealthReportSendInterval = TimeSpan.FromSeconds(1),
             HealthReportRetrySendInterval = TimeSpan.FromSeconds(3),
         };
-
-        // Use one FC for the lifetime of the consuming SF service process that loads FabricHealerProxy.dll.
-        private static readonly FabricClient fabricClient = new FabricClient(settings);
-        private static readonly object instanceLock = new object();
-        private static readonly object writeLock = new object();
-        private static readonly TimeSpan defaultHealthReportTtl = TimeSpan.FromMinutes(15);
+        private static readonly object _instanceLock = new object();
+        private static readonly object _writeLock = new object();
+        private static readonly object _lock = new object();
+        private static readonly TimeSpan _defaultHealthReportTtl = TimeSpan.FromMinutes(15);
+        private static FabricClient _fabricClient = null;
+        private static FabricHealerProxy _instance = null;
 
         // Instance tuple that stores RepairData objects for a specified duration (defaultHealthReportTtl).
-        private ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairData)> repairDataHistory =
+        private ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairData)> _repairDataHistory =
                  new ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairData)>();
-        private CancellationTokenRegistration tokenRegistration;
-        private CancellationTokenSource cts = null;
-        private readonly Logger logger;
+        private CancellationTokenRegistration _tokenRegistration;
+        private CancellationTokenSource _cts = null;
+        private readonly Logger _logger = null;
 
         private FabricHealerProxy()
         {
-            if (repairDataHistory == null)
+            if (_repairDataHistory == null)
             {
-                repairDataHistory = new ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairFacts)>();
+                _repairDataHistory = new ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairFacts)>();
             }
 
-            logger = new Logger(FHProxyId);
+            _logger = new Logger(FHProxyId);
+        }
+
+        // Use one FC for the lifetime of the consuming SF service process that loads FabricHealerProxy.dll.
+        private static FabricClient FabricClientSingleton
+        {
+            get
+            {
+                if (_fabricClient == null)
+                {
+                    lock (_lock)
+                    {
+                        if (_fabricClient == null)
+                        {
+                            _fabricClient = new FabricClient(_fcsettings);
+                            return _fabricClient;
+                        }
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        // This call with throw an ObjectDisposedException if fabricClient was disposed by, say, a plugin or if the runtime
+                        // disposed of it for some random (unlikely..) reason. This is just a test to ensure it is not in a disposed state.
+                        if (_fabricClient.Settings.HealthReportSendInterval > TimeSpan.MinValue)
+                        {
+                            return _fabricClient;
+                        }
+                    }
+                    catch (Exception e) when (e is ObjectDisposedException || e is InvalidComObjectException)
+                    {
+                        lock (_lock)
+                        {
+                            _fabricClient = null;
+                            _fabricClient = new FabricClient(_fcsettings);
+                            return _fabricClient;
+                        }
+                    }
+                }
+
+                return _fabricClient;
+            }
         }
 
         /// <summary>
@@ -67,18 +109,18 @@ namespace FabricHealer
         {
             get
             {
-                if (instance == null)
+                if (_instance == null)
                 {
-                    lock (instanceLock)
+                    lock (_instanceLock)
                     {
-                        if (instance == null)
+                        if (_instance == null)
                         {
-                            instance = new FabricHealerProxy();
+                            _instance = new FabricHealerProxy();
                         }
                     }
                 }
 
-                return instance;
+                return _instance;
             }
         }
 
@@ -100,14 +142,14 @@ namespace FabricHealer
         /// <exception cref="TimeoutException">Thrown when internal Fabric client API calls timeout.</exception>
         public async Task RepairEntityAsync(RepairFacts repairFacts, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
         {
-            if (cts == null)
+            if (_cts == null)
             {
-                lock (writeLock)
+                lock (_writeLock)
                 {
-                    if (cts == null)
+                    if (_cts == null)
                     {
-                        cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                        tokenRegistration = cts.Token.Register(() => { Close(); });
+                        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                        _tokenRegistration = _cts.Token.Register(() => { Close(); });
                     }
                 }
             }
@@ -120,14 +162,14 @@ namespace FabricHealer
             if (repairFacts == null)
             {
                 string msg = "Supplied null for repairData argument. You must supply an instance of RepairData.";
-                logger.LogWarning(msg);
+                _logger.LogWarning(msg);
                 throw new ArgumentNullException(msg);
             }
 
             if (string.IsNullOrEmpty(repairFacts.NodeName))
             {
                 string msg = "RepairData.NodeName is a required field.";
-                logger.LogWarning(msg);
+                _logger.LogWarning(msg);
                 throw new MissingRepairFactsException(msg);
             }
 
@@ -149,14 +191,14 @@ namespace FabricHealer
                                     () => RepairEntityAsyncInternal(
                                             repairFacts,
                                             repairDataLifetime,
-                                            fabricClient,
+                                            FabricClientSingleton,
                                             cancellationToken)).ConfigureAwait(false);
             }
             catch (InvalidOperationException ioe)
             {
                 // This can happen when the internal ExecuteAsync impl calls LINQ's First() on a zero-sized collection, for example.
                 // This should not crash the containing process, so just capture it here.
-                logger.LogWarning($"Unexpected exception in Policy.Handle{Environment.NewLine}{ioe}");
+                _logger.LogWarning($"Unexpected exception in Policy.Handle{Environment.NewLine}{ioe}");
             }
         }
 
@@ -178,14 +220,14 @@ namespace FabricHealer
         /// <exception cref="TimeoutException">Thrown when internal Fabric client API calls timeout.</exception>
         public async Task RepairEntityAsync(IEnumerable<RepairFacts> repairFactsCollection, CancellationToken cancellationToken, TimeSpan repairDataLifetime = default)
         {
-            if (cts == null)
+            if (_cts == null)
             {
-                lock (writeLock)
+                lock (_writeLock)
                 {
-                    if (cts == null)
+                    if (_cts == null)
                     {
-                        cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                        tokenRegistration = cts.Token.Register(() => { Close(); });
+                        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                        _tokenRegistration = _cts.Token.Register(() => { Close(); });
                     }
                 }
             }
@@ -211,25 +253,35 @@ namespace FabricHealer
             // Remove expired repair data.
             ManageRepairDataHistory(cancellationToken);
 
-            // Application (0) EntityType enum default. Check to see if only Service was supplied. OR, check to see if only NodeName was supplied.
-            if (!string.IsNullOrWhiteSpace(repairData.ServiceName) && repairData.EntityType == EntityType.Application)
+            // Support not specifying EntityType.
+            if (!string.IsNullOrWhiteSpace(repairData.ServiceName) && repairData.EntityType == EntityType.Invalid)
             {
                 repairData.EntityType = EntityType.Service;
             }
+            else if (repairData.ReplicaId > 0 && repairData.EntityType == EntityType.Invalid)
+            {
+                repairData.EntityType = EntityType.Replica;
+            }
+            else if ((repairData.ProcessId > 0 || !string.IsNullOrWhiteSpace(repairData.ProcessName)) && repairData.EntityType == EntityType.Invalid)
+            {
+                repairData.EntityType = EntityType.Process;
+            }
             else if (!string.IsNullOrEmpty(repairData.NodeName) &&
-                     ((string.IsNullOrWhiteSpace(repairData.ApplicationName) && repairData.EntityType == EntityType.Application) || 
-                       repairData.EntityType == EntityType.Machine))
+                     string.IsNullOrWhiteSpace(repairData.ApplicationName) && 
+                     string.IsNullOrWhiteSpace(repairData.ServiceName) && 
+                     repairData.EntityType == EntityType.Invalid || repairData.EntityType == EntityType.Machine)
             {
                 repairData.EntityType = repairData.EntityType == EntityType.Machine ? EntityType.Machine : EntityType.Node;
 
                 if (string.IsNullOrWhiteSpace(repairData.NodeType))
                 {
-                    NodeList nodes = await fabricClient.QueryManager.GetNodeListAsync(repairData.NodeName, TimeSpan.FromSeconds(30), cancellationToken);
+                    NodeList nodes =
+                        await fabricClient.QueryManager.GetNodeListAsync(repairData.NodeName, TimeSpan.FromSeconds(30), cancellationToken);
 
                     if (nodes == null || nodes.Count == 0)
                     {
                         string msg = $"NodeName {repairData.NodeName} does not exist in this cluster.";
-                        logger.LogWarning(msg);
+                        _logger.LogWarning(msg);
                         throw new NodeNotFoundException(msg);
                     }
 
@@ -267,7 +319,7 @@ namespace FabricHealer
                             if (!TryValidateFixFabricUriString(repairData.ServiceName, out serviceName))
                             {
                                 string msg = $"Specified ServiceName, {repairData.ServiceName}, is invalid.";
-                                logger.LogWarning(msg);
+                                _logger.LogWarning(msg);
                                 throw new UriFormatException(msg);
                             }
 
@@ -282,15 +334,16 @@ namespace FabricHealer
                             if (!TryValidateFixFabricUriString(repairData.ApplicationName, out appName))
                             {
                                 string msg = $"Specified ApplicationName, {repairData.ApplicationName}, is invalid.";
-                                logger.LogWarning(msg);
+                                _logger.LogWarning(msg);
                                 throw new UriFormatException(msg);
                             }
                         }
 
+                        // Figure out PartitionId and Replica Id based on NodeName, ApplicationName and ServiceName facts.
                         if (repairData.ApplicationName != "fabric:/System" && (repairData.PartitionId == null || repairData.ReplicaId == 0))
                         {
                             DeployedServiceReplicaList depReplicas = await fabricClient.QueryManager.GetDeployedReplicaListAsync(repairData.NodeName, appName);
-                            
+
                             if (!depReplicas.Any(r => r.ServiceName.OriginalString.ToLower() == repairData.ServiceName.ToLower() && r.ReplicaStatus == ServiceReplicaStatus.Ready))
                             {
                                 throw new FabricServiceNotFoundException();
@@ -322,23 +375,6 @@ namespace FabricHealer
                             repairData.ReplicaId = replicaId;
                         }
 
-                        if (string.IsNullOrWhiteSpace(repairData.Description))
-                        {
-                            repairData.Description = $"{repairData.Source} has put " +
-                                $"{(!string.IsNullOrWhiteSpace(repairData.ServiceName) ? repairData.ServiceName : repairData.ApplicationName)} into {repairData.HealthState}.";
-                        }
-
-                        if (string.IsNullOrWhiteSpace(repairData.Property))
-                        {
-                            if (repairData.ServiceName != null)
-                            {
-                                repairData.Property = $"{repairData.NodeName}_{repairData.ServiceName.Remove(0, repairData.ApplicationName.Length + 1)}_{repairData.Metric ?? "FHRepair"}";
-                            }
-                            else
-                            {
-                                repairData.Property = $"{repairData.NodeName}_{repairData.ApplicationName.Replace("fabric:/", "")}_{repairData.Metric ?? "FHRepair"}";
-                            }
-                        }
                         break;
 
                     case EntityType.Machine:
@@ -371,7 +407,28 @@ namespace FabricHealer
 
                 if (repairDataLifetime == default)
                 {
-                    repairDataLifetime = defaultHealthReportTtl;
+                    repairDataLifetime = _defaultHealthReportTtl;
+                }
+
+                if (repairData.EntityType == EntityType.Application || repairData.EntityType == EntityType.Service)
+                {
+                    if (string.IsNullOrWhiteSpace(repairData.Description))
+                    {
+                        repairData.Description = $"{repairData.Source} has put " +
+                            $"{(!string.IsNullOrWhiteSpace(repairData.ServiceName) ? repairData.ServiceName : repairData.ApplicationName)} into {repairData.HealthState}.";
+                    } 
+                }
+
+                if (string.IsNullOrWhiteSpace(repairData.Property))
+                {
+                    if (repairData.ServiceName != null)
+                    {
+                        repairData.Property = $"{repairData.NodeName}_{repairData.ServiceName.Remove(0, repairData.ApplicationName.Length + 1)}_{repairData.Metric ?? "FHRepair"}";
+                    }
+                    else
+                    {
+                        repairData.Property = $"{repairData.NodeName}_{repairData.ApplicationName.Replace("fabric:/", "")}_{repairData.Metric ?? "FHRepair"}";
+                    }
                 }
 
                 var healthInformation = new HealthInformation(repairData.Source, repairData.Property, repairData.HealthState)
@@ -390,7 +447,7 @@ namespace FabricHealer
             catch (Exception e) when (e is FabricServiceNotFoundException)
             {
                 string msg = $"Specified ServiceName {repairData.ServiceName} does not exist in the cluster or has no replicas in Ready state.";
-                logger.LogWarning(msg);
+                _logger.LogWarning(msg);
                 throw new ServiceNotFoundException(msg);
             }
             catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
@@ -399,12 +456,12 @@ namespace FabricHealer
             }
 
             // Add repairData to history.
-            _ = repairDataHistory.TryAdd(repairData.Property, (DateTime.UtcNow, repairData));
+            _ = _repairDataHistory.TryAdd(repairData.Property, (DateTime.UtcNow, repairData));
         }
 
         private void ManageRepairDataHistory(CancellationToken cancellationToken)
         {
-            for (int i = 0; i < repairDataHistory.Count; i++)
+            for (int i = 0; i < _repairDataHistory.Count; i++)
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -413,11 +470,11 @@ namespace FabricHealer
 
                 try
                 {
-                    var data = repairDataHistory.ElementAt(i);
+                    var data = _repairDataHistory.ElementAt(i);
 
-                    if (DateTime.UtcNow.Subtract(data.Value.DateAdded) >= defaultHealthReportTtl)
+                    if (DateTime.UtcNow.Subtract(data.Value.DateAdded) >= _defaultHealthReportTtl)
                     {
-                        _ = repairDataHistory.TryRemove(data.Key, out _);
+                        _ = _repairDataHistory.TryRemove(data.Key, out _);
                         --i;
                     }
                 }
@@ -427,7 +484,7 @@ namespace FabricHealer
                 }
                 catch (Exception e)
                 {
-                    logger.LogError($"Unhandled exception in ManageRepairDataHistory:{Environment.NewLine}{e}");
+                    _logger.LogError($"Unhandled exception in ManageRepairDataHistory:{Environment.NewLine}{e}");
                     throw;
                 }
             }
@@ -444,50 +501,51 @@ namespace FabricHealer
 
             switch (repairFacts.EntityType)
             {
-                case EntityType.Application when repairFacts.ApplicationName != null:
+                case EntityType.Application when !string.IsNullOrWhiteSpace(repairFacts.ApplicationName):
+                case EntityType.Process when !string.IsNullOrWhiteSpace(repairFacts.ProcessName) || repairFacts.ProcessId > 0:
 
                     var appHealthReport = new ApplicationHealthReport(new Uri(repairFacts.ApplicationName), healthInformation);
-                    fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
+                    FabricClientSingleton.HealthManager.ReportHealth(appHealthReport, sendOptions);
                     break;
 
-                case EntityType.Service when repairFacts.ServiceName != null:
+                case EntityType.Service when !string.IsNullOrWhiteSpace(repairFacts.ServiceName):
 
                     var serviceHealthReport = new ServiceHealthReport(new Uri(repairFacts.ServiceName), healthInformation);
-                    fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
+                    FabricClientSingleton.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
                     break;
 
                 case EntityType.StatefulService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
 
                     var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport((Guid)repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
+                    FabricClientSingleton.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
                     break;
 
                 case EntityType.StatelessService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
 
                     var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport((Guid)repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
+                    FabricClientSingleton.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
                     break;
 
                 case EntityType.Partition when repairFacts.PartitionId != Guid.Empty:
                     var partitionHealthReport = new PartitionHealthReport((Guid)repairFacts.PartitionId, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
+                    FabricClientSingleton.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                     break;
 
-                case EntityType.DeployedApplication when repairFacts.ApplicationName != null:
+                case EntityType.DeployedApplication when !string.IsNullOrWhiteSpace(repairFacts.ApplicationName):
 
                     var deployedApplicationHealthReport = new DeployedApplicationHealthReport(new Uri(repairFacts.ApplicationName), repairFacts.NodeName, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
+                    FabricClientSingleton.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
                     break;
 
                 case EntityType.Disk:
                 case EntityType.Machine:
                 case EntityType.Node:
                     var nodeHealthReport = new NodeHealthReport(repairFacts.NodeName, healthInformation);
-                    fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
+                    FabricClientSingleton.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                     break;
             }
 
-            return await VerifyHealthReportExistsAsync(repairFacts, fabricClient, cancellationToken).ConfigureAwait(false);
+            return await VerifyHealthReportExistsAsync(repairFacts, FabricClientSingleton, cancellationToken).ConfigureAwait(false);
         }
 
         private async Task<bool> VerifyHealthReportExistsAsync(RepairFacts repairFacts, FabricClient fabricClient, CancellationToken cancellationToken)
@@ -517,7 +575,7 @@ namespace FabricHealer
                 }
                 catch (Exception e)
                 {
-                    logger.LogError($"Unhandled exception in VerifyHealthReportExistsAsync:{Environment.NewLine}{e}");
+                    _logger.LogError($"Unhandled exception in VerifyHealthReportExistsAsync:{Environment.NewLine}{e}");
                     throw;
                 }
             }
@@ -541,7 +599,7 @@ namespace FabricHealer
                 }
                 catch (Exception e)
                 {
-                    logger.LogError($"Unhandled exception in VerifyHealthReportExistsAsync:{Environment.NewLine}{e}");
+                    _logger.LogError($"Unhandled exception in VerifyHealthReportExistsAsync:{Environment.NewLine}{e}");
                     throw;
                 }
             }
@@ -567,7 +625,7 @@ namespace FabricHealer
                 }
                 catch (Exception e)
                 {
-                    logger.LogError($"Unhandled exception in VerifyHealthReportExistsAsync:{Environment.NewLine}{e}");
+                    _logger.LogError($"Unhandled exception in VerifyHealthReportExistsAsync:{Environment.NewLine}{e}");
                     throw;
                 }
             }
@@ -629,16 +687,16 @@ namespace FabricHealer
 
         private void ClearHealthReportsInternal()
         {
-            if (repairDataHistory?.Count == 0)
+            if (_repairDataHistory?.Count == 0)
             {
                 return;
             }
 
-            for (int i = 0; i < repairDataHistory.Count; i++)
+            for (int i = 0; i < _repairDataHistory.Count; i++)
             {
                 try
                 {
-                    var repairFacts = repairDataHistory.ElementAt(i).Value.RepairData;
+                    var repairFacts = _repairDataHistory.ElementAt(i).Value.RepairData;
                     var healthInformation = new HealthInformation(repairFacts.Source, repairFacts.Property, HealthState.Ok)
                     {
                         Description = $"Clearing existing {repairFacts.EntityType} health report created by FabricHealerProxy",
@@ -652,52 +710,52 @@ namespace FabricHealer
                         case EntityType.Application when repairFacts.ApplicationName != null:
 
                             var appHealthReport = new ApplicationHealthReport(new Uri(repairFacts.ApplicationName), healthInformation);
-                            fabricClient.HealthManager.ReportHealth(appHealthReport, sendOptions);
+                            FabricClientSingleton.HealthManager.ReportHealth(appHealthReport, sendOptions);
                             break;
 
                         case EntityType.Service when repairFacts.ServiceName != null:
 
                             var serviceHealthReport = new ServiceHealthReport(new Uri(repairFacts.ServiceName), healthInformation);
-                            fabricClient.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
+                            FabricClientSingleton.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
                             break;
 
                         case EntityType.StatefulService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
 
                             var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport((Guid)repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
-                            fabricClient.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
+                            FabricClientSingleton.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
                             break;
 
                         case EntityType.StatelessService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
 
                             var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport((Guid)repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
-                            fabricClient.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
+                            FabricClientSingleton.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
                             break;
 
                         case EntityType.Partition when repairFacts.PartitionId != Guid.Empty:
                             var partitionHealthReport = new PartitionHealthReport((Guid)repairFacts.PartitionId, healthInformation);
-                            fabricClient.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
+                            FabricClientSingleton.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                             break;
 
                         case EntityType.DeployedApplication when repairFacts.ApplicationName != null:
 
                             var deployedApplicationHealthReport = new DeployedApplicationHealthReport(new Uri(repairFacts.ApplicationName), repairFacts.NodeName, healthInformation);
-                            fabricClient.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
+                            FabricClientSingleton.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
                             break;
 
                         case EntityType.Disk:
                         case EntityType.Machine:
                         case EntityType.Node:
                             var nodeHealthReport = new NodeHealthReport(repairFacts.NodeName, healthInformation);
-                            fabricClient.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
+                            FabricClientSingleton.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                             break;
                     }
 
-                    if (!VerifyHealthReportExistsAsync(repairFacts, fabricClient, cts.Token).Result)
+                    if (!VerifyHealthReportExistsAsync(repairFacts, FabricClientSingleton, _cts.Token).Result)
                     {
                         throw new HealthReportNotFoundException();
                     }
 
-                    _ = repairDataHistory.TryRemove(repairDataHistory.ElementAt(i).Key, out _);
+                    _ = _repairDataHistory.TryRemove(_repairDataHistory.ElementAt(i).Key, out _);
                     --i;
                 }
                 catch (Exception e) when (e is ArgumentException || e is IndexOutOfRangeException)
@@ -706,7 +764,7 @@ namespace FabricHealer
                 }
                 catch (Exception e)
                 {
-                    logger.LogError($"Unhandled exception in ClearHealthReportsInternal:{Environment.NewLine}{e}");
+                    _logger.LogError($"Unhandled exception in ClearHealthReportsInternal:{Environment.NewLine}{e}");
                     throw;
                 }
             }
@@ -719,27 +777,27 @@ namespace FabricHealer
         /// </summary>
         public void Close()
         {
-            if (repairDataHistory != null)
+            if (_repairDataHistory != null)
             {
                 ClearHealthReports();
-                repairDataHistory?.Clear();
-                repairDataHistory = null;
+                _repairDataHistory?.Clear();
+                _repairDataHistory = null;
             }
 
-            if (cts != null)
+            if (_cts != null)
             {
-                cts.Dispose();
-                cts = null;
+                _cts.Dispose();
+                _cts = null;
             }
 
-            if (tokenRegistration != null)
+            if (_tokenRegistration != null)
             {
-                tokenRegistration.Dispose();
+                _tokenRegistration.Dispose();
             }
 
-            if (instance != null)
+            if (_instance != null)
             {
-                instance = null;
+                _instance = null;
             }
         }
     }
