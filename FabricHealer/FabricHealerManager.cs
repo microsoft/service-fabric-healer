@@ -875,7 +875,7 @@ namespace FabricHealer
                         }
                     }
 
-                    repairRules = GetRepairRulesForSupportedObserver(RepairConstants.FabricSystemObserver);
+                    repairRules = GetRepairRulesForTelemetryData(repairData);
 
                     if (repairRules == null || repairRules?.Count == 0)
                     {
@@ -1430,7 +1430,7 @@ namespace FabricHealer
                     else
                     {
                         // Nothing to do here.
-                        if (repairData.EntityType == EntityType.Invalid)
+                        if (repairData.EntityType == EntityType.Unknown)
                         {
                             continue;
                         }
@@ -1880,9 +1880,9 @@ namespace FabricHealer
         }
 
         /// <summary>
-        /// Get a list of rules that correspond to the supplied EntityType.
+        /// Get a list of rules based on facts held in a TelemetryData instance.
         /// </summary>
-        /// <param name="repairData">Instance of TelemetryData that FabricHealer deserialized from a Health Event Description.</param>
+        /// <param name="repairData">Instance of TelemetryData that FabricHealer created itself or deserialized from a Health Event Description.</param>
         /// <returns></returns>
         private List<string> GetRepairRulesForTelemetryData(TelemetryData repairData)
         {
@@ -1890,6 +1890,10 @@ namespace FabricHealer
 
             switch (repairData.EntityType)
             {
+                case EntityType.Unknown:
+
+                    return null;
+
                 // App/Service repair (user).
                 case EntityType.Application when repairData.ApplicationName.ToLower() != RepairConstants.SystemAppName.ToLower():
                 case EntityType.Service:
@@ -1899,8 +1903,8 @@ namespace FabricHealer
                     break;
 
                 // System service process repair.
-                case EntityType.Application when repairData.ProcessName != null:
-                case EntityType.Process:
+                case EntityType.Application when repairData.ApplicationName.ToLower() == RepairConstants.SystemAppName.ToLower() && repairData.ProcessName != null:
+                case EntityType.Process when repairData.ProcessName != null || repairData.ProcessId > 0:
                     repairPolicySectionName = RepairConstants.SystemServiceRepairPolicySectionName;
                     break;
 
