@@ -50,6 +50,7 @@ namespace FabricHealer.Repair
 
         // Mitigate Argument names.
         public const string AppName = "AppName";
+        public const string EntityType = "EntityType";
         public const string ServiceName = "ServiceName";
         public const string ServiceKind = "ServiceKind";
         public const string NodeName = "NodeName";

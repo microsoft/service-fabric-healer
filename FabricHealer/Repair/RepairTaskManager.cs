@@ -171,6 +171,7 @@ namespace FabricHealer.Repair
             // Think of these as facts from FabricObserver.
             compoundTerm.AddArgument(new Constant(repairData.ApplicationName), RepairConstants.AppName);
             compoundTerm.AddArgument(new Constant(repairData.Code), RepairConstants.ErrorCode);
+            compoundTerm.AddArgument(new Constant(repairData.EntityType.ToString()), RepairConstants.EntityType);
             compoundTerm.AddArgument(new Constant(repairData.HealthState.ToString()), RepairConstants.HealthState);
             compoundTerm.AddArgument(new Constant(repairData.Metric), RepairConstants.MetricName);
             compoundTerm.AddArgument(new Constant(Convert.ToInt64(repairData.Value)), RepairConstants.MetricValue);
@@ -813,12 +814,29 @@ namespace FabricHealer.Repair
             }
 
             // What was the target (a node, app, replica, etc..)?
-            string repairTarget;
+            string repairTarget = null;
 
             switch (repairData.EntityType)
             {
-                // FO..
+                // Try and handle the case where EntityType is not specified or is set to Invalid for some reason.
+                case EntityType.Invalid:
+
+                    if (!string.IsNullOrWhiteSpace(repairData.ServiceName))
+                    {
+                        goto case EntityType.Service;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(repairData.ApplicationName))
+                    {
+                        goto case EntityType.Application;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(repairData.NodeName))
+                    {
+                        goto case EntityType.Node;
+                    }
+                    break;
+
                 case EntityType.Application:
+
                     repairTarget = $"{repairData.ApplicationName} on node {repairData.NodeName}";
 
                     if (repairData.ApplicationName == RepairConstants.SystemAppName && !string.IsNullOrWhiteSpace(repairData.ProcessName))
@@ -828,34 +846,42 @@ namespace FabricHealer.Repair
                     break;
 
                 case EntityType.Disk:
+
                     repairTarget = $"{(repairData.RepairPolicy as DiskRepairPolicy)?.FolderPath} on machine hosting Fabric node {repairData.NodeName}";
                     break;
 
                 case EntityType.Service:
+
                     repairTarget = $"{repairData.ServiceName} on node {repairData.NodeName}";
                     break;
 
                 case EntityType.Process:
+
                     repairTarget = $"{repairData.ProcessName} on node {repairData.NodeName}";
                     break;
 
                 case EntityType.Node:
+
                     repairTarget = $"{repairData.NodeName}";
                     break;
 
                 case EntityType.Replica:
+
                     repairTarget = $"{repairData.ReplicaId}";
                     break;
 
                 case EntityType.Partition:
+
                     repairTarget = $"{repairData.PartitionId}";
                     break;
 
                 case EntityType.Machine:
+
                     repairTarget = $"Machine hosting Fabric node {repairData.NodeName}";
                     break;
 
                 default:
+
                     throw new ArgumentException("Unknown repair target type.");
             }
 

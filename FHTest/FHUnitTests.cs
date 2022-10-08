@@ -170,6 +170,7 @@ namespace FHTest
         }
 
         // This test ensures your test rules housed in testrules_wellformed file or in fact correct.
+        // Ensures that not specifying EntityType also works given the facts that are provided in the TelemetryData instance.
         [TestMethod]
         public async Task TestGuanLogicRule_GoodRule_QueryInitialized()
         {
@@ -238,6 +239,7 @@ namespace FHTest
             var repairData = new TelemetryData
             {
                 ApplicationName = "fabric:/test0",
+                EntityType = FabricHealer.Utilities.Telemetry.EntityType.Service,
                 NodeName = "TEST_0",
                 Metric = "Memory",
                 HealthState = HealthState.Warning,
@@ -308,6 +310,7 @@ namespace FHTest
             // These args hold the related values supplied by FO and are available anywhere Mitigate is used as a rule head.
             compoundTerm.AddArgument(new Constant(repairData.ApplicationName), RepairConstants.AppName);
             compoundTerm.AddArgument(new Constant(repairData.Code), RepairConstants.ErrorCode);
+            compoundTerm.AddArgument(new Constant(repairData.EntityType), RepairConstants.EntityType);
             compoundTerm.AddArgument(new Constant(repairData.HealthState.ToString()), RepairConstants.HealthState);
             compoundTerm.AddArgument(new Constant(repairData.Metric), RepairConstants.MetricName);
             compoundTerm.AddArgument(new Constant(Convert.ToInt64(repairData.Value)), RepairConstants.MetricValue);
@@ -600,9 +603,7 @@ namespace FHTest
 
             await Assert.ThrowsExceptionAsync<NodeNotFoundException>(async () => 
             { 
-                
-                    await FabricHealerProxy.Instance.RepairEntityAsync(repairFacts, token); 
-                
+                await FabricHealerProxy.Instance.RepairEntityAsync(repairFacts, token); 
             });
         }
 

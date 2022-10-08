@@ -1429,6 +1429,12 @@ namespace FabricHealer
                     }
                     else
                     {
+                        // Nothing to do here.
+                        if (repairData.EntityType == EntityType.Invalid)
+                        {
+                            continue;
+                        }
+
                         // Disk?
                         if (repairData.EntityType == EntityType.Disk && ConfigSettings.EnableDiskRepair)
                         {
