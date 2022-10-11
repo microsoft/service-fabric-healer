@@ -13,7 +13,6 @@ namespace FabricHealer.Repair.Guan
 {
     public class GetRepairHistoryPredicateType : PredicateType
     {
-        private static RepairTaskManager RepairTaskManager;
         private static TelemetryData RepairData;
         private static GetRepairHistoryPredicateType Instance;
 
@@ -27,24 +26,39 @@ namespace FabricHealer.Repair.Guan
 
             protected override async Task<Term> GetNextTermAsync()
             {
-                long repairCount = 0;
-                var timeWindow = (TimeSpan)Input.Arguments[1].Value.GetEffectiveTerm().GetObjectValue();
+                long repairCount;
+                TimeSpan timeWindow = TimeSpan.MinValue;
+                string repairAction = null;
+                long args = Input.Arguments.Count;
+
+                for (int i = 1; i < args; i++)
+                {
+                    var typeString = Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name;
+
+                    switch (typeString)
+                    {
+                        case "TimeSpan":
+                            timeWindow = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
+                            break;
+
+                        case "String":
+                            repairAction = Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue();
+                            break;
+
+                        default:
+                            throw new GuanException(
+                                $"GetRepairHistoryPredicateType failure. Unsupported argument type: {Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name}");
+                    }
+                }
 
                 if (timeWindow > TimeSpan.MinValue)
                 {
-                    repairCount = await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(timeWindow, RepairData, FabricHealerManager.Token);
+                    repairCount =
+                        await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(timeWindow, RepairData, FabricHealerManager.Token, repairAction);
                 }
                 else
                 {
-                    string message = 
-                        "You must supply a valid TimeSpan string for TimeWindow argument of GetRepairHistoryPredicate. " +
-                        "Default result has been supplied (0).";
-
-                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            $"GetRepairHistoryPredicate::{RepairData.RepairPolicy.RepairId}",
-                            message,
-                            FabricHealerManager.Token);
+                    throw new GuanException("You must supply a valid TimeSpan string for TimeWindow argument of GetRepairHistoryPredicate.");
                 }
 
                 var result = new CompoundTerm(this.Input.Functor);
@@ -53,11 +67,9 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static GetRepairHistoryPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
+        public static GetRepairHistoryPredicateType Singleton(string name, TelemetryData repairData)
         {
-            RepairTaskManager = repairTaskManager;
             RepairData = repairData;
-
             return Instance ??= new GetRepairHistoryPredicateType(name);
         }
 

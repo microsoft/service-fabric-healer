@@ -136,11 +136,12 @@ namespace FabricHealer.Repair
 
             // Add external helper predicates.
             functorTable.Add(CheckFolderSizePredicateType.Singleton(RepairConstants.CheckFolderSize, this, repairData));
-            functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, this, repairData));
+            functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairData));
             functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, this, repairData));
-            functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, this, repairData));
-            functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage, this));
-            functorTable.Add(GetEntityHealthStateDurationPredicateType.Singleton(RepairConstants.GetEntityHealthStateDuration, this, repairData));
+            functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, repairData));
+            functorTable.Add(CheckInsideScheduleIntervalPredicateType.Singleton(RepairConstants.CheckInsideScheduleInterval, repairData));
+            functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage));
+            functorTable.Add(GetEntityHealthStateDurationPredicateType.Singleton(RepairConstants.GetEntityHealthStateDuration, repairData));
 
             // Add external repair predicates.
             functorTable.Add(DeleteFilesPredicateType.Singleton(RepairConstants.DeleteFiles, this, repairData));
@@ -250,9 +251,9 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            // Make sure there is not already a repair job executing reboot repair for target node.
+            // Make sure there is not already a repair job executing machine-level repair for target node.
             var isRepairAlreadyInProgress =
-                    await repairTaskEngine.IsRepairInProgressOrMaxRepairsReachedAsync(executorName, repairData, cancellationToken);
+                    await repairTaskEngine.IsRepairInProgressAsync(executorName, repairData, cancellationToken);
 
             if (isRepairAlreadyInProgress)
             {
@@ -439,7 +440,7 @@ namespace FabricHealer.Repair
             await Task.Delay(new Random().Next(500, 1500), cancellationToken);
 
             // Has the repair already been scheduled by a different FH instance?
-            if (await repairTaskEngine.IsRepairInProgressOrMaxRepairsReachedAsync(RepairTaskEngine.FHTaskIdPrefix, repairData, cancellationToken))
+            if (await repairTaskEngine.IsRepairInProgressAsync(RepairTaskEngine.FHTaskIdPrefix, repairData, cancellationToken))
             {
                 return null;
             }
@@ -506,12 +507,12 @@ namespace FabricHealer.Repair
             var repairTask = await FabricRepairTasks.CreateRepairTaskAsync(
                                     repairData,
                                     executorData,
-                                    RepairTaskEngine.FabricHealerExecutorName,
+                                    RepairConstants.FabricHealer,
                                     cancellationToken);
             return repairTask;
         }
 
-        public async Task<bool> ExecuteFabricHealerRmRepairTaskAsync(RepairTask repairTask, TelemetryData repairData, CancellationToken cancellationToken)
+        public async Task<bool> ExecuteFabricHealerRepairTaskAsync(RepairTask repairTask, TelemetryData repairData, CancellationToken cancellationToken)
         {
             if (repairTask == null)
             {
@@ -523,7 +524,7 @@ namespace FabricHealer.Repair
             bool isApproved = false;
 
             var repairs = 
-                await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, cancellationToken);
+                await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, cancellationToken);
 
             if (repairs.All(repair => repair.TaskId != repairTask.TaskId))
             {
@@ -548,7 +549,7 @@ namespace FabricHealer.Repair
 
             while (approvalTimeout >= stopWatch.Elapsed)
             {
-                repairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FabricHealerExecutorName, cancellationToken);
+                repairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, cancellationToken);
 
                 // Was repair cancelled (or cancellation requested) by another FH instance for some reason? Could be due to FH going down or a new deployment or a bug (fix it...).
                 if (repairs.Any(repair => repair.TaskId == repairTask.TaskId
@@ -948,14 +949,8 @@ namespace FabricHealer.Repair
                             : TimeSpan.FromSeconds(5);
                         break;
 
-                    case EntityType.Machine:
-                        maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
-                            ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                            : TimeSpan.FromMinutes(60);
-                        break;
-
                     default:
-                        throw new ArgumentException("Unknown repair target type.");
+                        throw new ArgumentException("Unsupported repair target type.");
                 }
 
                 // Check healthstate of repair target to see if the repair worked.

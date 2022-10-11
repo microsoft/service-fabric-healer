@@ -47,7 +47,8 @@ namespace FabricHealer.Repair.Guan
                             break;
 
                         default:
-                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetObjectValue().GetType()}");
+                            throw new GuanException(
+                                $"RestartFabricNodePredicateType failure. Unsupported argument type: {Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name}");
                     }
                 }
 
@@ -60,7 +61,7 @@ namespace FabricHealer.Repair.Guan
                     // Historical info, like what step the healer was in when the node went down, is contained in the
                     // executordata instance.
                     repairTask = await RepairTaskEngine.ScheduleFabricHealerRepairTask(RepairExecutorData, FabricHealerManager.Token);
-                    success = await RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                    success = await RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
                                         repairTask,
                                         RepairData,
                                         FabricHealerManager.Token);
@@ -70,8 +71,8 @@ namespace FabricHealer.Repair.Guan
                 // Block attempts to create node-level repair tasks if one is already running in the cluster.
                 var repairTaskEngine = new RepairTaskEngine();
                 var isNodeRepairAlreadyInProgress =
-                    await repairTaskEngine.IsRepairInProgressOrMaxRepairsReachedAsync(
-                            RepairTaskEngine.FabricHealerExecutorName,
+                    await repairTaskEngine.IsRepairInProgressAsync(
+                            RepairConstants.FabricHealer,
                             RepairData,
                             FabricHealerManager.Token);
 
@@ -103,7 +104,7 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to execute custom repair (FH executor).
                 success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                                    () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
                                             repairTask,
                                             RepairData,
                                             FabricHealerManager.Token),

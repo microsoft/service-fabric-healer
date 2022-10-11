@@ -20,8 +20,6 @@ namespace FabricHealer.Repair
     {
         public const string FHTaskIdPrefix = "FH";
         public const string AzureTaskIdPrefix = "Azure";
-        public const string FabricHealerExecutorName = "FabricHealer";
-        public const string InfrastructureServiceName = "fabric:/System/InfrastructureService";
 
         /// <summary>
         /// Schedules a repair task where FabricHealer is the executor.
@@ -36,7 +34,7 @@ namespace FabricHealer.Repair
                 return null;
             }
 
-            var repairs = await GetFHRepairTasksCurrentlyProcessingAsync(FabricHealerExecutorName, token);
+            var repairs = await GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, token);
 
             if (repairs?.Count > 0)
             {
@@ -84,7 +82,7 @@ namespace FabricHealer.Repair
                 Impact = nodeRepairImpact,
                 Description = $"FabricHealer executing repair {repair} on node {executorData.RepairData.NodeName}",
                 State = RepairTaskState.Preparing,
-                Executor = FabricHealerExecutorName,
+                Executor = RepairConstants.FabricHealer,
                 ExecutorData = JsonSerializationUtility.TrySerializeObject(executorData, out string exData) ? exData : null,
                 PerformPreparingHealthCheck = doHealthChecks,
                 PerformRestoringHealthCheck = doHealthChecks,
@@ -143,10 +141,8 @@ namespace FabricHealer.Repair
                 return null;
             }
 
-            string taskId = $"{FHTaskIdPrefix}/{repairData.RepairPolicy.InfrastructureRepairName}/{repairData.NodeType}/{repairData.NodeName}";
-
-            bool isRepairInProgress =
-                await IsRepairInProgressOrMaxRepairsReachedAsync($"{RepairConstants.InfrastructureServiceName}/{repairData.NodeType}", repairData, cancellationToken);
+            string taskId = $"{FHTaskIdPrefix}/{Guid.NewGuid()}/{repairData.RepairPolicy.InfrastructureRepairName}/{repairData.NodeName}";
+            bool isRepairInProgress = await IsRepairInProgressAsync(executorName, repairData, cancellationToken);
 
             if (isRepairInProgress)
             {
@@ -180,10 +176,10 @@ namespace FabricHealer.Repair
         /// <param name="token">CancellationToken.</param>
         /// <param name="maxConcurrentRepairs">Optional: Number of max concurrent repairs for the entity type specified in repairData. Default is 0 which means no concurrent repairs.</param>
         /// <returns></returns>
-        public async Task<bool> IsRepairInProgressOrMaxRepairsReachedAsync(string executorName, TelemetryData repairData, CancellationToken token)
+        public async Task<bool> IsRepairInProgressAsync(string executorName, TelemetryData repairData, CancellationToken token)
         {
             // All RepairTasks are prefixed with FH, regardless of repair target type (VM/Machine, Fabric node, system service process, code package, replica).
-            // For VM-level repairs, RM will create a new task for IS that replaces FH executor data with IS job info.
+            // For Machine-level repairs, RM will create a new task for IS that replaces FH executor data with IS job info.
             RepairTaskList repairTasksInProgress =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             FHTaskIdPrefix,
@@ -197,18 +193,10 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            // Throttling machine level repairs.
-            if (executorName == $"{InfrastructureServiceName}/{repairData.NodeType}" &&
-                repairData.RepairPolicy.MaxConcurrentRepairs > 0 &&
-                repairTasksInProgress.Count(r => r.Executor == executorName) >= repairData.RepairPolicy.MaxConcurrentRepairs)
-            {
-                return true;
-            }
-
             foreach (var repair in repairTasksInProgress)
             {
-                // This check is to see if there are any FH-as-executor repairs in flight.
-                if (executorName == FabricHealerExecutorName)
+                // FH is executor. Repair Task's ExecutorData field will always be a JSON-serialized instance of RepairExecutorData.
+                if (executorName == RepairConstants.FabricHealer)
                 {
                     if (!JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData executorData))
                     {
@@ -226,28 +214,32 @@ namespace FabricHealer.Repair
                         return true;
                     }
                 }
-                else if (repair.Executor == $"{InfrastructureServiceName}/{repairData.NodeType}")
+                // InfrastructureService is executor. The related Repair Task's Description field is always the custom FH Repair ID.
+                else if (!string.IsNullOrWhiteSpace(repairData.RepairPolicy.InfrastructureRepairName) && repair.Description == repairData.RepairPolicy.RepairId)
                 {
-                    // This would block rescheduling any VM level operation (reboot) that is already in flight.
-                    // NOTE: For Infrastructure-level repairs (IS is executor), unique id is stored in the repair task's Description property.
-                    if (repair.Description == repairData.RepairPolicy.RepairId)
-                    {
-                        return true;
-                    }
-                }
-                else
-                {
-                    if (repair.Impact is NodeRepairImpactDescription impact)
-                    {
-                        if (impact.Kind == RepairImpactKind.Node && impact.ImpactedNodes.Any(n => n.NodeName == repairData.NodeName))
-                        {
-                            return true;
-                        }
-                    }
+                    return true;
                 }
             }
 
             return false;
+        }
+
+        public async Task<int> GetOutstandingRepairCount(string executorName, CancellationToken token)
+        {
+            RepairTaskList repairTasksInProgress =
+                    await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                            FHTaskIdPrefix,
+                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                            executorName,
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            token);
+
+            if (repairTasksInProgress == null || repairTasksInProgress.Count == 0)
+            {
+                return 0;
+            }
+
+            return repairTasksInProgress.Count(r => r.Executor == executorName);
         }
     }
 }

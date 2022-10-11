@@ -15,15 +15,17 @@ namespace FabricHealer.Repair
     public enum RepairActionType
     {
         DeleteFiles,
+        FullReimage,
+        HostRepaveData,
+        HostReboot,
+        RebootMachine,
+        ReimageOS,
         RemoveFabricNodeState,
         RemoveReplica,
         RepairPartition,
         RestartCodePackage,
         RestartFabricNode,
         RestartProcess,
-        RestartReplica,
-        RebootMachine,
-        ReimageDisk,
-        ReimageOS
+        RestartReplica
     }
 }

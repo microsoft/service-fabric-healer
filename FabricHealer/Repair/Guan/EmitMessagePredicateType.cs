@@ -16,7 +16,6 @@ namespace FabricHealer.Repair.Guan
     public class EmitMessagePredicateType : PredicateType
     {
         private static EmitMessagePredicateType Instance;
-        private static RepairTaskManager RepairTaskManager;
 
         private class Resolver : BooleanPredicateResolver
         {
@@ -70,10 +69,8 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static EmitMessagePredicateType Singleton(string name, RepairTaskManager repairTaskManager)
+        public static EmitMessagePredicateType Singleton(string name)
         {
-            RepairTaskManager = repairTaskManager;
-
             return Instance ??= new EmitMessagePredicateType(name);
         }
 

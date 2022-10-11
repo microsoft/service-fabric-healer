@@ -11,6 +11,7 @@ using System.Fabric.Health;
 using System.Fabric.Query;
 using System.Fabric.Repair;
 using System.Linq;
+using System.Security.Policy;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities;
@@ -148,8 +149,7 @@ namespace FabricHealer.Repair
             var repairTaskEngine = new RepairTaskEngine();
             RepairActionType repairAction = repairData.RepairPolicy.RepairAction;
             RepairTask repairTask;
-            await Task.Delay(new Random().Next(100, 1500), token);
-            bool isRepairInProgress = await repairTaskEngine.IsRepairInProgressOrMaxRepairsReachedAsync(executorName, repairData, token);
+            bool isRepairInProgress = await repairTaskEngine.IsRepairInProgressAsync(executorName, repairData, token);
 
             if (isRepairInProgress)
             {
@@ -158,13 +158,17 @@ namespace FabricHealer.Repair
 
             switch (repairAction)
             {
+                // IS
                 case RepairActionType.RebootMachine:
-                case RepairActionType.ReimageDisk:
                 case RepairActionType.ReimageOS:
+                case RepairActionType.HostReboot:
+                case RepairActionType.HostRepaveData:
+                case RepairActionType.FullReimage:
 
                     repairTask = await repairTaskEngine.ScheduleInfrastructureRepairTaskAsync(repairData, executorName, token);
                     break;
-
+                
+                // FH
                 case RepairActionType.DeleteFiles:
                 case RepairActionType.RestartCodePackage:
                 case RepairActionType.RestartFabricNode:
@@ -200,12 +204,10 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            await Task.Delay(new Random().Next(100, 1500), token);
-
             try
             {
                 var isRepairAlreadyInProgress =
-                    await repairTaskEngine.IsRepairInProgressOrMaxRepairsReachedAsync(repairTask.Executor, repairData, token);
+                    await repairTaskEngine.IsRepairInProgressAsync(repairTask.Executor, repairData, token);
 
                 if (!isRepairAlreadyInProgress)
                 {
@@ -239,9 +241,9 @@ namespace FabricHealer.Repair
             repairTask.ResultStatus = repairResult;
 
             return await FabricHealerManager.FabricClientSingleton.RepairManager.UpdateRepairExecutionStateAsync(
-                                                          repairTask,
-                                                          FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                          token);
+                            repairTask,
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            token);
         }
 
         public static async Task<IEnumerable<Service>> GetInfrastructureServiceInstancesAsync(CancellationToken cancellationToken)
@@ -262,22 +264,19 @@ namespace FabricHealer.Repair
             return infraInstances;
         }
 
-        // TODO: Work on this.. -CT
         public static async Task<bool> IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
                                          TimeSpan interval,
                                          TelemetryData repairData,
                                          string executorName,
                                          CancellationToken cancellationToken)
         {
-
-            // Repairs where specified executorName executor.
             var allRecentFHRepairTasksCompleted =
-                            await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                                    RepairTaskEngine.FHTaskIdPrefix,
-                                    RepairTaskStateFilter.Completed,
-                                    executorName,
-                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                    cancellationToken);
+                    await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                            RepairTaskEngine.FHTaskIdPrefix,
+                            RepairTaskStateFilter.Completed,
+                            executorName,
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            cancellationToken);
 
             if (allRecentFHRepairTasksCompleted == null || allRecentFHRepairTasksCompleted.Count == 0)
             {
@@ -288,41 +287,24 @@ namespace FabricHealer.Repair
 
             if (executorName == RepairConstants.FabricHealer)
             {
-                // There could be several repairs of this type for the same repair target in RM's db.
-                if (orderedRepairList.Any(r => r.ExecutorData.Contains(repairData.RepairPolicy.RepairId)))
+                var completedFHRepairs = orderedRepairList.Where(
+                    r => r.ResultStatus == RepairTaskResult.Succeeded && r.ExecutorData.Contains(repairData.RepairPolicy.RepairId));
+
+                foreach (var repair in completedFHRepairs)
                 {
-                    foreach (var repair in orderedRepairList)
+                    if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= interval)
                     {
-                        if (repair.ExecutorData.Contains(repairData.RepairPolicy.RepairId))
-                        {
-                            // Completed aborted/cancelled repair tasks should not block repairs if they are inside run interval.
-                            return repair.CompletedTimestamp != null &&
-                                    repair.Flags != RepairTaskFlags.AbortRequested &&
-                                    repair.Flags != RepairTaskFlags.CancelRequested &&
-                                    DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= interval;
-                        }
+                        return true;
                     }
                 }
             }
-            else
+            else // Infra.
             {
-                // VM repairs - IS is executor, ExecutorData is supplied by IS. Custom FH repair id supplied as repair Description.
-                foreach (var repair in orderedRepairList.Where(r => r.ResultStatus == RepairTaskResult.Succeeded))
+                var completedInfraRepairs = orderedRepairList.Where(r => r.ResultStatus == RepairTaskResult.Succeeded && r.Description == repairData.RepairPolicy.RepairId);
+                
+                foreach (var repair in completedInfraRepairs)
                 {
-                    if (repair.Executor != $"{RepairConstants.InfrastructureServiceName}/{repairData.NodeType}" ||
-                        repair.Description != repairData.RepairPolicy.RepairId)
-                    {
-                        continue;
-                    }
-
-                    if (!(repair.CompletedTimestamp is { }))
-                    {
-                        return false;
-                    }
-
-                    // Completed aborted/cancelled repair tasks should not block repairs if they are inside run interval.
-                    if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= interval
-                        && repair.Flags != RepairTaskFlags.CancelRequested && repair.Flags != RepairTaskFlags.AbortRequested)
+                    if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= interval)
                     {
                         return true;
                     }
@@ -332,10 +314,47 @@ namespace FabricHealer.Repair
             return false;
         }
 
+        public static async Task<bool> IsLastScheduledRepairJobWithinTimeRangeAsync(
+                                         TimeSpan interval,
+                                         string executorName,
+                                         CancellationToken cancellationToken)
+        {
+            var allCurrentFHRepairTasks =
+                            await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                                    RepairTaskEngine.FHTaskIdPrefix,
+                                    RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                                    executorName,
+                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                    cancellationToken);
+
+            if (allCurrentFHRepairTasks == null || allCurrentFHRepairTasks.Count == 0)
+            {
+                return false;
+            }
+
+            var orderedRepairList = allCurrentFHRepairTasks.OrderByDescending(o => o.CreatedTimestamp).ToList();
+
+            foreach (var repair in orderedRepairList)
+            {
+                if (repair.CreatedTimestamp == null)
+                {
+                    continue;
+                }
+
+                if (repair.CreatedTimestamp.HasValue && DateTime.UtcNow.Subtract(repair.CreatedTimestamp.Value) <= interval)
+                {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
         public static async Task<int> GetCompletedRepairCountWithinTimeRangeAsync(
                                          TimeSpan timeWindow,
                                          TelemetryData repairData,
-                                         CancellationToken cancellationToken)
+                                         CancellationToken cancellationToken,
+                                         string repairAction = null)
         {
             var allRecentFHRepairTasksCompleted =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
@@ -356,12 +375,17 @@ namespace FabricHealer.Repair
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
+                if (repair.CompletedTimestamp == null || !repair.CompletedTimestamp.HasValue)
+                {
+                    continue;
+                }
+
                 // Non-Machine repairs (FH is executor, custom repair ExecutorData supplied by FH.)
-                if (repair.Executor == RepairTaskEngine.FabricHealerExecutorName)
+                if (repair.Executor == RepairConstants.FabricHealer)
                 {
                     var fhExecutorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
-                    if (fhExecutorData == null || fhExecutorData.RepairData?.RepairPolicy == null || repair.CompletedTimestamp == null || !repair.CompletedTimestamp.HasValue)
+                    if (fhExecutorData == null || fhExecutorData.RepairData?.RepairPolicy == null)
                     {
                         continue;
                     }
@@ -379,19 +403,21 @@ namespace FabricHealer.Repair
                     }
                 }
                 // Machine repairs (IS is executor, ExecutorData supplied by IS. Custom FH repair id supplied as repair Description.)
-                else if (repair.Executor == $"{RepairTaskEngine.InfrastructureServiceName}/{repairData.NodeType}" && repair.Description == repairData.RepairPolicy.RepairId)
+                else if (repair.Executor == $"{RepairConstants.InfrastructureServiceName}/{repairData.NodeType}")
                 {
-                    if (repair.CompletedTimestamp == null || !repair.CompletedTimestamp.HasValue)
+                    if (repairData.RepairPolicy.RepairId != repair.Description)
                     {
                         continue;
                     }
 
-                    // Note: Completed aborted/cancelled repair tasks should not block repairs if they are inside max time window
-                    // for a repair cycle (of n repair attempts at a run interval of y)
-                    if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= timeWindow
-                        && repair.Flags != RepairTaskFlags.CancelRequested && repair.Flags != RepairTaskFlags.AbortRequested)
+                    // Repair action string supplied.
+                    if (!string.IsNullOrWhiteSpace(repairAction) && repairData.RepairPolicy.InfrastructureRepairName == repairAction)
                     {
-                        count++;
+                        if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= timeWindow
+                            && repair.Flags != RepairTaskFlags.CancelRequested && repair.Flags != RepairTaskFlags.AbortRequested)
+                        {
+                            count++;
+                        }
                     }
                 }
             }

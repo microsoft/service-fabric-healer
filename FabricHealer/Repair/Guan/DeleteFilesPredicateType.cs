@@ -81,7 +81,7 @@ namespace FabricHealer.Repair.Guan
                             break;
 
                         case "searchpattern":
-                            searchPattern = Input.Arguments[i].Value.GetStringValue();
+                            searchPattern = Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue();
                             break;
 
                         default:
@@ -137,7 +137,7 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to execute repair (FH executor does this work and manages repair state through RM, as always).
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                                        () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
                                                 repairTask,
                                                 RepairData,
                                                 FabricHealerManager.Token),

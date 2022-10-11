@@ -36,15 +36,16 @@ namespace FabricHealer.Repair.Guan
                     switch (typeString)
                     {
                         case "TimeSpan":
-                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         case "Boolean":
-                            RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         default:
-                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetObjectValue().GetType()}");
+                            throw new GuanException(
+                                $"RestartReplicaPredicateType failure. Unsupported argument type: {Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name}");
                     }
                 }
 
@@ -62,7 +63,7 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to execute custom repair (FH executor).
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                                        () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
                                                 repairTask,
                                                 RepairData,
                                                 FabricHealerManager.Token),

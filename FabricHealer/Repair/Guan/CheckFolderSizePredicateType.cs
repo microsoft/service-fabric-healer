@@ -17,7 +17,6 @@ namespace FabricHealer.Repair.Guan
     public class CheckFolderSizePredicateType : PredicateType
     {
         private static CheckFolderSizePredicateType Instance;
-        private static RepairTaskManager RepairTaskManager;
         private static TelemetryData RepairData;
 
         private class Resolver : BooleanPredicateResolver
@@ -148,8 +147,6 @@ namespace FabricHealer.Repair.Guan
         public static CheckFolderSizePredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
         {
             RepairData = repairData;
-            RepairTaskManager = repairTaskManager;
-
             return Instance ??= new CheckFolderSizePredicateType(name);
         }
 

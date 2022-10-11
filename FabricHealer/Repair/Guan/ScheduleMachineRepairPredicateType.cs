@@ -48,61 +48,40 @@ namespace FabricHealer.Repair.Guan
                     switch (typeString)
                     {
                         case "String":
-                            // Repair action name is required.
-                            string repairAction = (string)Input.Arguments[0].Value.GetObjectValue();
-
-                            /*
-                                public const string SystemReboot = "System.Reboot";
-                                public const string SystemReimageOS = "System.ReimageOS";
-                                public const string SystemFullReimage = "System.FullReimage";
-                                public const string SystemHostReboot = "System.Azure.HostReboot";
-                                public const string SystemHostRepaveData = "System.Azure.HostRepaveData";
-                            */
-
-                            // Machine Repair type (for FabricHealer). 
-                            RepairData.RepairPolicy.RepairAction = repairAction switch
-                            {
-                                RepairConstants.SystemReboot => RepairActionType.RebootMachine,
-                                RepairConstants.SystemHostReboot => RepairActionType.RebootMachine,
-                                RepairConstants.SystemReimageOS => RepairActionType.ReimageOS,
-                                RepairConstants.SystemFullReimage => RepairActionType.ReimageOS,
-                                RepairConstants.SystemHostRepaveData => RepairActionType.ReimageOS,
-
-                                _ => throw new GuanException($"Unrecognized repair action name: {repairAction}. Repair actions are case sensitive."),
-                            };
-
-                            // Infrastructure Repair Action string (for RepairManager service).
-                            RepairData.RepairPolicy.InfrastructureRepairName = repairAction;
+                            string repairAction = (string)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
+                            SetPolicyRepairAction(repairAction);
                             break;
 
                         case "TimeSpan":
-                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         case "Boolean":
-                            RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
-
+                        // Guan logic defaults to long for numeric types.
                         case "Int64":
-                            RepairData.RepairPolicy.MaxConcurrentRepairs = (long)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.MaxConcurrentRepairs = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         default:
-                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetObjectValue().GetType()}");
+                            throw new GuanException(
+                                "Failure in ScheduleMachineRepairPredicateType. Unsupported argument type specified: " +
+                                $"{Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name}{Environment.NewLine}" +
+                                $"Only String, TimeSpan, Boolean and Int32/64 argument types are supported by this predicate.");
                     }
                 }
 
                 bool isRepairAlreadyInProgress =
-                        await repairTaskEngine.IsRepairInProgressOrMaxRepairsReachedAsync(
-                                $"{RepairTaskEngine.InfrastructureServiceName}/{RepairData.NodeType}",
+                        await repairTaskEngine.IsRepairInProgressAsync(
+                                $"{RepairConstants.InfrastructureServiceName}/{RepairData.NodeType}",
                                 RepairData,
                                 FabricHealerManager.Token);
 
                 if (isRepairAlreadyInProgress)
                 {
-                    string message = $"Machine Repair {RepairData.RepairPolicy.RepairId} is already in progress" +
-                                     $"{(RepairData.RepairPolicy.MaxConcurrentRepairs > 0 ? $" or the number of outstanding machine repairs is currently {RepairData.RepairPolicy.MaxConcurrentRepairs}" : "")}. " +
-                                     $"Will not attempt repair at this time.";
+                    string message = 
+                        $"Machine Repair is already in progress for node {RepairData.NodeName}. Will not schedule machine repair at this time.";
 
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
@@ -113,23 +92,18 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                bool isWithinPostProbationPeriod =
-                       await FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
-                           RepairData.RepairPolicy.MaxTimePostRepairHealthCheck,
-                           RepairData,
-                           $"{RepairConstants.InfrastructureServiceName}/{RepairData.NodeType}",
-                           FabricHealerManager.Token);
+                int outstandingRepairCount = 
+                    await repairTaskEngine.GetOutstandingRepairCount(
+                        executorName: $"{RepairConstants.InfrastructureServiceName}/{RepairData.NodeType}", FabricHealerManager.Token);
 
-                if (isWithinPostProbationPeriod)
+                if (RepairData.RepairPolicy.MaxConcurrentRepairs > 0 && outstandingRepairCount >= RepairData.RepairPolicy.MaxConcurrentRepairs)
                 {
-                    string message = $"{RepairData.NodeName} is currently in post-repair probation ({RepairData.RepairPolicy.MaxTimePostRepairHealthCheck}). " +
-                                     $"Will not attempt another repair at this time.";
-
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            $"ScheduleMachineRepairPredicateType::{RepairData.NodeName}_PostRepairProbationOngoing",
-                            message,
-                            FabricHealerManager.Token);
+                           LogLevel.Info,
+                           $"ScheduleMachineRepairPredicateType::MaxOustandingRepairs",
+                           $"The number of outstanding machine repairs is currently at the maximum specified threshold ({RepairData.RepairPolicy.MaxConcurrentRepairs}). " +
+                           $"Will not schedule any other machine repairs at this time.",
+                           FabricHealerManager.Token);
 
                     return false;
                 }
@@ -141,6 +115,39 @@ namespace FabricHealer.Repair.Guan
                                                 FabricHealerManager.Token),
                                         FabricHealerManager.Token);
                 return success;
+            }
+
+            private static void SetPolicyRepairAction(string repairAction)
+            {
+                // Force to lower case to support any casing used for repair action string in the logic rule.
+                if (repairAction.ToLower() == RepairConstants.SystemReboot.ToLower())
+                {
+                    RepairData.RepairPolicy.RepairAction = RepairActionType.RebootMachine;
+                }
+                else if (repairAction.ToLower() == RepairConstants.SystemHostReboot.ToLower())
+                {
+                    RepairData.RepairPolicy.RepairAction = RepairActionType.HostReboot;
+                }
+                else if (repairAction.ToLower() == RepairConstants.SystemHostRepaveData.ToLower())
+                {
+                    RepairData.RepairPolicy.RepairAction = RepairActionType.HostRepaveData;
+                }
+                else if (repairAction.ToLower() == RepairConstants.SystemReimageOS.ToLower())
+                {
+                    RepairData.RepairPolicy.RepairAction = RepairActionType.ReimageOS;
+                }
+                else if (repairAction.ToLower() == RepairConstants.SystemFullReimage.ToLower())
+                {
+                    RepairData.RepairPolicy.RepairAction = RepairActionType.FullReimage;
+                }
+                else
+                {
+                    throw new GuanException(
+                        $"Unrecognized repair action name: {repairAction}. You must specify a valid machine repair action. E.g., \"System.Reboot\"");
+                }
+
+                // Infrastructure Repair Action string is used in Repair Job Task ID.
+                RepairData.RepairPolicy.InfrastructureRepairName = repairAction;
             }
         }
 

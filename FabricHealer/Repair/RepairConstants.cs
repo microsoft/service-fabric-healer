@@ -86,6 +86,7 @@ namespace FabricHealer.Repair
 
         // Helper Predicates.
         public const string CheckInsideRunInterval = "CheckInsideRunInterval";
+        public const string CheckInsideScheduleInterval = "CheckInsideScheduleInterval";
         public const string CheckFolderSize = "CheckFolderSize";
         public const string GetEntityHealthStateDuration = "GetEntityHealthStateDuration";
         public const string GetHealthEventHistory = "GetHealthEventHistory";
