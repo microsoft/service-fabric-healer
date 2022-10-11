@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using System;
 using System.Fabric;
 using System.Threading;
-using FabricHealer.Repair.Guan;
 using System.IO;
 using System.Linq;
 using FabricHealer.Utilities.Telemetry;
@@ -154,7 +153,9 @@ namespace FHTest
                 RepairData = repairData
             };
 
-            foreach (var file in Directory.GetFiles(FHRulesDirectory))
+            var files = Directory.GetFiles(FHRulesDirectory);
+
+            foreach (var file in files)
             {
                 List<string> repairRules = ParseRulesFile(await File.ReadAllLinesAsync(file, token));
 
@@ -268,67 +269,7 @@ namespace FHTest
         {
             _ = FabricHealerManager.Instance(context, token);
             var repairTaskManager = new RepairTaskManager(context, token);
-            var repairTaskEngine = new RepairTaskEngine();
-
-            // Add predicate types to functor table. Note that all health information data from FO are automatically passed to all predicates.
-            // This enables access to various health state values in any query. See Mitigate() in rules files, for examples.
-            FunctorTable functorTable = new FunctorTable();
-
-            // Add external helper predicates.
-            functorTable.Add(CheckFolderSizePredicateType.Singleton(RepairConstants.CheckFolderSize, repairTaskManager, repairData));
-            functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairTaskManager, repairData));
-            functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, repairTaskManager, repairData));
-            functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, repairTaskManager, repairData));
-            functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage, repairTaskManager));
-            functorTable.Add(GetEntityHealthStateDurationPredicateType.Singleton(RepairConstants.GetEntityHealthStateDuration, repairTaskManager, repairData));
-
-            // Add external repair predicates.
-            functorTable.Add(DeleteFilesPredicateType.Singleton(RepairConstants.DeleteFiles, repairTaskManager, repairData));
-            functorTable.Add(RestartCodePackagePredicateType.Singleton(RepairConstants.RestartCodePackage, repairTaskManager, repairData));
-            functorTable.Add(RestartFabricNodePredicateType.Singleton(RepairConstants.RestartFabricNode, repairTaskManager, executorData, repairTaskEngine, repairData));
-            functorTable.Add(RestartFabricSystemProcessPredicateType.Singleton(RepairConstants.RestartFabricSystemProcess, repairTaskManager, repairData));
-            functorTable.Add(RestartReplicaPredicateType.Singleton(RepairConstants.RestartReplica, repairTaskManager, repairData));
-            functorTable.Add(ScheduleMachineRepairPredicateType.Singleton(RepairConstants.ScheduleMachineRepair, repairTaskManager, repairData));
-
-            // Parse rules
-            Module module = Module.Parse("external", repairRules, functorTable);
-
-            // Create guan query dispatcher.
-            var queryDispatcher = new GuanQueryDispatcher(module);
-
-            /* Bind default arguments to goal (Mitigate). */
-
-            List<CompoundTerm> compoundTerms = new List<CompoundTerm>();
-
-            // Mitigate is the head of the rules used in FH. It's the Goal that Guan will try to accomplish based on the logical expressions (or subgoals) that form a given rule.
-            CompoundTerm compoundTerm = new CompoundTerm("Mitigate");
-
-            // The type of metric that led FO to generate the unhealthy evaluation for the entity (App, Node, VM, Replica, etc).
-            // We rename these for brevity for simplified use in logic rule composition (e;g., MetricName="Threads" instead of MetricName="Total Thread Count").
-            repairData.Metric = SupportedErrorCodes.GetMetricNameFromErrorCode(repairData.Code);
-
-            // These args hold the related values supplied by FO and are available anywhere Mitigate is used as a rule head.
-            compoundTerm.AddArgument(new Constant(repairData.ApplicationName), RepairConstants.AppName);
-            compoundTerm.AddArgument(new Constant(repairData.Code), RepairConstants.ErrorCode);
-            compoundTerm.AddArgument(new Constant(repairData.EntityType), RepairConstants.EntityType);
-            compoundTerm.AddArgument(new Constant(repairData.HealthState.ToString()), RepairConstants.HealthState);
-            compoundTerm.AddArgument(new Constant(repairData.Metric), RepairConstants.MetricName);
-            compoundTerm.AddArgument(new Constant(Convert.ToInt64(repairData.Value)), RepairConstants.MetricValue);
-            compoundTerm.AddArgument(new Constant(repairData.NodeName), RepairConstants.NodeName);
-            compoundTerm.AddArgument(new Constant(repairData.NodeType), RepairConstants.NodeType);
-            compoundTerm.AddArgument(new Constant(repairData.ObserverName), RepairConstants.ObserverName);
-            compoundTerm.AddArgument(new Constant(repairData.OS), RepairConstants.OS);
-            compoundTerm.AddArgument(new Constant(repairData.ServiceKind), RepairConstants.ServiceKind);
-            compoundTerm.AddArgument(new Constant(repairData.ServiceName), RepairConstants.ServiceName);
-            compoundTerm.AddArgument(new Constant(repairData.ProcessId), RepairConstants.ProcessId);
-            compoundTerm.AddArgument(new Constant(repairData.ProcessName), RepairConstants.ProcessName);
-            compoundTerm.AddArgument(new Constant(repairData.ProcessStartTime), RepairConstants.ProcessStartTime);
-            compoundTerm.AddArgument(new Constant(repairData.PartitionId), RepairConstants.PartitionId);
-            compoundTerm.AddArgument(new Constant(repairData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
-            compoundTerm.AddArgument(new Constant(repairData.ReplicaRole), RepairConstants.ReplicaRole);
-            compoundTerms.Add(compoundTerm);
-
-            await queryDispatcher.RunQueryAsync(compoundTerms);
+            await repairTaskManager.RunGuanQueryAsync(repairData, repairRules, executorData);
         }
 
         private static List<string> ParseRulesFile(string[] rules)
@@ -510,7 +451,7 @@ namespace FHTest
 
             var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, RepairFactsServiceTarget.ServiceName);
             Assert.IsTrue(generatedWarning);
-            Assert.IsTrue(data is not null);
+            Assert.IsTrue(data != null);
         }
 
         [TestMethod]
@@ -529,7 +470,7 @@ namespace FHTest
 
             var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, null, NodeName);
             Assert.IsTrue(generatedWarning);
-            Assert.IsTrue(data is not null);
+            Assert.IsTrue(data != null);
         }
 
         [TestMethod]
@@ -624,13 +565,13 @@ namespace FHTest
                 {
                     var (generatedWarningService, sdata) = await IsEntityInWarningStateAsync(null, repair.ServiceName);
                     Assert.IsTrue(generatedWarningService);
-                    Assert.IsTrue(sdata is not null);
+                    Assert.IsTrue(sdata != null);
                 }
                 else if (repair.EntityType == EntityType.Disk || repair.EntityType == EntityType.Machine || repair.EntityType == EntityType.Node)
                 {
                     var (generatedWarningNode, ndata) = await IsEntityInWarningStateAsync(null, null, NodeName);
                     Assert.IsTrue(generatedWarningNode);
-                    Assert.IsTrue(ndata is not null);
+                    Assert.IsTrue(ndata != null);
                 }
 
                 // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");

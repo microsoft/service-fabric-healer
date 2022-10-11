@@ -77,7 +77,7 @@ namespace FabricHealer.Utilities
         /// <typeparam name="T">Target type.</typeparam>
         /// <param name="obj">Json string representing an instance of type T.</param>
         /// <param name="data">out: an instance of type T.</param>
-        /// <returns>An instance of the specified type T or null if the string can't be deserialized into the specified type T. Note: Missing members are treated as Error.</returns>
+        /// <returns>An instance of the specified type T or null if the string can't be deserialized into the specified type T.</returns>
         public static bool TryDeserializeObject<T>(string obj, out T data, JsonSerializerSettings jsonSerializerSettings = null)
         {
             if (string.IsNullOrWhiteSpace(obj))
@@ -88,7 +88,7 @@ namespace FabricHealer.Utilities
             
             try
             {
-                jsonSerializerSettings ??= new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error };
+                jsonSerializerSettings ??= new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Ignore };
                 data = JsonConvert.DeserializeObject<T>(obj, jsonSerializerSettings);
                 return true;
             }

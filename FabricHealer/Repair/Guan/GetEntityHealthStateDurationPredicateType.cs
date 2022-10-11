@@ -13,7 +13,6 @@ namespace FabricHealer.Repair.Guan
 {
     public class GetEntityHealthStateDurationPredicateType : PredicateType
     {
-        private static RepairTaskManager RepairTaskManager;
         private static TelemetryData RepairData;
         private static GetEntityHealthStateDurationPredicateType Instance;
 
@@ -53,9 +52,8 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static GetEntityHealthStateDurationPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
+        public static GetEntityHealthStateDurationPredicateType Singleton(string name, TelemetryData repairData)
         {
-            RepairTaskManager = repairTaskManager;
             RepairData = repairData;
             return Instance ??= new GetEntityHealthStateDurationPredicateType(name);
         }
