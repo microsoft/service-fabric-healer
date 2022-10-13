@@ -4,8 +4,9 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Fabric;
+using System.Fabric.Description;
+using System.Fabric.Query;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,70 +19,46 @@ namespace FabricHealer.Repair
         private static readonly Logger Logger = new Logger("UpgradeLogger");
 
         /// <summary>
-        /// Gets Application Upgrade Domains (integers) for application or applications
-        /// currently upgrading (or rolling back).
+        /// Gets current Application upgrade domains for specified application.
         /// </summary>
-        /// <param name="fabricClient">FabricClient instance</param>
         /// <param name="token">CancellationToken</param>
-        /// <param name="appName" type="optional">Application Name (Uri)</param>
-        /// <returns>List of integers representing UDs</returns>
-        internal static async Task<List<int>> GetUdsWhereApplicationUpgradeInProgressAsync(Uri appName, CancellationToken token)
+        /// <param name="appName">Application Name (Fabric Uri format)</param>
+        /// <returns>UD where application upgrade is currently executing or null if there is no upgrade in progress.</returns>
+        internal static async Task<string> GetUDWhereApplicationUpgradeInProgressAsync(Uri appName, CancellationToken token)
         {
             try
             {
-                if (appName == null)
+                if (appName == null || token.IsCancellationRequested)
                 {
-                    throw new ArgumentException("appName must be supplied.");
+                    return null;
                 }
 
-                int currentUpgradeDomainInProgress = -1;
-                var upgradeDomainsInProgress = new List<int>();
+                string currentUpgradeDomainInProgress = null;
+                ApplicationUpgradeProgress upgradeProgress =
+                    await FabricHealerManager.FabricClientSingleton.ApplicationManager.GetApplicationUpgradeProgressAsync(
+                            appName,
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            token);
 
-
-                var appList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetApplicationListAsync(appName, FabricHealerManager.ConfigSettings.AsyncTimeout, token);
-
-                foreach (var application in appList)
+                if (upgradeProgress == null)
                 {
-                    var upgradeProgress =
-                        await FabricHealerManager.FabricClientSingleton.ApplicationManager.GetApplicationUpgradeProgressAsync(
-                                application.ApplicationName, 
-                                TimeSpan.FromMinutes(1), 
-                                token);
-
-                    if (!upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingBackInProgress) &&
-                        !upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingForwardInProgress) &&
-                        !upgradeProgress.UpgradeState.Equals(ApplicationUpgradeState.RollingForwardPending))
-                    {
-                        continue;
-                    }
-
-                    if (int.TryParse(upgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName, out currentUpgradeDomainInProgress))
-                    {
-                        if (!upgradeDomainsInProgress.Contains(currentUpgradeDomainInProgress))
-                        {
-                            upgradeDomainsInProgress.Add(currentUpgradeDomainInProgress);
-                        }
-                    }
-                    else
-                    {
-                        currentUpgradeDomainInProgress = -1;
-                    }
-                }
-               
-                // If no UD's are being upgraded then currentUpgradeDomainInProgress
-                // remains -1, otherwise it will be added only once.
-                if (!upgradeDomainsInProgress.Any())
-                {
-                    upgradeDomainsInProgress.Add(currentUpgradeDomainInProgress);
+                    return null;
                 }
 
-                return upgradeDomainsInProgress;
+                if (upgradeProgress.UpgradeState != ApplicationUpgradeState.RollingBackInProgress &&
+                    upgradeProgress.UpgradeState != ApplicationUpgradeState.RollingForwardInProgress &&
+                    upgradeProgress.UpgradeState != ApplicationUpgradeState.RollingForwardPending)
+                {
+                    return null;
+                }
+
+                currentUpgradeDomainInProgress = upgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName;
+                return currentUpgradeDomainInProgress;
             }
             catch (Exception e) when (e is ArgumentException || e is FabricException || e is TimeoutException)
             {
-                Logger.LogError($"Exception getting UDs for application upgrades in progress:{Environment.NewLine}{e}");
-
-                return new List<int>{ -1 };
+                Logger.LogError($"Exception getting UDs for application upgrade in progress for {appName.OriginalString}:{Environment.NewLine}{e.Message}");
+                return null;
             }
         }
 
@@ -91,7 +68,7 @@ namespace FabricHealer.Repair
         /// <param name="fabricClient">FabricClient</param>
         /// <param name="token"></param>
         /// <returns>UD in progress</returns>
-        public static async Task<string> GetCurrentUDWhereFabricUpgradeInProgressAsync(CancellationToken token)
+        internal static async Task<string> GetCurrentUDWhereFabricUpgradeInProgressAsync(CancellationToken token)
         {
             try
             {
@@ -122,7 +99,7 @@ namespace FabricHealer.Repair
         /// <param name="nodeType">NodeType string</param>
         /// <param name="token">CancellationToken instance</param>
         /// <returns>true if tenant update is in progress, false otherwise</returns>
-        public static async Task<bool> IsAzureUpdateInProgress(string nodeType, string nodeName, CancellationToken token)
+        internal static async Task<bool> IsAzureUpdateInProgress(string nodeType, string nodeName, CancellationToken token)
         {
             var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                                         null,

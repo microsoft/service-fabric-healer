@@ -15,7 +15,6 @@ using Polly;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
-using static System.Fabric.Query.ReplicaStatus;
 
 namespace FabricHealer
 {

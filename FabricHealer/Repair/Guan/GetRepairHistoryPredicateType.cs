@@ -7,7 +7,6 @@ using System;
 using System.Threading.Tasks;
 using Guan.Logic;
 using FabricHealer.Utilities.Telemetry;
-using FabricHealer.Utilities;
 
 namespace FabricHealer.Repair.Guan
 {

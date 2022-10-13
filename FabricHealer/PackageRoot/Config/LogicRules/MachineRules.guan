@@ -73,7 +73,7 @@ Mitigate() :- CheckInsideScheduleInterval(00:10:00), !.
 ## ProbationWaitDurationPre (minimum time-in-error) rule. If this rule succeeds, Guan will immediately stop processing rules.
 ## The HealthState constraint in the head of the rule is for efficiency purposes: don't process sub rules if the supplied entity's health state (fact) is not Error.
 ## GetEntityHealthStateDuration takes a HealthState argument because it can be used to get the active duration of any supported entity health state.
-Mitigate(HealthState=Error) :- GetEntityHealthStateDuration(?duration, Entity=Machine, HealthState=Error), ?duration <= 00:02:00, !.
+Mitigate(HealthState=Error) :- GetEntityHealthStateDuration(?duration, Entity=Machine, HealthState=Error), ?duration <= 02:00:00, !.
 
 ## Outside of Probationary period for Error health state.
 ## Try to schedule a machine repair if there are currently less than 2 outstanding repairs for machines in the cluster (MaxOutstandingRepairs).

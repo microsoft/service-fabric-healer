@@ -26,15 +26,10 @@ using System.Fabric.Description;
 
 namespace FabricHealer.Repair
 {
-    public class RepairExecutor
+    public sealed class RepairExecutor
     {
         private const double MaxWaitTimeMinutesForNodeOperation = 60.0;
         private readonly StatelessServiceContext serviceContext;
-
-        private bool IsOneNodeCluster
-        {
-            get;
-        }
 
         public RepairExecutor(StatelessServiceContext context, CancellationToken token)
         {
@@ -46,9 +41,6 @@ namespace FabricHealer.Repair
                 {
                     return;
                 }
-
-                IsOneNodeCluster =
-                        FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(null, FabricHealerManager.ConfigSettings.AsyncTimeout, token).GetAwaiter().GetResult().Count == 1;
             }
             catch (FabricException fe)
             {
@@ -212,7 +204,7 @@ namespace FabricHealer.Repair
                                     RepairTask repairTask, 
                                     CancellationToken cancellationToken)
         {
-            if (IsOneNodeCluster)
+            if (await FabricHealerManager.IsOneNodeClusterAsync())
             {
                 string info = "One node cluster detected. Aborting node restart operation.";
 
