@@ -162,7 +162,7 @@ namespace FabricHealer.Repair
                 case RepairActionType.HostRepaveData:
                 case RepairActionType.FullReimage:
 
-                    repairTask = await repairTaskEngine.ScheduleInfrastructureRepairTaskAsync(repairData, executorName, token);
+                    repairTask = await repairTaskEngine.CreateInfrastructureRepairTaskAsync(repairData, executorName, token);
                     break;
                 
                 // FH
@@ -172,7 +172,7 @@ namespace FabricHealer.Repair
                 case RepairActionType.RestartProcess:
                 case RepairActionType.RestartReplica:
 
-                    repairTask = await repairTaskEngine.ScheduleFabricHealerRepairTask(executorData, token);
+                    repairTask = await repairTaskEngine.CreateFabricHealerRepairTask(executorData, token);
                     break;
 
                 default:
@@ -181,7 +181,7 @@ namespace FabricHealer.Repair
                     return null;
             }
 
-            bool success = await TryCreateRepairTaskAsync(
+            bool success = await RepairManagerCreateRepairTaskAsync(
                                     repairTask,
                                     repairData,
                                     repairTaskEngine,
@@ -190,7 +190,7 @@ namespace FabricHealer.Repair
             return success ? repairTask : null;
         }
 
-        private static async Task<bool> TryCreateRepairTaskAsync(
+        private static async Task<bool> RepairManagerCreateRepairTaskAsync(
                                             RepairTask repairTask,
                                             TelemetryData repairData,
                                             RepairTaskEngine repairTaskEngine,

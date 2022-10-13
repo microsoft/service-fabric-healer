@@ -227,7 +227,7 @@ namespace FabricHealer.Repair
 
                 executorName = service.ServiceName.OriginalString;
 
-               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "ScheduleInfrastructureRepairTask::ExecutorFound",
                         $"Executor set to {executorName} for Machine Repair Action {repairData.RepairPolicy.InfrastructureRepairName}.",
