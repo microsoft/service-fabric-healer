@@ -60,7 +60,7 @@ namespace FabricHealer.Repair.Guan
                 {
                     // Historical info, like what step the healer was in when the node went down, is contained in the
                     // executordata instance.
-                    repairTask = await RepairTaskEngine.ScheduleFabricHealerRepairTask(RepairExecutorData, FabricHealerManager.Token);
+                    repairTask = await RepairTaskEngine.CreateFabricHealerRepairTask(RepairExecutorData, FabricHealerManager.Token);
                     success = await RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
                                         repairTask,
                                         RepairData,

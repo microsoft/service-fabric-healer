@@ -20,12 +20,12 @@ namespace FabricHealer.Repair
         public const string AzureTaskIdPrefix = "Azure";
 
         /// <summary>
-        /// Schedules a repair task where FabricHealer is the executor.
+        /// Creates a repair task where FabricHealer is the executor.
         /// </summary>
         /// <param name="executorData"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        public async Task<RepairTask> ScheduleFabricHealerRepairTask(RepairExecutorData executorData, CancellationToken token)
+        public async Task<RepairTask> CreateFabricHealerRepairTask(RepairExecutorData executorData, CancellationToken token)
         {
             if (executorData == null || executorData.RepairData.NodeName == null)
             {
@@ -108,13 +108,13 @@ namespace FabricHealer.Repair
         }
 
         /// <summary>
-        /// Schedules a repair task where SF's InfrastructureService (IS) is the executor.
+        /// Creates a repair task where SF's InfrastructureService (IS) is the executor.
         /// </summary>
         /// <param name="repairData"></param>
         /// <param name="executorName"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task<RepairTask> ScheduleInfrastructureRepairTaskAsync(TelemetryData repairData, string executorName, CancellationToken cancellationToken)
+        public async Task<RepairTask> CreateInfrastructureRepairTaskAsync(TelemetryData repairData, string executorName, CancellationToken cancellationToken)
         {
             if (await FabricHealerManager.IsOneNodeClusterAsync())
             {
