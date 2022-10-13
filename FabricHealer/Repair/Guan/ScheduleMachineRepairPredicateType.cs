@@ -40,6 +40,7 @@ namespace FabricHealer.Repair.Guan
                 // Block attempts to create duplicate repair tasks or more than specified concurrent machine-level repairs.
                 var repairTaskEngine = new RepairTaskEngine();
                 int count = Input.Arguments.Count;
+                string repairAction = null;
 
                 for (int i = 0; i < count; i++)
                 {
@@ -48,7 +49,7 @@ namespace FabricHealer.Repair.Guan
                     switch (typeString)
                     {
                         case "String":
-                            string repairAction = (string)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
+                            repairAction = (string)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             SetPolicyRepairAction(repairAction);
                             break;
 
@@ -100,7 +101,7 @@ namespace FabricHealer.Repair.Guan
                 {
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                            LogLevel.Info,
-                           $"ScheduleMachineRepairPredicateType::MaxOustandingRepairs",
+                           "ScheduleMachineRepairPredicateType::MaxOustandingRepairs",
                            $"The number of outstanding machine repairs is currently at the maximum specified threshold ({RepairData.RepairPolicy.MaxConcurrentRepairs}). " +
                            $"Will not schedule any other machine repairs at this time.",
                            FabricHealerManager.Token);

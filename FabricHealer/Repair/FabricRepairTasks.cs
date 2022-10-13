@@ -11,7 +11,6 @@ using System.Fabric.Health;
 using System.Fabric.Query;
 using System.Fabric.Repair;
 using System.Linq;
-using System.Security.Policy;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities;
@@ -24,10 +23,9 @@ namespace FabricHealer.Repair
         public static async Task<bool> IsRepairTaskInDesiredStateAsync(
                                         string taskId,
                                         string executorName,
-                                        List<RepairTaskState> desiredStates)
+                                        IList<RepairTaskState> desiredStates)
         {
             IList<RepairTask> repairTaskList = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(taskId, RepairTaskStateFilter.All, executorName);
-
             return desiredStates.Any(desiredState => repairTaskList.Count(rt => rt.State == desiredState) > 0);
         }
 
@@ -35,7 +33,6 @@ namespace FabricHealer.Repair
         /// Cancels a repair task based on its current state.
         /// </summary>
         /// <param name="repairTask"><see cref="RepairTask"/> to be cancelled</param>
-        /// <param name="fabricClient">FabricClient instance.</param>
         /// <returns></returns>
         public static async Task CancelRepairTaskAsync(RepairTask repairTask)
         {

@@ -4,9 +4,7 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Fabric.Description;
 using System.Fabric.Health;
-using System.Fabric.Query;
 using System.Fabric.Repair;
 using System.Linq;
 using System.Threading;
@@ -118,20 +116,7 @@ namespace FabricHealer.Repair
         /// <returns></returns>
         public async Task<RepairTask> ScheduleInfrastructureRepairTaskAsync(TelemetryData repairData, string executorName, CancellationToken cancellationToken)
         {
-            // This constraint (MaxResults) is used just to make sure there is more 1 node in the cluster. We don't need a list of all nodes.
-            var nodeQueryDesc = new NodeQueryDescription
-            {
-                MaxResults = 3,
-            };
-
-            NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricHealerManager.FabricClientSingleton.QueryManager.GetNodePagedListAsync(
-                                            nodeQueryDesc,
-                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                            cancellationToken),
-                                     cancellationToken);
-
-            if (nodes?.Count == 1)
+            if (await FabricHealerManager.IsOneNodeClusterAsync())
             {
                 return null;
             }
