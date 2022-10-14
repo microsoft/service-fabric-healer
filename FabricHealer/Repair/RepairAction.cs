@@ -14,12 +14,8 @@ namespace FabricHealer.Repair
     [Serializable]
     public enum RepairActionType
     {
+        Infra,
         DeleteFiles,
-        FullReimage,
-        HostRepaveData,
-        HostReboot,
-        RebootMachine,
-        ReimageOS,
         RemoveFabricNodeState,
         RemoveReplica,
         RepairPartition,

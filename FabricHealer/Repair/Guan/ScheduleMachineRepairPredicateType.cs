@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace FabricHealer.Repair.Guan
 {
     /// <summary>
-    /// impl for Guan ScheduleMachineRepair predicate. Schedules repairs for machines.
+    /// Backing impl for ScheduleMachineRepair Guan predicate used in logic rules. This predicate schedules SF InfrastructureService-executed repairs for host machines.
     /// </summary>
     public class ScheduleMachineRepairPredicateType : PredicateType
     {
@@ -50,7 +50,7 @@ namespace FabricHealer.Repair.Guan
                     {
                         case "String":
                             repairAction = (string)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
-                            SetPolicyRepairAction(repairAction);
+                            RepairData.RepairPolicy.InfrastructureRepairName = repairAction; 
                             break;
 
                         case "TimeSpan":
@@ -75,7 +75,7 @@ namespace FabricHealer.Repair.Guan
 
                 bool isRepairAlreadyInProgress =
                         await repairTaskEngine.IsRepairInProgressAsync(
-                                $"{RepairConstants.InfrastructureServiceName}/{RepairData.NodeType}",
+                                RepairData.EntityType == EntityType.Machine ? RepairTaskEngine.InfraTaskIdPrefix : RepairTaskEngine.FHTaskIdPrefix,
                                 RepairData,
                                 FabricHealerManager.Token);
 
@@ -94,8 +94,7 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 int outstandingRepairCount = 
-                    await repairTaskEngine.GetOutstandingRepairCount(
-                        executorName: $"{RepairConstants.InfrastructureServiceName}/{RepairData.NodeType}", FabricHealerManager.Token);
+                    await repairTaskEngine.GetOutstandingRepairCount(taskIdPrefix: RepairTaskEngine.InfraTaskIdPrefix, FabricHealerManager.Token);
 
                 if (RepairData.RepairPolicy.MaxConcurrentRepairs > 0 && outstandingRepairCount >= RepairData.RepairPolicy.MaxConcurrentRepairs)
                 {
@@ -109,6 +108,8 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
+                // TODO: Experiment with Guan context information for rules (what rule executed for repair).
+
                 // Attempt to schedule an Infrastructure Repair Job (where IS is the executor).
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => RepairTaskManager.ScheduleInfrastructureRepairTask(
@@ -116,39 +117,6 @@ namespace FabricHealer.Repair.Guan
                                                 FabricHealerManager.Token),
                                         FabricHealerManager.Token);
                 return success;
-            }
-
-            private static void SetPolicyRepairAction(string repairAction)
-            {
-                // Force to lower case to support any casing used for repair action string in the logic rule.
-                if (repairAction.ToLower() == RepairConstants.SystemReboot.ToLower())
-                {
-                    RepairData.RepairPolicy.RepairAction = RepairActionType.RebootMachine;
-                }
-                else if (repairAction.ToLower() == RepairConstants.SystemHostReboot.ToLower())
-                {
-                    RepairData.RepairPolicy.RepairAction = RepairActionType.HostReboot;
-                }
-                else if (repairAction.ToLower() == RepairConstants.SystemHostRepaveData.ToLower())
-                {
-                    RepairData.RepairPolicy.RepairAction = RepairActionType.HostRepaveData;
-                }
-                else if (repairAction.ToLower() == RepairConstants.SystemReimageOS.ToLower())
-                {
-                    RepairData.RepairPolicy.RepairAction = RepairActionType.ReimageOS;
-                }
-                else if (repairAction.ToLower() == RepairConstants.SystemFullReimage.ToLower())
-                {
-                    RepairData.RepairPolicy.RepairAction = RepairActionType.FullReimage;
-                }
-                else
-                {
-                    throw new GuanException(
-                        $"Unrecognized repair action name: {repairAction}. You must specify a valid machine repair action. E.g., \"System.Reboot\"");
-                }
-
-                // Infrastructure Repair Action string is used in Repair Job Task ID.
-                RepairData.RepairPolicy.InfrastructureRepairName = repairAction;
             }
         }
 

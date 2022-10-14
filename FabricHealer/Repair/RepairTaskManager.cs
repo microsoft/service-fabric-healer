@@ -23,7 +23,7 @@ namespace FabricHealer.Repair
 {
     public sealed class RepairTaskManager : IRepairTasks
     {
-        private static readonly TimeSpan MaxWaitTimeForInfrastructureRepairTaskCompleted = TimeSpan.FromHours(2);
+        private static readonly TimeSpan MaxWaitTimeForInfrastructureRepairTaskCompleted = TimeSpan.FromHours(8);
         private static readonly TimeSpan MaxWaitTimeForFHRepairTaskCompleted = TimeSpan.FromHours(1);
         private readonly RepairTaskEngine repairTaskEngine;
         private readonly RepairExecutor repairExecutor;
@@ -139,6 +139,7 @@ namespace FabricHealer.Repair
             functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairData));
             functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, this, repairData));
             functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, repairData));
+            functorTable.Add(CheckInsideProbationPeriodType.Singleton(RepairConstants.CheckInsideProbationPeriod, repairData));
             functorTable.Add(CheckInsideScheduleIntervalPredicateType.Singleton(RepairConstants.CheckInsideScheduleInterval, repairData));
             functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage));
             functorTable.Add(GetEntityHealthStateDurationPredicateType.Singleton(RepairConstants.GetEntityHealthStateDuration, repairData));
@@ -200,7 +201,7 @@ namespace FabricHealer.Repair
         // clusters. RM, as usual, will orchestrate the repair cycle.
         public async Task<bool> ScheduleInfrastructureRepairTask(TelemetryData repairData, CancellationToken cancellationToken)
         {
-            var infraServices = await FabricRepairTasks.GetInfrastructureServiceInstancesAsync(cancellationToken);
+            /*var infraServices = await FabricRepairTasks.GetInfrastructureServiceInstancesAsync(cancellationToken);
             var arrServices = infraServices as Service[] ?? infraServices.ToArray();
 
             if (arrServices.Length == 0)
@@ -249,19 +250,18 @@ namespace FabricHealer.Repair
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                 return false;
-            }
+            }*/
 
             // Make sure there is not already a repair job executing machine-level repair for target node.
-            var isRepairAlreadyInProgress =
-                    await repairTaskEngine.IsRepairInProgressAsync(executorName, repairData, cancellationToken);
+            bool isRepairAlreadyInProgress =
+                    await repairTaskEngine.IsRepairInProgressAsync(RepairTaskEngine.InfraTaskIdPrefix, repairData, cancellationToken);
 
             if (isRepairAlreadyInProgress)
             {
                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "ScheduleInfrastructureRepairTask::RepairAlreadyInProgress",
-                        $"Machine repair for {repairData.NodeName} is already in progress " +
-                        "or the max number of concurrent machine repairs has been reached. Will not schedule another machine repair at this time.",
+                        $"A Machine repair for {repairData.NodeName} is already in progress.",
                         cancellationToken,
                         repairData,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
@@ -270,7 +270,7 @@ namespace FabricHealer.Repair
             }
 
             // Create repair task for target node.
-            var repairTask = await FabricRepairTasks.CreateRepairTaskAsync(repairData, null, executorName, cancellationToken);
+            var repairTask = await FabricRepairTasks.CreateRepairTaskAsync(repairData, null, RepairTaskEngine.InfraTaskIdPrefix, cancellationToken);
 
             if (repairTask == null)
             {
@@ -285,7 +285,7 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
                     "ScheduleInfrastructureRepairTask::Success",
                     $"Successfully scheduled Infrastructure Repair Task {repairTask.TaskId}",
@@ -294,73 +294,6 @@ namespace FabricHealer.Repair
                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
             return true;
-
-            // TODO: ensure the target node is healthy after successful completion of the Repair Job (which includes MaxTimePostRepairHealthCheck (probation)).
-
-            /*var timer = Stopwatch.StartNew();
-
-            // It can take a while to get from a VM reboot/reimage to a healthy Fabric node, so block here until repair completes.
-            // Note that, by design, this will block any other FabricHealer-initiated repair from taking place in the cluster.
-            // FabricHealer is designed to be very conservative with respect to node level repairs. 
-            while (timer.Elapsed < MaxWaitTimeForInfrastructureRepairTaskCompleted)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (!await FabricRepairTasks.IsRepairTaskInDesiredStateAsync(
-                            repairTask.TaskId,
-                            executorName,
-                            new List<RepairTaskState> { RepairTaskState.Completed }))
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
-                    continue;
-                }
-
-                 // TODO: Post-repair HealthState (Ok) probation requires that the target node be healthy for 30 minutes after successful repair...
-                // Check to see if this repair has already completed, but is still in the post-repair probationary period specified in the logic rule.
-                if (repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue)
-                {
-                    int completedRepairInProbation =
-                        await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(
-                                repairData.RepairPolicy.MaxTimePostRepairHealthCheck,
-                                repairData,
-                                FabricHealerManager.Token,
-                                repairData.RepairPolicy.InfrastructureRepairName);
-
-                    if (completedRepairInProbation > 0)
-                    {
-                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                               LogLevel.Info,
-                               "ScheduleMachineRepairPredicateType::PostRepairProbation",
-                               $"Repair {repairData.RepairPolicy.RepairId} is not yet complete: The target node is in post-repair health check probation: " +
-                               $"Probation period = {repairData.RepairPolicy.MaxTimePostRepairHealthCheck}.",
-                               FabricHealerManager.Token);
-
-                        return false;
-                    }
-                }
-
-                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "InfrastructureRepairTask::Completed",
-                        $"Successfully completed repair {repairData.RepairPolicy.RepairId}",
-                        cancellationToken,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-                timer.Stop();
-                return true;
-            }
-
-           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "ScheduleInfrastructureRepairTask::Timeout",
-                    $"Max wait time of {MaxWaitTimeForInfrastructureRepairTaskCompleted} has elapsed for repair " +
-                    $"{repairData.RepairPolicy.RepairId}.",
-                    cancellationToken,
-                    repairData,
-                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-            return false; */
         }
 
         public async Task<bool> DeleteFilesAsyncAsync(TelemetryData repairData, CancellationToken cancellationToken)
@@ -529,7 +462,7 @@ namespace FabricHealer.Repair
             var repairTask = await FabricRepairTasks.CreateRepairTaskAsync(
                                     repairData,
                                     executorData,
-                                    RepairConstants.FabricHealer,
+                                    RepairTaskEngine.FHTaskIdPrefix,
                                     cancellationToken);
             return repairTask;
         }

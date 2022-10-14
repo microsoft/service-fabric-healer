@@ -1,9 +1,4 @@
-﻿// ------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
-// ------------------------------------------------------------
-
-using System;
+﻿using System;
 using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
@@ -11,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace FabricHealer.Repair.Guan
 {
-    public class CheckInsideScheduleIntervalPredicateType : PredicateType
+    public class CheckInsideProbationPeriodType : PredicateType
     {
-        private static CheckInsideScheduleIntervalPredicateType Instance;
+        private static CheckInsideProbationPeriodType Instance;
         private static TelemetryData RepairData;
 
         private class Resolver : BooleanPredicateResolver
@@ -28,10 +23,10 @@ namespace FabricHealer.Repair.Guan
             {
                 int count = Input.Arguments.Count;
 
-                if (count == 0 || Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() != typeof(TimeSpan))
+                if (count == 0 || Input.Arguments[0].Value.GetObjectValue().GetType() != typeof(TimeSpan))
                 {
                     throw new GuanException(
-                                "CheckInsideScheduleInterval: One argument is required and it must be a TimeSpan " +
+                                "CheckInsideProbationPeriod: One argument is required and it must be a TimeSpan " +
                                 "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
                 }
 
@@ -42,23 +37,24 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                bool insideScheduleInterval =
-                    await FabricRepairTasks.IsLastScheduledRepairJobWithinTimeRangeAsync(
+                bool insideProbationPeriod =
+                    await FabricRepairTasks.IsRepairInPostProbationAsync(
                             interval,
                             RepairData.EntityType == EntityType.Machine ? RepairTaskEngine.InfraTaskIdPrefix : RepairTaskEngine.FHTaskIdPrefix,
+                            RepairData,
                             FabricHealerManager.Token);
 
-                if (!insideScheduleInterval)
+                if (!insideProbationPeriod)
                 {
                     return false;
                 }
 
-                string message = $"{RepairData.RepairPolicy.RepairAction} job has already been scheduled at least once within the specified scheduling interval " +
-                                 $"({interval}). Will not schedule {RepairData.EntityType} repair at this time.";
+                string message = $"FH repair job {RepairData.RepairPolicy.RepairId} is currently in post-repair health probation ({interval}). " +
+                                 $"Will not schedule another repair for the target {RepairData.RepairPolicy} at this time.";
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        $"CheckInsideScheduleInterval::{RepairData.RepairPolicy.RepairAction}",
+                        $"CheckInsideProbationPeriod::{RepairData.RepairPolicy.RepairId}",
                         message,
                         FabricHealerManager.Token);
 
@@ -66,13 +62,13 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static CheckInsideScheduleIntervalPredicateType Singleton(string name, TelemetryData repairData)
+        public static CheckInsideProbationPeriodType Singleton(string name, TelemetryData repairData)
         {
             RepairData = repairData;
-            return Instance ??= new CheckInsideScheduleIntervalPredicateType(name);
+            return Instance ??= new CheckInsideProbationPeriodType(name);
         }
 
-        private CheckInsideScheduleIntervalPredicateType(string name)
+        private CheckInsideProbationPeriodType(string name)
                  : base(name, true, 1)
         {
 
@@ -84,4 +80,3 @@ namespace FabricHealer.Repair.Guan
         }
     }
 }
-
