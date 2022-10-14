@@ -1360,26 +1360,27 @@ namespace FabricHealer
                 var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync(node.NodeName, ConfigSettings.AsyncTimeout, Token);
                 string nodeType = nodeList[0].NodeType;
                 string nodeUD = nodeList[0].UpgradeDomain;
+                NodeStatus nodeStatus = nodeList[0].NodeStatus;
                 var nodeHealth = await FabricClientSingleton.HealthManager.GetNodeHealthAsync(node.NodeName, ConfigSettings.AsyncTimeout, Token);
                 var nodeHealthEvents =
                     nodeHealth.HealthEvents.Where(
                                 s => (s.HealthInformation.HealthState == HealthState.Warning || s.HealthInformation.HealthState == HealthState.Error));
 
                 // Ensure a node in Error is not in error due to being down as part of a cluster upgrade or infra update in its UD.
-                // If this (current) node is in Error, don't do anything.
-                if (node.AggregatedHealthState == HealthState.Error && node.NodeName != serviceContext.NodeContext.NodeName)
+                if (node.AggregatedHealthState == HealthState.Error && nodeStatus == NodeStatus.Down) //|| nodeStatus == NodeStatus.Disabling))
                 {
+                    // Cluster Upgrade in target node's UD?
                     string udInClusterUpgrade = await UpgradeChecker.GetCurrentUDWhereFabricUpgradeInProgressAsync(Token);
 
                     if (!string.IsNullOrWhiteSpace(udInClusterUpgrade) && udInClusterUpgrade == nodeUD)
                     {
                         string telemetryDescription =
                             $"Cluster is currently upgrading in UD \"{udInClusterUpgrade}\", which is the UD for node {node.NodeName}, which is down. " +
-                            "Will not schedule or execute node-level repair at this time.";
+                            "Will not schedule another machine repair at this time.";
 
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
-                                $"{node.NodeName}_down_ClusterUpgrade({nodeUD})",
+                                $"{node.NodeName}_Down_ClusterUpgrade({nodeUD})",
                                 telemetryDescription,
                                 Token,
                                 null,
@@ -1388,14 +1389,14 @@ namespace FabricHealer
                         continue;
                     }
 
-                    // Check to see if an Azure tenant/platform update is in progress for target node. Do not conduct repairs if so.
+                    // Azure tenant/platform update in progress for the target node?
                     if (await UpgradeChecker.IsAzureUpdateInProgress(nodeType, node.NodeName, Token))
                     {
-                        string telemetryDescription = $"{node.NodeName} is down due to Infra repair job (UD = {nodeUD}). Will not attempt node repair at this time.";
+                        string telemetryDescription = $"{node.NodeName} is down due to Infra repair job (UD = {nodeUD}). Will not schedule another machine repair at this time.";
 
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
-                                $"{node.NodeName}_down_InfraRepair",
+                                $"{node.NodeName}_Down_InfraRepair",
                                 telemetryDescription,
                                 Token,
                                 null,
@@ -1468,13 +1469,16 @@ namespace FabricHealer
 
                     // Make sure that there is not already an Infra repair in progress for the target node.
                     var currentISRepairs =
-                        await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync($"{RepairConstants.InfrastructureServiceName}/{nodeType}", Token);
+                        await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.InfraTaskIdPrefix, Token);
 
                     if (currentISRepairs?.Count > 0)
                     {
-                        if (currentISRepairs.Any(r => r.Description.Contains(node.NodeName)))
+                        // Description for Infra repairs created by FH will always have this form: Machine_Repair_[node type]_[node name] (e.g., Machine_Repair_SFRole0__SFRole0_3).
+                        // TaskId would also work here as FH creates the repair task with an ID that will always have the structure FH/[guid]/[repair action]/[node name]
+                        // (e.g., FH/d0d25d5b-7f36-49cf-aac4-b9d6bfd07e12/System.Reboot/_SFRole0_3)
+                        if (currentISRepairs.Any(r => r.TaskId.EndsWith(node.NodeName) || r.Description.EndsWith(node.NodeName)))
                         {
-                            var repair = currentISRepairs.FirstOrDefault(r => r.Description.Contains(node.NodeName));
+                            var repair = currentISRepairs.FirstOrDefault(r => r.TaskId.EndsWith(node.NodeName) || r.Description.EndsWith(node.NodeName));
 
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
@@ -1484,7 +1488,7 @@ namespace FabricHealer
                                     null,
                                     ConfigSettings.EnableVerboseLogging);
 
-                            return;
+                            continue;
                         }
                     }
 

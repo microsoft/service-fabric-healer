@@ -47,7 +47,7 @@ namespace FabricHealer.Repair.Guan
                     await FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
                             interval,
                             RepairData,
-                            RepairData.EntityType == EntityType.Machine ? RepairConstants.InfrastructureServiceName : RepairConstants.FabricHealer,
+                            RepairData.EntityType == EntityType.Machine ? RepairTaskEngine.InfraTaskIdPrefix : RepairTaskEngine.FHTaskIdPrefix,
                             FabricHealerManager.Token);
                 
                 if (!insideRunInterval)

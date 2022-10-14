@@ -22,10 +22,9 @@ namespace FabricHealer.Repair
     {
         public static async Task<bool> IsRepairTaskInDesiredStateAsync(
                                         string taskId,
-                                        string executorName,
                                         IList<RepairTaskState> desiredStates)
         {
-            IList<RepairTask> repairTaskList = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(taskId, RepairTaskStateFilter.All, executorName);
+            IList<RepairTask> repairTaskList = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(taskId, RepairTaskStateFilter.All, null);
             return desiredStates.Any(desiredState => repairTaskList.Count(rt => rt.State == desiredState) > 0);
         }
 
@@ -140,13 +139,13 @@ namespace FabricHealer.Repair
         public static async Task<RepairTask> CreateRepairTaskAsync(
                                                 TelemetryData repairData,
                                                 RepairExecutorData executorData,
-                                                string executorName,
+                                                string taskIdPrefix,
                                                 CancellationToken token)
         {
             var repairTaskEngine = new RepairTaskEngine();
             RepairActionType repairAction = repairData.RepairPolicy.RepairAction;
             RepairTask repairTask;
-            bool isRepairInProgress = await repairTaskEngine.IsRepairInProgressAsync(executorName, repairData, token);
+            bool isRepairInProgress = await repairTaskEngine.IsRepairInProgressAsync(taskIdPrefix, repairData, token);
 
             if (isRepairInProgress)
             {
@@ -156,13 +155,9 @@ namespace FabricHealer.Repair
             switch (repairAction)
             {
                 // IS
-                case RepairActionType.RebootMachine:
-                case RepairActionType.ReimageOS:
-                case RepairActionType.HostReboot:
-                case RepairActionType.HostRepaveData:
-                case RepairActionType.FullReimage:
+                case RepairActionType.Infra:
 
-                    repairTask = await repairTaskEngine.CreateInfrastructureRepairTaskAsync(repairData, executorName, token);
+                    repairTask = await repairTaskEngine.CreateInfrastructureRepairTaskAsync(repairData, token);
                     break;
                 
                 // FH
@@ -264,14 +259,14 @@ namespace FabricHealer.Repair
         public static async Task<bool> IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
                                          TimeSpan interval,
                                          TelemetryData repairData,
-                                         string executorName,
+                                         string taskIdPrefix,
                                          CancellationToken cancellationToken)
         {
             var allRecentFHRepairTasksCompleted =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             RepairTaskEngine.FHTaskIdPrefix,
                             RepairTaskStateFilter.Completed,
-                            executorName,
+                            taskIdPrefix,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
 
@@ -282,7 +277,7 @@ namespace FabricHealer.Repair
 
             var orderedRepairList = allRecentFHRepairTasksCompleted.OrderByDescending(o => o.CompletedTimestamp).ToList();
 
-            if (executorName == RepairConstants.FabricHealer)
+            if (taskIdPrefix == RepairTaskEngine.FHTaskIdPrefix)
             {
                 var completedFHRepairs = orderedRepairList.Where(
                     r => r.ResultStatus == RepairTaskResult.Succeeded && r.ExecutorData.Contains(repairData.RepairPolicy.RepairId));
@@ -295,7 +290,7 @@ namespace FabricHealer.Repair
                     }
                 }
             }
-            else // Infra.
+            else if (taskIdPrefix == RepairTaskEngine.InfraTaskIdPrefix)
             {
                 var completedInfraRepairs = orderedRepairList.Where(r => r.ResultStatus == RepairTaskResult.Succeeded && r.Description == repairData.RepairPolicy.RepairId);
                 
@@ -313,16 +308,16 @@ namespace FabricHealer.Repair
 
         public static async Task<bool> IsLastScheduledRepairJobWithinTimeRangeAsync(
                                          TimeSpan interval,
-                                         string executorName,
+                                         string TaskIdPrefix,
                                          CancellationToken cancellationToken)
         {
             var allCurrentFHRepairTasks =
-                            await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                                    RepairTaskEngine.FHTaskIdPrefix,
-                                    RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
-                                    executorName,
-                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                    cancellationToken);
+                    await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                            TaskIdPrefix,
+                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                            null,
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            cancellationToken);
 
             if (allCurrentFHRepairTasks == null || allCurrentFHRepairTasks.Count == 0)
             {
@@ -400,13 +395,8 @@ namespace FabricHealer.Repair
                     }
                 }
                 // Machine repairs (IS is executor, ExecutorData supplied by IS. Custom FH repair id supplied as repair Description.)
-                else if (repair.Executor == $"{RepairConstants.InfrastructureServiceName}/{repairData.NodeType}")
+                else if (repairData.RepairPolicy.RepairId != repair.Description)
                 {
-                    if (repairData.RepairPolicy.RepairId != repair.Description)
-                    {
-                        continue;
-                    }
-
                     // Repair action string supplied.
                     if (!string.IsNullOrWhiteSpace(repairAction) && repairData.RepairPolicy.InfrastructureRepairName == repairAction)
                     {
@@ -484,6 +474,49 @@ namespace FabricHealer.Repair
             }
             
             return TimeSpan.MinValue;
+        }
+
+        internal static async Task<bool> IsRepairInPostProbationAsync(
+                                            TimeSpan probationPeriod,
+                                            string taskPrefixId,
+                                            TelemetryData repairData,
+                                            CancellationToken cancellationToken)
+        {
+            var allCurrentFHRepairTasks =
+                    await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                            taskPrefixId,
+                            RepairTaskStateFilter.Completed,
+                            null,
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            cancellationToken);
+
+            if (allCurrentFHRepairTasks == null || allCurrentFHRepairTasks.Count == 0)
+            {
+                return false;
+            }
+
+            var orderedRepairList = allCurrentFHRepairTasks.OrderByDescending(o => o.CompletedTimestamp).ToList();
+
+            foreach (var repair in orderedRepairList)
+            {
+                if (repair.Description != repairData.RepairPolicy.RepairId)
+                {
+                    continue;
+                }
+
+                if (repair.CompletedTimestamp == null)
+                {
+                    continue;
+                }
+
+                if (repair.CompletedTimestamp.HasValue &&
+                    DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= probationPeriod)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
