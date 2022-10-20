@@ -18,6 +18,7 @@ using FabricHealer.Interfaces;
 using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
+using System.Transactions;
 
 namespace FabricHealer.Repair
 {
@@ -32,12 +33,10 @@ namespace FabricHealer.Repair
         private readonly TimeSpan maxLifeTimeHealthEventsData = TimeSpan.FromDays(2);
         private DateTime lastHealthEventsListClearDateTime;
         internal readonly List<HealthEvent> detectedHealthEvents = new List<HealthEvent>();
-        internal readonly StatelessServiceContext Context;
 
-        public RepairTaskManager(StatelessServiceContext context, CancellationToken token)
+        public RepairTaskManager()
         {
-            Context = context;
-            repairExecutor = new RepairExecutor(context, token);
+            repairExecutor = new RepairExecutor();
             repairTaskEngine = new RepairTaskEngine();
             lastHealthEventsListClearDateTime = healthEventsListCreationTime;
         }
@@ -136,13 +135,14 @@ namespace FabricHealer.Repair
 
             // Add external helper predicates.
             functorTable.Add(CheckFolderSizePredicateType.Singleton(RepairConstants.CheckFolderSize, this, repairData));
-            functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairData));
-            functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, this, repairData));
             functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, repairData));
             functorTable.Add(CheckInsideProbationPeriodType.Singleton(RepairConstants.CheckInsideProbationPeriod, repairData));
             functorTable.Add(CheckInsideScheduleIntervalPredicateType.Singleton(RepairConstants.CheckInsideScheduleInterval, repairData));
+            functorTable.Add(CheckOutstandingRepairsPredicateType.Singleton(RepairConstants.CheckOutstandingRepairs, repairData));
             functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage));
             functorTable.Add(GetEntityHealthStateDurationPredicateType.Singleton(RepairConstants.GetEntityHealthStateDuration, repairData));
+            functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, this, repairData));
+            functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairData));
 
             // Add external repair predicates.
             functorTable.Add(DeleteFilesPredicateType.Singleton(RepairConstants.DeleteFiles, this, repairData));
@@ -197,71 +197,19 @@ namespace FabricHealer.Repair
         }
 
         // The repair will be executed by SF Infrastructure service, not FH. This is the case for all
-        // Machine-level repairs. IS will communicate with VMSS (for example) to guarantee safe repairs in MR-enabled
-        // clusters. RM, as usual, will orchestrate the repair cycle.
+        // Machine-level repairs.
         public async Task<bool> ScheduleInfrastructureRepairTask(TelemetryData repairData, CancellationToken cancellationToken)
         {
-            /*var infraServices = await FabricRepairTasks.GetInfrastructureServiceInstancesAsync(cancellationToken);
-            var arrServices = infraServices as Service[] ?? infraServices.ToArray();
-
-            if (arrServices.Length == 0)
+            // Internal throttling to protect against bad rules (over scheduling of repair tasks within a fixed time range). 
+            if (await RepairCountThrottleMaxCheck(repairData, cancellationToken))
             {
-               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "ScheduleInfrastructureRepairTask::ISNotFound",
-                        "Infrastructure Service not deployed. Will not attemp Machine repair.",
-                        cancellationToken,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-                return false;
-            }
-
-            string executorName = null;
-
-            foreach (var service in arrServices)
-            {
-                if (!service.ServiceName.OriginalString.Contains(repairData.NodeType))
-                {
-                    continue;
-                }
-
-                executorName = service.ServiceName.OriginalString;
+                string message = $"Too many repairs of this type have been scheduled in the last 1 hour: " +
+                                 $"{repairData.RepairPolicy.InfrastructureRepairName}. Will not schedule another repair at this time.";
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        "ScheduleInfrastructureRepairTask::ExecutorFound",
-                        $"Executor set to {executorName} for Machine Repair Action {repairData.RepairPolicy.InfrastructureRepairName}.",
-                        cancellationToken,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-                break;
-            }
-
-            if (executorName == null)
-            {
-               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        $"ScheduleInfrastructureRepairTask::ISNotFound({repairData.NodeType})",
-                        $"Unable to find InfrastructureService instance for node type {repairData.NodeType}.",
-                        cancellationToken,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-                return false;
-            }*/
-
-            // Make sure there is not already a repair job executing machine-level repair for target node.
-            bool isRepairAlreadyInProgress =
-                    await repairTaskEngine.IsRepairInProgressAsync(RepairTaskEngine.InfraTaskIdPrefix, repairData, cancellationToken);
-
-            if (isRepairAlreadyInProgress)
-            {
-               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "ScheduleInfrastructureRepairTask::RepairAlreadyInProgress",
-                        $"A Machine repair for {repairData.NodeName} is already in progress.",
+                        $"InternalThrottling({repairData.NodeName}::{repairData.RepairPolicy.InfrastructureRepairName})",
+                        message,
                         cancellationToken,
                         repairData,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
@@ -274,13 +222,13 @@ namespace FabricHealer.Repair
 
             if (repairTask == null)
             {
-               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "ScheduleInfrastructureRepairTask::Failure",
-                        "Unable to schedule Infrastructure Repair Task.",
-                        cancellationToken,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                         LogLevel.Info,
+                         "ScheduleInfrastructureRepairTask::Failure",
+                         "Unable to schedule Infrastructure Repair Task.",
+                         cancellationToken,
+                         repairData,
+                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                 return false;
             }
@@ -294,6 +242,103 @@ namespace FabricHealer.Repair
                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
             return true;
+        }
+
+        private static async Task<bool> RepairCountThrottleMaxCheck(TelemetryData repairData, CancellationToken cancellationToken)
+        {
+            string repairPolicySectionName;
+
+            switch (repairData.EntityType)
+            {
+                // App/Service repair (user).
+                case EntityType.Application when repairData.ApplicationName.ToLower() != RepairConstants.SystemAppName.ToLower():
+                case EntityType.Service:
+                case EntityType.StatefulService:
+                case EntityType.StatelessService:
+                    repairPolicySectionName = RepairConstants.AppRepairPolicySectionName;
+                    break;
+
+                // System service process repair.
+                case EntityType.Application when repairData.ProcessName != null:
+                case EntityType.Process:
+                    repairPolicySectionName = RepairConstants.SystemServiceRepairPolicySectionName;
+                    break;
+
+                // Disk repair.
+                case EntityType.Disk when FabricHealerManager.ServiceContext.NodeContext.NodeName == repairData.NodeName:
+                    repairPolicySectionName = RepairConstants.DiskRepairPolicySectionName;
+                    break;
+
+                // Machine repair.
+                case EntityType.Machine:
+                    repairPolicySectionName = RepairConstants.MachineRepairPolicySectionName;
+                    break;
+
+                // Fabric Node repair.
+                case EntityType.Node:
+                    repairPolicySectionName = RepairConstants.FabricNodeRepairPolicySectionName;
+                    break;
+
+                default:
+                    return false;
+            }
+
+            string throttleSetting = FabricHealerManager.GetSettingParameterValue(repairPolicySectionName, RepairConstants.MaxRepairsInTimeRange);
+
+            // <Parameter Name="MaxRepairsInTimeRange" Value="5, 02:00:00" />
+            // <Parameter Name="MaxRepairsInTimeRange" Value="5, 02:00:00; 6, 24:00:00; 7, 48:00:00;" />
+            if (throttleSetting.Contains(';'))
+            {
+                string[] arrSettings = throttleSetting.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (string s in arrSettings)
+                {
+                    string[] settings = s.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+                    if (settings.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    if (!int.TryParse(settings[0].Trim(), out int maxCount))
+                    {
+                        throw new ArgumentException($"Unsupported value for maxCount specified in {repairPolicySectionName} setting. Please check your configuration.");
+                    }
+
+                    if (!TimeSpan.TryParse(settings[1].Trim(), out TimeSpan timeRange))
+                    {
+                        throw new ArgumentException($"Unsupported value timeRange in {repairPolicySectionName} setting. Please check your configuration.");
+                    }
+
+                    if (await FabricRepairTasks.GetCreatedRepairCountWithinTimeRangeAsync(timeRange, repairData, cancellationToken) >= maxCount)
+                    {
+                        return true;
+                    }
+                } 
+            }
+            else
+            {
+                string[] settings = throttleSetting.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+                if (settings.Length == 0)
+                {
+                    return false;
+                }
+
+                if (!int.TryParse(settings[0].Trim(), out int maxCount))
+                {
+                    throw new ArgumentException($"Unsupported value for maxCount specified in {repairPolicySectionName} setting. Please check your configuration.");
+                }
+
+                if (!TimeSpan.TryParse(settings[1].Trim(), out TimeSpan timeRange))
+                {
+                    throw new ArgumentException($"Unsupported value timeRange in {repairPolicySectionName} setting. Please check your configuration.");
+                }
+
+                return await FabricRepairTasks.GetCreatedRepairCountWithinTimeRangeAsync(timeRange, repairData, cancellationToken) >= maxCount;
+            }
+
+            return false;
         }
 
         public async Task<bool> DeleteFilesAsyncAsync(TelemetryData repairData, CancellationToken cancellationToken)
@@ -340,7 +385,7 @@ namespace FabricHealer.Repair
             }
 
             // Can only kill processes on the same node where FH instance that took the job is running.
-            if (repairData.NodeName != Context.NodeContext.NodeName)
+            if (repairData.NodeName != FabricHealerManager.ServiceContext.NodeContext.NodeName)
             {
                 return false;
             }
@@ -383,9 +428,9 @@ namespace FabricHealer.Repair
                 var nodes = await FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(nodeName, asyncTimeout, cancellationToken);
                 return nodes.Count > 0 ? nodes[0] : null;
             }
-            catch (FabricException fe)
+            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
             {
-                FabricHealerManager.RepairLogger.LogError($"Error getting node {nodeName}:{Environment.NewLine}{fe}");
+                FabricHealerManager.RepairLogger.LogError($"Error getting node {nodeName}:{Environment.NewLine}{e}");
                 return null;
             }
         }
@@ -394,62 +439,44 @@ namespace FabricHealer.Repair
         {
             await Task.Delay(new Random().Next(500, 1500), cancellationToken);
 
-            // Has the repair already been scheduled by a different FH instance?
+            // Internal throttling to protect against bad rules (over-scheduling of repair tasks within a fixed time range). 
+            if (await RepairCountThrottleMaxCheck(repairData, cancellationToken))
+            {
+                string message = $"Too many repairs of this type have been scheduled in the last 15 minutes: " +
+                                 $"{repairData.RepairPolicy.RepairId}. Will not schedule another repair at this time.";
+
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        $"InternalThrottling({repairData.RepairPolicy.RepairId})",
+                        message,
+                        cancellationToken,
+                        repairData,
+                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                return null;
+            }
+
+            // Has the repair already been scheduled?
             if (await repairTaskEngine.IsRepairInProgressAsync(RepairTaskEngine.FHTaskIdPrefix, repairData, cancellationToken))
             {
                 return null;
             }
 
-            // Don't attempt a node-level repair on a node where there is already an active node-level repair. \\
-
-            var currentlyExecutingRepairs =
-                await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                        null,
-                        RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
-                        null,
-                        FabricHealerManager.ConfigSettings.AsyncTimeout,
-                        cancellationToken);
-
-            if (currentlyExecutingRepairs.Count > 0)
+            // Don't attempt a node-level repair on a node where there is already an active node-level repair.
+            if (await repairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(repairData, cancellationToken))
             {
-                foreach (var repair in currentlyExecutingRepairs)
-                {
-                    if (repair.Impact is NodeRepairImpactDescription impact)
-                    {
-                        if (!impact.ImpactedNodes.Any(
-                            n => n.NodeName == repairData.NodeName && (n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData)))
-                        {
-                            continue;
-                        }
-                    }
+                string message = $"Node {repairData.NodeName} already has a node-impactful repair in progress: " +
+                                 $"{repairData.RepairPolicy.RepairAction}";
 
-                    // FH-generated repair jobs.
-                    if (JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData data))
-                    {
-                        if (data.RepairData.RepairPolicy.RepairAction == RepairActionType.RestartReplica ||
-                            data.RepairData.RepairPolicy.RepairAction == RepairActionType.RemoveReplica ||
-                            data.RepairData.RepairPolicy.RepairAction == RepairActionType.DeleteFiles ||
-                            data.RepairData.RepairPolicy.RepairAction == RepairActionType.RestartCodePackage)
-                        {
-                            continue;
-                        }
-                    }
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        $"NodeRepairAlreadyInProgress::{repairData.NodeName}",
+                        message,
+                        cancellationToken,
+                        repairData,
+                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-                    string message =
-                        $"Node {repairData.NodeName} already has a node-impactful repair in progress: " +
-                        $"{Enum.GetName(typeof(RepairActionType), repairData.RepairPolicy.RepairAction)}: {repair.TaskId}" +
-                        "Exiting RepairTaskManager.ScheduleFabricHealerRmRepairTaskAsync.";
-
-                   await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            "ScheduleRepairTask::NodeRepairAlreadyInProgress",
-                            message,
-                            cancellationToken,
-                            repairData,
-                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-                    return null;
-                }
+                return null;
             }
 
             var executorData = new RepairExecutorData
@@ -598,7 +625,7 @@ namespace FabricHealer.Repair
                             if (repairData.PartitionId == null)
                             {
                                 success = false;
-                               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                         LogLevel.Info,
                                         "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoPartition",
                                         $"No partition specified.",

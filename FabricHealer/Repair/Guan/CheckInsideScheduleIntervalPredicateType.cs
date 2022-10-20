@@ -45,7 +45,7 @@ namespace FabricHealer.Repair.Guan
                 bool insideScheduleInterval =
                     await FabricRepairTasks.IsLastScheduledRepairJobWithinTimeRangeAsync(
                             interval,
-                            RepairData.EntityType == EntityType.Machine ? RepairTaskEngine.InfraTaskIdPrefix : RepairTaskEngine.FHTaskIdPrefix,
+                            RepairData,
                             FabricHealerManager.Token);
 
                 if (!insideScheduleInterval)

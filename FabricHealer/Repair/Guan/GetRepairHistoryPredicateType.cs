@@ -27,7 +27,6 @@ namespace FabricHealer.Repair.Guan
             {
                 long repairCount;
                 TimeSpan timeWindow = TimeSpan.MinValue;
-                string repairAction = null;
                 long args = Input.Arguments.Count;
 
                 for (int i = 1; i < args; i++)
@@ -37,11 +36,18 @@ namespace FabricHealer.Repair.Guan
                     switch (typeString)
                     {
                         case "TimeSpan":
+
                             timeWindow = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
+                        // This only makes sense for Machine-level repair rules, where you can specify any string for machine repair action that is supported in your SF configuration.
+                        // Otherwise, FH already knows what you mean with GetRepairHistory([TimeSpan value]), given the repair context (which FH creates).
                         case "String":
-                            repairAction = Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue();
+
+                            if (RepairData.EntityType == EntityType.Machine)
+                            {
+                                RepairData.RepairPolicy.InfrastructureRepairName = Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue();
+                            }
                             break;
 
                         default:
@@ -53,7 +59,7 @@ namespace FabricHealer.Repair.Guan
                 if (timeWindow > TimeSpan.MinValue)
                 {
                     repairCount =
-                        await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(timeWindow, RepairData, FabricHealerManager.Token, repairAction);
+                        await FabricRepairTasks.GetCompletedRepairCountWithinTimeRangeAsync(timeWindow, RepairData, FabricHealerManager.Token);
                 }
                 else
                 {

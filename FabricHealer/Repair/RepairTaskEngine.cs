@@ -4,11 +4,13 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Fabric;
 using System.Fabric.Health;
 using System.Fabric.Repair;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricHealer.TelemetryLib;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 
@@ -207,7 +209,50 @@ namespace FabricHealer.Repair
             return false;
         }
 
-        public async Task<int> GetOutstandingRepairCount(string taskIdPrefix, CancellationToken token)
+        /// <summary>
+        /// Determines if a node-impactful repair has already been scheduled/claimed for a target node.
+        /// </summary>
+        /// <param name="repairData">TelemetryData instance.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns></returns>
+        public async Task<bool> IsNodeLevelRepairCurrentlyInFlightAsync(TelemetryData repairData, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var currentlyExecutingRepairs =
+                    await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                            null,
+                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                            null,
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            cancellationToken);
+
+                if (currentlyExecutingRepairs.Count > 0)
+                {
+                    foreach (var repair in currentlyExecutingRepairs)
+                    {
+                        if (repair.Impact is NodeRepairImpactDescription impact)
+                        {
+                            if (!impact.ImpactedNodes.Any(
+                                n => n.NodeName == repairData.NodeName && (n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData)))
+                            {
+                                continue;
+                            }
+                        }
+
+                        return true;
+                    }
+                }
+            }
+            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            {
+
+            }
+
+            return false;
+        }
+
+        public async Task<int> GetOutstandingFHRepairCount(string taskIdPrefix, CancellationToken token)
         {
             RepairTaskList repairTasksInProgress =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
@@ -223,6 +268,50 @@ namespace FabricHealer.Repair
             }
 
             return repairTasksInProgress.Count(r => r.TaskId.StartsWith(taskIdPrefix));
+        }
+
+        /// <summary>
+        /// Get number of currently active repair jobs in the cluster.
+        /// </summary>
+        /// <param name="taskIdPrefix"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public async Task<int> GetOutstandingMachineRepairCount(CancellationToken token)
+        {
+            int count = 0;
+
+            try
+            {
+                var currentlyExecutingRepairs =
+                    await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                            null,
+                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                            null,
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            token);
+
+                if (currentlyExecutingRepairs.Count > 0)
+                {
+                    foreach (var repair in currentlyExecutingRepairs)
+                    {
+                        if (repair.Impact is NodeRepairImpactDescription impact)
+                        {
+                            if (!impact.ImpactedNodes.Any(n => n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData))
+                            {
+                                continue;
+                            }
+
+                            count++;
+                        }
+                    }
+                }
+            }
+            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            {
+
+            }
+
+            return count;
         }
     }
 }

@@ -43,8 +43,31 @@ namespace FabricHealer.Repair.Guan
                 {
                     throw new GuanException("The third argument of GetCurrentEntityHealthStateDuration must be a valid HealthState value (Error, Warning, etc..)");
                 }
-                
-                duration = await FabricRepairTasks.GetEntityCurrentHealthStateDurationAsync(entityType, RepairData.NodeName, state, FabricHealerManager.Token);
+
+                switch (entityType)
+                {
+                    case EntityType.Application:
+                        duration = await FabricRepairTasks.GetEntityCurrentHealthStateDurationAsync(entityType, RepairData.ApplicationName, state, FabricHealerManager.Token);
+                        break;
+
+                    case EntityType.Disk:
+                    case EntityType.Machine:
+                    case EntityType.Node:
+
+                        duration = await FabricRepairTasks.GetEntityCurrentHealthStateDurationAsync(entityType, RepairData.NodeName, state, FabricHealerManager.Token);
+                        break;
+
+                    case EntityType.Partition:
+                        duration = await FabricRepairTasks.GetEntityCurrentHealthStateDurationAsync(entityType, RepairData.PartitionId.ToString(), state, FabricHealerManager.Token);
+                        break;
+
+                    case EntityType.Service:
+                        duration = await FabricRepairTasks.GetEntityCurrentHealthStateDurationAsync(entityType, RepairData.ServiceName, state, FabricHealerManager.Token);
+                        break;
+
+                    default:
+                        throw new GuanException($"Unsupported entity type: {entityType}");
+                }
 
                 var result = new CompoundTerm(this.Input.Functor);
                 result.AddArgument(new Constant(duration), "0");

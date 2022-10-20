@@ -29,12 +29,9 @@ namespace FabricHealer.Repair
     public sealed class RepairExecutor
     {
         private const double MaxWaitTimeMinutesForNodeOperation = 60.0;
-        private readonly StatelessServiceContext serviceContext;
 
-        public RepairExecutor(StatelessServiceContext context, CancellationToken token)
+        public RepairExecutor()
         {
-            serviceContext = context;
-
             try
             {
                 if (FabricHealerManager.ConfigSettings == null)
@@ -248,13 +245,13 @@ namespace FabricHealer.Repair
             }
 
             ServiceDescription serviceDesc =
-               await FabricHealerManager.FabricClientSingleton.ServiceManager.GetServiceDescriptionAsync(serviceContext.ServiceName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
+               await FabricHealerManager.FabricClientSingleton.ServiceManager.GetServiceDescriptionAsync(FabricHealerManager.ServiceContext.ServiceName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
 
             int instanceCount = (serviceDesc as StatelessServiceDescription).InstanceCount;
 
             if (instanceCount == -1)
             {
-                bool isTargetNodeHostingFH = repairData.NodeName == serviceContext.NodeContext.NodeName;
+                bool isTargetNodeHostingFH = repairData.NodeName == FabricHealerManager.ServiceContext.NodeContext.NodeName;
 
                 if (isTargetNodeHostingFH)
                 {

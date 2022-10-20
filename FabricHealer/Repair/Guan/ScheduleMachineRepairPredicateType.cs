@@ -53,31 +53,20 @@ namespace FabricHealer.Repair.Guan
                             RepairData.RepairPolicy.InfrastructureRepairName = repairAction; 
                             break;
 
-                        case "TimeSpan":
-                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
-                            break;
-
                         case "Boolean":
                             RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
-                            break;
-                        // Guan logic defaults to long for numeric types.
-                        case "Int64":
-                            RepairData.RepairPolicy.MaxConcurrentRepairs = (long)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         default:
                             throw new GuanException(
-                                "Failure in ScheduleMachineRepairPredicateType. Unsupported argument type specified: " +
+                                "Failure in ScheduleMachineRepair. Unsupported argument type specified: " +
                                 $"{Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name}{Environment.NewLine}" +
-                                $"Only String, TimeSpan, Boolean and Int32/64 argument types are supported by this predicate.");
+                                $"Only String and Boolean argument types are supported by this predicate.");
                     }
                 }
 
                 bool isRepairAlreadyInProgress =
-                        await repairTaskEngine.IsRepairInProgressAsync(
-                                RepairData.EntityType == EntityType.Machine ? RepairTaskEngine.InfraTaskIdPrefix : RepairTaskEngine.FHTaskIdPrefix,
-                                RepairData,
-                                FabricHealerManager.Token);
+                    await repairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(RepairData, FabricHealerManager.Token);
 
                 if (isRepairAlreadyInProgress)
                 {
@@ -86,32 +75,15 @@ namespace FabricHealer.Repair.Guan
 
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            $"ScheduleMachineRepairPredicateType::{RepairData.RepairPolicy.RepairId}",
+                            $"ScheduleMachineRepair::{RepairData.RepairPolicy.InfrastructureRepairName}",
                             message,
                             FabricHealerManager.Token);
 
                     return false;
                 }
 
-                int outstandingRepairCount = 
-                    await repairTaskEngine.GetOutstandingRepairCount(taskIdPrefix: RepairTaskEngine.InfraTaskIdPrefix, FabricHealerManager.Token);
-
-                if (RepairData.RepairPolicy.MaxConcurrentRepairs > 0 && outstandingRepairCount >= RepairData.RepairPolicy.MaxConcurrentRepairs)
-                {
-                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                           LogLevel.Info,
-                           "ScheduleMachineRepairPredicateType::MaxOustandingRepairs",
-                           $"The number of outstanding machine repairs is currently at the maximum specified threshold ({RepairData.RepairPolicy.MaxConcurrentRepairs}). " +
-                           $"Will not schedule any other machine repairs at this time.",
-                           FabricHealerManager.Token);
-
-                    return false;
-                }
-
-                // TODO: Experiment with Guan context information for rules (what rule executed for repair).
-
                 // Attempt to schedule an Infrastructure Repair Job (where IS is the executor).
-                bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+               bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => RepairTaskManager.ScheduleInfrastructureRepairTask(
                                                 RepairData,
                                                 FabricHealerManager.Token),
@@ -128,7 +100,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private ScheduleMachineRepairPredicateType(string name)
-                 : base(name, true, 0)
+                 : base(name, true, 1, 2)
         {
 
         }

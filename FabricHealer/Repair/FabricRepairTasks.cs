@@ -22,9 +22,17 @@ namespace FabricHealer.Repair
     {
         public static async Task<bool> IsRepairTaskInDesiredStateAsync(
                                         string taskId,
-                                        IList<RepairTaskState> desiredStates)
+                                        IList<RepairTaskState> desiredStates,
+                                        CancellationToken cancellationToken)
         {
-            IList<RepairTask> repairTaskList = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(taskId, RepairTaskStateFilter.All, null);
+            IList<RepairTask> repairTaskList = 
+                await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                        taskId,
+                        RepairTaskStateFilter.All,
+                        null,
+                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                        cancellationToken);
+
             return desiredStates.Any(desiredState => repairTaskList.Count(rt => rt.State == desiredState) > 0);
         }
 
@@ -259,14 +267,13 @@ namespace FabricHealer.Repair
         public static async Task<bool> IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
                                          TimeSpan interval,
                                          TelemetryData repairData,
-                                         string taskIdPrefix,
                                          CancellationToken cancellationToken)
         {
             var allRecentFHRepairTasksCompleted =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                            RepairTaskEngine.FHTaskIdPrefix,
+                            repairData.RepairPolicy.RepairIdPrefix,
                             RepairTaskStateFilter.Completed,
-                            taskIdPrefix,
+                            null,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
 
@@ -277,7 +284,7 @@ namespace FabricHealer.Repair
 
             var orderedRepairList = allRecentFHRepairTasksCompleted.OrderByDescending(o => o.CompletedTimestamp).ToList();
 
-            if (taskIdPrefix == RepairTaskEngine.FHTaskIdPrefix)
+            if (repairData.RepairPolicy.RepairIdPrefix == RepairTaskEngine.FHTaskIdPrefix)
             {
                 var completedFHRepairs = orderedRepairList.Where(
                     r => r.ResultStatus == RepairTaskResult.Succeeded && r.ExecutorData.Contains(repairData.RepairPolicy.RepairId));
@@ -290,7 +297,7 @@ namespace FabricHealer.Repair
                     }
                 }
             }
-            else if (taskIdPrefix == RepairTaskEngine.InfraTaskIdPrefix)
+            else if (repairData.RepairPolicy.RepairIdPrefix == RepairTaskEngine.InfraTaskIdPrefix)
             {
                 var completedInfraRepairs = orderedRepairList.Where(r => r.ResultStatus == RepairTaskResult.Succeeded && r.Description == repairData.RepairPolicy.RepairId);
                 
@@ -308,12 +315,12 @@ namespace FabricHealer.Repair
 
         public static async Task<bool> IsLastScheduledRepairJobWithinTimeRangeAsync(
                                          TimeSpan interval,
-                                         string TaskIdPrefix,
+                                         TelemetryData repairData,
                                          CancellationToken cancellationToken)
         {
             var allCurrentFHRepairTasks =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                            TaskIdPrefix,
+                            repairData.RepairPolicy.RepairIdPrefix,
                             RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
                             null,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
@@ -345,12 +352,11 @@ namespace FabricHealer.Repair
         public static async Task<int> GetCompletedRepairCountWithinTimeRangeAsync(
                                          TimeSpan timeWindow,
                                          TelemetryData repairData,
-                                         CancellationToken cancellationToken,
-                                         string repairAction = null)
+                                         CancellationToken cancellationToken)
         {
             var allRecentFHRepairTasksCompleted =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                            RepairTaskEngine.FHTaskIdPrefix,
+                            repairData.RepairPolicy.RepairIdPrefix,
                             RepairTaskStateFilter.Completed,
                             null,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
@@ -372,6 +378,68 @@ namespace FabricHealer.Repair
                     continue;
                 }
 
+                // Non-Machine repairs scheduled and executed by FH.
+                if (repair.Executor == RepairConstants.FabricHealer)
+                {
+                    var fhExecutorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
+
+                    if (fhExecutorData == null || fhExecutorData.RepairData?.RepairPolicy == null)
+                    {
+                        continue;
+                    }
+
+                    if (repairData.RepairPolicy.RepairId != fhExecutorData.RepairData.RepairPolicy.RepairId)
+                    {
+                        continue;
+                    }
+
+                    if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= timeWindow)
+                    {
+                        count++;
+                    }
+                }
+                // Machine repairs scheduled by FH.
+                else if (repairData.RepairPolicy.InfrastructureRepairName == repair.Action)
+                {
+                    if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= timeWindow)
+                    {
+                        count++;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        public static async Task<int> GetCreatedRepairCountWithinTimeRangeAsync(
+                                         TimeSpan timeWindow,
+                                         TelemetryData repairData,
+                                         CancellationToken cancellationToken)
+        {
+            var allRecentFHRepairTasksCreated =
+                    await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                            null,
+                            RepairTaskStateFilter.Created,
+                            null,
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            cancellationToken);
+
+            if (allRecentFHRepairTasksCreated?.Count == 0)
+            {
+                return 0;
+            }
+
+            int count = 0;
+
+            foreach (RepairTask repair in allRecentFHRepairTasksCreated)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (repair.CreatedTimestamp == null || !repair.CreatedTimestamp.HasValue)
+                {
+                    continue;
+                }
+
                 // Non-Machine repairs (FH is executor, custom repair ExecutorData supplied by FH.)
                 if (repair.Executor == RepairConstants.FabricHealer)
                 {
@@ -387,44 +455,46 @@ namespace FabricHealer.Repair
                         continue;
                     }
 
-                    // Note: Completed aborted/cancelled repair tasks should not block repairs if they are inside run interval.
-                    if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= timeWindow
-                        && repair.Flags != RepairTaskFlags.CancelRequested && repair.Flags != RepairTaskFlags.AbortRequested)
+                    if (DateTime.UtcNow.Subtract(repair.CreatedTimestamp.Value) <= timeWindow)
                     {
                         count++;
                     }
                 }
-                // Machine repairs (IS is executor, ExecutorData supplied by IS. Custom FH repair id supplied as repair Description.)
-                else if (repairData.RepairPolicy.RepairId != repair.Description)
+                // Machine/other source repairs.
+                else if (DateTime.UtcNow.Subtract(repair.CreatedTimestamp.Value) <= timeWindow)
                 {
-                    // Repair action string supplied.
-                    if (!string.IsNullOrWhiteSpace(repairAction) && repairData.RepairPolicy.InfrastructureRepairName == repairAction)
-                    {
-                        if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= timeWindow
-                            && repair.Flags != RepairTaskFlags.CancelRequested && repair.Flags != RepairTaskFlags.AbortRequested)
-                        {
-                            count++;
-                        }
-                    }
+                    count++;
                 }
             }
 
             return count;
         }
 
-        internal static async Task<TimeSpan> GetEntityCurrentHealthStateDurationAsync(EntityType entityType, string entityFilter, HealthState state, CancellationToken token)
+        /// <summary>
+        /// Returns the anount of time the target entity (application, node, etc) has been in the specified health state.
+        /// </summary>
+        /// <param name="entityType">EntityType</param>
+        /// <param name="nameOrIdFilter">String representation of the target entity's name or ID (e.g., application name or node name or partition id)</param>
+        /// <param name="healthState">Target HealthState to match.</param>
+        /// <param name="token">CancellationToken</param>
+        /// <returns></returns>
+        internal static async Task<TimeSpan> GetEntityCurrentHealthStateDurationAsync(
+                                                EntityType entityType, 
+                                                string nameOrIdFilter,
+                                                HealthState healthState,
+                                                CancellationToken token)
         {
             HealthEventsFilter healthEventsFilter = new HealthEventsFilter();
 
-            if (state == HealthState.Warning)
+            if (healthState == HealthState.Warning)
             {
                 healthEventsFilter.HealthStateFilterValue = HealthStateFilter.Warning;
             }
-            else if (state == HealthState.Error)
+            else if (healthState == HealthState.Error)
             {
                 healthEventsFilter.HealthStateFilterValue = HealthStateFilter.Error;
             }
-            else if (state == HealthState.Ok)
+            else if (healthState == HealthState.Ok)
             {
                 healthEventsFilter.HealthStateFilterValue = HealthStateFilter.Ok;
             }
@@ -436,81 +506,221 @@ namespace FabricHealer.Repair
             switch (entityType)
             {
                 case EntityType.Application:
-                    break;
-
-                case EntityType.Service:
-                    break;
-
-                case EntityType.Machine:
-                case EntityType.Node:
-
-                    var queryDesc = new NodeHealthQueryDescription(entityFilter)
+                    
+                    var appqueryDesc = new ApplicationHealthQueryDescription(new Uri(nameOrIdFilter))
                     {
                         EventsFilter = healthEventsFilter
                     };
-                    var nodeHealthList =
-                        await FabricHealerManager.FabricClientSingleton.HealthManager.GetNodeHealthAsync(
-                                    queryDesc, FabricHealerManager.ConfigSettings.AsyncTimeout, token);
-                    
-                    if (nodeHealthList == null || nodeHealthList.HealthEvents.Count == 0)
+
+                    try
+                    {
+                        var appHealth =
+                            await FabricHealerManager.FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
+                                        appqueryDesc, FabricHealerManager.ConfigSettings.AsyncTimeout, token);
+
+                        if (appHealth == null || appHealth.HealthEvents.Count == 0)
+                        {
+                            return TimeSpan.MinValue;
+                        }
+
+                        // How many times has the entity transitioned to Error health state in the last hour?
+                        // This is not going to work if the same event is created in a cycle. TODO: figure out how to do this correctly.
+                        if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
+                        {
+                            var appHealthErrorEvents =
+                                 appHealth.HealthEvents.Where(
+                                     evt => DateTime.UtcNow.Subtract(
+                                         evt.LastErrorTransitionAt) <= TimeSpan.FromHours(1)).OrderByDescending(
+                                             o => o.LastErrorTransitionAt);
+
+                            int errorCount = appHealthErrorEvents.Count();
+
+                            if (errorCount > 1)
+                            {
+                                return DateTime.UtcNow.Subtract(appHealthErrorEvents.First().LastErrorTransitionAt);
+                            }
+                        }
+
+                        var appHealthEvents = appHealth.HealthEvents.OrderByDescending(o => o.SourceUtcTimestamp);
+
+                        // return the time since the last health event was issued, as a TimeSpan.
+                        return DateTime.UtcNow.Subtract(appHealthEvents.First().SourceUtcTimestamp);
+
+                    }
+                    catch (FabricException)
                     {
                         return TimeSpan.MinValue;
                     }
 
-                    foreach (var nodeHealthEvent in nodeHealthList.HealthEvents)
+                case EntityType.Partition:
+
+                    var partitionqueryDesc = new PartitionHealthQueryDescription(Guid.Parse(nameOrIdFilter))
                     {
-                        if (nodeHealthEvent.IsExpired)
+                        EventsFilter = healthEventsFilter
+                    };
+
+                    try
+                    {
+                        var partitionHealth =
+                            await FabricHealerManager.FabricClientSingleton.HealthManager.GetPartitionHealthAsync(
+                                        partitionqueryDesc, FabricHealerManager.ConfigSettings.AsyncTimeout, token);
+
+                        if (partitionHealth == null || partitionHealth.HealthEvents.Count == 0)
                         {
-                            continue;
+                            return TimeSpan.MinValue;
                         }
 
-                        return DateTime.UtcNow.Subtract(nodeHealthEvent.SourceUtcTimestamp);
+                        // How many times has the entity transitioned to Error health state in the last hour?
+                        // This is not going to work if the same event is created in a cycle. TODO: figure out how to do this correctly.
+                        if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
+                        {
+                            var partitionHealthErrorEvents =
+                                 partitionHealth.HealthEvents.Where(
+                                     evt => DateTime.UtcNow.Subtract(
+                                         evt.LastErrorTransitionAt) <= TimeSpan.FromHours(1)).OrderByDescending(
+                                             o => o.LastErrorTransitionAt);
+
+                            int errorCount = partitionHealthErrorEvents.Count();
+
+                            if (errorCount > 1)
+                            {
+                                return DateTime.UtcNow.Subtract(partitionHealthErrorEvents.First().LastErrorTransitionAt);
+                            }
+                        }
+
+                        var partitionHealthEvents = partitionHealth.HealthEvents.OrderByDescending(o => o.SourceUtcTimestamp);
+                        return DateTime.UtcNow.Subtract(partitionHealthEvents.First().SourceUtcTimestamp);
+                    }
+                    catch (FabricException)
+                    {
+                        return TimeSpan.MinValue;
                     }
 
-                    break;
+                case EntityType.Service:
+
+                    var servicequeryDesc = new ServiceHealthQueryDescription(new Uri(nameOrIdFilter))
+                    {
+                        EventsFilter = healthEventsFilter
+                    };
+
+                    try
+                    {
+                        var serviceHealth =
+                            await FabricHealerManager.FabricClientSingleton.HealthManager.GetServiceHealthAsync(
+                                        servicequeryDesc, FabricHealerManager.ConfigSettings.AsyncTimeout, token);
+
+                        if (serviceHealth == null || serviceHealth.HealthEvents.Count == 0)
+                        {
+                            return TimeSpan.MinValue;
+                        }
+
+                        // How many times has the entity transitioned to Error health state in the last hour?
+                        // This is not going to work if the same event is created in a cycle. TODO: figure out how to do this correctly.
+                        if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
+                        {
+                            var serviceHealthErrorEvents =
+                                 serviceHealth.HealthEvents.Where(
+                                     evt => DateTime.UtcNow.Subtract(
+                                         evt.LastErrorTransitionAt) <= TimeSpan.FromHours(1)).OrderByDescending(
+                                             o => o.LastErrorTransitionAt);
+
+                            int errorCount = serviceHealthErrorEvents.Count();
+
+                            if (errorCount > 1)
+                            {
+                                return DateTime.UtcNow.Subtract(serviceHealthErrorEvents.First().LastErrorTransitionAt);
+                            }
+                        }
+
+                        var serviceHealthEvents = serviceHealth.HealthEvents.OrderByDescending(o => o.SourceUtcTimestamp);
+                        return DateTime.UtcNow.Subtract(serviceHealthEvents.First().SourceUtcTimestamp);
+                    }
+                    catch (FabricException)
+                    {
+                        return TimeSpan.MinValue;
+                    }
+
+                case EntityType.Disk:
+                case EntityType.Machine:
+                case EntityType.Node:
+
+                    var nodequeryDesc = new NodeHealthQueryDescription(nameOrIdFilter)
+                    {
+                        EventsFilter = healthEventsFilter
+                    };
+
+                    try
+                    {
+                        var nodeHealth =
+                            await FabricHealerManager.FabricClientSingleton.HealthManager.GetNodeHealthAsync(
+                                        nodequeryDesc, FabricHealerManager.ConfigSettings.AsyncTimeout, token);
+
+                        if (nodeHealth == null || nodeHealth.HealthEvents.Count == 0)
+                        {
+                            return TimeSpan.MinValue;
+                        }
+
+                        // How many times has the entity transitioned to Error health state in the last hour?
+                        // This is not going to work if the same event is created in a cycle. TODO: figure out how to do this correctly.
+                        if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
+                        {
+                            var nodeHealthErrorEvents =
+                                 nodeHealth.HealthEvents.Where(
+                                     evt => DateTime.UtcNow.Subtract(
+                                         evt.LastErrorTransitionAt) <= TimeSpan.FromHours(2)).OrderByDescending(
+                                             o => o.LastErrorTransitionAt);
+
+                            int errorCount = nodeHealthErrorEvents.Count();
+
+                            if (errorCount > 1)
+                            {
+                                return DateTime.UtcNow.Subtract(nodeHealthErrorEvents.First().LastErrorTransitionAt);
+                            }
+                        }
+
+                        var nodeHealthEvents = nodeHealth.HealthEvents.OrderByDescending(o => o.SourceUtcTimestamp);
+                        return DateTime.UtcNow.Subtract(nodeHealthEvents.First().SourceUtcTimestamp);
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is FabricException || e is InvalidOperationException || e is TaskCanceledException || e is TimeoutException)
+                    {
+                        string message = $"Unable to get {healthState} health state duration for {entityType}: {e.Message}";
+                        FabricHealerManager.RepairLogger.LogWarning(message);
+                        return TimeSpan.MinValue;
+                    }
 
                 default:
                     return TimeSpan.MinValue;
             }
-            
-            return TimeSpan.MinValue;
         }
 
-        internal static async Task<bool> IsRepairInPostProbationAsync(
-                                            TimeSpan probationPeriod,
-                                            string taskPrefixId,
-                                            TelemetryData repairData,
-                                            CancellationToken cancellationToken)
+        // TOTHINK: Should this look at any repair and apply a probation to it (so, not just FH-scheduled/executed repairs).
+        // This mainly makes sense for node-level repairs (machine).
+        internal static async Task<bool> IsRepairInPostProbationAsync(TimeSpan probationPeriod, TelemetryData repairData, CancellationToken cancellationToken)
         {
-            var allCurrentFHRepairTasks =
+            var allCompletedFHRepairTasks =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                            taskPrefixId,
+                            null, // no prefix filter..
                             RepairTaskStateFilter.Completed,
-                            null,
+                            null, // no executor name filter..
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
 
-            if (allCurrentFHRepairTasks == null || allCurrentFHRepairTasks.Count == 0)
+            if (allCompletedFHRepairTasks == null || allCompletedFHRepairTasks.Count == 0)
             {
                 return false;
             }
 
-            var orderedRepairList = allCurrentFHRepairTasks.OrderByDescending(o => o.CompletedTimestamp).ToList();
+            var orderedRepairList = allCompletedFHRepairTasks.OrderByDescending(o => o.CompletedTimestamp).ToList();
 
             foreach (var repair in orderedRepairList)
             {
-                if (repair.Description != repairData.RepairPolicy.RepairId)
-                {
-                    continue;
-                }
-
                 if (repair.CompletedTimestamp == null)
                 {
                     continue;
                 }
 
                 if (repair.CompletedTimestamp.HasValue &&
-                    DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= probationPeriod)
+                    DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) < probationPeriod)
                 {
                     return true;
                 }

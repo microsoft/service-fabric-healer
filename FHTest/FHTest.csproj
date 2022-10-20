@@ -24,12 +24,16 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+		<PackageReference Include="ServiceFabric.Mocks" Version="6.0.3" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\FabricHealerProxy\FabricHealerProxy.csproj" />
         <ProjectReference Include="..\FabricHealer\FabricHealer.csproj" />
     </ItemGroup>
     <ItemGroup>
+        <None Update="PackageRoot\Config\Settings.xml">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
         <None Update="testrules_wellformed">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>

@@ -15,9 +15,9 @@
     <!-- Repair Policy Enablement -->
     <Parameter Name="EnableAppRepair" DefaultValue="true" />
     <Parameter Name="EnableDiskRepair" DefaultValue="false" />
-    <Parameter Name="EnableFabricNodeRepair" DefaultValue="true" />
+    <Parameter Name="EnableFabricNodeRepair" DefaultValue="false" />
     <Parameter Name="EnableMachineRepair" DefaultValue="true" />
-    <Parameter Name="EnableReplicaRepair" DefaultValue="true" />
+    <Parameter Name="EnableReplicaRepair" DefaultValue="false" />
     <!-- This means FH will apply some mitigation (restarts) to all instances of a target service on a node-by-node basis only (rolling). -->
     <Parameter Name="EnableRollingServiceRestarts" DefaultValue="true" />
     <Parameter Name="EnableSystemServiceRepair" DefaultValue="true" />
