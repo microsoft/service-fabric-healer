@@ -28,7 +28,7 @@ namespace FabricHealer.Repair.Guan
             protected override async Task<bool> CheckAsync()
             {
                 // Can only kill processes on the same node where the FH instance that took the job is running.
-                if (RepairData.NodeName != RepairTaskManager.Context.NodeContext.NodeName)
+                if (RepairData.NodeName != FabricHealerManager.ServiceContext.NodeContext.NodeName)
                 {
                     return false;
                 }

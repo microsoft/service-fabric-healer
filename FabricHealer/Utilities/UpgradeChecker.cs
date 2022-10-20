@@ -94,19 +94,19 @@ namespace FabricHealer.Repair
         }
 
         /// <summary>
-        /// Determines if an Azure tenant update is in progress for cluster VMs.
+        /// Determines if an Azure tenant/platform update is in progress in the cluster.
         /// </summary>
         /// <param name="nodeType">NodeType string</param>
         /// <param name="token">CancellationToken instance</param>
         /// <returns>true if tenant update is in progress, false otherwise</returns>
-        internal static async Task<bool> IsAzureUpdateInProgress(string nodeType, string nodeName, CancellationToken token)
+        internal static async Task<bool> IsAzureUpdateInProgress(string nodeName, CancellationToken token)
         {
             var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                                        null,
+                                        "Azure",
                                         System.Fabric.Repair.RepairTaskStateFilter.Approved |
                                         System.Fabric.Repair.RepairTaskStateFilter.Active |
                                         System.Fabric.Repair.RepairTaskStateFilter.Executing,
-                                        $"fabric:/System/InfrastructureService/{nodeType}",
+                                        null,
                                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                                         token);
 
@@ -120,11 +120,11 @@ namespace FabricHealer.Repair
             if (repairTasks.ToList().Any(
                 n => JsonSerializationUtility.TryDeserializeObject(n.ExecutorData, out ISExecutorData data) && data.JobId == nodeName))
             {
-                string message = $"Azure Platform or Tenant Update in progress for {nodeType}. Will not attempt repairs at this time.";
+                string message = $"Azure Platform or Tenant Update in progress for {nodeName}. Will not attempt repairs at this time.";
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        "AzurePlatformOrTenantUpdateInProgress",
+                        $"AzurePlatformOrTenantUpdateInProgress_{nodeName}",
                         message,
                         token);
 

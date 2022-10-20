@@ -1,4 +1,9 @@
-﻿using System;
+﻿// ------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
+// ------------------------------------------------------------
+
+using System;
 using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
@@ -37,12 +42,7 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                bool insideProbationPeriod =
-                    await FabricRepairTasks.IsRepairInPostProbationAsync(
-                            interval,
-                            RepairData.EntityType == EntityType.Machine ? RepairTaskEngine.InfraTaskIdPrefix : RepairTaskEngine.FHTaskIdPrefix,
-                            RepairData,
-                            FabricHealerManager.Token);
+                bool insideProbationPeriod = await FabricRepairTasks.IsRepairInPostProbationAsync(interval, RepairData, FabricHealerManager.Token);
 
                 if (!insideProbationPeriod)
                 {
@@ -50,7 +50,7 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 string message = $"FH repair job {RepairData.RepairPolicy.RepairId} is currently in post-repair health probation ({interval}). " +
-                                 $"Will not schedule another repair for the target {RepairData.RepairPolicy} at this time.";
+                                 $"Will not schedule another machine repair for {RepairData.NodeName} at this time.";
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,

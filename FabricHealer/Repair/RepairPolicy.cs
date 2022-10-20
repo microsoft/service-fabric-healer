@@ -68,5 +68,14 @@ namespace FabricHealer.Repair
         {
             get; set;
         }
+
+        /// <summary>
+        /// The repair ID prefix used to associate an FH repair to its executor (FH or FH_Infra, for example).
+        /// </summary>
+        [EventField]
+        public string RepairIdPrefix
+        {
+            get; set;
+        }
     }
 }

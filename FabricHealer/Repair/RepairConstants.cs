@@ -36,6 +36,7 @@ namespace FabricHealer.Repair
 
         // General Repair Settings Parameters.
         public const string EnableAutoMitigation = "EnableAutoMitigation";
+        public const string MaxRepairsInTimeRange = "MaxRepairsInTimeRange";
 
         // RepairPolicy Settings Sections.
         public const string FabricNodeRepairPolicySectionName = "FabricNodeRepairPolicy";
@@ -88,6 +89,7 @@ namespace FabricHealer.Repair
         public const string CheckInsideRunInterval = "CheckInsideRunInterval";
         public const string CheckInsideScheduleInterval = "CheckInsideScheduleInterval";
         public const string CheckInsideProbationPeriod = "CheckInsideProbationPeriod";
+        public const string CheckOutstandingRepairs = "CheckOutstandingRepairs";
         public const string CheckFolderSize = "CheckFolderSize";
         public const string GetEntityHealthStateDuration = "GetEntityHealthStateDuration";
         public const string GetHealthEventHistory = "GetHealthEventHistory";

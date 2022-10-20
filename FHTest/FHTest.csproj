@@ -32,6 +32,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+	<PackageReference Include="ServiceFabric.Mocks" Version="6.0.3" />
   </ItemGroup>
 
   <ItemGroup>
@@ -40,6 +41,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="PackageRoot\Config\Settings.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="testrules_wellformed">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
