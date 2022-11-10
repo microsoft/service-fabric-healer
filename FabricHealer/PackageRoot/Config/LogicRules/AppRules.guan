@@ -1,6 +1,6 @@
-﻿## Logic rules for Service Fabric Application-level repairs.
+﻿## Logic rules for Service Fabric Application-level repairs. Note that all of these rules expect facts from an external source (FabricObserver or FHProxy).
 
-## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
+## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver or FHProxy, renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
 ## |---------------------------|----------------------------------------------------------------------------------------------|
 ## | AppName                   | Name of the SF application, format is "fabric:/SomeApp" (Quotes are required)                |
@@ -62,38 +62,39 @@
 ## *Note*:  you must wrap the date string in quotes to make it explicit to Guan that the arg is a string as it contains mathematical operators (in this case a /).
 ## The rule below reads: If any of the specified (set in Mitigate) app's service processes have put it into Warning due to CPU over-consumption and today's date is later than the supplied end date, emit a message, stop processing rules (!).
 
-Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("12/30/2022"),
-	EmitMessage("Exceeded specified end date for repair of fabric:/MyApp CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("12/30/2022"), time()), !.
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("12/31/2022"),
+	EmitMessage("Exceeded specified end date for repair of fabric:/CpuStress CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("12/31/2022"), time()), !.
 
-## Alternatively, you could enforce repair end dates inline (as a subgoal) to any rule, e.g.,
+## Alternatively, you could enforce repair end dates inline (as a subrule) to any rule, e.g.,
 
 Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- time() < DateTime("12/30/2022"),
 	?MetricValue >= 8500,
 	TimeScopedRestartCodePackage(4, 01:00:00).
 
-## Logic rules for multiple metrics and targets. The goal is to Mitigate!
+## Logic rules for multiple metrics and targets using facts provided by either FabricObserver SF service or FHProxy (library hosted in a user service).
 
 ## CPU 
 
-## CPU - Percent In Use - Constrained on AppName and number of times FabricObserver generates an Error/Warning Health report for CpuPercent metric within a specified timespan.
+## CPU - Percent In Use - Constrained on AppName and number of times FabricObserver/FHProxy generates an Error/Warning Health report for CpuPercent metric within a specified timespan.
 ## This reads: Try to mitigate an SF Application in Error or Warning named fabric:/CpuStress where one of its services is consuming too much CPU (as a percentage of total CPU) 
 ## and where at least 3 health events identifying this problem were produced in the last 15 minutes. This is useful to ensure you don't mitigate a transient (short-lived)
 ## problem as they will self-correct.
 
 ## How long has it been in unhealthy state and how long has it not been in unhealthy state (healthy state).
 
+## CPU - Percent In Use - Constrained on ServiceName.
 Mitigate(ServiceName="fabric:/CpuStress/CpuStressor", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 85,
 	GetHealthEventHistory(?HealthEventCount, 00:30:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartCodePackage(1, 00:15:00).
 
-## CPU - Percent In Use - Constrained on AppName = "fabric:/MyApp42", observed Metric value and health event count within specified time range.
+## CPU - Percent In Use - Constrained on AppName.
 Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80, 
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartCodePackage(4, 01:00:00).
 
-## CPU - Percent In Use - Specific application, any of its service processes. Your FO error/warning threshold alone prompts repair. This doesn't take into account transient misbehavior.
+## CPU - Percent In Use - Specific application, any of its service processes.
 Mitigate(AppName="fabric:/MyApp", MetricName="CpuPercent") :- TimeScopedRestartCodePackage(5, 01:00:00).
 
 ## CPU - Percent In Use - Any application's service that exceeds 90% cpu usage, repair up to 5 times in a one hour window.

@@ -1,4 +1,4 @@
-﻿## Logic rules for Disk repair. Only file management is supported (file deletion).
+﻿## Logic rules for Disk repair. Only file management is supported (file deletion). Note that all of these rules expect facts from an external source (FabricObserver or FHProxy).
 
 ## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver or FHProxy, renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
