@@ -1024,7 +1024,7 @@ namespace FabricHealer
                         ConfigSettings.EnableVerboseLogging);
 
                 // Update the in-memory HealthEvent List.
-                this.repairTaskManager.detectedHealthEvents.Add(evt);
+                this.repairTaskManager.detectedHealthEvents.Add((repairData.ApplicationName, evt));
 
                 // Start the repair workflow.
                 await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
@@ -1346,7 +1346,7 @@ namespace FabricHealer
                         ConfigSettings.EnableVerboseLogging);
 
                 // Update the in-memory HealthEvent List.
-                repairTaskManager.detectedHealthEvents.Add(evt);
+                repairTaskManager.detectedHealthEvents.Add((repairData.ServiceName, evt));
 
                 // Start the repair workflow.
                 await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
@@ -1524,7 +1524,7 @@ namespace FabricHealer
                             ConfigSettings.EnableVerboseLogging);
 
                     // Update the in-memory HealthEvent List.
-                    repairTaskManager.detectedHealthEvents.Add(evt);
+                    repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, evt));
 
                     // Start the repair workflow.
                     await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
@@ -1574,7 +1574,7 @@ namespace FabricHealer
                     ConfigSettings.EnableVerboseLogging);
 
             // Update the in-memory HealthEvent List.
-            repairTaskManager.detectedHealthEvents.Add(evt);
+            repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, evt));
 
             // Start the repair workflow.
             await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
@@ -1633,7 +1633,7 @@ namespace FabricHealer
                     ConfigSettings.EnableVerboseLogging);
 
             // Update the in-memory HealthEvent List.
-            repairTaskManager.detectedHealthEvents.Add(healthEvent);
+            repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, healthEvent));
 
             // Start the repair workflow.
             await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);

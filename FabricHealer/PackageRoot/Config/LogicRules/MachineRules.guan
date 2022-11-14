@@ -61,6 +61,9 @@ Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
 ## Don't proceed if there are 2 machine repairs currently active in the cluster.
 Mitigate() :- CheckOutstandingRepairs(2), !.
 
+## Don't proceed if the target machine hasn't been in Error (including cyclic Up/Down) state for at least two hours.
+Mitigate(HealthState=Error) :- GetEntityHealthStateDuration(?duration), ?duration <= 02:00:00, !.
+
 ## Don't schedule a repair if one was scheduled less than 10 minutes ago. Do we want this account for all repairs (not just FH-scheduled)?
 Mitigate() :- CheckInsideScheduleInterval(00:10:00), !.
 

@@ -15,6 +15,7 @@ namespace FabricHealer.Repair.Guan
     {
         private static TelemetryData RepairData;
         private static GetEntityHealthStateDurationPredicateType Instance;
+        private static RepairTaskManager RepairTaskManager;
 
         private class Resolver : GroundPredicateResolver
         {
@@ -24,60 +25,21 @@ namespace FabricHealer.Repair.Guan
 
             }
 
-            // GetEntityHealthStateDuration(?HealthStateDuration, Machine, State=Error)
             protected override async Task<Term> GetNextTermAsync()
             {
-                if (Input.Arguments.Count != 3)
-                {
-                    throw new GuanException("GetCurrentEntityHealthStateDuration predicate requires 3 arguments.");
-                }
-
                 TimeSpan duration;
+                duration = await RepairTaskManager.GetEntityCurrentHealthStateDurationAsync(RepairData, FabricHealerManager.Token);
 
-                if (!Enum.TryParse((string)Input.Arguments[1].Value.GetEffectiveTerm().GetObjectValue(), out EntityType entityType))
-                {
-                    throw new GuanException("The second argument of GetCurrentEntityHealthStateDuration must be a valid EntityType value (Application, Service, Node, Machine, etc..)");
-                }
-
-                if (!Enum.TryParse((string)Input.Arguments[2].Value.GetEffectiveTerm().GetObjectValue(), out HealthState state))
-                {
-                    throw new GuanException("The third argument of GetCurrentEntityHealthStateDuration must be a valid HealthState value (Error, Warning, etc..)");
-                }
-
-                switch (entityType)
-                {
-                    case EntityType.Application:
-                        duration = await FabricRepairTasks.GetEntityCurrentHealthStateDurationAsync(entityType, RepairData.ApplicationName, state, FabricHealerManager.Token);
-                        break;
-
-                    case EntityType.Disk:
-                    case EntityType.Machine:
-                    case EntityType.Node:
-
-                        duration = await FabricRepairTasks.GetEntityCurrentHealthStateDurationAsync(entityType, RepairData.NodeName, state, FabricHealerManager.Token);
-                        break;
-
-                    case EntityType.Partition:
-                        duration = await FabricRepairTasks.GetEntityCurrentHealthStateDurationAsync(entityType, RepairData.PartitionId.ToString(), state, FabricHealerManager.Token);
-                        break;
-
-                    case EntityType.Service:
-                        duration = await FabricRepairTasks.GetEntityCurrentHealthStateDurationAsync(entityType, RepairData.ServiceName, state, FabricHealerManager.Token);
-                        break;
-
-                    default:
-                        throw new GuanException($"Unsupported entity type: {entityType}");
-                }
-
-                var result = new CompoundTerm(this.Input.Functor);
+                var result = new CompoundTerm(Input.Functor);
                 result.AddArgument(new Constant(duration), "0");
                 return result;
             }
         }
 
-        public static GetEntityHealthStateDurationPredicateType Singleton(string name, TelemetryData repairData)
+        public static GetEntityHealthStateDurationPredicateType Singleton(string name, TelemetryData repairData, RepairTaskManager repairTaskManager)
         {
             RepairData = repairData;
+            RepairTaskManager = repairTaskManager;
             return Instance ??= new GetEntityHealthStateDurationPredicateType(name);
         }
 
