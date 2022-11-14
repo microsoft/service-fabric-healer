@@ -32,7 +32,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (timeRange > TimeSpan.MinValue)
                 {
-                    eventCount = RepairTaskManager.GetEntityHealthEventCountWithinTimeRange(RepairData.Property, timeRange);
+                    eventCount = RepairTaskManager.GetEntityHealthEventCountWithinTimeRange(RepairData, timeRange);
                 }
                 else
                 {

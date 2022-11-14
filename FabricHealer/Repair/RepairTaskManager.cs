@@ -18,7 +18,7 @@ using FabricHealer.Interfaces;
 using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
-using System.Transactions;
+using System.Fabric.Description;
 
 namespace FabricHealer.Repair
 {
@@ -32,12 +32,13 @@ namespace FabricHealer.Repair
         private readonly DateTime healthEventsListCreationTime = DateTime.UtcNow;
         private readonly TimeSpan maxLifeTimeHealthEventsData = TimeSpan.FromDays(2);
         private DateTime lastHealthEventsListClearDateTime;
-        internal readonly List<HealthEvent> detectedHealthEvents = new List<HealthEvent>();
+        internal readonly List<(string entityName, HealthEvent healthEvent)> detectedHealthEvents;
 
         public RepairTaskManager()
         {
             repairExecutor = new RepairExecutor();
             repairTaskEngine = new RepairTaskEngine();
+            detectedHealthEvents = new List<(string id, HealthEvent healthEvent)>();
             lastHealthEventsListClearDateTime = healthEventsListCreationTime;
         }
 
@@ -140,7 +141,7 @@ namespace FabricHealer.Repair
             functorTable.Add(CheckInsideScheduleIntervalPredicateType.Singleton(RepairConstants.CheckInsideScheduleInterval, repairData));
             functorTable.Add(CheckOutstandingRepairsPredicateType.Singleton(RepairConstants.CheckOutstandingRepairs, repairData));
             functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage));
-            functorTable.Add(GetEntityHealthStateDurationPredicateType.Singleton(RepairConstants.GetEntityHealthStateDuration, repairData));
+            functorTable.Add(GetEntityHealthStateDurationPredicateType.Singleton(RepairConstants.GetEntityHealthStateDuration, repairData, this));
             functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, this, repairData));
             functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairData));
 
@@ -987,17 +988,37 @@ namespace FabricHealer.Repair
         }
 
         // Support for GetHealthEventHistoryPredicateType, which enables time-scoping logic rules based on health events related to specific SF entities/targets.
-        internal int GetEntityHealthEventCountWithinTimeRange(string property, TimeSpan timeWindow)
+        internal int GetEntityHealthEventCountWithinTimeRange(TelemetryData repairData, TimeSpan timeWindow)
         {
             int count = 0;
-            var healthEvents = detectedHealthEvents.Where(evt => evt.HealthInformation.Property == property);
-
-            if (healthEvents == null || !healthEvents.Any())
+            if (repairData == null || detectedHealthEvents == null || !detectedHealthEvents.Any())
             {
                 return count;
             }
 
-            foreach (HealthEvent healthEvent in healthEvents)
+            string id = string.Empty;
+
+            switch (repairData.EntityType)
+            {
+                case EntityType.Application:
+                    id = repairData.ApplicationName;
+                    break;
+
+                case EntityType.Service:
+                    id = repairData.ServiceName;
+                    break;
+
+                case EntityType.Disk:
+                case EntityType.Machine:
+                case EntityType.Node:
+                    id = repairData.NodeName;
+                    break;
+            }
+
+            var entityHealthEvents = detectedHealthEvents.Where(
+                    evt => evt.entityName == id && evt.healthEvent.HealthInformation.Property == repairData.Property);
+
+            foreach (var (_, healthEvent) in entityHealthEvents)
             {
                 if (DateTime.UtcNow.Subtract(healthEvent.SourceUtcTimestamp) > timeWindow)
                 {
@@ -1014,6 +1035,165 @@ namespace FabricHealer.Repair
             }
 
             return count;
+        }
+
+        /// <summary>
+        /// Returns the anount of time the target entity (application, node, etc) has been in the specified health state.
+        /// </summary>
+        /// <param name="entityType">EntityType</param>
+        /// <param name="nameOrIdFilter">String representation of the target entity's name or ID (e.g., application name or node name or partition id)</param>
+        /// <param name="healthState">Target HealthState to match.</param>
+        /// <param name="token">CancellationToken</param>
+        /// <returns></returns>
+        internal async Task<TimeSpan> GetEntityCurrentHealthStateDurationAsync(
+                                                TelemetryData repairData,
+                                                CancellationToken token)
+        {
+            HealthEventsFilter healthEventsFilter = new HealthEventsFilter();
+
+            if (repairData.HealthState == HealthState.Warning)
+            {
+                healthEventsFilter.HealthStateFilterValue = HealthStateFilter.Warning;
+            }
+            else if (repairData.HealthState == HealthState.Error)
+            {
+                healthEventsFilter.HealthStateFilterValue = HealthStateFilter.Error;
+            }
+            else if (repairData.HealthState == HealthState.Ok)
+            {
+                healthEventsFilter.HealthStateFilterValue = HealthStateFilter.Ok;
+            }
+            else
+            {
+                healthEventsFilter.HealthStateFilterValue = HealthStateFilter.None;
+            }
+
+            switch (repairData.EntityType)
+            {
+                case EntityType.Application:
+
+                    var appqueryDesc = new ApplicationHealthQueryDescription(new Uri(repairData.ApplicationName))
+                    {
+                        EventsFilter = healthEventsFilter
+                    };
+
+                    try
+                    {
+                        var appHealth =
+                            await FabricHealerManager.FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
+                                        appqueryDesc, FabricHealerManager.ConfigSettings.AsyncTimeout, token);
+
+                        if (appHealth == null || appHealth.HealthEvents.Count == 0)
+                        {
+                            return TimeSpan.MinValue;
+                        }  
+
+                        // How many times has the entity been put into Error health state in the last 2 hours?
+                        if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
+                        {
+                            if (GetEntityHealthEventCountWithinTimeRange(repairData, TimeSpan.FromHours(2)) > 1)
+                            {
+                                return DateTime.UtcNow.Subtract(
+                                    detectedHealthEvents.Where(
+                                        evt => evt.entityName == repairData.ApplicationName &&
+                                               evt.healthEvent.HealthInformation.Property == repairData.Property).Last().healthEvent.SourceUtcTimestamp);
+                            }
+                        }
+
+                        var appHealthEvents = appHealth.HealthEvents.OrderByDescending(o => o.SourceUtcTimestamp);
+
+                        // return the time since the last health event was issued, as a TimeSpan.
+                        return DateTime.UtcNow.Subtract(appHealthEvents.First().SourceUtcTimestamp);
+
+                    }
+                    catch (FabricException)
+                    {
+                        return TimeSpan.MinValue;
+                    }
+
+                case EntityType.Service:
+
+                    var servicequeryDesc = new ServiceHealthQueryDescription(new Uri(repairData.ServiceName))
+                    {
+                        EventsFilter = healthEventsFilter
+                    };
+
+                    try
+                    {
+                        var serviceHealth =
+                            await FabricHealerManager.FabricClientSingleton.HealthManager.GetServiceHealthAsync(
+                                        servicequeryDesc, FabricHealerManager.ConfigSettings.AsyncTimeout, token);
+
+                        if (serviceHealth == null || serviceHealth.HealthEvents.Count == 0)
+                        {
+                            return TimeSpan.MinValue;
+                        }
+
+                        // How many times has the entity been put into Error health state in the last 2 hours ?
+                        if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
+                        {
+                            if (GetEntityHealthEventCountWithinTimeRange(repairData, TimeSpan.FromHours(2)) > 1)
+                            {
+                                return DateTime.UtcNow.Subtract(
+                                    detectedHealthEvents.Where(
+                                        evt => evt.entityName == repairData.ServiceName &&
+                                               evt.healthEvent.HealthInformation.Property == repairData.Property).Last().healthEvent.SourceUtcTimestamp);
+                            }
+                        }
+
+                        var serviceHealthEvents = serviceHealth.HealthEvents.OrderByDescending(o => o.SourceUtcTimestamp);
+                        return DateTime.UtcNow.Subtract(serviceHealthEvents.First().SourceUtcTimestamp);
+                    }
+                    catch (FabricException)
+                    {
+                        return TimeSpan.MinValue;
+                    }
+
+                case EntityType.Disk:
+                case EntityType.Machine:
+                case EntityType.Node:
+
+                    var nodequeryDesc = new NodeHealthQueryDescription(repairData.NodeName)
+                    {
+                        EventsFilter = healthEventsFilter
+                    };
+
+                    try
+                    {
+                        var nodeHealth =
+                            await FabricHealerManager.FabricClientSingleton.HealthManager.GetNodeHealthAsync(
+                                        nodequeryDesc, FabricHealerManager.ConfigSettings.AsyncTimeout, token);
+
+                        if (nodeHealth == null || nodeHealth.HealthEvents.Count == 0)
+                        {
+                            return TimeSpan.MinValue;
+                        }
+
+                        // How many times has the entity been put into Error health state in the last 2 hours?
+                        if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
+                        {
+                            if (GetEntityHealthEventCountWithinTimeRange(repairData, TimeSpan.FromHours(2)) > 1)
+                            {
+                                return DateTime.UtcNow.Subtract(
+                                    detectedHealthEvents.Where(
+                                        evt => evt.entityName == repairData.NodeName &&
+                                               evt.healthEvent.HealthInformation.Property == repairData.Property).Last().healthEvent.SourceUtcTimestamp);
+                            }
+                        }
+
+                        var nodeHealthEvents = nodeHealth.HealthEvents.OrderByDescending(o => o.SourceUtcTimestamp);
+                        return DateTime.UtcNow.Subtract(nodeHealthEvents.First().SourceUtcTimestamp);
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is FabricException || e is InvalidOperationException || e is TaskCanceledException || e is TimeoutException)
+                    {
+                        string message = $"Unable to get {repairData.HealthState} health state duration for {repairData.EntityType}: {e.Message}";
+                        FabricHealerManager.RepairLogger.LogWarning(message);
+                        return TimeSpan.MinValue;
+                    }
+
+                default:
+                    return TimeSpan.MinValue;
+            }
         }
 
         /// <summary>
