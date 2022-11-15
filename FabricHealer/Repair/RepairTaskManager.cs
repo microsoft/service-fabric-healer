@@ -89,13 +89,13 @@ namespace FabricHealer.Repair
 
             if (node == null)
             {
-               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Warning,
-                        "RepairTaskManager.StartRepairWorkflowAsync",
-                        "Unable to locate target node. Aborting repair.",
-                        cancellationToken,
-                        null,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                         LogLevel.Warning,
+                         "RepairTaskManager.StartRepairWorkflowAsync",
+                         "Unable to locate target node. Aborting repair.",
+                         cancellationToken,
+                         null,
+                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                 return;
             }
@@ -111,13 +111,13 @@ namespace FabricHealer.Repair
             }
             catch (GuanException ge)
             {
-               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Warning,
-                        "StartRepairWorkflowAsync:GuanException",
-                        $"Failed in Guan: {ge}",
-                        cancellationToken,
-                        null,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                         LogLevel.Warning,
+                         "StartRepairWorkflowAsync:GuanException",
+                         $"Failed in Guan: {ge}",
+                         cancellationToken,
+                         null,
+                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
             }
         }
 
@@ -141,7 +141,7 @@ namespace FabricHealer.Repair
             functorTable.Add(CheckInsideScheduleIntervalPredicateType.Singleton(RepairConstants.CheckInsideScheduleInterval, repairData));
             functorTable.Add(CheckOutstandingRepairsPredicateType.Singleton(RepairConstants.CheckOutstandingRepairs, repairData));
             functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage));
-            functorTable.Add(GetEntityHealthStateDurationPredicateType.Singleton(RepairConstants.GetEntityHealthStateDuration, repairData, this));
+            functorTable.Add(CheckEntityHealthStateDurationPredicateType.Singleton(RepairConstants.CheckInsideHealthStateMinDuration, repairData, this));
             functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, this, repairData));
             functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairData));
 
@@ -315,7 +315,7 @@ namespace FabricHealer.Repair
                     {
                         return true;
                     }
-                } 
+                }
             }
             else
             {
@@ -394,13 +394,13 @@ namespace FabricHealer.Repair
             string actionMessage =
                $"Attempting to restart Service Fabric system process {repairData.ProcessName}.";
 
-           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairExecutor.RestartSystemServiceProcessAsync::Start",
-                    actionMessage,
-                    cancellationToken,
-                    repairData,
-                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                     LogLevel.Info,
+                     "RepairExecutor.RestartSystemServiceProcessAsync::Start",
+                     actionMessage,
+                     cancellationToken,
+                     repairData,
+                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
             bool result = await repairExecutor.RestartSystemServiceProcessAsync(repairData, cancellationToken);
 
@@ -411,13 +411,13 @@ namespace FabricHealer.Repair
 
             string statusSuccess = $"Successfully restarted Service Fabric system service process {repairData.ProcessName} on node {repairData.NodeName}.";
 
-           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairExecutor.RestartSystemServiceProcessAsync::Success",
-                    statusSuccess,
-                    cancellationToken,
-                    repairData,
-                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                     LogLevel.Info,
+                     "RepairExecutor.RestartSystemServiceProcessAsync::Success",
+                     statusSuccess,
+                     cancellationToken,
+                     repairData,
+                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
             return true;
         }
@@ -482,7 +482,7 @@ namespace FabricHealer.Repair
 
             var executorData = new RepairExecutorData
             {
-                ExecutorTimeoutInMinutes = (int)MaxWaitTimeForFHRepairTaskCompleted.TotalMinutes, 
+                ExecutorTimeoutInMinutes = (int)MaxWaitTimeForFHRepairTaskCompleted.TotalMinutes,
                 RepairData = repairData
             };
 
@@ -506,29 +506,29 @@ namespace FabricHealer.Repair
             Stopwatch stopWatch = Stopwatch.StartNew();
             bool isApproved = false;
 
-            var repairs = 
+            var repairs =
                 await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, cancellationToken);
 
             if (repairs.All(repair => repair.TaskId != repairTask.TaskId))
             {
-               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
-                        $"Failed to find scheduled repair task {repairTask.TaskId}.",
-                        FabricHealerManager.Token,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                         LogLevel.Info,
+                         "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
+                         $"Failed to find scheduled repair task {repairTask.TaskId}.",
+                         FabricHealerManager.Token,
+                         repairData,
+                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                 return false;
             }
 
-           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairTaskManager::WaitingForApproval",
-                    $"Waiting for RM to Approve repair task {repairTask.TaskId}.",
-                    cancellationToken,
-                    repairData,
-                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                     LogLevel.Info,
+                     "RepairTaskManager::WaitingForApproval",
+                     $"Waiting for RM to Approve repair task {repairTask.TaskId}.",
+                     cancellationToken,
+                     repairData,
+                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
             while (approvalTimeout >= stopWatch.Elapsed)
             {
@@ -539,13 +539,13 @@ namespace FabricHealer.Repair
                                        && (repair.State == RepairTaskState.Completed && repair.ResultStatus == RepairTaskResult.Cancelled
                                            || repair.Flags == RepairTaskFlags.CancelRequested || repair.Flags == RepairTaskFlags.AbortRequested)))
                 {
-                   await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
-                            $"Repair Task {repairTask.TaskId} was aborted or cancelled.",
-                            FabricHealerManager.Token,
-                            repairData,
-                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                             LogLevel.Info,
+                             "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
+                             $"Repair Task {repairTask.TaskId} was aborted or cancelled.",
+                             FabricHealerManager.Token,
+                             repairData,
+                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                     return false;
                 }
@@ -565,23 +565,23 @@ namespace FabricHealer.Repair
 
             if (isApproved)
             {
-               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync_Approved",
-                        $"RM has Approved repair task {repairTask.TaskId}.",
-                        cancellationToken,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                         LogLevel.Info,
+                         "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync_Approved",
+                         $"RM has Approved repair task {repairTask.TaskId}.",
+                         cancellationToken,
+                         repairData,
+                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
             }
             else
             {
-               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync_NotApproved",
-                        $"RM did not Approve repair task {repairTask.TaskId}. Cancelling...",
-                        cancellationToken,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                         LogLevel.Info,
+                         "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync_NotApproved",
+                         $"RM did not Approve repair task {repairTask.TaskId}. Cancelling...",
+                         cancellationToken,
+                         repairData,
+                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                 await FabricRepairTasks.CancelRepairTaskAsync(repairTask);
                 return false;
@@ -593,13 +593,13 @@ namespace FabricHealer.Repair
                         RepairTaskResult.Pending,
                         cancellationToken);
 
-           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync_MovedExecuting",
-                    $"Executing repair {repairTask.TaskId}.",
-                    cancellationToken,
-                    repairData,
-                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                     LogLevel.Info,
+                     "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync_MovedExecuting",
+                     $"Executing repair {repairTask.TaskId}.",
+                     cancellationToken,
+                     repairData,
+                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
             bool success;
             var repairAction = repairData.RepairPolicy.RepairAction;
@@ -609,19 +609,65 @@ namespace FabricHealer.Repair
                 switch (repairAction)
                 {
                     case RepairActionType.DeleteFiles:
-                            
+
                         success = await DeleteFilesAsyncAsync(repairData, cancellationToken);
                         break;
 
                     // Note: For SF app container services, RestartDeployedCodePackage API does not work.
                     // Thus, using Restart/Remove(stateful/stateless)Replica API instead, which does restart container instances.
                     case RepairActionType.RestartCodePackage:
-                    {
-                        if (string.IsNullOrWhiteSpace(repairData.ContainerId))
                         {
-                            success = await RestartDeployedCodePackageAsync(repairData, cancellationToken);
+                            if (string.IsNullOrWhiteSpace(repairData.ContainerId))
+                            {
+                                success = await RestartDeployedCodePackageAsync(repairData, cancellationToken);
+                            }
+                            else
+                            {
+                                if (repairData.PartitionId == null)
+                                {
+                                    success = false;
+                                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                            LogLevel.Info,
+                                            "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoPartition",
+                                            $"No partition specified.",
+                                            cancellationToken,
+                                            repairData,
+                                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                                    break;
+                                }
+
+                                // Need replica or instance details..
+                                var repList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
+                                                    (Guid)repairData.PartitionId,
+                                                    repairData.ReplicaId,
+                                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                    cancellationToken);
+
+                                if (repList.Count == 0)
+                                {
+                                    success = false;
+                                    break;
+                                }
+
+                                var rep = repList[0];
+
+                                // Restarting stateful replica will restart the container instance.
+                                if (rep.ServiceKind == ServiceKind.Stateful)
+                                {
+                                    success = await RestartReplicaAsync(repairData, cancellationToken);
+                                }
+                                else
+                                {
+                                    // For stateless intances, you need to remove the replica, which will
+                                    // restart the container instance.
+                                    success = await RemoveReplicaAsync(repairData, cancellationToken);
+                                }
+                            }
+
+                            break;
                         }
-                        else
+                    case RepairActionType.RemoveReplica:
                         {
                             if (repairData.PartitionId == null)
                             {
@@ -637,7 +683,51 @@ namespace FabricHealer.Repair
                                 break;
                             }
 
-                            // Need replica or instance details..
+                            var repList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
+                                                    (Guid)repairData.PartitionId,
+                                                    repairData.ReplicaId,
+                                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                    cancellationToken);
+
+                            if (repList.Count == 0)
+                            {
+                                success = false;
+                                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                        LogLevel.Info,
+                                        "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoReplica",
+                                        $"Stateless Instance {repairData.ReplicaId} not found on partition " +
+                                        $"{repairData.PartitionId}.",
+                                        cancellationToken,
+                                        repairData,
+                                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                                break;
+                            }
+
+                            success = await RemoveReplicaAsync(repairData, cancellationToken);
+                            break;
+                        }
+                    case RepairActionType.RestartProcess:
+
+                        success = await RestartSystemServiceProcessAsync(repairData, cancellationToken);
+                        break;
+
+                    case RepairActionType.RestartReplica:
+                        {
+                            if (repairData.PartitionId == null)
+                            {
+                                success = false;
+                                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                        LogLevel.Info,
+                                        "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoPartition",
+                                        $"No partition specified.",
+                                        cancellationToken,
+                                        repairData,
+                                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                                break;
+                            }
+
                             var repList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
                                                 (Guid)repairData.PartitionId,
                                                 repairData.ReplicaId,
@@ -647,148 +737,58 @@ namespace FabricHealer.Repair
                             if (repList.Count == 0)
                             {
                                 success = false;
+                                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                         LogLevel.Info,
+                                         "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoReplica",
+                                         $"Stateful replica {repairData.ReplicaId} not found on partition " +
+                                         $"{repairData.PartitionId}.",
+                                         cancellationToken,
+                                         repairData,
+                                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
                                 break;
                             }
 
-                            var rep = repList[0];
+                            var replica = repList[0];
 
-                            // Restarting stateful replica will restart the container instance.
-                            if (rep.ServiceKind == ServiceKind.Stateful)
+                            // Restart - stateful replica.
+                            if (replica.ServiceKind == ServiceKind.Stateful)
                             {
                                 success = await RestartReplicaAsync(repairData, cancellationToken);
                             }
                             else
                             {
-                                // For stateless intances, you need to remove the replica, which will
-                                // restart the container instance.
+                                // For stateless replicas (aka instances), you need to remove the replica. The runtime will create a new one
+                                // and place it.
                                 success = await RemoveReplicaAsync(repairData, cancellationToken);
                             }
-                        }
-
-                        break;
-                    }
-                    case RepairActionType.RemoveReplica:
-                    {
-                        if (repairData.PartitionId == null)
-                        {
-                            success = false;
-                            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                    LogLevel.Info,
-                                    "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoPartition",
-                                    $"No partition specified.",
-                                    cancellationToken,
-                                    repairData,
-                                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                             break;
                         }
-
-                        var repList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                                (Guid)repairData.PartitionId,
-                                                repairData.ReplicaId,
-                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                cancellationToken);
-
-                        if (repList.Count == 0)
-                        {
-                            success = false;
-                            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                    LogLevel.Info,
-                                    "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoReplica",
-                                    $"Stateless Instance {repairData.ReplicaId} not found on partition " +
-                                    $"{repairData.PartitionId}.",
-                                    cancellationToken,
-                                    repairData,
-                                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-                            break;
-                        }
-
-                        success = await RemoveReplicaAsync(repairData, cancellationToken);
-                        break;
-                    }
-                    case RepairActionType.RestartProcess:
-                    
-                        success = await RestartSystemServiceProcessAsync(repairData, cancellationToken);
-                        break;
-                    
-                    case RepairActionType.RestartReplica:
-                    {
-                        if (repairData.PartitionId == null)
-                        {
-                            success = false;
-                            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                    LogLevel.Info,
-                                    "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoPartition",
-                                    $"No partition specified.",
-                                    cancellationToken,
-                                    repairData,
-                                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-                            break;
-                        }
-
-                        var repList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                            (Guid)repairData.PartitionId,
-                                            repairData.ReplicaId,
-                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                            cancellationToken);
-
-                        if (repList.Count == 0)
-                        {
-                            success = false;
-                               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                        LogLevel.Info,
-                                        "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoReplica",
-                                        $"Stateful replica {repairData.ReplicaId} not found on partition " +
-                                        $"{repairData.PartitionId}.",
-                                        cancellationToken,
-                                        repairData,
-                                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-                                break;
-                        }
-
-                        var replica = repList[0];
-  
-                        // Restart - stateful replica.
-                        if (replica.ServiceKind == ServiceKind.Stateful)
-                        {
-                            success = await RestartReplicaAsync(repairData, cancellationToken);
-                        }
-                        else
-                        {
-                            // For stateless replicas (aka instances), you need to remove the replica. The runtime will create a new one
-                            // and place it.
-                            success = await RemoveReplicaAsync(repairData, cancellationToken);
-                        }
-
-                        break;
-                    }
                     case RepairActionType.RestartFabricNode:
-                    {
-                        var executorData = repairTask.ExecutorData;
-
-                        if (string.IsNullOrWhiteSpace(executorData))
                         {
+                            var executorData = repairTask.ExecutorData;
 
-                           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                    LogLevel.Info,
-                                    "RepairTaskManager.SafeRestartFabricNode",
-                                    $"Repair {repairTask.TaskId} is missing ExecutorData.",
-                                    cancellationToken,
-                                    repairData,
-                                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                            if (string.IsNullOrWhiteSpace(executorData))
+                            {
 
-                            success = false;
+                                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                         LogLevel.Info,
+                                         "RepairTaskManager.SafeRestartFabricNode",
+                                         $"Repair {repairTask.TaskId} is missing ExecutorData.",
+                                         cancellationToken,
+                                         repairData,
+                                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                                success = false;
+                            }
+                            else
+                            {
+                                success = await SafeRestartServiceFabricNodeAsync(repairData, repairTask, cancellationToken);
+                            }
+
+                            break;
                         }
-                        else
-                        {
-                            success = await SafeRestartServiceFabricNodeAsync(repairData, repairTask, cancellationToken);
-                        }
-
-                        break;
-                    }
                     default:
                         return false;
                 }
@@ -941,23 +941,23 @@ namespace FabricHealer.Repair
 
                 if (isHealthy)
                 {
-                   await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
-                            $"{repairData.RepairPolicy.RepairAction} repair for {repairTarget} has succeeded.",
-                            cancellationToken,
-                            repairData,
-                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                             LogLevel.Info,
+                             "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
+                             $"{repairData.RepairPolicy.RepairAction} repair for {repairTarget} has succeeded.",
+                             cancellationToken,
+                             repairData,
+                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
                 }
                 else
                 {
-                   await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
-                            $"{repairData.RepairPolicy.RepairAction} repair for {repairTarget} has failed. {repairTarget} is still in an unhealthy state.",
-                            cancellationToken,
-                            repairData,
-                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                             LogLevel.Info,
+                             "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
+                             $"{repairData.RepairPolicy.RepairAction} repair for {repairTarget} has failed. {repairTarget} is still in an unhealthy state.",
+                             cancellationToken,
+                             repairData,
+                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
                 }
 
                 // Tell RM we are ready to move to Completed state as our custom code has completed its repair execution successfully.
@@ -975,13 +975,13 @@ namespace FabricHealer.Repair
             }
 
             // Executor failure. Cancel repair task.
-           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync_ExecuteFailed",
-                    $"Executor failed for repair {repairTask.TaskId}. See logs for details. Cancelling repair task.",
-                    cancellationToken,
-                    repairData,
-                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                     LogLevel.Info,
+                     "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync_ExecuteFailed",
+                     $"Executor failed for repair {repairTask.TaskId}. See logs for details. Cancelling repair task.",
+                     cancellationToken,
+                     repairData,
+                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
             await FabricRepairTasks.CancelRepairTaskAsync(repairTask);
             return false;
@@ -1047,6 +1047,7 @@ namespace FabricHealer.Repair
         /// <returns></returns>
         internal async Task<TimeSpan> GetEntityCurrentHealthStateDurationAsync(
                                                 TelemetryData repairData,
+                                                TimeSpan timeWindow,
                                                 CancellationToken token)
         {
             HealthEventsFilter healthEventsFilter = new HealthEventsFilter();
@@ -1086,17 +1087,20 @@ namespace FabricHealer.Repair
                         if (appHealth == null || appHealth.HealthEvents.Count == 0)
                         {
                             return TimeSpan.MinValue;
-                        }  
+                        }
 
                         // How many times has the entity been put into Error health state in the last 2 hours?
                         if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
                         {
-                            if (GetEntityHealthEventCountWithinTimeRange(repairData, TimeSpan.FromHours(2)) > 1)
+                            if (GetEntityHealthEventCountWithinTimeRange(repairData, timeWindow) > 1)
                             {
-                                return DateTime.UtcNow.Subtract(
-                                    detectedHealthEvents.Where(
+                                var orderedEvents = detectedHealthEvents.Where(
                                         evt => evt.entityName == repairData.ApplicationName &&
-                                               evt.healthEvent.HealthInformation.Property == repairData.Property).Last().healthEvent.SourceUtcTimestamp);
+                                               evt.healthEvent.HealthInformation.Property == repairData.Property)
+                                      .OrderByDescending(o => o.healthEvent.SourceUtcTimestamp);
+
+                                return DateTime.UtcNow.Subtract(
+                                    orderedEvents.Last().healthEvent.SourceUtcTimestamp);
                             }
                         }
 
@@ -1132,12 +1136,14 @@ namespace FabricHealer.Repair
                         // How many times has the entity been put into Error health state in the last 2 hours ?
                         if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
                         {
-                            if (GetEntityHealthEventCountWithinTimeRange(repairData, TimeSpan.FromHours(2)) > 1)
+                            if (GetEntityHealthEventCountWithinTimeRange(repairData, timeWindow) > 1)
                             {
-                                return DateTime.UtcNow.Subtract(
-                                    detectedHealthEvents.Where(
+                                var orderedEvents = detectedHealthEvents.Where(
                                         evt => evt.entityName == repairData.ServiceName &&
-                                               evt.healthEvent.HealthInformation.Property == repairData.Property).Last().healthEvent.SourceUtcTimestamp);
+                                               evt.healthEvent.HealthInformation.Property == repairData.Property)
+                                      .OrderByDescending(o => o.healthEvent.SourceUtcTimestamp);
+
+                                return DateTime.UtcNow.Subtract(orderedEvents.Last().healthEvent.SourceUtcTimestamp);
                             }
                         }
 
@@ -1172,12 +1178,14 @@ namespace FabricHealer.Repair
                         // How many times has the entity been put into Error health state in the last 2 hours?
                         if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
                         {
-                            if (GetEntityHealthEventCountWithinTimeRange(repairData, TimeSpan.FromHours(2)) > 1)
+                            if (GetEntityHealthEventCountWithinTimeRange(repairData, timeWindow) > 1)
                             {
-                                return DateTime.UtcNow.Subtract(
-                                    detectedHealthEvents.Where(
+                                var orderedEvents = detectedHealthEvents.Where(
                                         evt => evt.entityName == repairData.NodeName &&
-                                               evt.healthEvent.HealthInformation.Property == repairData.Property).Last().healthEvent.SourceUtcTimestamp);
+                                               evt.healthEvent.HealthInformation.Property == repairData.Property)
+                                      .OrderByDescending(o => o.healthEvent.SourceUtcTimestamp);
+
+                                return DateTime.UtcNow.Subtract(orderedEvents.Last().healthEvent.SourceUtcTimestamp);
                             }
                         }
 
@@ -1244,7 +1252,7 @@ namespace FabricHealer.Repair
             switch (repairData.EntityType)
             {
                 case EntityType.Application:
-                
+
                     var appHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                              () => FabricHealerManager.FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
                                                         new Uri(repairData.ApplicationName),
@@ -1277,7 +1285,7 @@ namespace FabricHealer.Repair
                     }
 
                     return isTargetAppHealedOnTargetNode ? HealthState.Ok : appHealth.AggregatedHealthState;
-                    
+
                 case EntityType.Service:
 
                     var serviceHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -1298,7 +1306,7 @@ namespace FabricHealer.Repair
 
                 case EntityType.Node:
                 case EntityType.Machine:
-                
+
                     var nodeHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                 () => FabricHealerManager.FabricClientSingleton.HealthManager.GetNodeHealthAsync(
                                                             repairData.NodeName,
@@ -1314,9 +1322,9 @@ namespace FabricHealer.Repair
                                                         && repairData.HealthState == HealthState.Ok);
 
                     return isTargetNodeHealed ? HealthState.Ok : nodeHealth.AggregatedHealthState;
-                   
+
                 case EntityType.Replica:
-                
+
                     // Make sure the Partition where the restarted replica was located is now healthy.
                     var partitionHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                     () => FabricHealerManager.FabricClientSingleton.HealthManager.GetPartitionHealthAsync(
@@ -1326,7 +1334,7 @@ namespace FabricHealer.Repair
                                                     token);
 
                     return partitionHealth.AggregatedHealthState;
-                    
+
                 default:
                     return HealthState.Unknown;
             }
