@@ -91,7 +91,7 @@ namespace FabricHealer.Repair
         public const string CheckInsideProbationPeriod = "CheckInsideProbationPeriod";
         public const string CheckOutstandingRepairs = "CheckOutstandingRepairs";
         public const string CheckFolderSize = "CheckFolderSize";
-        public const string GetEntityHealthStateDuration = "GetEntityHealthStateDuration";
+        public const string CheckInsideHealthStateMinDuration = "CheckInsideHealthStateMinDuration";
         public const string GetHealthEventHistory = "GetHealthEventHistory";
         public const string GetRepairHistory = "GetRepairHistory";
         public const string EmitMessage = "EmitMessage";

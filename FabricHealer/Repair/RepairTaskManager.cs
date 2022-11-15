@@ -141,7 +141,7 @@ namespace FabricHealer.Repair
             functorTable.Add(CheckInsideScheduleIntervalPredicateType.Singleton(RepairConstants.CheckInsideScheduleInterval, repairData));
             functorTable.Add(CheckOutstandingRepairsPredicateType.Singleton(RepairConstants.CheckOutstandingRepairs, repairData));
             functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage));
-            functorTable.Add(GetEntityHealthStateDurationPredicateType.Singleton(RepairConstants.GetEntityHealthStateDuration, repairData, this));
+            functorTable.Add(CheckEntityHealthStateDurationPredicateType.Singleton(RepairConstants.CheckInsideHealthStateMinDuration, repairData, this));
             functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, this, repairData));
             functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairData));
 
@@ -1047,6 +1047,7 @@ namespace FabricHealer.Repair
         /// <returns></returns>
         internal async Task<TimeSpan> GetEntityCurrentHealthStateDurationAsync(
                                                 TelemetryData repairData,
+                                                TimeSpan timeWindow,
                                                 CancellationToken token)
         {
             HealthEventsFilter healthEventsFilter = new HealthEventsFilter();
@@ -1091,12 +1092,15 @@ namespace FabricHealer.Repair
                         // How many times has the entity been put into Error health state in the last 2 hours?
                         if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
                         {
-                            if (GetEntityHealthEventCountWithinTimeRange(repairData, TimeSpan.FromHours(2)) > 1)
+                            if (GetEntityHealthEventCountWithinTimeRange(repairData, timeWindow) > 1)
                             {
-                                return DateTime.UtcNow.Subtract(
-                                    detectedHealthEvents.Where(
+                                var orderedEvents = detectedHealthEvents.Where(
                                         evt => evt.entityName == repairData.ApplicationName &&
-                                               evt.healthEvent.HealthInformation.Property == repairData.Property).Last().healthEvent.SourceUtcTimestamp);
+                                               evt.healthEvent.HealthInformation.Property == repairData.Property)
+                                      .OrderByDescending(o => o.healthEvent.SourceUtcTimestamp);
+
+                                return DateTime.UtcNow.Subtract(
+                                    orderedEvents.Last().healthEvent.SourceUtcTimestamp);
                             }
                         }
 
@@ -1132,12 +1136,14 @@ namespace FabricHealer.Repair
                         // How many times has the entity been put into Error health state in the last 2 hours ?
                         if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
                         {
-                            if (GetEntityHealthEventCountWithinTimeRange(repairData, TimeSpan.FromHours(2)) > 1)
+                            if (GetEntityHealthEventCountWithinTimeRange(repairData, timeWindow) > 1)
                             {
-                                return DateTime.UtcNow.Subtract(
-                                    detectedHealthEvents.Where(
+                                var orderedEvents = detectedHealthEvents.Where(
                                         evt => evt.entityName == repairData.ServiceName &&
-                                               evt.healthEvent.HealthInformation.Property == repairData.Property).Last().healthEvent.SourceUtcTimestamp);
+                                               evt.healthEvent.HealthInformation.Property == repairData.Property)
+                                      .OrderByDescending(o => o.healthEvent.SourceUtcTimestamp);
+
+                                return DateTime.UtcNow.Subtract(orderedEvents.Last().healthEvent.SourceUtcTimestamp);
                             }
                         }
 
@@ -1172,12 +1178,14 @@ namespace FabricHealer.Repair
                         // How many times has the entity been put into Error health state in the last 2 hours?
                         if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
                         {
-                            if (GetEntityHealthEventCountWithinTimeRange(repairData, TimeSpan.FromHours(2)) > 1)
+                            if (GetEntityHealthEventCountWithinTimeRange(repairData, timeWindow) > 1)
                             {
-                                return DateTime.UtcNow.Subtract(
-                                    detectedHealthEvents.Where(
+                                var orderedEvents = detectedHealthEvents.Where(
                                         evt => evt.entityName == repairData.NodeName &&
-                                               evt.healthEvent.HealthInformation.Property == repairData.Property).Last().healthEvent.SourceUtcTimestamp);
+                                               evt.healthEvent.HealthInformation.Property == repairData.Property)
+                                      .OrderByDescending(o => o.healthEvent.SourceUtcTimestamp);
+
+                                return DateTime.UtcNow.Subtract(orderedEvents.Last().healthEvent.SourceUtcTimestamp);
                             }
                         }
 
