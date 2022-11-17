@@ -52,8 +52,8 @@ Mitigate(MetricName=FileHandles, MetricValue=?MetricValue, OS=Linux) :- ?MetricV
   GetHealthEventHistory(?HealthEventCount, 00:15:00), ?HealthEventCount >= 3,
   TimeScopedScheduleRepair(2, 08:00:00, System.Reboot).
 
-## Non-TelemetryData-based machine repair scheduling. 
-## This means FabricHealerManager provides the facts used here by querying HM directly, versus supplying facts from TelemetryData instances provided by FabricObserver or FHProxy.
+## FH-determined machine repair scheduling. 
+## This means FabricHealerManager provides the facts used here by querying HM directly, versus supplying facts from serialized TelemetryData instances created by FabricObserver or FHProxy.
 
 ## Don't proceed if the target entity is not in Error.
 Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
@@ -61,11 +61,10 @@ Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
 ## Don't proceed if there are 2 machine repairs currently active in the cluster.
 Mitigate() :- CheckOutstandingRepairs(2), !.
 
-## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours. It is redundant to specify HealthState in head of rule given the above rule that
-## prevents proceeding if the target node is not in Error. However, it is used here for clarity. Internally, FabricHealerManager creates the TelemetryData instance that holds this fact.
-Mitigate(HealthState=Error) :- CheckInsideHealthStateMinDuration(02:00:00), !.
+## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours.
+Mitigate() :- CheckInsideHealthStateMinDuration(02:00:00), !.
 
-## Don't schedule a repair if one was scheduled less than 10 minutes ago. Do we want this account for all repairs (not just FH-scheduled)?
+## Don't schedule a repair if one was scheduled less than 10 minutes ago. [Do we want this account for all scheduled repairs (not just FH-scheduled)?]
 Mitigate() :- CheckInsideScheduleInterval(00:10:00), !.
 
 ## Don't proceed if a node in the cluster is still in post-repair probation (so, a Completed repair, node is recovering).
@@ -73,16 +72,14 @@ Mitigate() :- CheckInsideProbationPeriod(00:30:00), !.
 
 ## Mitigations.
 
-## Reboot. Supported in VMSS-managed clusters. Schedule a reboot if the target node hasn't already been rebooted twice in the last 4 hours.
+## Reboot.
 ## Don't process any other rules if scheduling succeeds or fails (note the !) and there are less than 2 of these repairs that have completed in the last 4 hours.
 Mitigate() :- GetRepairHistory(?repairCount, 04:00:00, System.Reboot), ?repairCount < 2, !, ScheduleMachineRepair(System.Reboot).
 
-## Reimage. Not supported in VMSS-managed clusters. Schedule a reimage if the target node has already been rebooted twice in the last 4 hours.
-## Don't process any other rules if scheduling succeeds or fails (note the !) and there are less than 2 of these repairs that have completed in the last 4 hours.
+## Reimage.
 Mitigate() :- GetRepairHistory(?repairCount, 04:00:00, System.ReimageOS), ?repairCount < 2, !, ScheduleMachineRepair(System.ReimageOS).
 
-## Heal. Supported in VMSS-managed clusters. Schedule a heal if the target node has already been reimaged twice in the last 4 hours.
-## Don't process any other rules if scheduling succeeds or fails (note the !) and there are less than 2 of these repairs that have completed in the last 4 hours.
+## Heal.
 Mitigate() :- GetRepairHistory(?repairCount, 04:00:00, System.Azure.Heal), ?repairCount < 2, !, ScheduleMachineRepair(System.Azure.Heal).
 
-## If we end up here, then human intervention is required (Triage).
+## If we end up here, then human intervention is required (Triage)..
