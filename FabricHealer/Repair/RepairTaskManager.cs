@@ -24,21 +24,20 @@ namespace FabricHealer.Repair
 {
     public sealed class RepairTaskManager : IRepairTasks
     {
-        private static readonly TimeSpan MaxWaitTimeForInfrastructureRepairTaskCompleted = TimeSpan.FromHours(8);
         private static readonly TimeSpan MaxWaitTimeForFHRepairTaskCompleted = TimeSpan.FromHours(1);
         private readonly RepairTaskEngine repairTaskEngine;
         private readonly RepairExecutor repairExecutor;
         private readonly TimeSpan asyncTimeout = TimeSpan.FromSeconds(60);
         private readonly DateTime healthEventsListCreationTime = DateTime.UtcNow;
-        private readonly TimeSpan maxLifeTimeHealthEventsData = TimeSpan.FromDays(2);
+        private readonly TimeSpan maxLifeTimeHealthEventsData = TimeSpan.FromHours(4);
         private DateTime lastHealthEventsListClearDateTime;
-        internal readonly List<(string entityName, HealthEvent healthEvent)> detectedHealthEvents;
+        internal readonly List<(string entityName, HealthEvent healthEvent, DateTime DateTimeAdded)> detectedHealthEvents;
 
         public RepairTaskManager()
         {
             repairExecutor = new RepairExecutor();
             repairTaskEngine = new RepairTaskEngine();
-            detectedHealthEvents = new List<(string id, HealthEvent healthEvent)>();
+            detectedHealthEvents = new List<(string id, HealthEvent healthEvent, DateTime DateTimeAdded)>();
             lastHealthEventsListClearDateTime = healthEventsListCreationTime;
         }
 
@@ -991,6 +990,7 @@ namespace FabricHealer.Repair
         internal int GetEntityHealthEventCountWithinTimeRange(TelemetryData repairData, TimeSpan timeWindow)
         {
             int count = 0;
+
             if (repairData == null || detectedHealthEvents == null || !detectedHealthEvents.Any())
             {
                 return count;
@@ -1015,17 +1015,11 @@ namespace FabricHealer.Repair
                     break;
             }
 
-            var entityHealthEvents = detectedHealthEvents.Where(
-                    evt => evt.entityName == id && evt.healthEvent.HealthInformation.Property == repairData.Property);
-
-            foreach (var (_, healthEvent) in entityHealthEvents)
-            {
-                if (DateTime.UtcNow.Subtract(healthEvent.SourceUtcTimestamp) > timeWindow)
-                {
-                    continue;
-                }
-                count++;
-            }
+            count = detectedHealthEvents.Count(
+                        evt => evt.entityName == id
+                            && evt.healthEvent.HealthInformation.SourceId == repairData.Source
+                            && evt.healthEvent.HealthInformation.Property == repairData.Property
+                            && DateTime.UtcNow.Subtract(evt.healthEvent.SourceUtcTimestamp) <= timeWindow);
 
             // Lifetime management of Health Events list data. Data is kept in-memory only for 2 days. If FH process restarts, data is not preserved.
             if (DateTime.UtcNow.Subtract(lastHealthEventsListClearDateTime) >= maxLifeTimeHealthEventsData)
@@ -1089,18 +1083,19 @@ namespace FabricHealer.Repair
                             return TimeSpan.MinValue;
                         }  
 
-                        // How many times has the entity been put into Error health state in the last 2 hours?
+                        // How many times has the entity been put into Error health within the specified time window?
                         if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
                         {
                             if (GetEntityHealthEventCountWithinTimeRange(repairData, timeWindow) > 1)
                             {
                                 var orderedEvents = detectedHealthEvents.Where(
-                                        evt => evt.entityName == repairData.ApplicationName &&
-                                               evt.healthEvent.HealthInformation.Property == repairData.Property)
+                                        evt => evt.entityName == repairData.ApplicationName
+                                            && evt.healthEvent.HealthInformation.SourceId == repairData.Source
+                                            && evt.healthEvent.HealthInformation.Property == repairData.Property
+                                            && DateTime.UtcNow.Subtract(evt.healthEvent.SourceUtcTimestamp) <= timeWindow)
                                       .OrderByDescending(o => o.healthEvent.SourceUtcTimestamp);
 
-                                return DateTime.UtcNow.Subtract(
-                                    orderedEvents.Last().healthEvent.SourceUtcTimestamp);
+                                return DateTime.UtcNow.Subtract(orderedEvents.Last().healthEvent.SourceUtcTimestamp);
                             }
                         }
 
@@ -1139,8 +1134,10 @@ namespace FabricHealer.Repair
                             if (GetEntityHealthEventCountWithinTimeRange(repairData, timeWindow) > 1)
                             {
                                 var orderedEvents = detectedHealthEvents.Where(
-                                        evt => evt.entityName == repairData.ServiceName &&
-                                               evt.healthEvent.HealthInformation.Property == repairData.Property)
+                                        evt => evt.entityName == repairData.ServiceName 
+                                            && evt.healthEvent.HealthInformation.SourceId == repairData.Source
+                                            && evt.healthEvent.HealthInformation.Property == repairData.Property
+                                            && DateTime.UtcNow.Subtract(evt.healthEvent.SourceUtcTimestamp) <= timeWindow)
                                       .OrderByDescending(o => o.healthEvent.SourceUtcTimestamp);
 
                                 return DateTime.UtcNow.Subtract(orderedEvents.Last().healthEvent.SourceUtcTimestamp);
@@ -1175,14 +1172,17 @@ namespace FabricHealer.Repair
                             return TimeSpan.MinValue;
                         }
 
-                        // How many times has the entity been put into Error health state in the last 2 hours?
+                        // How many times has the entity been put into Error health state.
+                        // Look into LastTransition to Error.
                         if (healthEventsFilter.HealthStateFilterValue == HealthStateFilter.Error)
                         {
                             if (GetEntityHealthEventCountWithinTimeRange(repairData, timeWindow) > 1)
                             {
                                 var orderedEvents = detectedHealthEvents.Where(
-                                        evt => evt.entityName == repairData.NodeName &&
-                                               evt.healthEvent.HealthInformation.Property == repairData.Property)
+                                        evt => evt.entityName == repairData.NodeName
+                                               && evt.healthEvent.HealthInformation.SourceId == repairData.Source
+                                               && evt.healthEvent.HealthInformation.Property == repairData.Property
+                                               && DateTime.UtcNow.Subtract(evt.healthEvent.SourceUtcTimestamp) <= timeWindow)
                                       .OrderByDescending(o => o.healthEvent.SourceUtcTimestamp);
 
                                 return DateTime.UtcNow.Subtract(orderedEvents.Last().healthEvent.SourceUtcTimestamp);

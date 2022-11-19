@@ -1023,8 +1023,8 @@ namespace FabricHealer
                         null,
                         ConfigSettings.EnableVerboseLogging);
 
-                // Update the in-memory HealthEvent List.
-                this.repairTaskManager.detectedHealthEvents.Add((repairData.ApplicationName, evt));
+                // Update the in-memory HealthEvent data.
+                this.repairTaskManager.detectedHealthEvents.Add((repairData.ApplicationName, evt, DateTime.UtcNow));
 
                 // Start the repair workflow.
                 await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
@@ -1346,7 +1346,7 @@ namespace FabricHealer
                         ConfigSettings.EnableVerboseLogging);
 
                 // Update the in-memory HealthEvent List.
-                repairTaskManager.detectedHealthEvents.Add((repairData.ServiceName, evt));
+                repairTaskManager.detectedHealthEvents.Add((repairData.ServiceName, evt, DateTime.UtcNow));
 
                 // Start the repair workflow.
                 await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
@@ -1442,7 +1442,8 @@ namespace FabricHealer
                             EntityType = EntityType.Machine,
                             Description = evt.HealthInformation.Description,
                             HealthState = evt.HealthInformation.HealthState,
-                            Source = RepairConstants.FabricHealer
+                            Property = evt.HealthInformation.Property,
+                            Source = evt.HealthInformation.SourceId
                         };
                     }
                     else
@@ -1523,8 +1524,8 @@ namespace FabricHealer
                             null,
                             ConfigSettings.EnableVerboseLogging);
 
-                    // Update the in-memory HealthEvent List.
-                    repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, evt));
+                    // Update the in-memory HealthEvent data.
+                    repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, evt, DateTime.UtcNow));
 
                     // Start the repair workflow.
                     await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
@@ -1573,8 +1574,8 @@ namespace FabricHealer
                     null,
                     ConfigSettings.EnableVerboseLogging);
 
-            // Update the in-memory HealthEvent List.
-            repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, evt));
+            // Update the in-memory HealthEvent data.
+            repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, evt, DateTime.UtcNow));
 
             // Start the repair workflow.
             await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
@@ -1632,8 +1633,8 @@ namespace FabricHealer
                     null,
                     ConfigSettings.EnableVerboseLogging);
 
-            // Update the in-memory HealthEvent List.
-            repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, healthEvent));
+            // Update the in-memory HealthEvent data.
+            repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, healthEvent, DateTime.UtcNow));
 
             // Start the repair workflow.
             await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
