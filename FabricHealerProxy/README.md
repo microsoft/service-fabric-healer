@@ -1,28 +1,14 @@
-﻿# FabricHealerProxy
+﻿# FabricHealerProxy 1.0.1
 
-FabricHealerProxy is a .NET Standard 2.0 library that provides a very simple and reliable way for any .NET Service Fabric service to initiate Service Fabric entity repair by the FabricHealer service running in the same cluster. It is assumed that you have experience with FabricHealer and understand how to use it.
+FabricHealerProxy is a .NET Standard 2.0 library that provides a very simple and reliable way for any .NET Service Fabric service to initiate Service Fabric entity repair by the FabricHealer service running in the same cluster. You can install FabricHealerProxy into your .NET Service Fabric service from the [nuget.org package gallery](...). 
 
 ### How to use FabricHealerProxy
 
-- Learn how to use [FabricHealer](https://github.com/microsoft/service-fabric-healer) and get comfortable with its [Configuration as Logic model](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/LogicWorkflows.md).
-- [Deploy FabricHealer](https://github.com/microsoft/service-fabric-healer#deploy-fabrichealer) to your Service Fabric cluster.
-- Install FabricHealerProxy into your own .NET service and write a small amount of code to initiate FabricHealer repairs for a variety of targets. 
+- Deploy FabricHealer ([ARM](/Documentation/Deployment/Deployment.md), [PowerShell](/README.md#powershell-deployment)) to your cluster (Do note that if you deploy FabricHealer as a singleton partition 1 (versus -1), then FH will only conduct SF-related repairs).
+- Install FabricHealerProxy nupkg into your own service from where you want to initiate repair of SF entities (stateful/stateless services, Fabric nodes).
 
-The API is *very* simple, by design. For example, this is how you would initiate a repair for a service running on a specified Fabric node:
-
-```C#
-var serviceRepairFacts = new RepairFacts
-{
-    ServiceName = "fabric:/GettingStartedApplication/MyActorService",
-    NodeName = "appnode4"
-};
-
-await FabricHealerProxy.Instance.RepairEntityAsync(serviceRepairFacts, cancellationToken);
-```
-
-FabricHealerProxy will use the information you provide - even when it is as terse as above - to generate all the facts that FabricHealer needs to successfully execute the related entity-specific repair as defined in logic rules. If any of the related logic rules succeed,
-then FH will orchestrate Service Fabric's RepairManager service through to repair job completion, emitting repair step information via telemetry, local logging, and etw along the way.
-The above sample is *all* that is needed to restart a service running on a Fabric node named appnode4, for example. Of course, it depends on what the FabricHealer logic dictates, but you define that in FabricHealer with user configuration - that also happens to be logic programming :)
+FabricHealer will execute entity-related logic rules (housed in it's FabricNodeRules.guan file in this case), and if any of the rules succeed, then FH will create a Repair Job with pre and post safety checks (default),
+orchestrate RM through to repair completion (FH will be the executor of the repair), emit repair step information via telemetry, local logging, and etw.
 
 ### Sample application (Stateless Service)
 

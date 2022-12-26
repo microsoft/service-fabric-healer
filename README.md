@@ -1,10 +1,8 @@
-## FabricHealer 1.1.1.831
+## FabricHealer 1.1.1.960
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
-#### This version targets .NET Core 3.1 and requires SF Runtime >= 8.0
+#### This version targets .NET 6 and requires SF Runtime >= 9.0
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-healer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-healer.json)
-
-(The [net6](https://github.com/microsoft/service-fabric-healer/tree/net6) branch houses the version for .NET 6 and SF Runtime >= 9.0)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-healer%2Fnet6%2FDocumentation%2FDeployment%2Fservice-fabric-healer.json)
 
 FabricHealer (FH) is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
 applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls,
@@ -19,33 +17,26 @@ Description value: a serialized instance of a well-known (to FH) type (must impl
 Service Fabric service.
 
 FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster.
-It is a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04). Note that this version (1.1.1.831) will be the last version that supports .NET Core 3.1. 
-
-All warning and error health reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) and subsequently repaired by FabricHealer are user-configured
- - developer control extends from unhealthy event source to related healing operations. 
-
-FabricObserver and FabricHealer are part of a family of highly configurable Service Fabric observability tools that work together to keep your clusters green.
+It is a .NET 6.0 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04).  
 
 To learn more about FabricHealer's configuration-as-logic model, [click here.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/LogicWorkflows.md)  
 
 ```
-FabricHealer requires that RepairManager (RM) service is deployed. 
+FabricHealer requires the Service Fabric RepairManager (RM) service. 
 ```
 ```
-For VM level repair, InfrastructureService (IS) service must be deployed.
+For VM level repair, the Service Fabric InfrastructureService (IS) service must be deployed for each node type.
 ```
 
 ## Build and run  
 
 1. Clone the repo.
-2. Install [.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
+2. Install [.NET 6](https://dotnet.microsoft.com/download/dotnet-core/6.0)
 3. Build. 
 
 ## Deploy FabricHealer 
-You can deploy FabricHealer using Visual Studio (if you build the sources yourself), PowerShell or ARM. ***Please note*** that this version of FabricHealer no longer supports the DefaultServices node in ApplicationManifest.xml. This means that should you deploy using PowerShell,
-you must create an instance of the service as the last command in your script.
-This was done to support ARM deployment, specifically. The StartupServices.xml file you see in the FabricHealerApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio. Your ARM template or PowerShell script will
-contain all the information necessary for deploying FabricHealer.
+You can deploy FabricHealer using Visual Studio (if you build the sources yourself), PowerShell or ARM. ***Please note*** that this version of FabricHealer no longer supports the DefaultServices node in ApplicationManifest.xml. This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
+The StartupServices.xml file you see in the FabricHealerApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio. Your ARM template or PowerShell script will contain all the information necessary for deploying FabricHealer.
 
 ### ARM Deployment
 
@@ -78,15 +69,15 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH11831 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH11960 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH11831
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH11960
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.1.1.831   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.1.1.960   
 
 #Create the Service instance:  
 
@@ -94,7 +85,7 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.1.1.831 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.1.1.960 -Monitored -FailureAction rollback
 ```  
 
 ## Using FabricHealer  

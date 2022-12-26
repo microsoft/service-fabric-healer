@@ -7,6 +7,7 @@ using Microsoft.Win32;
 
 namespace FabricHealer.Utilities
 {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "This is only ever called when running on Windows..")]
     public class WindowsServiceFabricConfiguration : ServiceFabricConfiguration
     {
         private const string ServiceFabricWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
@@ -15,14 +16,8 @@ namespace FabricHealer.Utilities
 
         public override string FabricRoot => GetString(nameof(FabricRoot));
 
-        public override string GetString(string name)
-        {
-            return (string)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, null);
-        }
+        public override string GetString(string name) => (string)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, null);
 
-        public override int GetInt32(string name)
-        {
-            return (int)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, 0);
-        }
+        public override int GetInt32(string name) => (int)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, 0);
     }
 }

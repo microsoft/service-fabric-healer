@@ -28,6 +28,7 @@ namespace FabricHealer.Repair
         public const string EnableTelemetry = "EnableTelemetry";
         public const string EnableRollingServiceRestartsParameter = "EnableRollingServiceRestarts";
         public const string AppInsightsInstrumentationKeyParameter = "AppInsightsInstrumentationKey";
+        public const string AppInsightsConnectionStringParameter = "AppInsightsConnectionString";
         public const string EnableETW = "EnableETW";
         public const string HealthCheckIntervalInSeconds = "HealthCheckIntervalInSeconds";
         public const string LocalLogPathParameter = "LocalLogPath";

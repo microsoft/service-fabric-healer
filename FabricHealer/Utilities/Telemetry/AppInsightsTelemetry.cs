@@ -28,25 +28,25 @@ namespace FabricHealer.Utilities.Telemetry
         private readonly TelemetryClient telemetryClient;
         private readonly Logger logger;
 
-        public AppInsightsTelemetry(string key)
+        /// <summary>
+        /// OBSOLETE: DO NOT USE. Application Insights InstrumentationKey is deprecated. Pass a full ConnectionString to AppInsightsTelemetry constructor instead.
+        /// </summary>
+        public string Key
+        {
+            get => throw new NotSupportedException("Key unsupported for ApplicationInsights (InstrumentationKey is deprecated). Use ConnectionString instead.");
+            set => throw new NotSupportedException("Key unsupported for ApplicationInsights (InstrumentationKey is deprecated). Use ConnectionString instead.");
+        }
+
+        public AppInsightsTelemetry(string connectionString)
         {
             logger = new Logger("TelemetryLog");
-            telemetryClient = new TelemetryClient(new TelemetryConfiguration() { InstrumentationKey = key });
+            telemetryClient = new TelemetryClient(new TelemetryConfiguration() { ConnectionString = connectionString });
         }
 
         /// <summary>
         /// Gets a value indicating whether telemetry is enabled or not.
         /// </summary>
         private bool IsEnabled => telemetryClient.IsEnabled() && FabricHealerManager.ConfigSettings.TelemetryEnabled;
-
-        /// <summary>
-        /// Gets or sets the key.
-        /// </summary>
-        public string Key
-        {
-            get => telemetryClient?.InstrumentationKey;
-            set => telemetryClient.InstrumentationKey = value;
-        }
 
         /// <summary>
         /// Calls AI to track the availability.
