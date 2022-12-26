@@ -34,7 +34,7 @@ namespace FabricHealer.Utilities.Telemetry
 
             telemetryClient = FabricHealerManager.ConfigSettings.TelemetryProviderType switch
             {
-                TelemetryProviderType.AzureApplicationInsights => new AppInsightsTelemetry(FabricHealerManager.ConfigSettings.AppInsightsInstrumentationKey),
+                TelemetryProviderType.AzureApplicationInsights => new AppInsightsTelemetry(FabricHealerManager.ConfigSettings.AppInsightsConnectionString),
                 TelemetryProviderType.AzureLogAnalytics => new LogAnalyticsTelemetry(
                                                                 FabricHealerManager.ConfigSettings.LogAnalyticsWorkspaceId,
                                                                 FabricHealerManager.ConfigSettings.LogAnalyticsSharedKey,

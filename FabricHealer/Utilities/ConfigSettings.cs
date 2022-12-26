@@ -59,6 +59,12 @@ namespace FabricHealer.Utilities
             private set;
         }
 
+        public string AppInsightsConnectionString
+        {
+            get;
+            private set;
+        }
+
         // For Azure LogAnalytics Telemetry
         public string LogAnalyticsWorkspaceId
         {
@@ -261,7 +267,7 @@ namespace FabricHealer.Utilities
                     }
                     else
                     {
-                        AppInsightsInstrumentationKey = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AppInsightsInstrumentationKeyParameter);
+                        AppInsightsConnectionString = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AppInsightsConnectionStringParameter);
 
                         if (string.IsNullOrWhiteSpace(AppInsightsInstrumentationKey))
                         {
