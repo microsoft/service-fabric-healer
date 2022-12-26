@@ -1,6 +1,6 @@
-## FabricHealer 1.1.0.831
+## FabricHealer 1.1.1.960
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
-#### This version targets .NET Core 3.1 and requires SF Runtime >= 8.0
+#### This version targets .NET 6 and requires SF Runtime >= 9.0
 
 FabricHealer (FH) is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
 applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls,
@@ -15,17 +15,10 @@ Description value: a serialized instance of a well-known (to FH) type (must impl
 Service Fabric service.
 
 FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster.
-It is a .NET Core 3.1 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04). Note that this version (1.1.0.831) will be the last version that supports .NET Core 3.1. 
-Please use version 1.1.1 if you are already running Service Fabric 9.0. FH 1.1.1 targets .NET 6 and SF 9.x.
-
-All warning and error health reports created by [FabricObserver](https://github.com/microsoft/service-fabric-observer) or [FabricHealerProxy](https://github.com/microsoft/service-fabric-healer/tree/develop/FabricHealerProxy) and subsequently repaired by FabricHealer are user-configured - developer control extends from unhealthy event source to related healing operations. 
-
-FabricObserver and FabricHealer are part of a family of highly configurable Service Fabric observability tools that work together to keep your clusters green.
-
-To learn more about FabricHealer's configuration-as-logic model, [click here.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/LogicWorkflows.md)  
+It is a .NET 6 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04).  
 
 ```
-FabricHealer requires that RepairManager (RM) service is deployed. 
+FabricHealer requires that  RepairManager (RM) service is deployed. 
 ```
 ```
 For VM level repair, InfrastructureService (IS) service must be deployed.
@@ -34,9 +27,8 @@ For VM level repair, InfrastructureService (IS) service must be deployed.
 ## Build and run  
 
 1. Clone the repo.
-2. Install [.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)
+2. Install [.NET 6](https://dotnet.microsoft.com/download/dotnet-core/6.0)
 3. Build. 
-
 
 ## Using FabricHealer  
 

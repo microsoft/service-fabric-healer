@@ -1,4 +1,4 @@
-﻿## Logic rules for Service Fabric System Service repairs.
+﻿## Logic rules for Service Fabric System Service repairs. Note that all of these rules expect facts from an external source (FabricObserver or FHProxy).
 
 ## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                                   |
@@ -65,6 +65,10 @@ Mitigate(MetricName="MemoryMB", ProcessName=?SysProcName) :- not(?SysProcName ==
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
+##Mitigate(MetricName="MemoryMB", ProcessName="Fabric", MetricValue=?Value) :- ?Value >= 1500, GetHealthEventHistory(?HealthEventCount, 00:15:00),
+##	?HealthEventCount >= 3,
+##	TimeScopedRestartFabricNode(1, 01:00:00).
+
 
 ## Memory Use - Percent in use
 
@@ -109,7 +113,7 @@ Mitigate(MetricName="FileHandles", OS="Linux", ProcessName=?SysProcName) :- not(
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 
-## Open File Handles - Linux, Fabric or FabricHost. In these cases, we want a safe (graceful) restart of the Fabric node; not just kill the process, which will restart the node, but not gracefully.
+## Open File Handles - Linux OS, Fabric process. In these cases, we want a safe (graceful) restart of the Fabric node; not just kill the process, which will restart the node, but not gracefully.
 ## Restart the Fabric node where the offending instance is running.
 
 Mitigate(MetricName="FileHandles", OS="Linux", ProcessName="Fabric") :- TimeScopedRestartFabricNode(2, 08:00:00).

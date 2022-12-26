@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.1.0.831" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.1.1.960" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- FabricHealerManager Settings  -->
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
     <Parameter Name="EnableETW" DefaultValue="true" />
-    <Parameter Name="MonitorLoopSleepSeconds" DefaultValue="5" />
+    <Parameter Name="HealthCheckIntervalInSeconds" DefaultValue="60" />
     <Parameter Name="EnableTelemetry" DefaultValue="true" />
     <!-- Set VerboseLoggingEnabled to true if you want detailed local logging and telemetry/ETW with repair data. 
          This data will live in a folder named RepairData, which will be created in your LocalLogPath directory.
@@ -16,11 +16,11 @@
     <Parameter Name="EnableAppRepair" DefaultValue="true" />
     <Parameter Name="EnableDiskRepair" DefaultValue="false" />
     <Parameter Name="EnableFabricNodeRepair" DefaultValue="false" />
-    <Parameter Name="EnableMachineRepair" DefaultValue="false" />
+    <Parameter Name="EnableMachineRepair" DefaultValue="true" />
     <Parameter Name="EnableReplicaRepair" DefaultValue="false" />
     <!-- This means FH will apply some mitigation (restarts) to all instances of a target service on a node-by-node basis only (rolling). -->
     <Parameter Name="EnableRollingServiceRestarts" DefaultValue="true" />
-    <Parameter Name="EnableSystemServiceRepair" DefaultValue="false" />
+    <Parameter Name="EnableSystemServiceRepair" DefaultValue="true" />
     <!-- Logic rule files -->
     <Parameter Name="AppRulesConfigurationFile" DefaultValue="AppRules.guan" />
     <Parameter Name="DiskRulesConfigurationFile" DefaultValue="DiskRules.guan" />
@@ -33,13 +33,13 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.1.0.831" />
+    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.1.1.960" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
           <!-- FabricHealerManager -->
           <Section Name="RepairManagerConfiguration">
-            <Parameter Name="HealthCheckLoopSleepTimeSeconds" Value="[MonitorLoopSleepSeconds]" />
+            <Parameter Name="HealthCheckIntervalInSeconds" Value="[HealthCheckIntervalInSeconds]" />
             <Parameter Name="EnableAutoMitigation" Value="[AutoMitigationEnabled]" />
             <Parameter Name="EnableETW" Value="[EnableETW]" />
             <Parameter Name="EnableTelemetry" Value="[EnableTelemetry]" />
@@ -76,19 +76,18 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-	<!--
-	Because of certain actions FabricHealer takes in a cluster (deleting files created by or restarting services running at higher elevation, for example), 
-    it may need to run as System user on Windows and root on Linux. Note that you should test FH out NOT running as System and validate that it works for your scenarios.
-	For user service-level SF API mitigations (RestartCodePackage, RestartReplica, etc), it can (and therefore should) run as default (Network Service on Windows, sfappsuser on Linux). 
-	Test it out and do what works best for your security configuration. Keep in mind that running as System or root is non-optimal and should be thoughtfully considered.
-	<Policies>
+    <!-- Because of certain actions FabricHealer takes in a cluster (deleting files created by or restarting services running at higher elevation, for example), 
+         it may need to run as System user on Windows and root on Linux. Note that you should test FH out NOT running as System and validate that it works for your scenarios.
+         For user service-level SF API mitigations (RestartCodePackage, RestartReplica, etc), it can (and therefore should) run as default (Network Service on Windows, sfappsuser on Linux). 
+         Test it out and do what works best for your security configuration. Keep in mind that running as System or root is non-optimal and should be thoughtfully considered. -->
+    <Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
-    </Policies> -->
+    </Policies>
   </ServiceManifestImport>
   <Principals>
-	  <Users>
-		  <!-- LocalSystem AccountType maps to System on Windows and root on Linux. -->
-		  <User Name="SystemUser" AccountType="LocalSystem" />
-	  </Users>
+    <Users>
+      <!-- LocalSystem AccountType maps to System on Windows and root on Linux. -->
+      <User Name="SystemUser" AccountType="LocalSystem" />
+    </Users>
   </Principals>
 </ApplicationManifest>

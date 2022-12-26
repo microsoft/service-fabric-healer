@@ -30,7 +30,7 @@ namespace FabricHealer.Repair.Guan
             protected override async Task<bool> CheckAsync()
             {
                 // Can only delete files on the same VM where the FH instance that took the job is running.
-                if (RepairData.NodeName != RepairTaskManager.Context.NodeContext.NodeName)
+                if (RepairData.NodeName != FabricHealerManager.ServiceContext.NodeContext.NodeName)
                 {
                     return false;
                 }
@@ -81,7 +81,7 @@ namespace FabricHealer.Repair.Guan
                             break;
 
                         case "searchpattern":
-                            searchPattern = Input.Arguments[i].Value.GetStringValue();
+                            searchPattern = Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue();
                             break;
 
                         default:
@@ -93,11 +93,11 @@ namespace FabricHealer.Repair.Guan
                 {
                     if (!ValidateFileSearchPattern(searchPattern, path, recurseSubDirectories))
                     {
-                        await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
                                 "DeleteFilesPredicateType::NoFilesMatchSearchPattern",
                                 $"Specified search pattern, {searchPattern}, does not match any files in {path}.",
-                                RepairTaskManager.Token);
+                                FabricHealerManager.Token);
 
                         return false;
                     }
@@ -127,8 +127,8 @@ namespace FabricHealer.Repair.Guan
                 var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                           () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
                                                   RepairData,
-                                                  RepairTaskManager.Token),
-                                           RepairTaskManager.Token);
+                                                  FabricHealerManager.Token),
+                                           FabricHealerManager.Token);
 
                 if (repairTask == null)
                 {
@@ -137,11 +137,11 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to execute repair (FH executor does this work and manages repair state through RM, as always).
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                                        () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
                                                 repairTask,
                                                 RepairData,
-                                                RepairTaskManager.Token),
-                                         RepairTaskManager.Token);
+                                                FabricHealerManager.Token),
+                                         FabricHealerManager.Token);
                 return success;
             }
         }

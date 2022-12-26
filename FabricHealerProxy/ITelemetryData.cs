@@ -9,7 +9,7 @@ using System.Fabric.Health;
 namespace FabricHealer
 {
     /// <summary>
-    /// 
+    /// Interface that all TelemetryData types must implement.
     /// </summary>
     public interface ITelemetryData
     {

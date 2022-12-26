@@ -12,6 +12,6 @@ namespace FabricHealer.TelemetryLib
         internal const string ClusterTypeSfrp = "SFRP";
         internal const string ClusterTypePaasV1 = "PaasV1";
         internal const int AsyncOperationTimeoutSeconds = 120;
-        public const string AIKey = "c065641b-ec84-43fe-a8e7-c2bcbb697995";
+        internal const string ConnectionString = "InstrumentationKey=c065641b-ec84-43fe-a8e7-c2bcbb697995;IngestionEndpoint=https://eastus-0.in.applicationinsights.azure.com/";
     }
 }

@@ -1,58 +1,85 @@
-﻿## Logic rules for Machine level repairs in the cluster. Only OS reboot is supported today.
+﻿## Logic rules for scheduling Machine-level repair jobs in the cluster. EntityType fact is Machine.
+## FH does not conduct (execute) these repairs. It simply schedules them. InfrastructureService is always the Executor for these types of Repair Jobs.
 
-## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
-## | Argument Name             | Definition                                                                                   |
-## |---------------------------|----------------------------------------------------------------------------------------------|
-## | NodeName                  | Name of the node                                                                             | 
-## | NodeType                  | Type of node                                                                                 |  
-## | ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                        | 
-## | MetricName                | Name of the Metric  (e.g., CpuPercent or MemoryMB, etc.)                                     |   
-## | MetricValue               | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)                              | 
-## | OS                        | The name of the OS from which the data was collected (Linux or Windows)                      |
-## | HealthState               | The HealthState of the target entity: Error or Warning                                       |
+## Applicable Named Arguments for Mitigate. Facts are supplied by FabricObserver, FHProxy or FH itself.
+## Any argument below with (FO/FHProxy) means that only FO or FHProxy will present the fact.
+## | Argument Name             | Definition                                                             |
+## |---------------------------|------------------------------------------------------------------------|
+## | NodeName                  | Name of the node                                                       | 
+## | NodeType                  | Type of node                                                           |  
+## | ErrorCode (FO/FHProxy)    | Supported Error Code emitted by caller (e.g. "FO002")                  | 
+## | MetricName (FO/FHProxy)   | Name of the Metric  (e.g., CpuPercent or MemoryMB, etc.)               |   
+## | MetricValue (FO/FHProxy)  | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)        | 
+## | OS                        | The name of the OS where FabricHealer is running (Linux or Windows)    |
+## | HealthState               | The HealthState of the target entity: Error or Warning                 |
     
-## VM-related Metric Names.
-## | Name                      |                                                                                    
-## |---------------------------|
-## | ActiveTcpPorts            |                                         
-## | CpuPercent                |    
-## | EphemeralPorts            |    
-## | MemoryMB                  | 
-## | MemoryPercent             | 
-## | FileHandles (Linux)       | 
-## | FileHandlesPercent (Linux)| 
+## Metric Names, from FO or FHProxy.
+## | Name                           |                                                                                    
+## |--------------------------------|
+## | ActiveTcpPorts                 |                                         
+## | CpuPercent                     |    
+## | EphemeralPorts                 | 
+## | EphemeralPortsPercent          | 
+## | MemoryMB                       | 
+## | MemoryPercent                  | 
+## | FileHandles (Linux-only)       | 
+## | FileHandlesPercent (Linux-only)| 
 
-## First, check if we are inside run interval. If so, then cut (!).
-## This is commented out by default. Just uncomment and set the global run interval for VM level repairs to suit your needs.
-
+## If this is what you need, then first check if we are inside the specified run interval for scheduling *any* machine-level repair for any reason. 
+## Ending with a cut (!) means the goal (Mitigate) has been satisfied and Guan will immediately stop processing rules.
 ## Mitigate() :- CheckInsideRunInterval(02:00:00), !.
 
-## TimeScopedRestartVM is an internal predicate to check for the number of times a VM reboot repair has run to completion within a supplied time window. 
-## If Completed VM Repair count is less then supplied value, then run RestartVM mitigation.
+## TimeScopedScheduleRepair is an internal predicate to check for the number of times the specified machine repair action has run to completion within a supplied time window. 
+## If the completed machine repair count is less then supplied value, then schedule an infrastructure repair via ScheduleMachineRepair predicate.
+TimeScopedScheduleRepair(?count, ?time, ?repairAction) :- GetRepairHistory(?repairCount, ?time), ?repairCount < ?count, ScheduleMachineRepair(?repairAction).
 
-TimeScopedRestartVM(?count, ?time) :- GetRepairHistory(?repairCount, ?time),
-    ?repairCount < ?count, 
-    RestartVM().
+## Metric-defined machine repair scheduling.
 
 ## Percent Memory in Use (of total physical).
-
-Mitigate(MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 95,
-	GetHealthEventHistory(?HealthEventCount, 00:15:00),
-	?HealthEventCount >= 3,
-    TimeScopedRestartVM(4, 08:00:00).
-
+Mitigate(MetricName=MemoryPercent, MetricValue=?MetricValue) :- ?MetricValue >= 95,
+  GetHealthEventHistory(?HealthEventCount, 00:15:00), ?HealthEventCount >= 3,
+  TimeScopedScheduleRepair(4, 08:00:00, System.Reboot).
 
 ## File Handles/FDs. Linux-only.
-## Percent Allocated, System-wide.
 
-Mitigate(MetricName="FileHandlesPercent", MetricValue=?MetricValue, OS="Linux") :- ?MetricValue >= 95,
-	GetHealthEventHistory(?HealthEventCount, 00:15:00),
-	?HealthEventCount >= 3,
-    TimeScopedRestartVM(2, 08:00:00).
+## Percent Allocated, System-wide.
+Mitigate(MetricName=FileHandlesPercent, MetricValue=?MetricValue, OS=Linux) :- ?MetricValue >= 95,
+  GetHealthEventHistory(?HealthEventCount, 00:15:00), ?HealthEventCount >= 3,
+  TimeScopedScheduleRepair(2, 08:00:00, System.Reboot).
 
 ## Total Allocated, System-wide.
+Mitigate(MetricName=FileHandles, MetricValue=?MetricValue, OS=Linux) :- ?MetricValue >= 1000000,
+  GetHealthEventHistory(?HealthEventCount, 00:15:00), ?HealthEventCount >= 3,
+  TimeScopedScheduleRepair(2, 08:00:00, System.Reboot).
 
-Mitigate(MetricName="FileHandles", MetricValue=?MetricValue, OS="Linux") :- ?MetricValue >= 1000000,
-	GetHealthEventHistory(?HealthEventCount, 00:15:00),
-	?HealthEventCount >= 3,
-    TimeScopedRestartVM(2, 08:00:00).
+## FH-determined machine repair scheduling. 
+## This means FabricHealerManager provides the facts used here by querying HM directly, versus supplying facts from serialized TelemetryData instances created by FabricObserver or FHProxy.
+
+## Don't proceed if the target entity is not in Error.
+Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
+
+## Don't proceed if there are 2 machine repairs currently active in the cluster.
+Mitigate() :- CheckOutstandingRepairs(2), !.
+
+## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours.
+Mitigate() :- CheckInsideHealthStateMinDuration(02:00:00), !.
+
+## Don't schedule a repair if one was scheduled less than 10 minutes ago. [Do we want this account for all scheduled repairs (not just FH-scheduled)?]
+Mitigate() :- CheckInsideScheduleInterval(00:10:00), !.
+
+## Don't proceed if a node in the cluster is still in post-repair probation (so, a Completed repair, node is recovering).
+Mitigate() :- CheckInsideProbationPeriod(00:30:00), !.
+
+## Mitigations.
+
+## Reboot.
+## Don't process any other rules if scheduling succeeds or fails (note the !) and there are less than 2 of these repairs that have completed in the last 4 hours.
+Mitigate() :- GetRepairHistory(?repairCount, 04:00:00, System.Reboot), ?repairCount < 2, !, ScheduleMachineRepair(System.Reboot).
+
+## Reimage.
+Mitigate() :- GetRepairHistory(?repairCount, 04:00:00, System.ReimageOS), ?repairCount < 2, !, ScheduleMachineRepair(System.ReimageOS).
+
+## Heal.
+Mitigate() :- GetRepairHistory(?repairCount, 04:00:00, System.Azure.Heal), ?repairCount < 2, !, ScheduleMachineRepair(System.Azure.Heal).
+
+## If we end up here, then human intervention is required (Triage)..

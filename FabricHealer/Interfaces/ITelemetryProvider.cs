@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 
 namespace FabricHealer.Interfaces

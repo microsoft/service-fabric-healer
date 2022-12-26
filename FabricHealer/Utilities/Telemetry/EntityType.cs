@@ -11,11 +11,15 @@ namespace FabricHealer.Utilities.Telemetry
     public enum EntityType
     {
         /// <summary>
+        /// Unknown (default).
+        /// </summary>
+        Unknown,
+        /// <summary>
         /// Application type.
         /// </summary>
         Application,
         /// <summary>
-        /// Node type.
+        /// Fabric Node type.
         /// </summary>
         Node,
         /// <summary>
@@ -43,7 +47,7 @@ namespace FabricHealer.Utilities.Telemetry
         /// </summary>
         Process,
         /// <summary>
-        /// Machine (physical or virtual) type. This is for machine reboot repairs.
+        /// Machine (physical or virtual) type.
         /// </summary>
         Machine,
         /// <summary>

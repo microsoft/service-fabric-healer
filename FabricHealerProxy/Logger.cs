@@ -4,46 +4,32 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Diagnostics.Tracing;
-using System.Fabric.Health;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
-using FabricHealer.Utilities.Telemetry;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
 using NLog.Time;
 
-namespace FabricHealer.Utilities
+namespace FabricHealer
 {
-    public sealed class Logger
+    internal sealed class Logger
     {
-        private const int Retries = 5;
-        private readonly string loggerName;
+        private const int MaxRetries = 5;
 
         // Text file logger.
-        private ILogger OLogger
+        private ILogger logger;
+        private readonly string folderName;
+        private readonly string filename;
+        private readonly string loggerName;
+
+        internal bool EnableVerboseLogging
         {
             get; set;
         }
 
-        private string FolderName
-        {
-            get;
-        }
-
-        private string Filename
-        {
-            get;
-        }
-
-        public bool EnableVerboseLogging
-        {
-            get; set;
-        }
-
-        public string LogFolderBasePath
+        internal string LogFolderBasePath
         {
             get; set;
         }
@@ -53,10 +39,10 @@ namespace FabricHealer.Utilities
         /// </summary>
         /// <param name="sourceName">Name of observer.</param>
         /// <param name="logFolderBasePath">Base folder path.</param>
-        public Logger(string sourceName, string logFolderBasePath = null)
+        internal Logger(string sourceName, string logFolderBasePath = null)
         {
-            FolderName = sourceName;
-            Filename = sourceName + ".log";
+            folderName = sourceName;
+            filename = sourceName + ".log";
             loggerName = sourceName;
 
             if (!string.IsNullOrWhiteSpace(logFolderBasePath))
@@ -80,16 +66,16 @@ namespace FabricHealer.Utilities
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     // Add current drive letter if not supplied for Windows path target.
-                    if (!LogFolderBasePath[..3].Contains(":\\"))
+                    if (!LogFolderBasePath.Substring(0, 3).Contains(":\\"))
                     {
-                        string windrive = Environment.SystemDirectory[..3];
+                        string windrive = Environment.SystemDirectory.Substring(0, 3);
                         logFolderBase = windrive + LogFolderBasePath;
                     }
                 }
                 else
                 {
                     // Remove supplied drive letter if Linux is the runtime target.
-                    if (LogFolderBasePath[..3].Contains(":\\"))
+                    if (LogFolderBasePath.Substring(0, 3).Contains(":\\"))
                     {
                         logFolderBase = LogFolderBasePath.Remove(0, 3).Replace("\\", "/");
                     }
@@ -100,26 +86,29 @@ namespace FabricHealer.Utilities
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     string windrive = Environment.SystemDirectory.Substring(0, 3);
-                    logFolderBase = windrive + "fabric_healer_logs";
+                    logFolderBase = windrive + "fabric_healer_proxy_logs";
                 }
                 else
                 {
-                    logFolderBase = "/tmp/fabric_healer_logs";
+                    logFolderBase = "/tmp/fabric_healer_proxy_logs";
                 }
             }
 
             LogFolderBasePath = logFolderBase;
-            string file = Path.Combine(logFolderBase, "fabric_healer.log");
+            string file = Path.Combine(logFolderBase, "fabric_healer_proxy.log");
 
-            if (!string.IsNullOrWhiteSpace(FolderName) && !string.IsNullOrWhiteSpace(Filename))
+            if (!string.IsNullOrWhiteSpace(folderName) && !string.IsNullOrWhiteSpace(filename))
             {
-                string folderPath = Path.Combine(logFolderBase, FolderName);
-                file = Path.Combine(folderPath, Filename);
+                string folderPath = Path.Combine(logFolderBase, folderName);
+                file = Path.Combine(folderPath, filename);
             }
 
             var targetName = loggerName + "LogFile";
 
-            LogManager.Configuration ??= new LoggingConfiguration();
+            if (LogManager.Configuration == null)
+            {
+                LogManager.Configuration = new LoggingConfiguration();
+            }
 
             if ((FileTarget)LogManager.Configuration?.FindTargetByName(targetName) == null)
             {
@@ -143,68 +132,37 @@ namespace FabricHealer.Utilities
             }
 
             TimeSource.Current = new AccurateUtcTimeSource();
-            OLogger = LogManager.GetLogger(loggerName);
+            logger = LogManager.GetLogger(loggerName);
         }
 
-        public void LogInfo(string format, params object[] parameters)
+        internal void LogInfo(string format, params object[] parameters)
         {
             if (!EnableVerboseLogging)
             {
                 return;
             }
 
-            OLogger.Info(format, parameters);
+            logger.Info(format, parameters);
         }
 
-        public void LogError(string format, params object[] parameters)
+        internal void LogError(string format, params object[] parameters)
         {
-            OLogger.Error(format, parameters);
+            logger.Error(format, parameters);
         }
 
-        public void LogWarning(string format, params object[] parameters)
+        internal void LogWarning(string format, params object[] parameters)
         {
-            OLogger.Warn(format, parameters);
+            logger.Warn(format, parameters);
         }
 
-        /// <summary>
-        /// Logs EventSource events as specified event name using T data as payload.
-        /// </summary>
-        /// <typeparam name="T">Generic type. Must be a class or struct attributed as EventData (EventSource.EventDataAttribute).</typeparam>
-        /// <param name="eventName">The name of the ETW event. This corresponds to the table name in Kusto.</param>
-        /// <param name="eventData">The data of generic type that will be the event Payload.</param>
-        public void LogEtw<T>(string eventName, T eventData)
-        {
-            if (eventData == null || string.IsNullOrWhiteSpace(eventName))
-            {
-                return;
-            }
-
-            if (!JsonSerializationUtility.TrySerializeObject(eventData, out string data))
-            {
-                return;
-            }
-
-            EventKeywords keywords = ServiceEventSource.Keywords.InternalData;
-
-            if (eventData is TelemetryData telemData)
-            {
-                if (telemData.HealthState == HealthState.Error || telemData.HealthState == HealthState.Warning)
-                {
-                    keywords = ServiceEventSource.Keywords.ErrorOrWarning;
-                }
-            }
-
-            ServiceEventSource.Current.Write(new { data }, eventName, keywords);
-        }
-
-        public static bool TryWriteLogFile(string path, string content)
+        internal static bool TryWriteLogFile(string path, string content)
         {
             if (string.IsNullOrWhiteSpace(content))
             {
                 return false;
             }
 
-            for (var i = 0; i < Retries; i++)
+            for (var i = 0; i < MaxRetries; i++)
             {
                 try
                 {

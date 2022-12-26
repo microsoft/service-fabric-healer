@@ -14,6 +14,7 @@ namespace FabricHealer.Repair
     [Serializable]
     public enum RepairActionType
     {
+        Infra,
         DeleteFiles,
         RemoveFabricNodeState,
         RemoveReplica,
@@ -21,7 +22,6 @@ namespace FabricHealer.Repair
         RestartCodePackage,
         RestartFabricNode,
         RestartProcess,
-        RestartReplica,
-        RestartVM,
+        RestartReplica
     }
 }

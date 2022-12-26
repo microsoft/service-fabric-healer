@@ -23,5 +23,3 @@ await FabricHealerProxy.Instance.RepairEntityAsync(serviceRepairFacts, cancellat
 FabricHealerProxy will use the information you provide - even when it is as terse as above - to generate all the facts that FabricHealer needs to successfully execute the related entity-specific repair as defined in logic rules. If any of the related logic rules succeed,
 then FH will orchestrate Service Fabric's RepairManager service through to repair job completion, emitting repair step information via telemetry, local logging, and etw along the way.
 The above sample is *all* that is needed to restart a service running on a Fabric node named appnode4, for example. Of course, it depends on what the FabricHealer logic dictates, but you define that in FabricHealer with user configuration - that also happens to be logic programming :)
-
-

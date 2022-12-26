@@ -28,7 +28,7 @@ namespace FabricHealer.Repair.Guan
             protected override async Task<bool> CheckAsync()
             {
                 // Can only kill processes on the same node where the FH instance that took the job is running.
-                if (RepairData.NodeName != RepairTaskManager.Context.NodeContext.NodeName)
+                if (RepairData.NodeName != FabricHealerManager.ServiceContext.NodeContext.NodeName)
                 {
                     return false;
                 }
@@ -39,18 +39,20 @@ namespace FabricHealer.Repair.Guan
                 for (int i = 0; i < count; i++)
                 {
                     var typeString = Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name;
+
                     switch (typeString)
                     {
                         case "TimeSpan":
-                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         case "Boolean":
-                            RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetObjectValue();
+                            RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
                         default:
-                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Value.GetObjectValue().GetType()}");
+                            throw new GuanException($"RestartFabricSystemProcessPredicateType failure. Unsupported argument type: {Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name}. " +
+                                                    "Only Boolean and TimeSpan arg types are supported for this predicate.");
                     }
                 }
 
@@ -58,8 +60,8 @@ namespace FabricHealer.Repair.Guan
                 var repairTask = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                     () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
                                             RepairData,
-                                            RepairTaskManager.Token),
-                                    RepairTaskManager.Token).GetAwaiter().GetResult();
+                                            FabricHealerManager.Token),
+                                    FabricHealerManager.Token).GetAwaiter().GetResult();
 
                 if (repairTask == null)
                 {
@@ -68,11 +70,11 @@ namespace FabricHealer.Repair.Guan
 
                 // Try to execute repair (FH executor does this work and manages repair state).
                 bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync(
+                                        () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
                                                 repairTask,
                                                 RepairData,
-                                                RepairTaskManager.Token),
-                                            RepairTaskManager.Token);
+                                                FabricHealerManager.Token),
+                                            FabricHealerManager.Token);
                 return success;
             }
         }

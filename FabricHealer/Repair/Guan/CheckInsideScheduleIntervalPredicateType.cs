@@ -11,9 +11,9 @@ using System.Threading.Tasks;
 
 namespace FabricHealer.Repair.Guan
 {
-    public class CheckInsideRunIntervalPredicateType : PredicateType
+    public class CheckInsideScheduleIntervalPredicateType : PredicateType
     {
-        private static CheckInsideRunIntervalPredicateType Instance;
+        private static CheckInsideScheduleIntervalPredicateType Instance;
         private static TelemetryData RepairData;
 
         private class Resolver : BooleanPredicateResolver
@@ -26,41 +26,39 @@ namespace FabricHealer.Repair.Guan
 
             protected override async Task<bool> CheckAsync()
             {
-                TimeSpan runInterval = TimeSpan.MinValue;
                 int count = Input.Arguments.Count;
 
-                if (count == 0 || Input.Arguments[0].Value.GetObjectValue().GetType() != typeof(TimeSpan))
+                if (count == 0 || Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() != typeof(TimeSpan))
                 {
                     throw new GuanException(
-                                "CheckInsideRunInterval: One argument is required and it must be a TimeSpan " +
+                                "CheckInsideScheduleInterval: One argument is required and it must be a TimeSpan " +
                                 "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
                 }
 
-                var interval = (TimeSpan)Input.Arguments[0].Value.GetObjectValue();
+                var interval = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
 
                 if (interval == TimeSpan.MinValue)
                 {
                     return false;
                 }
 
-                bool insideRunInterval = 
-                    await FabricRepairTasks.IsLastCompletedFHRepairTaskWithinTimeRangeAsync(
+                bool insideScheduleInterval =
+                    await FabricRepairTasks.IsLastScheduledRepairJobWithinTimeRangeAsync(
                             interval,
                             RepairData,
                             FabricHealerManager.Token);
-                
-                if (!insideRunInterval)
+
+                if (!insideScheduleInterval)
                 {
                     return false;
                 }
 
-                string message = $"{RepairData.RepairPolicy.RepairAction} job has already been scheduled/executed at least once within the specified run interval " +
-                                 $"({(runInterval > TimeSpan.MinValue ? runInterval : interval)}).{Environment.NewLine}" +
-                                 $"Will not attempt {RepairData.EntityType} repair at this time.";
+                string message = $"{RepairData.RepairPolicy.RepairAction} job has already been scheduled at least once within the specified scheduling interval " +
+                                 $"({interval}). Will not schedule {RepairData.EntityType} repair at this time.";
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        $"CheckInsideRunInterval::{RepairData.RepairPolicy.RepairAction}",
+                        $"CheckInsideScheduleInterval::{RepairData.RepairPolicy.RepairAction}",
                         message,
                         FabricHealerManager.Token);
 
@@ -68,14 +66,13 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static CheckInsideRunIntervalPredicateType Singleton(string name, TelemetryData repairData)
+        public static CheckInsideScheduleIntervalPredicateType Singleton(string name, TelemetryData repairData)
         {
             RepairData = repairData;
-
-            return Instance ??= new CheckInsideRunIntervalPredicateType(name);
+            return Instance ??= new CheckInsideScheduleIntervalPredicateType(name);
         }
 
-        private CheckInsideRunIntervalPredicateType(string name)
+        private CheckInsideScheduleIntervalPredicateType(string name)
                  : base(name, true, 1)
         {
 
@@ -87,3 +84,4 @@ namespace FabricHealer.Repair.Guan
         }
     }
 }
+

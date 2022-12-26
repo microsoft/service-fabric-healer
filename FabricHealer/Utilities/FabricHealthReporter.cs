@@ -5,7 +5,6 @@
 
 using FabricHealer.Utilities.Telemetry;
 using System;
-using System.Fabric;
 using System.Fabric.Health;
 
 namespace FabricHealer.Utilities

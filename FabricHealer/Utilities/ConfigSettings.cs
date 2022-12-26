@@ -23,7 +23,7 @@ namespace FabricHealer.Utilities
             private set;
         }
 
-        public int ExecutionLoopSleepSeconds
+        public int HealthCheckIntervalInSeconds
         {
             get;
             private set;
@@ -37,7 +37,7 @@ namespace FabricHealer.Utilities
 
         public bool EnableRollingServiceRestarts
         {
-            get; 
+            get;
             private set;
         }
 
@@ -46,7 +46,7 @@ namespace FabricHealer.Utilities
             get; set;
         }
 
-        public TelemetryProviderType TelemetryProvider
+        public TelemetryProviderType TelemetryProviderType
         {
             get;
             private set;
@@ -54,6 +54,12 @@ namespace FabricHealer.Utilities
 
         // For Azure ApplicationInsights Telemetry
         public string AppInsightsInstrumentationKey
+        {
+            get;
+            private set;
+        }
+
+        public string AppInsightsConnectionString
         {
             get;
             private set;
@@ -84,7 +90,7 @@ namespace FabricHealer.Utilities
             private set;
         } = TimeSpan.FromSeconds(120);
 
-        // For EventSource Telemetry
+        // For EventSource ETW
         public bool EtwEnabled
         {
             get;
@@ -103,7 +109,8 @@ namespace FabricHealer.Utilities
             private set;
         }
 
-        // RepairPolicy Enablement
+        // RepairPolicy Enablement\\
+
         public bool EnableAppRepair
         {
             get;
@@ -142,7 +149,7 @@ namespace FabricHealer.Utilities
 
         public ConfigSettings(StatelessServiceContext context)
         {
-            this.context = context ?? throw new ArgumentException("Context can't be null.");
+            this.context = context ?? throw new ArgumentException("ServiceContext can't be null.");
             UpdateConfigSettings();
         }
 
@@ -155,7 +162,7 @@ namespace FabricHealer.Utilities
             {
                 EnableAutoMitigation = enableAutoMitigation;
             }
-            
+
             if (int.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AsyncOperationTimeout), out int timeout))
             {
                 AsyncTimeout = TimeSpan.FromSeconds(timeout);
@@ -167,50 +174,17 @@ namespace FabricHealer.Utilities
                 EnableVerboseLogging = enableVerboseLogging;
             }
 
-            LocalLogPathParameter = GetConfigSettingValue( RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LocalLogPathParameter);
+            LocalLogPathParameter = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LocalLogPathParameter);
 
-            if (int.TryParse( GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.HealthCheckLoopSleepTimeSeconds), out int execFrequency))
+            if (int.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.HealthCheckIntervalInSeconds), out int execFrequency))
             {
-                ExecutionLoopSleepSeconds = execFrequency;
+                HealthCheckIntervalInSeconds = execFrequency;
             }
 
             // Rolling service restarts.
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableRollingServiceRestartsParameter), out bool enableRollingRestarts))
             {
                 EnableRollingServiceRestarts = enableRollingRestarts;
-            }
-
-            // Telemetry.
-            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableTelemetry), out bool telemEnabled))
-            {
-                TelemetryEnabled = telemEnabled;
-
-                if (TelemetryEnabled)
-                {
-                    string telemetryProviderType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.TelemetryProviderType);
-                    
-                    if (string.IsNullOrWhiteSpace(telemetryProviderType))
-                    {
-                        TelemetryEnabled = false;
-                        return;
-                    }
-
-                    if (Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
-                    {
-                        TelemetryProvider = telemetryProvider;
-
-                        if (telemetryProvider == TelemetryProviderType.AzureLogAnalytics)
-                        {
-                            LogAnalyticsLogType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsLogTypeParameter);
-                            LogAnalyticsSharedKey = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsSharedKeyParameter);
-                            LogAnalyticsWorkspaceId = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsWorkspaceIdParameter);
-                        }
-                        else
-                        {
-                            AppInsightsInstrumentationKey = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AppInsightsInstrumentationKeyParameter);
-                        }
-                    }
-                }
             }
 
             // ETW.
@@ -255,6 +229,54 @@ namespace FabricHealer.Utilities
             {
                 EnableMachineRepair = vmRepairEnabled;
             }
+
+            // Telemetry. Add any new settings above this (note the returns below..).
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableTelemetry), out bool telemEnabled))
+            {
+                TelemetryEnabled = telemEnabled;
+
+                if (TelemetryEnabled)
+                {
+                    string telemetryProviderType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.TelemetryProviderType);
+
+                    if (string.IsNullOrWhiteSpace(telemetryProviderType))
+                    {
+                        TelemetryEnabled = false;
+                        return;
+                    }
+
+                    if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
+                    {
+                        TelemetryEnabled = false;
+                        return;
+                    }
+
+                    TelemetryProviderType = telemetryProvider;
+
+                    if (telemetryProvider == TelemetryProviderType.AzureLogAnalytics)
+                    {
+                        LogAnalyticsLogType = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsLogTypeParameter);
+                        LogAnalyticsSharedKey = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsSharedKeyParameter);
+                        LogAnalyticsWorkspaceId = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LogAnalyticsWorkspaceIdParameter);
+
+                        if (string.IsNullOrWhiteSpace(LogAnalyticsSharedKey) || string.IsNullOrWhiteSpace(LogAnalyticsSharedKey))
+                        {
+                            TelemetryEnabled = false;
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        AppInsightsConnectionString = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AppInsightsConnectionStringParameter);
+
+                        if (string.IsNullOrWhiteSpace(AppInsightsInstrumentationKey))
+                        {
+                            TelemetryEnabled = false;
+                            return;
+                        }
+                    }
+                }
+            }
         }
 
         private string GetConfigSettingValue(string sectionName, string parameterName)
@@ -267,7 +289,7 @@ namespace FabricHealer.Utilities
                 if (settings == null)
                 {
                     settings = context.CodePackageActivationContext?.GetConfigurationPackageObject("Config")?.Settings;
-                    
+
                     if (settings == null)
                     {
                         return null;
@@ -280,7 +302,7 @@ namespace FabricHealer.Utilities
                 // reset.
                 configSettings = null;
 
-                return parameter.Value;  
+                return parameter.Value;
             }
             catch (Exception e) when (e is KeyNotFoundException || e is FabricElementNotFoundException)
             {

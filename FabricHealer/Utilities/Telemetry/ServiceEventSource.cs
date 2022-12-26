@@ -3,22 +3,38 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using FabricHealer.Repair;
 using System;
 using System.Diagnostics.Tracing;
 using System.Fabric;
-using System.Threading.Tasks;
-using FabricHealer.TelemetryLib;
-using FabricHealer.Repair;
 
 namespace FabricHealer.Utilities.Telemetry
 {
-    public sealed class ServiceEventSource : EventSource, ITelemetryEventSource
+    public sealed class ServiceEventSource : EventSource
     {
-        public static readonly ServiceEventSource Current = new ServiceEventSource();
+        private static ServiceEventSource _current = null;
+        private static readonly object _lock = new object();
 
-        // Instance constructor is private to enforce singleton semantics.
-        // FabricObserver ETW provider name is passed to base.ctor here instead of decorating this class.
-        private ServiceEventSource() : base(RepairConstants.EventSourceProviderName)
+        public static ServiceEventSource Current
+        {
+            get
+            {
+                if (_current == null)
+                {
+                    lock (_lock)
+                    {
+                        if (_current == null)
+                        {
+                            _current = new ServiceEventSource();
+                        }
+                    }
+                }
+
+                return _current;
+            }
+        }
+
+        public ServiceEventSource() : base(RepairConstants.FabricHealerETWProvider)
         {
 
         }
@@ -43,42 +59,19 @@ namespace FabricHealer.Utilities.Telemetry
         }
 
         [NonEvent]
-        public void DataTypeWriteInfo<T>(string eventName, T data)
+        internal void Write<T>(T data, string eventName, EventKeywords keywords)
         {
+            if (!IsEnabled())
+            {
+                return;
+            }
+
             var options = new EventSourceOptions
             {
                 ActivityOptions = EventActivityOptions.None,
-                Keywords = Keywords.ResourceUsage,
+                Keywords = keywords,
                 Opcode = EventOpcode.Info,
-                Level = EventLevel.Verbose,
-            };
-
-            Write(eventName, options, data);
-        }
-
-        [NonEvent]
-        public void DataTypeWriteWarning<T>(string eventName, T data)
-        {
-            var options = new EventSourceOptions
-            {
-                ActivityOptions = EventActivityOptions.None,
-                Keywords = Keywords.ErrorOrWarning,
-                Opcode = EventOpcode.Info,
-                Level = EventLevel.Warning,
-            };
-
-            Write(eventName, options, data);
-        }
-
-        [NonEvent]
-        public void DataTypeWriteError<T>(string eventName, T data)
-        {
-            var options = new EventSourceOptions
-            {
-                ActivityOptions = EventActivityOptions.None,
-                Keywords = Keywords.ErrorOrWarning,
-                Opcode = EventOpcode.Info,
-                Level = EventLevel.Error,
+                Level = EventLevel.Verbose
             };
 
             Write(eventName, options, data);
@@ -207,18 +200,6 @@ namespace FabricHealer.Utilities.Telemetry
             {
                 WriteEvent(VerboseMessageEventId, message);
             }
-        }
-
-        [Event(42, Level = EventLevel.Verbose)]
-        public void InternalFHDataEvent<T>(T data)
-        {
-            Write("FabricHealerOperationalEvent", data);
-        }
-
-        [Event(43, Level = EventLevel.Error)]
-        public void InternalFHCriticalErrorDataEvent<T>(T data)
-        {
-            Write("FabricHealerCriticalErrorEvent", data);
         }
 
 #if UNSAFE

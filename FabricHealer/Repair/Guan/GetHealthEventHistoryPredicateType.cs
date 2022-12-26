@@ -32,18 +32,18 @@ namespace FabricHealer.Repair.Guan
 
                 if (timeRange > TimeSpan.MinValue)
                 {
-                    eventCount = RepairTaskManager.GetEntityHealthEventCountWithinTimeRange(RepairData.Property, timeRange);
+                    eventCount = RepairTaskManager.GetEntityHealthEventCountWithinTimeRange(RepairData, timeRange);
                 }
                 else
                 {
                     string message = "You must supply a valid TimeSpan argument for GetHealthEventHistoryPredicateType. " +
                                      "Default result has been supplied (0).";
 
-                    await RepairTaskManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
                             $"GetHealthEventHistoryPredicateType::{RepairData.Property}",
                             message,
-                            RepairTaskManager.Token);
+                            FabricHealerManager.Token);
                 }
 
                 var result = new CompoundTerm(this.Input.Functor);

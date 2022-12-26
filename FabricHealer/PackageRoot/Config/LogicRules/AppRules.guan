@@ -1,6 +1,6 @@
-﻿## Logic rules for Service Fabric Application-level repairs.
+﻿## Logic rules for Service Fabric Application-level repairs. Note that all of these rules expect facts from an external source (FabricObserver or FHProxy).
 
-## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, renamed for brevity by FH.
+## Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver or FHProxy, renamed for brevity by FH.
 ## | Argument Name             | Definition                                                                                   |
 ## |---------------------------|----------------------------------------------------------------------------------------------|
 ## | AppName                   | Name of the SF application, format is "fabric:/SomeApp" (Quotes are required)                |
@@ -11,6 +11,7 @@
 ## | ObserverName              | Name of Observer that generated the event (if the data comes from FabricObserver service)    |
 ## | PartitionId               | Id of the partition                                                                          |
 ## | ReplicaOrInstanceId       | Id of the replica or instance                                                                |
+## | ReplicaRole               | Role of replica: Primary or ActiveSecondary. Or None (e.g., Stateless replica)               |
 ## | ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                        | 
 ## | MetricName                | Name of the metric (e.g., CpuPercent or MemoryMB, etc.)                                      |   
 ## | MetricValue               | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)                              | 
@@ -61,36 +62,39 @@
 ## *Note*:  you must wrap the date string in quotes to make it explicit to Guan that the arg is a string as it contains mathematical operators (in this case a /).
 ## The rule below reads: If any of the specified (set in Mitigate) app's service processes have put it into Warning due to CPU over-consumption and today's date is later than the supplied end date, emit a message, stop processing rules (!).
 
-Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("12/30/2022"),
-	EmitMessage("Exceeded specified end date for repair of fabric:/MyApp CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("12/30/2022"), time()), !.
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("12/31/2022"),
+	EmitMessage("Exceeded specified end date for repair of fabric:/CpuStress CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("12/31/2022"), time()), !.
 
-## Alternatively, you could enforce repair end dates inline (as a subgoal) to any rule, e.g.,
+## Alternatively, you could enforce repair end dates inline (as a subrule) to any rule, e.g.,
 
 Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- time() < DateTime("12/30/2022"),
 	?MetricValue >= 8500,
 	TimeScopedRestartCodePackage(4, 01:00:00).
 
-## Logic rules for multiple metrics and targets. The goal is to Mitigate!
+## Logic rules for multiple metrics and targets using facts provided by either FabricObserver SF service or FHProxy (library hosted in a user service).
 
 ## CPU 
 
-## CPU - Percent In Use - Constrained on AppName and number of times FabricObserver generates an Error/Warning Health report for CpuPercent metric within a specified timespan.
+## CPU - Percent In Use - Constrained on AppName and number of times FabricObserver/FHProxy generates an Error/Warning Health report for CpuPercent metric within a specified timespan.
 ## This reads: Try to mitigate an SF Application in Error or Warning named fabric:/CpuStress where one of its services is consuming too much CPU (as a percentage of total CPU) 
 ## and where at least 3 health events identifying this problem were produced in the last 15 minutes. This is useful to ensure you don't mitigate a transient (short-lived)
 ## problem as they will self-correct.
 
-Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 15,
-	GetHealthEventHistory(?HealthEventCount, 00:15:00),
+## How long has it been in unhealthy state and how long has it not been in unhealthy state (healthy state).
+
+## CPU - Percent In Use - Constrained on ServiceName.
+Mitigate(ServiceName="fabric:/CpuStress/CpuStressor", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 85,
+	GetHealthEventHistory(?HealthEventCount, 00:30:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartCodePackage(1, 00:15:00).
 
-## CPU - Percent In Use - Constrained on AppName = "fabric:/MyApp42", observed Metric value and health event count within specified time range.
+## CPU - Percent In Use - Constrained on AppName.
 Mitigate(AppName="fabric:/MyApp42", MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 80, 
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartCodePackage(4, 01:00:00).
 
-## CPU - Percent In Use - Specific application, any of its service processes. Your FO error/warning threshold alone prompts repair. This doesn't take into account transient misbehavior.
+## CPU - Percent In Use - Specific application, any of its service processes.
 Mitigate(AppName="fabric:/MyApp", MetricName="CpuPercent") :- TimeScopedRestartCodePackage(5, 01:00:00).
 
 ## CPU - Percent In Use - Any application's service that exceeds 90% cpu usage, repair up to 5 times in a one hour window.
@@ -116,16 +120,22 @@ Mitigate(AppName="fabric:/MyApp", MetricName="FileHandles") :- TimeScopedRestart
 ## Memory
 
 ## Memory - Percent In Use for Any SF Service Process belonging to the specified SF Application. 3 repairs within 10 minute window.
-Mitigate(AppName="fabric:/CpuStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
+Mitigate(AppName="fabric:/MemoryStress", MetricName="MemoryPercent", MetricValue=?MetricValue) :- ?MetricValue >= 30, 
 	TimeScopedRestartCodePackage(3, 00:10:00).
 
 ## Memory - Megabytes In Use for Any SF Service Process belonging to the specified SF Applications. 5 repairs within 5 hour window.
-Mitigate(AppName="fabric:/Voting", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
-## Any app service that exceeds 1GB private workingset, restart code package if warning data is provided at least 3 times within 15 minute window. 1 repair per hour.
-Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 1024,
+## Note the constraint on HealthState in the head of the rule below, which only applies to one service, fabric:/Voting/VotingData, in this example (just change the fabric Uri for your target). 
+## This is important when you have both Warning and Error thresholds specified for some service for some metric in FabricObserver. You would do that 
+## to enable FabricObserver to dump the offending service process in the Error case, for example. Then, have FabricHealer restart the code package.
+## This is important to call out as you do not want to have a repair task already in flight for the Warning case when what you
+## really want to do is conduct restart repair only in the Error case (and after FO has dumped the process already, which will always be the case).
+Mitigate(ServiceName="fabric:/Voting/VotingData", MetricName="MemoryMB", HealthState="Error") :- TimeScopedRestartCodePackage(5, 05:00:00).
+
+## Any app service that exceeds 2GB private workingset, restart code package if warning data is provided at least 3 times within 15 minute window. 1 repair per hour.
+Mitigate(MetricName="MemoryMB", MetricValue=?MetricValue) :- ?MetricValue >= 2048,
 	GetHealthEventHistory(?HealthEventCount, TimeRange=00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartCodePackage(1, 01:00:00).
@@ -139,7 +149,7 @@ Mitigate(MetricName="ActiveTcpPorts") :- TimeScopedRestartCodePackage(5, 05:00:0
 ## Local Ports in Dynamic Range (aka Ephemeral Ports)
 ## Percentage in use or Total Ephemeral ports - Any app service. 5 repairs within 5 hour window. This means if FO or FHProxy supplies repair facts related to Ephemeral ports,
 ## then restart the offending service by simulating process failure (RestartCodePackage). This will free all TCP ports held by the process.
-Mitigate(MetricName="EphemeralPorts") :- TimeScopedRestartCodePackage(15, 05:00:00).
+Mitigate(MetricName="EphemeralPorts", HealthState="Error") :- TimeScopedRestartCodePackage(15, 05:00:00).
 
 ## Total Ephemeral Ports - Specific Application: any of its services, constrained on number of local ephemeral ports open. 
 ## 5 repairs within 5 hour window.
@@ -156,7 +166,7 @@ Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPortsPercent", MetricVa
 Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?AppName != "fabric:/FabricObserver", ?MetricValue >= 400, TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Threads - Any app service. 5 repairs within 5 hour window. This means if FO warns on Thread count, then heal. There are no conditional checks (on MetricValue) to take place.
-## Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
+Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Generic rule for restarting any service in Warning or Error. This means any service that is in Error or Warning state and
 ## also specified in the serialized TelemetryData instance that forms the Description of the related Service level Health Event will be restarted.
@@ -177,7 +187,8 @@ TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, ?time)
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
 ## Note you can add up to two optional arguments to RestartCodePackage/RestartReplica, name them whatever you want or omit the names, it just has to be either a TimeSpan value for how long to wait 
 ## for the repair target to become healthy and/or a bool for whether or not RM should do health checks before and after the repair executes. 
-## See below for an example using both optional arguments (named arguments are just used for clarity; you could also just specify RestartCodePackage(true, 00:10:00), for example).
+## See below for an example using both optional arguments. Named arguments are just used for clarity below; you could also just specify RestartCodePackage(true, 00:10:00), for example.
+## Note: It's up to you to decide if you want RepairManager to conduct pre and post health checks.
 
-TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).
+TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:10:00).
 TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:01:00).

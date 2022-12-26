@@ -28,14 +28,16 @@ namespace FabricHealer.Repair
         public const string EnableTelemetry = "EnableTelemetry";
         public const string EnableRollingServiceRestartsParameter = "EnableRollingServiceRestarts";
         public const string AppInsightsInstrumentationKeyParameter = "AppInsightsInstrumentationKey";
+        public const string AppInsightsConnectionStringParameter = "AppInsightsConnectionString";
         public const string EnableETW = "EnableETW";
-        public const string HealthCheckLoopSleepTimeSeconds = "HealthCheckLoopSleepTimeSeconds";
+        public const string HealthCheckIntervalInSeconds = "HealthCheckIntervalInSeconds";
         public const string LocalLogPathParameter = "LocalLogPath";
         public const string AsyncOperationTimeout = "AsyncOperationTimeoutSeconds";
         public const string EnableFabricHealerOperationalTelemetry = "EnableOperationalTelemetry";
 
         // General Repair Settings Parameters.
         public const string EnableAutoMitigation = "EnableAutoMitigation";
+        public const string MaxRepairsInTimeRange = "MaxRepairsInTimeRange";
 
         // RepairPolicy Settings Sections.
         public const string FabricNodeRepairPolicySectionName = "FabricNodeRepairPolicy";
@@ -50,12 +52,14 @@ namespace FabricHealer.Repair
 
         // Mitigate Argument names.
         public const string AppName = "AppName";
+        public const string EntityType = "EntityType";
         public const string ServiceName = "ServiceName";
         public const string ServiceKind = "ServiceKind";
         public const string NodeName = "NodeName";
         public const string NodeType = "NodeType";
         public const string PartitionId = "PartitionId";
         public const string ReplicaOrInstanceId = "ReplicaOrInstanceId";
+        public const string ReplicaRole = "ReplicaRole";
         public const string ErrorCode = "ErrorCode";
         public const string MetricName = "MetricName";
         public const string MetricValue = "MetricValue";
@@ -72,11 +76,23 @@ namespace FabricHealer.Repair
         public const string RestartFabricNode = "RestartFabricNode";
         public const string RestartFabricSystemProcess = "RestartFabricSystemProcess";
         public const string RestartReplica = "RestartReplica";
-        public const string RestartVM = "RestartVM";
+        public const string ScheduleMachineRepair = "ScheduleMachineRepair";
+        public const string ScheduleDiskReimage = "ScheduleDiskReimage";
+
+        // Infra repair names (RM "commands").
+        public const string SystemReboot = "System.Reboot";
+        public const string SystemReimageOS = "System.ReimageOS";
+        public const string SystemFullReimage = "System.FullReimage";
+        public const string SystemHostReboot = "System.Azure.HostReboot";
+        public const string SystemHostRepaveData = "System.Azure.HostRepaveData";
 
         // Helper Predicates.
         public const string CheckInsideRunInterval = "CheckInsideRunInterval";
+        public const string CheckInsideScheduleInterval = "CheckInsideScheduleInterval";
+        public const string CheckInsideProbationPeriod = "CheckInsideProbationPeriod";
+        public const string CheckOutstandingRepairs = "CheckOutstandingRepairs";
         public const string CheckFolderSize = "CheckFolderSize";
+        public const string CheckInsideHealthStateMinDuration = "CheckInsideHealthStateMinDuration";
         public const string GetHealthEventHistory = "GetHealthEventHistory";
         public const string GetRepairHistory = "GetRepairHistory";
         public const string EmitMessage = "EmitMessage";
@@ -109,10 +125,13 @@ namespace FabricHealer.Repair
 
         // General
         public const string SystemAppName = "fabric:/System";
+        public const string InfrastructureServiceName = "fabric:/System/InfrastructureService";
         public const string FabricHealerAppName = "fabric:/FabricHealer";
         public const string RepairManagerAppName = "fabric:/System/RepairManagerService";
         public const string RepairData = "RepairData";
         public const string RepairPolicy = "RepairPolicy";
         public const string FabricHealer = "FabricHealer";
+        public const string FabricHealerDataEvent = "FabricHealerDataEvent";
+        public const string FabricHealerETWProvider = "FabricHealerETWProvider";
     }
 }

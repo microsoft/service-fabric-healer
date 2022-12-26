@@ -18,9 +18,9 @@ namespace FabricHealer.Repair
         /// <summary>
         /// The unique ID of a FabricHealer Repair.
         /// </summary>
-        public string RepairId 
-        { 
-            get; set; 
+        public string RepairId
+        {
+            get; set;
         }
 
         /// <summary>
@@ -28,6 +28,15 @@ namespace FabricHealer.Repair
         /// </summary>
         [EventField]
         public RepairActionType RepairAction
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// The name of the infrastucture repair to provide to RM that IS will execute.
+        /// </summary>
+        [EventField]
+        public string InfrastructureRepairName
         {
             get; set;
         }
@@ -47,6 +56,24 @@ namespace FabricHealer.Repair
         /// </summary>
         [EventField]
         public bool DoHealthChecks
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// The maximum number of currently executing machine repairs in the cluster allowed.
+        /// </summary>
+        [EventField]
+        public long MaxConcurrentRepairs
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// The repair ID prefix used to associate an FH repair to its executor (FH or FH_Infra, for example).
+        /// </summary>
+        [EventField]
+        public string RepairIdPrefix
         {
             get; set;
         }
