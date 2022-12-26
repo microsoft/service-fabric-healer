@@ -1,8 +1,7 @@
-## FabricHealer 1.1.1.960
+## FabricHealer 1.1.1
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
-#### This version targets .NET 6 and requires SF Runtime >= 9.0
 
-FabricHealer (FH) is a Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
+FabricHealer (FH) is a .NET 6 Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
 applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls,
 but can also be fully customizable (like Disk repair). All repairs are safely orchestrated through the Service Fabric RepairManager system service.
 Repair workflow configuration is written as [Prolog](http://www.let.rug.nl/bos/lpn//lpnpage.php?pageid=online)-like [logic](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/PackageRoot/Config/LogicRules) with [supporting external predicates](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/Repair/Guan) written in C#. 
@@ -15,8 +14,11 @@ Description value: a serialized instance of a well-known (to FH) type (must impl
 Service Fabric service.
 
 FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster.
-It is a .NET 6 application and has been tested on Windows (2016/2019) and Ubuntu (16/18.04).  
+It is a .NET 6 application and has been tested on multiple versions of Windows Server and Ubuntu.  
 
+```
+This version of FabricHealer requires SF Runtime versions 9 and higher.
+```
 ```
 FabricHealer requires that  RepairManager (RM) service is deployed. 
 ```
