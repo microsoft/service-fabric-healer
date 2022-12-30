@@ -24,6 +24,7 @@ namespace FabricHealer.Repair
 {
     public sealed class RepairTaskManager : IRepairTasks
     {
+        private const string FHRepairPrefix = "FH";
         private static readonly TimeSpan MaxWaitTimeForFHRepairTaskCompleted = TimeSpan.FromHours(1);
         private readonly RepairTaskEngine repairTaskEngine;
         private readonly RepairExecutor repairExecutor;
@@ -506,7 +507,7 @@ namespace FabricHealer.Repair
             bool isApproved = false;
 
             var repairs = 
-                await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, cancellationToken);
+                await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(FHRepairPrefix, cancellationToken);
 
             if (repairs.All(repair => repair.TaskId != repairTask.TaskId))
             {
@@ -531,7 +532,7 @@ namespace FabricHealer.Repair
 
             while (approvalTimeout >= stopWatch.Elapsed)
             {
-                repairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, cancellationToken);
+                repairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(FHRepairPrefix, cancellationToken);
 
                 // Was repair cancelled (or cancellation requested) by another FH instance for some reason? Could be due to FH going down or a new deployment or a bug (fix it...).
                 if (repairs.Any(repair => repair.TaskId == repairTask.TaskId
