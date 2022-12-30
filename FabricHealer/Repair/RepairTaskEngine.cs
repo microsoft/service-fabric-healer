@@ -35,7 +35,7 @@ namespace FabricHealer.Repair
                 return null;
             }
 
-            var repairs = await GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, token);
+            var repairs = await GetFHRepairTasksCurrentlyProcessingAsync(FHTaskIdPrefix, token);
 
             if (repairs?.Count > 0)
             {

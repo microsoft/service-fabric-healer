@@ -481,7 +481,7 @@ namespace FabricHealer
                 var currentFHRepairTasksInProgress =
                         await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                 () => repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                                        RepairConstants.FabricHealer,
+                                        RepairTaskEngine.FHTaskIdPrefix,
                                         Token),
                                 Token);
 
@@ -887,7 +887,7 @@ namespace FabricHealer
                     }
 
                     // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
-                    var fhRepairTasks = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, Token);
+                    var fhRepairTasks = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FHTaskIdPrefix, Token);
 
                     if (fhRepairTasks.Count > 0)
                     {
@@ -927,7 +927,7 @@ namespace FabricHealer
                     system = "System ";
 
                     var currentRepairs =
-                        await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, Token);
+                        await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FHTaskIdPrefix, Token);
 
                     // Is a repair for the target app service instance already happening in the cluster?
                     // There can be multiple Warnings emitted by FO for a single app at the same time.
@@ -974,7 +974,7 @@ namespace FabricHealer
 
                     string serviceProcessName = $"{repairData.ServiceName?.Replace("fabric:/", "").Replace("/", "")}";
                     var currentRepairs =
-                        await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, Token);
+                        await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FHTaskIdPrefix, Token);
 
                     // This is the way each FH repair is ID'd. This data is stored in the related Repair Task's ExecutorData property.
                     repairId = $"{repairData.NodeName}_{serviceProcessName}_{repairData.Metric?.Replace(" ", string.Empty)}";
@@ -1180,7 +1180,7 @@ namespace FabricHealer
 
                     // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
                     var fhRepairTasks = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                                                RepairConstants.FabricHealer,
+                                                RepairTaskEngine.FHTaskIdPrefix,
                                                 Token);
 
                     if (fhRepairTasks.Count > 0)
@@ -1221,7 +1221,7 @@ namespace FabricHealer
                     system = "System ";
 
                     var currentRepairs =
-                        await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, Token);
+                        await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FHTaskIdPrefix, Token);
 
                     // Is a repair for the target app service instance already happening in the cluster?
                     // There can be multiple Warnings emitted by FO for a single app at the same time.
@@ -1268,7 +1268,7 @@ namespace FabricHealer
 
                     string serviceProcessName = $"{repairData.ServiceName.Replace("fabric:/", "").Replace("/", "")}";
                     var currentFHRepairs =
-                        await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, Token);
+                        await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FHTaskIdPrefix, Token);
 
                     // This is the way each FH repair is ID'd. This data is stored in the related Repair Task's ExecutorData property.
                     repairId = $"{repairData.NodeName}_{serviceProcessName}_{repairData.Metric?.Replace(" ", string.Empty)}";
@@ -1594,7 +1594,7 @@ namespace FabricHealer
             string repairId = $"{repairData.NodeName}_{repairData.NodeType}_Restart";
 
             var currentRepairs =
-                await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, Token);
+                await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FHTaskIdPrefix, Token);
 
             // Block attempts to reschedule another Fabric node-level repair for the same node if a current repair has not yet completed.
             if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
@@ -1755,7 +1755,7 @@ namespace FabricHealer
                                 repairData.Property = healthEvent.HealthInformation.Property;
 
                                 // Repair already in progress?
-                                var currentRepairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FabricHealer, Token);
+                                var currentRepairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FHTaskIdPrefix, Token);
 
                                 if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
                                 {

@@ -72,7 +72,7 @@ namespace FabricHealer.Repair.Guan
                 var repairTaskEngine = new RepairTaskEngine();
                 var isNodeRepairAlreadyInProgress =
                     await repairTaskEngine.IsRepairInProgressAsync(
-                            RepairConstants.FabricHealer,
+                            RepairTaskEngine.FHTaskIdPrefix,
                             RepairData,
                             FabricHealerManager.Token);
 
