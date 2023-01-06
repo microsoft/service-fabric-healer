@@ -28,7 +28,7 @@ namespace FabricHealer.Utilities
 
             try
             {
-                JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings
+                JsonSerializerSettings jsonSerializerSettings = new()
                 {
                     MissingMemberHandling = MissingMemberHandling.Ignore
                 };

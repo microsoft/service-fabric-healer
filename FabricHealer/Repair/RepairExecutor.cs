@@ -676,7 +676,7 @@ namespace FabricHealer.Repair
 
         private Process[] GetDotnetProcessesByFirstArgument(string argument)
         {
-            List<Process> result = new List<Process>();
+            List<Process> result = new();
             Process[] processes = Process.GetProcessesByName("dotnet");
 
             foreach (var p in processes)

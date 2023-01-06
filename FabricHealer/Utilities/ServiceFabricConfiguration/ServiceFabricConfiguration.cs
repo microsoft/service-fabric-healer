@@ -16,7 +16,7 @@ namespace FabricHealer.Utilities
     public abstract class ServiceFabricConfiguration
     {
         private static ServiceFabricConfiguration instance;
-        private static readonly object lockObj = new object();
+        private static readonly object lockObj = new();
 
         public static ServiceFabricConfiguration Instance
         {

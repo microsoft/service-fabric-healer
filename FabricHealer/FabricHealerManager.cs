@@ -37,15 +37,15 @@ namespace FabricHealer
         private bool disposedValue;
         private readonly RepairTaskManager repairTaskManager;
         private readonly RepairTaskEngine repairTaskEngine;
-        private readonly Uri systemAppUri = new Uri(RepairConstants.SystemAppName);
-        private readonly Uri repairManagerServiceUri = new Uri(RepairConstants.RepairManagerAppName);
+        private readonly Uri systemAppUri = new(RepairConstants.SystemAppName);
+        private readonly Uri repairManagerServiceUri = new(RepairConstants.RepairManagerAppName);
         private readonly FabricHealthReporter healthReporter;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private readonly string sfRuntimeVersion;
         private int nodeCount;
         private DateTime StartDateTime;
         private long _instanceCount;
-        private static readonly object lockObj = new object();
+        private static readonly object lockObj = new();
 
         internal static Logger RepairLogger
         {
@@ -163,11 +163,11 @@ namespace FabricHealer
             };
 
             NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricHealerManager.FabricClientSingleton.QueryManager.GetNodePagedListAsync(
+                                    () => FabricClientSingleton.QueryManager.GetNodePagedListAsync(
                                             nodeQueryDesc,
-                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                            FabricHealerManager.Token),
-                                     FabricHealerManager.Token);
+                                            ConfigSettings.AsyncTimeout,
+                                            Token),
+                                     Token);
 
             return nodes?.Count == 1;
         }
@@ -1657,7 +1657,7 @@ namespace FabricHealer
                 Start Time (UTC): 2020-04-26 19:22:55.492. 
             */
 
-            List<HealthEvent> healthEvents = new List<HealthEvent>();
+            List<HealthEvent> healthEvents = new();
             var partitionHealthStates = serviceHealth.PartitionHealthStates.Where(
                 p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error);
 
@@ -1674,7 +1674,11 @@ namespace FabricHealer
                     foreach (var rep in replicaHealthStates)
                     {
                         var replicaHealth =
-                            await FabricClientSingleton.HealthManager.GetReplicaHealthAsync(partitionHealthState.PartitionId, rep.Id, ConfigSettings.AsyncTimeout, Token);
+                            await FabricClientSingleton.HealthManager.GetReplicaHealthAsync(
+                                    partitionHealthState.PartitionId,
+                                    rep.Id,
+                                    ConfigSettings.AsyncTimeout, 
+                                    Token);
 
                         if (replicaHealth != null)
                         {
@@ -1746,7 +1750,9 @@ namespace FabricHealer
                                     errOrWarn = "Warning";
                                 }
 
-                                string repairId = $"{nodeName}_{serviceHealth.ServiceName.OriginalString.Remove(0, appName.Length + 1)}_{repairData.PartitionId}";
+                                string repairId = 
+                                    $"{nodeName}_{serviceHealth.ServiceName.OriginalString.Remove(0, appName.Length + 1)}_{repairData.PartitionId}";
+
                                 repairData.RepairPolicy = new RepairPolicy
                                 {
                                     RepairId = repairId,
@@ -2072,8 +2078,8 @@ namespace FabricHealer
 
                 string releaseAssetName = releases[0].Name;
                 string latestVersion = releaseAssetName.Split(" ")[1];
-                Version latestGitHubVersion = new Version(latestVersion);
-                Version localVersion = new Version(InternalVersionNumber);
+                Version latestGitHubVersion = new(latestVersion);
+                Version localVersion = new(InternalVersionNumber);
                 int versionComparison = localVersion.CompareTo(latestGitHubVersion);
 
                 if (versionComparison < 0)

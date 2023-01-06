@@ -125,7 +125,7 @@ namespace FabricHealer
 
                 LogManager.Configuration.AddTarget(loggerName + "LogFile", target);
 
-                var ruleInfo = new LoggingRule(loggerName, NLog.LogLevel.Debug, target);
+                var ruleInfo = new LoggingRule(loggerName, LogLevel.Debug, target);
 
                 LogManager.Configuration.LoggingRules.Add(ruleInfo);
                 LogManager.ReconfigExistingLoggers();

@@ -13,7 +13,7 @@ namespace FabricHealer.Utilities.Telemetry
     public sealed class ServiceEventSource : EventSource
     {
         private static ServiceEventSource _current = null;
-        private static readonly object _lock = new object();
+        private static readonly object _lock = new();
 
         public static ServiceEventSource Current
         {

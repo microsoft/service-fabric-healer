@@ -18,7 +18,7 @@ namespace FabricHealer.Utilities
     public static class FabricClientRetryHelper
     {
         private static readonly TimeSpan DefaultOperationTimeout = TimeSpan.FromMinutes(2);
-        private static readonly Logger Logger = new Logger("FabricClientRetryHelper");
+        private static readonly Logger Logger = new("FabricClientRetryHelper");
 
         /// <summary>
         /// Helper method to execute given function with defaultFabricClientRetryErrors and default Operation Timeout

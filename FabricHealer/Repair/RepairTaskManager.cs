@@ -24,7 +24,6 @@ namespace FabricHealer.Repair
 {
     public sealed class RepairTaskManager : IRepairTasks
     {
-        private const string FHRepairPrefix = "FH";
         private static readonly TimeSpan MaxWaitTimeForFHRepairTaskCompleted = TimeSpan.FromHours(1);
         private readonly RepairTaskEngine repairTaskEngine;
         private readonly RepairExecutor repairExecutor;
@@ -132,7 +131,7 @@ namespace FabricHealer.Repair
         public async Task RunGuanQueryAsync(TelemetryData repairData, List<string> repairRules, RepairExecutorData repairExecutorData = null)
         {
             // Add predicate types to functor table. Note that all health information data from FO are automatically passed to all predicates.
-            FunctorTable functorTable = new FunctorTable();
+            FunctorTable functorTable = new();
 
             // Add external helper predicates.
             functorTable.Add(CheckFolderSizePredicateType.Singleton(RepairConstants.CheckFolderSize, this, repairData));
@@ -161,10 +160,10 @@ namespace FabricHealer.Repair
 
             /* Bind default arguments to goal (Mitigate). */
 
-            List<CompoundTerm> compoundTerms = new List<CompoundTerm>();
+            List<CompoundTerm> compoundTerms = new();
 
             // Mitigate is the head of the rules used in FH. It's the goal that Guan will try to accomplish based on the logical expressions (or subgoals) that form a given rule.
-            CompoundTerm compoundTerm = new CompoundTerm("Mitigate");
+            CompoundTerm compoundTerm = new("Mitigate");
 
             // The type of metric that led FO to generate the unhealthy evaluation for the entity (App, Node, VM, Replica, etc).
             // We rename these for brevity for simplified use in logic rule composition (e;g., MetricName="Threads" instead of MetricName="Total Thread Count").
@@ -507,7 +506,7 @@ namespace FabricHealer.Repair
             bool isApproved = false;
 
             var repairs = 
-                await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(FHRepairPrefix, cancellationToken);
+                await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FHTaskIdPrefix, cancellationToken);
 
             if (repairs.All(repair => repair.TaskId != repairTask.TaskId))
             {
@@ -532,7 +531,7 @@ namespace FabricHealer.Repair
 
             while (approvalTimeout >= stopWatch.Elapsed)
             {
-                repairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(FHRepairPrefix, cancellationToken);
+                repairs = await repairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairTaskEngine.FHTaskIdPrefix, cancellationToken);
 
                 // Was repair cancelled (or cancellation requested) by another FH instance for some reason? Could be due to FH going down or a new deployment or a bug (fix it...).
                 if (repairs.Any(repair => repair.TaskId == repairTask.TaskId
@@ -1045,7 +1044,7 @@ namespace FabricHealer.Repair
                                                 TimeSpan timeWindow,
                                                 CancellationToken token)
         {
-            HealthEventsFilter healthEventsFilter = new HealthEventsFilter();
+            HealthEventsFilter healthEventsFilter = new();
 
             if (repairData.HealthState == HealthState.Warning)
             {

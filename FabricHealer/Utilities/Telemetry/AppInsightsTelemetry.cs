@@ -163,7 +163,7 @@ namespace FabricHealer.Utilities.Telemetry
                 return false;
             }
 
-            TraceTelemetry tt = new TraceTelemetry(name, SeverityLevel.Information);
+            TraceTelemetry tt = new(name, SeverityLevel.Information);
 
             telemetryClient?.TrackTrace(tt);
 
@@ -183,7 +183,7 @@ namespace FabricHealer.Utilities.Telemetry
                 return Task.CompletedTask;
             }
 
-            Dictionary<string, string> properties = new Dictionary<string, string>
+            Dictionary<string, string> properties = new()
             {
                 { "Application", telemetryData.ApplicationName ?? string.Empty },
                 { "ServiceName", telemetryData.ServiceName ?? string.Empty },

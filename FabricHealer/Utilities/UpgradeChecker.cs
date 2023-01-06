@@ -16,7 +16,7 @@ namespace FabricHealer.Repair
 {
     public static class UpgradeChecker
     {
-        private static readonly Logger Logger = new Logger("UpgradeLogger");
+        private static readonly Logger Logger = new("UpgradeLogger");
 
         /// <summary>
         /// Gets current Application upgrade domains for specified application.

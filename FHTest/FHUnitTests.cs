@@ -37,11 +37,11 @@ namespace FHTest
     [TestClass]
     public class FHUnitTests
     {
-        private static readonly Uri TestServiceName = new Uri("fabric:/app/service");
-        private static readonly FabricClient fabricClient = new FabricClient();
+        private static readonly Uri TestServiceName = new("fabric:/app/service");
+        private static readonly FabricClient fabricClient = new();
         private static readonly ICodePackageActivationContext CodePackageContext = null;
         private static readonly StatelessServiceContext TestServiceContext = null;
-        private readonly CancellationToken token = new CancellationToken();
+        private readonly CancellationToken token = new();
 
         // This is the name of the node used on your local dev machine's SF cluster. If you customize this, then change it.
         private const string NodeName = "_Node_0";
@@ -104,7 +104,7 @@ namespace FHTest
                 string configXml = File.ReadAllText(configPath);
 
                 // Safe XML pattern - *Do not use LoadXml*.
-                XmlDocument xdoc = new XmlDocument { XmlResolver = null };
+                XmlDocument xdoc = new() { XmlResolver = null };
                 sreader = new StringReader(configXml);
                 xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null });
                 xdoc.Load(xreader);
@@ -189,7 +189,7 @@ namespace FHTest
 
         private static async Task CleanupTestHealthReportsAsync()
         {
-            Logger logger = new Logger("TestLogger");
+            Logger logger = new("TestLogger");
             var fabricClient = new FabricClient();
             var apps = await fabricClient.QueryManager.GetApplicationListAsync();
 
@@ -311,7 +311,7 @@ namespace FHTest
             var repairData = new TelemetryData
             {
                 ApplicationName = "fabric:/test",
-                EntityType = FabricHealer.Utilities.Telemetry.EntityType.Service,
+                EntityType = EntityType.Service,
                 NodeName = NodeName,
                 Code = SupportedErrorCodes.AppErrorMemoryMB,
                 HealthState = HealthState.Warning,
@@ -402,7 +402,7 @@ namespace FHTest
             // This will be the data used to create a repair task.
             var repairData = new TelemetryData
             {
-                EntityType = FabricHealer.Utilities.Telemetry.EntityType.Disk,
+                EntityType = EntityType.Disk,
                 NodeName = NodeName,
                 HealthState = HealthState.Warning,
                 RepairPolicy = new RepairPolicy
@@ -447,7 +447,7 @@ namespace FHTest
             var repairData = new TelemetryData
             {
                 ApplicationName = "fabric:/test",
-                EntityType = FabricHealer.Utilities.Telemetry.EntityType.Partition,
+                EntityType = EntityType.Partition,
                 PartitionId = Guid.NewGuid(),
                 NodeName = NodeName,
                 HealthState = HealthState.Warning,
@@ -495,7 +495,7 @@ namespace FHTest
             var repairData = new TelemetryData
             {
                 ApplicationName = "fabric:/System",
-                EntityType = FabricHealer.Utilities.Telemetry.EntityType.Partition,
+                EntityType = EntityType.Partition,
                 PartitionId = Guid.NewGuid(),
                 NodeName = NodeName,
                 HealthState = HealthState.Warning,
@@ -594,7 +594,7 @@ namespace FHTest
             var repairData = new TelemetryData
             {
                 ApplicationName = "fabric:/test0",
-                EntityType = FabricHealer.Utilities.Telemetry.EntityType.Service,
+                EntityType = EntityType.Service,
                 NodeName = NodeName,
                 Metric = "Memory",
                 HealthState = HealthState.Warning,
@@ -722,7 +722,7 @@ namespace FHTest
         // By default, if you only supply NodeName and ServiceName, then FabricHealerProxy assumes the target EntityType is Service. This is a convience to limit how many facts
         // you must supply in a RepairFacts instance. For any type of repair, NodeName is always required.
 
-        static readonly RepairFacts RepairFactsServiceTarget = new RepairFacts
+        static readonly RepairFacts RepairFactsServiceTarget = new()
         {
             ServiceName = "fabric:/GettingStartedApplication/MyActorService",
             NodeName = NodeName,
@@ -734,7 +734,7 @@ namespace FHTest
         // This specifies that you want FabricHealer to repair a Fabric node named _Node_0. The only supported Fabric node repair in FabricHealer is a Restart.
         // Related rules can be found in FabricNodeRules.guan file in the FabricHealer project's PackageRoot/Config/LogicRules folder.
         // So, implicitly, this means you want FabricHealer to restart _Node_0. By default, if you only supply NodeName, then FabricHealerProxy assumes the target EntityType is Node.
-        static readonly RepairFacts RepairFactsNodeTarget = new RepairFacts
+        static readonly RepairFacts RepairFactsNodeTarget = new()
         {
             NodeName = NodeName,
             // Specifying Source is Required for unit tests.
@@ -744,7 +744,7 @@ namespace FHTest
 
         // Initiate a reboot of the machine hosting the specified Fabric node, _Node_4. This will be executed by the InfrastructureService for the related node type.
         // The related logic rules for this repair target are housed in FabricHealer's MachineRules.guan file.
-        static readonly RepairFacts RepairFactsMachineTarget = new RepairFacts
+        static readonly RepairFacts RepairFactsMachineTarget = new()
         {
             NodeName = NodeName,
             EntityType = FabricHealer.EntityType.Machine,
@@ -754,7 +754,7 @@ namespace FHTest
         };
 
         // Restart system service process.
-        static readonly RepairFacts SystemServiceRepairFacts = new RepairFacts
+        static readonly RepairFacts SystemServiceRepairFacts = new()
         {
             ApplicationName = "fabric:/System",
             NodeName = NodeName,
@@ -768,7 +768,7 @@ namespace FHTest
 
         // Disk - Delete files. This only works if FabricHealer instance is present on the same target node.
         // Note the rules in FabricHealer\PackageRoot\LogicRules\DiskRules.guan file in the FabricHealer project.
-        static readonly RepairFacts DiskRepairFacts = new RepairFacts
+        static readonly RepairFacts DiskRepairFacts = new()
         {
             NodeName = NodeName,
             EntityType = FabricHealer.EntityType.Disk,
@@ -780,7 +780,7 @@ namespace FHTest
         };
 
         // For use in the IEnumerable<RepairFacts> RepairEntityAsync overload.
-        static readonly List<RepairFacts> RepairFactsList = new List<RepairFacts>
+        static readonly List<RepairFacts> RepairFactsList = new()
         {
             DiskRepairFacts,
             RepairFactsMachineTarget,
