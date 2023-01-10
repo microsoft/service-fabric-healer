@@ -10,10 +10,10 @@ using FabricHealer.Utilities.Telemetry;
 
 namespace FabricHealer.Repair.Guan
 {
-    public class CheckEntityHealthStateDurationPredicateType : PredicateType
+    public class CheckInsideHealthStateMinDurationPredicateType : PredicateType
     {
         private static TelemetryData RepairData;
-        private static CheckEntityHealthStateDurationPredicateType Instance;
+        private static CheckInsideHealthStateMinDurationPredicateType Instance;
         private static RepairTaskManager RepairTaskManager;
 
         private class Resolver : BooleanPredicateResolver
@@ -53,14 +53,14 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static CheckEntityHealthStateDurationPredicateType Singleton(string name, TelemetryData repairData, RepairTaskManager repairTaskManager)
+        public static CheckInsideHealthStateMinDurationPredicateType Singleton(string name, TelemetryData repairData, RepairTaskManager repairTaskManager)
         {
             RepairData = repairData;
             RepairTaskManager = repairTaskManager;
-            return Instance ??= new CheckEntityHealthStateDurationPredicateType(name);
+            return Instance ??= new CheckInsideHealthStateMinDurationPredicateType(name);
         }
 
-        private CheckEntityHealthStateDurationPredicateType(string name)
+        private CheckInsideHealthStateMinDurationPredicateType(string name)
                  : base(name, true, 1)
         {
 

@@ -128,7 +128,6 @@ namespace FabricHealer.Repair
                 return null;
             }
 
-            string taskId = $"{InfraTaskIdPrefix}/{Guid.NewGuid()}/{repairData.NodeName}";
             bool isRepairInProgress = await IsRepairInProgressAsync(InfraTaskIdPrefix, repairData, cancellationToken);
 
             if (isRepairInProgress)
@@ -137,18 +136,14 @@ namespace FabricHealer.Repair
             }
 
             bool doHealthChecks = repairData.HealthState != HealthState.Error;
-
-            // Error health state on target SF entity can block RM from approving the job to repair it (which is the whole point of doing the job).
-            // So, do not do health checks if customer configures FO to emit Error health reports.
-            // In general, FO should *not* be configured to emit Error events. See FO documentation.
-
+            string taskId = $"{InfraTaskIdPrefix}/{Guid.NewGuid()}/{repairData.NodeName}";
             var repairTask = new ClusterRepairTask(taskId, repairData.RepairPolicy.InfrastructureRepairName)
             {
                 Target = new NodeRepairTargetDescription(repairData.NodeName),
                 Description = $"{repairData.RepairPolicy}",
                 PerformPreparingHealthCheck = doHealthChecks,
                 PerformRestoringHealthCheck = doHealthChecks,
-                State = RepairTaskState.Created,
+                State = RepairTaskState.Created
             };
 
             return repairTask;
@@ -219,7 +214,7 @@ namespace FabricHealer.Repair
         {
             try
             {
-                var currentlyExecutingRepairs =
+                RepairTaskList activeRepairs =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             null,
                             RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
@@ -227,20 +222,27 @@ namespace FabricHealer.Repair
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
 
-                if (currentlyExecutingRepairs.Count > 0)
+                if (activeRepairs.Count > 0)
                 {
-                    foreach (var repair in currentlyExecutingRepairs)
+                    foreach (RepairTask repair in activeRepairs)
                     {
                         if (repair.Impact is NodeRepairImpactDescription impact)
                         {
                             if (!impact.ImpactedNodes.Any(
-                                n => n.NodeName == repairData.NodeName && (n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData)))
+                                n => n.NodeName == repairData.NodeName 
+                                  && (n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData)))
                             {
                                 continue;
                             }
-                        }
 
-                        return true;
+                            if (repair.Executor.Contains(RepairConstants.InfrastructureServiceName) || 
+                                repair.Action.ToLower().Contains("reboot") || 
+                                repair.Action.ToLower().Contains("reimage") || 
+                                repair.Action.ToLower().Contains("heal"))
+                            {
+                                return true;
+                            }
+                        }
                     }
                 }
             }

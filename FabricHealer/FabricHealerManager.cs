@@ -505,7 +505,10 @@ namespace FabricHealer
                         continue;
                     }
 
-                    if (!JsonSerializationUtility.TryDeserializeObject(executorData, out RepairExecutorData repairExecutorData))
+                    if (!JsonSerializationUtility.TryDeserializeObject(
+                            executorData,
+                            out RepairExecutorData repairExecutorData,
+                            new Newtonsoft.Json.JsonSerializerSettings { MissingMemberHandling = Newtonsoft.Json.MissingMemberHandling.Error}))
                     {
                         continue;
                     }
@@ -627,15 +630,6 @@ namespace FabricHealer
                 {
                     return;
                 }
-
-                // TOTHINK..
-                // Don't schedule/execute repairs if this node is in Error state. Error health state should mean that this node is not working properly or put into
-                // Error by some watchdog (most likely, if this code is even running...).
-                /*var nodeHealth = await FabricClientSingleton.HealthManager.GetNodeHealthAsync(ServiceContext.NodeContext.NodeName);
-                if (nodeHealth.AggregatedHealthState == HealthState.Error)
-                {
-                    return;
-                }*/
 
                 // Check cluster upgrade status. If the cluster is upgrading to a new version (or rolling back)
                 // then do not attempt any repairs.
@@ -1365,7 +1359,7 @@ namespace FabricHealer
                        null,
                        ConfigSettings.EnableVerboseLogging);
 
-                return;
+                //return;
             }
 
             var supportedNodeHealthStates =
@@ -1382,7 +1376,7 @@ namespace FabricHealer
                 var nodeHealth = await FabricClientSingleton.HealthManager.GetNodeHealthAsync(node.NodeName, ConfigSettings.AsyncTimeout, Token);
                 var nodeHealthEvents =
                     nodeHealth.HealthEvents.Where(
-                                s => (s.HealthInformation.HealthState == HealthState.Warning || s.HealthInformation.HealthState == HealthState.Error));
+                        s => s.HealthInformation.HealthState == HealthState.Warning || s.HealthInformation.HealthState == HealthState.Error);
 
                 // Ensure a node in Error is not in error due to being down as part of a cluster upgrade or infra update in its UD.
                 if (node.AggregatedHealthState == HealthState.Error && nodeStatus == NodeStatus.Down) //|| nodeStatus == NodeStatus.Disabling))

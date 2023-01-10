@@ -113,7 +113,7 @@ namespace FabricHealer.Repair
                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
                         "StartRepairWorkflowAsync:GuanException",
-                        $"Failed in Guan: {ge}",
+                        $"Failed in Guan:{Environment.NewLine}{ge}",
                         cancellationToken,
                         null,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
@@ -136,11 +136,11 @@ namespace FabricHealer.Repair
             // Add external helper predicates.
             functorTable.Add(CheckFolderSizePredicateType.Singleton(RepairConstants.CheckFolderSize, this, repairData));
             functorTable.Add(CheckInsideRunIntervalPredicateType.Singleton(RepairConstants.CheckInsideRunInterval, repairData));
-            functorTable.Add(CheckInsideProbationPeriodType.Singleton(RepairConstants.CheckInsideProbationPeriod, repairData));
+            functorTable.Add(CheckInsideNodeProbationPeriodPredicateType.Singleton(RepairConstants.CheckInsideNodeProbationPeriod, repairData));
             functorTable.Add(CheckInsideScheduleIntervalPredicateType.Singleton(RepairConstants.CheckInsideScheduleInterval, repairData));
             functorTable.Add(CheckOutstandingRepairsPredicateType.Singleton(RepairConstants.CheckOutstandingRepairs, repairData));
             functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage));
-            functorTable.Add(CheckEntityHealthStateDurationPredicateType.Singleton(RepairConstants.CheckInsideHealthStateMinDuration, repairData, this));
+            functorTable.Add(CheckInsideHealthStateMinDurationPredicateType.Singleton(RepairConstants.CheckInsideHealthStateMinDuration, repairData, this));
             functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, this, repairData));
             functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairData));
 

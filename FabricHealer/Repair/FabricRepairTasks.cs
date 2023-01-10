@@ -11,10 +11,13 @@ using System.Fabric.Health;
 using System.Fabric.Query;
 using System.Fabric.Repair;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using Newtonsoft.Json;
 
 namespace FabricHealer.Repair
 {
@@ -93,7 +96,7 @@ namespace FabricHealer.Repair
 
                 default:
 
-                    throw new Exception($"Repair task {repairTask.TaskId} is in invalid state {repairTask.State}");
+                    throw new FabricException($"Repair task {repairTask.TaskId} is in invalid state {repairTask.State}");
             }
         }
 
@@ -211,7 +214,11 @@ namespace FabricHealer.Repair
 
                 if (!isRepairAlreadyInProgress)
                 {
-                    _ = await FabricHealerManager.FabricClientSingleton.RepairManager.CreateRepairTaskAsync(repairTask, FabricHealerManager.ConfigSettings.AsyncTimeout, token);
+                    _ = await FabricHealerManager.FabricClientSingleton.RepairManager.CreateRepairTaskAsync(
+                                repairTask,
+                                FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                token);
+
                     return true;
                 }
             }
@@ -470,11 +477,24 @@ namespace FabricHealer.Repair
             return count;
         }
 
-        // TOTHINK: Should this look at any repair and apply a probation to it (so, not just FH-scheduled/executed repairs).
-        // This mainly makes sense for node-level repairs (machine).
-        internal static async Task<bool> IsRepairInPostProbationAsync(TimeSpan probationPeriod, TelemetryData repairData, CancellationToken cancellationToken)
+        /// <summary>
+        /// Determines if the target machine (node) is inside the specified post repair probation period.
+        /// </summary>
+        /// <param name="probationPeriod">Post-repair probation period.</param>
+        /// <param name="nodeName">Name of the Service Fabric node for which a machine-level repair was conducted.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns></returns>
+        internal static async Task<bool> IsMachineInPostRepairProbationAsync(
+                                            TimeSpan probationPeriod,
+                                            string nodeName,
+                                            CancellationToken cancellationToken)
         {
-            var allCompletedFHRepairTasks =
+            if (string.IsNullOrWhiteSpace(nodeName))
+            {
+                return false;
+            }
+
+            var allCompletedRepairTasks =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             null, // no prefix filter..
                             RepairTaskStateFilter.Completed,
@@ -482,22 +502,31 @@ namespace FabricHealer.Repair
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
 
-            if (allCompletedFHRepairTasks == null || allCompletedFHRepairTasks.Count == 0)
+            if (allCompletedRepairTasks == null || allCompletedRepairTasks.Count == 0)
             {
                 return false;
             }
 
-            var orderedRepairList = allCompletedFHRepairTasks.OrderByDescending(o => o.CompletedTimestamp).ToList();
-
-            foreach (var repair in orderedRepairList)
+            if (!allCompletedRepairTasks.Any(
+                    r => r.Impact is NodeRepairImpactDescription nodeImpact
+                      && nodeImpact.ImpactedNodes.Any(
+                        n => n.NodeName == nodeName && (n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData))))
             {
-                if (repair.CompletedTimestamp == null)
-                {
-                    continue;
-                }
+                return false;
+            }
 
-                if (repair.CompletedTimestamp.HasValue &&
-                    DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) < probationPeriod)
+            var orderedNodeRepairList =
+                    allCompletedRepairTasks
+                        .Where(r => r.Impact is NodeRepairImpactDescription nodeImpact
+                                 && nodeImpact.ImpactedNodes.Any(
+                                   n => n.NodeName == nodeName && (n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData)))
+                        .OrderByDescending(o => o.CompletedTimestamp);
+
+            foreach (RepairTask repair in orderedNodeRepairList)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (repair.CompletedTimestamp.HasValue && DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) < probationPeriod)
                 {
                     return true;
                 }

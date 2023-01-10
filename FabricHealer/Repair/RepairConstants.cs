@@ -89,7 +89,7 @@ namespace FabricHealer.Repair
         // Helper Predicates.
         public const string CheckInsideRunInterval = "CheckInsideRunInterval";
         public const string CheckInsideScheduleInterval = "CheckInsideScheduleInterval";
-        public const string CheckInsideProbationPeriod = "CheckInsideProbationPeriod";
+        public const string CheckInsideNodeProbationPeriod = "CheckInsideNodeProbationPeriod";
         public const string CheckOutstandingRepairs = "CheckOutstandingRepairs";
         public const string CheckFolderSize = "CheckFolderSize";
         public const string CheckInsideHealthStateMinDuration = "CheckInsideHealthStateMinDuration";

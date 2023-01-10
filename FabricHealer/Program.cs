@@ -7,7 +7,6 @@ using System;
 using System.Threading;
 using FabricHealer.Utilities.Telemetry;
 using Microsoft.ServiceFabric.Services.Runtime;
-using System.Diagnostics;
 
 namespace FabricHealer
 {
