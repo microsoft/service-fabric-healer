@@ -70,7 +70,7 @@ Mitigate() :- CheckInsideNodeProbationPeriod(00:30:00), !.
 ## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours.
 Mitigate() :- CheckInsideHealthStateMinDuration(02:00:00), !.
 
-## Don't schedule a repair if one was scheduled less than 10 minutes ago.
+## Don't schedule a machine repair if one was scheduled less than 10 minutes ago.
 Mitigate() :- CheckInsideScheduleInterval(00:10:00), !.
 
 ## Mitigations (RM repair scheduling logic - InfrastructureService for the target node type will be the repair Executor, not FH).

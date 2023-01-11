@@ -5,8 +5,9 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Guan.Logic;
 
-namespace Guan.Logic
+namespace FabricHealer.Repair.Guan
 {
     public class GuanQueryDispatcher
     {

@@ -42,7 +42,7 @@ namespace FabricHealer.Repair.Guan
 
                 RepairData.RepairPolicy.MaxConcurrentRepairs = maxRepairs;
                 int outstandingRepairCount =
-                   await repairTaskEngine.GetOutstandingFHRepairCount(taskIdPrefix: RepairData.RepairPolicy.RepairIdPrefix, FabricHealerManager.Token);
+                   await repairTaskEngine.GetAllOutstandingFHRepairsCountAsync(taskIdPrefix: RepairData.RepairPolicy.RepairIdPrefix, FabricHealerManager.Token);
 
                 if (outstandingRepairCount >= maxRepairs)
                 {

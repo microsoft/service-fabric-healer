@@ -201,7 +201,7 @@ namespace FabricHealer.Repair
         public async Task<bool> ScheduleInfrastructureRepairTask(TelemetryData repairData, CancellationToken cancellationToken)
         {
             // Internal throttling to protect against bad rules (over scheduling of repair tasks within a fixed time range). 
-            if (await RepairCountThrottleMaxCheck(repairData, cancellationToken))
+            if (await CheckRepairCountThrottle(repairData, cancellationToken))
             {
                 string message = $"Too many repairs of this type have been scheduled in the last 1 hour: " +
                                  $"{repairData.RepairPolicy.InfrastructureRepairName}. Will not schedule another repair at this time.";
@@ -244,7 +244,7 @@ namespace FabricHealer.Repair
             return true;
         }
 
-        private static async Task<bool> RepairCountThrottleMaxCheck(TelemetryData repairData, CancellationToken cancellationToken)
+        private static async Task<bool> CheckRepairCountThrottle(TelemetryData repairData, CancellationToken cancellationToken)
         {
             string repairPolicySectionName;
 
@@ -310,7 +310,7 @@ namespace FabricHealer.Repair
                         throw new ArgumentException($"Unsupported value timeRange in {repairPolicySectionName} setting. Please check your configuration.");
                     }
 
-                    if (await FabricRepairTasks.GetCreatedRepairCountWithinTimeRangeAsync(timeRange, repairData, cancellationToken) >= maxCount)
+                    if (await FabricRepairTasks.GetScheduledRepairCountWithinTimeRangeAsync(timeRange, repairData, cancellationToken) >= maxCount)
                     {
                         return true;
                     }
@@ -335,7 +335,7 @@ namespace FabricHealer.Repair
                     throw new ArgumentException($"Unsupported value timeRange in {repairPolicySectionName} setting. Please check your configuration.");
                 }
 
-                return await FabricRepairTasks.GetCreatedRepairCountWithinTimeRangeAsync(timeRange, repairData, cancellationToken) >= maxCount;
+                return await FabricRepairTasks.GetScheduledRepairCountWithinTimeRangeAsync(timeRange, repairData, cancellationToken) >= maxCount;
             }
 
             return false;
@@ -344,7 +344,7 @@ namespace FabricHealer.Repair
         public async Task<bool> DeleteFilesAsyncAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
             return await repairExecutor.DeleteFilesAsync(
-                            repairData ?? throw new ArgumentException(nameof(repairData)),
+                            repairData ?? throw new ArgumentException("repairData can't be null."),
                             cancellationToken);
         }
 
@@ -440,7 +440,7 @@ namespace FabricHealer.Repair
             await Task.Delay(new Random().Next(500, 1500), cancellationToken);
 
             // Internal throttling to protect against bad rules (over-scheduling of repair tasks within a fixed time range). 
-            if (await RepairCountThrottleMaxCheck(repairData, cancellationToken))
+            if (await CheckRepairCountThrottle(repairData, cancellationToken))
             {
                 string message = $"Too many repairs of this type have been scheduled in the last 15 minutes: " +
                                  $"{repairData.RepairPolicy.RepairId}. Will not schedule another repair at this time.";

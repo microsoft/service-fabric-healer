@@ -374,16 +374,12 @@ namespace FabricHealer.Repair
                 return 0;
             }
 
+            var orderedRepairList = allRecentFHRepairTasksCompleted.OrderByDescending(o => o.CompletedTimestamp);
             int count = 0;
 
-            foreach (var repair in allRecentFHRepairTasksCompleted.Where(r => r.ResultStatus == RepairTaskResult.Succeeded))
+            foreach (RepairTask repair in orderedRepairList)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-
-                if (repair.CompletedTimestamp == null || !repair.CompletedTimestamp.HasValue)
-                {
-                    continue;
-                }
 
                 // Non-Machine repairs scheduled and executed by FH.
                 if (repair.Executor == RepairConstants.FabricHealer)
@@ -418,27 +414,35 @@ namespace FabricHealer.Repair
             return count;
         }
 
-        public static async Task<int> GetCreatedRepairCountWithinTimeRangeAsync(
+        /// <summary>
+        /// Gets the number of repairs that have been created within a specified time range.
+        /// </summary>
+        /// <param name="timeWindow">Time range to look for repairs.</param>
+        /// <param name="repairData">TelemetryData instance.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        /// <returns></returns>
+        public static async Task<int> GetScheduledRepairCountWithinTimeRangeAsync(
                                          TimeSpan timeWindow,
                                          TelemetryData repairData,
                                          CancellationToken cancellationToken)
         {
-            var allRecentFHRepairTasksCreated =
+            var allActiveFHRepairTasks =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                            null,
-                            RepairTaskStateFilter.Created,
+                            // Should this filter be applied? Does it matter if FH scheduled the repairs?
+                            repairData.RepairPolicy.RepairIdPrefix,
+                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
                             null,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
 
-            if (allRecentFHRepairTasksCreated?.Count == 0)
+            if (allActiveFHRepairTasks?.Count == 0)
             {
                 return 0;
             }
 
             int count = 0;
 
-            foreach (RepairTask repair in allRecentFHRepairTasksCreated)
+            foreach (RepairTask repair in allActiveFHRepairTasks)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 

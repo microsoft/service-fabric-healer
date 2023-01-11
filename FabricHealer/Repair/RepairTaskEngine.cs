@@ -226,6 +226,7 @@ namespace FabricHealer.Repair
                 {
                     foreach (RepairTask repair in activeRepairs)
                     {
+                        // This would mean that the job has node-level impact and its state is at least Approved.
                         if (repair.Impact is NodeRepairImpactDescription impact)
                         {
                             if (!impact.ImpactedNodes.Any(
@@ -235,9 +236,20 @@ namespace FabricHealer.Repair
                                 continue;
                             }
 
-                            if (repair.Executor.Contains(RepairConstants.InfrastructureServiceName) || 
-                                repair.Action.ToLower().Contains("reboot") || 
-                                repair.Action.ToLower().Contains("reimage") || 
+                            return true;
+                        }
+
+                        // State == Created/Claimed if we get here.
+                        if (repair.Target is NodeRepairTargetDescription target) 
+                        {
+                            if (!target.Nodes.Any(n => n == repairData.NodeName))
+                            {
+                                continue;
+                            }
+
+                            if (repair.Executor.Contains(RepairConstants.InfrastructureServiceName) ||
+                                repair.Action.ToLower().Contains("reboot") ||
+                                repair.Action.ToLower().Contains("reimage") ||
                                 repair.Action.ToLower().Contains("heal"))
                             {
                                 return true;
@@ -254,8 +266,13 @@ namespace FabricHealer.Repair
             return false;
         }
 
-        public async Task<int> GetOutstandingFHRepairCount(string taskIdPrefix, CancellationToken token)
+        public async Task<int> GetAllOutstandingFHRepairsCountAsync(string taskIdPrefix, CancellationToken token)
         {
+            if (taskIdPrefix == InfraTaskIdPrefix) 
+            {
+                return await GetAllOutstandingNodeRepairsCountAsync(token);   
+            }
+
             RepairTaskList repairTasksInProgress =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             taskIdPrefix,
@@ -269,48 +286,50 @@ namespace FabricHealer.Repair
                 return 0;
             }
 
+            if (string.IsNullOrWhiteSpace(taskIdPrefix))
+            {
+                return repairTasksInProgress.Count;
+            }
+
             return repairTasksInProgress.Count(r => r.TaskId.StartsWith(taskIdPrefix));
         }
 
-        /// <summary>
-        /// Get number of currently active repair jobs in the cluster.
-        /// </summary>
-        /// <param name="taskIdPrefix"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
-        public async Task<int> GetOutstandingMachineRepairCount(CancellationToken token)
+        private async Task<int> GetAllOutstandingNodeRepairsCountAsync(CancellationToken token)
         {
-            int count = 0;
-
-            try
-            {
-                var currentlyExecutingRepairs =
+            RepairTaskList repairTasksInProgress =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             null,
                             RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
                             null,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             token);
+            int count = 0;
 
-                if (currentlyExecutingRepairs.Count > 0)
+            if (repairTasksInProgress.Count > 0)
+            {
+                foreach (RepairTask repair in repairTasksInProgress)
                 {
-                    foreach (var repair in currentlyExecutingRepairs)
+                    // This would mean that the job has node-level impact and its state is at least Approved (ImpactLevel has been set).
+                    if (repair.Impact is NodeRepairImpactDescription impact)
                     {
-                        if (repair.Impact is NodeRepairImpactDescription impact)
+                        if (impact.ImpactedNodes.Any(n => n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData))
                         {
-                            if (!impact.ImpactedNodes.Any(n => n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData))
-                            {
-                                continue;
-                            }
-
+                            count++;
+                        }
+                    }
+                    // Claimed (no ImpactLevel has been established yet).
+                    else if ((repair.State == RepairTaskState.Created || repair.State == RepairTaskState.Claimed)
+                             && repair.Target is NodeRepairTargetDescription target)
+                    {
+                        if (repair.Executor.Contains(RepairConstants.InfrastructureServiceName) ||
+                            repair.Action.ToLower().Contains("reboot") ||
+                            repair.Action.ToLower().Contains("reimage") ||
+                            repair.Action.ToLower().Contains("heal"))
+                        {
                             count++;
                         }
                     }
                 }
-            }
-            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
-            {
-
             }
 
             return count;

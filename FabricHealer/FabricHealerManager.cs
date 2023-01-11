@@ -1476,8 +1476,8 @@ namespace FabricHealer
                     {
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
-                                $"{node.NodeName}_MachineRepairAlreadyInProgress",
-                                $"There is currently a Machine repair in progress for node {node.NodeName}.",
+                                $"{node.NodeName}::MachineRepairAlreadyInProgress",
+                                $"There is currently a Machine-level repair in progress for node {node.NodeName}. Will not schedule another repair at this time.",
                                 Token,
                                 null,
                                 ConfigSettings.EnableVerboseLogging);
