@@ -10,7 +10,6 @@ using System.Fabric.Repair;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricHealer.TelemetryLib;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 
@@ -221,7 +220,7 @@ namespace FabricHealer.Repair
                             null,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
-
+                
                 if (activeRepairs.Count > 0)
                 {
                     foreach (RepairTask repair in activeRepairs)
@@ -247,10 +246,15 @@ namespace FabricHealer.Repair
                                 continue;
                             }
 
+                            // TOTHINK: If there is an active Azure tenant/platform update for the target node,
+                            // then treat as any other node level repair?
+
                             if (repair.Executor.Contains(RepairConstants.InfrastructureServiceName) ||
                                 repair.Action.ToLower().Contains("reboot") ||
                                 repair.Action.ToLower().Contains("reimage") ||
-                                repair.Action.ToLower().Contains("heal"))
+                                repair.Action.ToLower().Contains("azure.heal") ||
+                                // TOTHINK: should all platform/tenant updates be treated as node-level repairs and counted at this stage?
+                                repair.Action.ToLower().Contains("azure.job"))
                             {
                                 return true;
                             }
@@ -258,7 +262,7 @@ namespace FabricHealer.Repair
                     }
                 }
             }
-            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is ArgumentException || e is FabricException || e is TaskCanceledException || e is TimeoutException)
             {
 
             }
@@ -309,7 +313,7 @@ namespace FabricHealer.Repair
             {
                 foreach (RepairTask repair in repairTasksInProgress)
                 {
-                    // This would mean that the job has node-level impact and its state is at least Approved (ImpactLevel has been set).
+                    // This would mean that the job has node-level impact and its state is at least Approved (Impact and ImpactLevel have been set).
                     if (repair.Impact is NodeRepairImpactDescription impact)
                     {
                         if (impact.ImpactedNodes.Any(n => n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData))
@@ -317,14 +321,15 @@ namespace FabricHealer.Repair
                             count++;
                         }
                     }
-                    // Claimed (no ImpactLevel has been established yet).
-                    else if ((repair.State == RepairTaskState.Created || repair.State == RepairTaskState.Claimed)
-                             && repair.Target is NodeRepairTargetDescription target)
+                    // Claimed/Created (no Impact has been established yet).
+                    else if (repair.Target is NodeRepairTargetDescription target)
                     {
                         if (repair.Executor.Contains(RepairConstants.InfrastructureServiceName) ||
                             repair.Action.ToLower().Contains("reboot") ||
                             repair.Action.ToLower().Contains("reimage") ||
-                            repair.Action.ToLower().Contains("heal"))
+                            repair.Action.ToLower().Contains("azure.heal") ||
+                            // TOTHINK: should all platform/tenant updates be treated as node-level repairs and counted at this stage?
+                            repair.Action.ToLower().Contains("azure.job"))
                         {
                             count++;
                         }

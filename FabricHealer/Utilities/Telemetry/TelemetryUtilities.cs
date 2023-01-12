@@ -44,8 +44,7 @@ namespace FabricHealer.Utilities.Telemetry
         }
 
         /// <summary>
-        /// Emits Repair telemetry to AppInsights (or some other external service),
-        /// ETW (EventSource), and Health Event to Service Fabric.
+        /// Emits Repair data to AppInsights or LogAnalytics, ETW (EventSource), and as an SF Health Event.
         /// </summary>
         /// <param name="level">Log Level.</param>
         /// <param name="source">Err/Warning source id.</param>

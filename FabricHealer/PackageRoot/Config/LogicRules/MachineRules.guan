@@ -87,3 +87,4 @@ Mitigate() :- GetRepairHistory(?repairCount, 04:00:00, System.ReimageOS), ?repai
 Mitigate() :- GetRepairHistory(?repairCount, 04:00:00, System.Azure.Heal), ?repairCount < 2, !, ScheduleMachineRepair(System.Azure.Heal).
 
 ## If we end up here, then human intervention is required (Triage).
+Mitigate(NodeName=?nodeName) :- EmitMessage("Machine repairs (escalations) have been exhausted for node {0}. Human intervention is requried.", ?nodeName), !.

@@ -99,10 +99,10 @@ namespace FabricHealer.Repair
         /// <param name="nodeType">NodeType string</param>
         /// <param name="token">CancellationToken instance</param>
         /// <returns>true if tenant update is in progress, false otherwise</returns>
-        internal static async Task<bool> IsAzureUpdateInProgress(string nodeName, CancellationToken token)
+        internal static async Task<bool> IsAzureJobInProgressAsync(string nodeName, CancellationToken token)
         {
             var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                                        "Azure",
+                                        RepairTaskEngine.AzureTaskIdPrefix,
                                         System.Fabric.Repair.RepairTaskStateFilter.Approved |
                                         System.Fabric.Repair.RepairTaskStateFilter.Active |
                                         System.Fabric.Repair.RepairTaskStateFilter.Executing,
@@ -118,7 +118,7 @@ namespace FabricHealer.Repair
             }
 
             if (repairTasks.ToList().Any(
-                n => JsonSerializationUtility.TryDeserializeObject(n.ExecutorData, out ISExecutorData data) && data.JobId == nodeName))
+                n => JsonSerializationUtility.TryDeserializeObject(n.ExecutorData, out ISExecutorData data) && data.StepId == nodeName))
             {
                 string message = $"Azure Platform or Tenant Update in progress for {nodeName}. Will not attempt repairs at this time.";
 

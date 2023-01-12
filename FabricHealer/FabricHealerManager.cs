@@ -631,6 +631,8 @@ namespace FabricHealer
                     return;
                 }
 
+                await RandomWaitAsync();
+
                 // Check cluster upgrade status. If the cluster is upgrading to a new version (or rolling back)
                 // then do not attempt any repairs.
                 try
@@ -1379,7 +1381,7 @@ namespace FabricHealer
                         s => s.HealthInformation.HealthState == HealthState.Warning || s.HealthInformation.HealthState == HealthState.Error);
 
                 // Ensure a node in Error is not in error due to being down as part of a cluster upgrade or infra update in its UD.
-                if (node.AggregatedHealthState == HealthState.Error && nodeStatus == NodeStatus.Down) //|| nodeStatus == NodeStatus.Disabling))
+                if (node.AggregatedHealthState == HealthState.Error && nodeStatus == NodeStatus.Down)
                 {
                     // Cluster Upgrade in target node's UD?
                     string udInClusterUpgrade = await UpgradeChecker.GetCurrentUDWhereFabricUpgradeInProgressAsync(Token);
@@ -1402,7 +1404,7 @@ namespace FabricHealer
                     }
 
                     // Azure tenant/platform update in progress for the target node?
-                    if (await UpgradeChecker.IsAzureUpdateInProgress(node.NodeName, Token))
+                    if (await UpgradeChecker.IsAzureJobInProgressAsync(node.NodeName, Token))
                     {
                         string telemetryDescription = $"{node.NodeName} is down due to Infra repair job (UD = {nodeUD}). Will not schedule another machine repair at this time.";
 
@@ -2052,7 +2054,7 @@ namespace FabricHealer
         private async Task RandomWaitAsync()
         {
             var random = new Random();
-            int waitTimeMS = random.Next(random.Next(100, nodeCount * 100), 1000 * nodeCount);
+            int waitTimeMS = random.Next(random.Next(500, nodeCount * 500), 1000 * nodeCount);
 
             await Task.Delay(waitTimeMS, Token);
         }
