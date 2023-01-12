@@ -139,11 +139,8 @@ namespace FabricHealer.Utilities.Telemetry
                     // Anonymous types are supported by FH's ETW impl.
                     var anonType = new
                     {
-                        LogLevel = level,
-                        Source = source,
-                        Message = description,
-                        Property = property,
-                        EntityType = entityType
+                        LogLevel = level.ToString(),
+                        Message = description
                     };
 
                     logger.LogEtw(RepairConstants.FabricHealerDataEvent, anonType);

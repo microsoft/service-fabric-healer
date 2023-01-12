@@ -61,9 +61,10 @@
 ## time() with no arguments returns DateTime.UtcNow. DateTime will return a DateTime object that represents the supplied datetime string. 
 ## *Note*:  you must wrap the date string in quotes to make it explicit to Guan that the arg is a string as it contains mathematical operators (in this case a /).
 ## The rule below reads: If any of the specified (set in Mitigate) app's service processes have put it into Warning due to CPU over-consumption and today's date is later than the supplied end date, emit a message, stop processing rules (!).
+## You can use LogInfo, LogWarning or LogError predicates to generate a log event that will create a local text log entry, an ETW event, and an SF health report.
 
 Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("12/31/2022"),
-	EmitMessage("Exceeded specified end date for repair of fabric:/CpuStress CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("12/31/2022"), time()), !.
+	LogInfo("Exceeded specified end date for repair of fabric:/CpuStress CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("12/31/2022"), time()), !.
 
 ## Alternatively, you could enforce repair end dates inline (as a subrule) to any rule, e.g.,
 
@@ -176,13 +177,13 @@ Mitigate() :- TimeScopedRestartReplica(10, 05:00:00).
 
 ## TimeScopedRestartCodePackage/TimeScopedRestartReplica are internal predicates to check for the number of times a repair has run to completion within a supplied time window. 
 ## If Completed Repair count is less then supplied value, then run RestartCodePackage/RestartReplica mitigation. If not, emit a message so developer has event data that describes why
-## the repair was not attempted at this time. EmitMessage always succeeds.
+## the repair was not attempted at this time. LogInfo/LogWarning/LogError always succeeds.
 
 TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount >= ?count,
-	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartCodePackage repair at this time.", ?count, ?time).
+	LogInfo("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartCodePackage repair at this time.", ?count, ?time).
 
 TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount >= ?count,
-	EmitMessage("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartReplica repair at this time.", ?count, ?time).
+	LogInfo("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartReplica repair at this time.", ?count, ?time).
 
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
 ## Note you can add up to two optional arguments to RestartCodePackage/RestartReplica, name them whatever you want or omit the names, it just has to be either a TimeSpan value for how long to wait 

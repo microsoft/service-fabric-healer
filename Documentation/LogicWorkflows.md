@@ -74,9 +74,9 @@ Attempts to delete files in a supplied path. You can supply target path, max num
 
 **Helper Predicates**
 
-```EmitMessage()``` 
+```LogInfo(), LogWarning(), LogError()``` 
 
-This will emit telemetry/etw/health report from a rule which enables informational messaging and can help with debugging. 
+These will emit telemetry/etw/health event at corresponding level (Info, Warning, Error) from a rule and can help with debugging, auditing, upstream action (ETW/Telemetry -> Alerts, for example). 
 
 ```GetRepairHistory()``` 
 
@@ -276,17 +276,30 @@ Mitigate(AppName="fabric:/System", MetricName="EphemeralPorts", MetricValue=?Met
 
 **Filtering parameters from Mitigate()**
 
-If you wish to do equals checks such as ```?AppName == ...``` you don't actually need to write this in the body of your rules, instead you can specify these values inside Mitigate() like so:
+If you wish to do a single test for equality such as ```?AppName == "fabric:/App1``` you don't actually need to write this in the body of your rules, instead you can specify these values inside Mitigate() like so:
 
 ```
-## This is the preferred way to do this. It is easier to read and employs less (unnecessary) basic logic.
+## This is the preferred way to do this for a single value test (note the use of = operator, not ==). It is easier to read and employs less (unnecessary) basic logic.
 Mitigate(AppName="fabric:/App1") :- ...
 ```
 
-What that means, is that the rule will only execute when the AppName is equal to "fabric:/App1". This is equivalent to the following:
+What that means, is that the rule will only execute when the AppName is "fabric:/App1". This is equivalent to the following:
 
 ```
-Mitigate(AppName=?AppName) :- ?AppName == "fabric:/App1", ...
+Mitigate(AppName=?appName) :- ?appName == "fabric:/App1", ...
 ```
 
-Obviously, the first way of doing it is more succinct and, again, preferred.
+Obviously, the first way of doing it is more succinct and, again, preferred for simple cases where you are only interested in a single value for the fact. If, for example,
+you want to test for multiple values of AppName, then you have to pull the variable out into a subrule as you can't add a logical expression to the head of a rule.
+
+E.g., you want to proceed if AppName is either fabric:/App1 or fabric:/App42:
+
+```
+Mitigate(AppName=?appName) :- ?appName == "fabric:/App1" || ?appName == "fabric:/App42", ...
+```
+
+Or, you are only interested in any AppName that is not fabric:/App1 or fabric:/App42:
+
+```
+Mitigate(AppName=?appName) :- not(?appName == "fabric:/App1" || ?appName == "fabric:/App42"), ...
+```

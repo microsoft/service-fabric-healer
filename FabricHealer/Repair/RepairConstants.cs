@@ -95,7 +95,9 @@ namespace FabricHealer.Repair
         public const string CheckInsideHealthStateMinDuration = "CheckInsideHealthStateMinDuration";
         public const string GetHealthEventHistory = "GetHealthEventHistory";
         public const string GetRepairHistory = "GetRepairHistory";
-        public const string EmitMessage = "EmitMessage";
+        public const string LogInfo = "LogInfo";
+        public const string LogWarning = "LogWarning";
+        public const string LogError = "LogError";
 
         // Metric names.
         public const string ActiveTcpPorts = "ActiveTcpPorts";

@@ -139,7 +139,9 @@ namespace FabricHealer.Repair
             functorTable.Add(CheckInsideNodeProbationPeriodPredicateType.Singleton(RepairConstants.CheckInsideNodeProbationPeriod, repairData));
             functorTable.Add(CheckInsideScheduleIntervalPredicateType.Singleton(RepairConstants.CheckInsideScheduleInterval, repairData));
             functorTable.Add(CheckOutstandingRepairsPredicateType.Singleton(RepairConstants.CheckOutstandingRepairs, repairData));
-            functorTable.Add(EmitMessagePredicateType.Singleton(RepairConstants.EmitMessage));
+            functorTable.Add(LogInfoPredicateType.Singleton(RepairConstants.LogInfo));
+            functorTable.Add(LogErrorPredicateType.Singleton(RepairConstants.LogError));
+            functorTable.Add(LogWarningPredicateType.Singleton(RepairConstants.LogWarning));
             functorTable.Add(CheckInsideHealthStateMinDurationPredicateType.Singleton(RepairConstants.CheckInsideHealthStateMinDuration, repairData, this));
             functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, this, repairData));
             functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairData));
@@ -163,7 +165,7 @@ namespace FabricHealer.Repair
             List<CompoundTerm> compoundTerms = new();
 
             // Mitigate is the head of the rules used in FH. It's the goal that Guan will try to accomplish based on the logical expressions (or subgoals) that form a given rule.
-            CompoundTerm compoundTerm = new("Mitigate");
+            CompoundTerm ruleHead = new("Mitigate");
 
             // The type of metric that led FO to generate the unhealthy evaluation for the entity (App, Node, VM, Replica, etc).
             // We rename these for brevity for simplified use in logic rule composition (e;g., MetricName="Threads" instead of MetricName="Total Thread Count").
@@ -171,25 +173,25 @@ namespace FabricHealer.Repair
 
             // These args hold the related values supplied by FO and are available anywhere Mitigate is used as a rule head.
             // Think of these as facts from FabricObserver.
-            compoundTerm.AddArgument(new Constant(repairData.ApplicationName), RepairConstants.AppName);
-            compoundTerm.AddArgument(new Constant(repairData.Code), RepairConstants.ErrorCode);
-            compoundTerm.AddArgument(new Constant(repairData.EntityType.ToString()), RepairConstants.EntityType);
-            compoundTerm.AddArgument(new Constant(repairData.HealthState.ToString()), RepairConstants.HealthState);
-            compoundTerm.AddArgument(new Constant(repairData.Metric), RepairConstants.MetricName);
-            compoundTerm.AddArgument(new Constant(Convert.ToInt64(repairData.Value)), RepairConstants.MetricValue);
-            compoundTerm.AddArgument(new Constant(repairData.NodeName), RepairConstants.NodeName);
-            compoundTerm.AddArgument(new Constant(repairData.NodeType), RepairConstants.NodeType);
-            compoundTerm.AddArgument(new Constant(repairData.ObserverName), RepairConstants.ObserverName);
-            compoundTerm.AddArgument(new Constant(repairData.OS), RepairConstants.OS);
-            compoundTerm.AddArgument(new Constant(repairData.ServiceKind), RepairConstants.ServiceKind);
-            compoundTerm.AddArgument(new Constant(repairData.ServiceName), RepairConstants.ServiceName);
-            compoundTerm.AddArgument(new Constant(repairData.ProcessId), RepairConstants.ProcessId);
-            compoundTerm.AddArgument(new Constant(repairData.ProcessName), RepairConstants.ProcessName);
-            compoundTerm.AddArgument(new Constant(repairData.ProcessStartTime), RepairConstants.ProcessStartTime);
-            compoundTerm.AddArgument(new Constant(repairData.PartitionId), RepairConstants.PartitionId);
-            compoundTerm.AddArgument(new Constant(repairData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
-            compoundTerm.AddArgument(new Constant(repairData.ReplicaRole), RepairConstants.ReplicaRole);
-            compoundTerms.Add(compoundTerm);
+            ruleHead.AddArgument(new Constant(repairData.ApplicationName), RepairConstants.AppName);
+            ruleHead.AddArgument(new Constant(repairData.Code), RepairConstants.ErrorCode);
+            ruleHead.AddArgument(new Constant(repairData.EntityType.ToString()), RepairConstants.EntityType);
+            ruleHead.AddArgument(new Constant(repairData.HealthState.ToString()), RepairConstants.HealthState);
+            ruleHead.AddArgument(new Constant(repairData.Metric), RepairConstants.MetricName);
+            ruleHead.AddArgument(new Constant(Convert.ToInt64(repairData.Value)), RepairConstants.MetricValue);
+            ruleHead.AddArgument(new Constant(repairData.NodeName), RepairConstants.NodeName);
+            ruleHead.AddArgument(new Constant(repairData.NodeType), RepairConstants.NodeType);
+            ruleHead.AddArgument(new Constant(repairData.ObserverName), RepairConstants.ObserverName);
+            ruleHead.AddArgument(new Constant(repairData.OS), RepairConstants.OS);
+            ruleHead.AddArgument(new Constant(repairData.ServiceKind), RepairConstants.ServiceKind);
+            ruleHead.AddArgument(new Constant(repairData.ServiceName), RepairConstants.ServiceName);
+            ruleHead.AddArgument(new Constant(repairData.ProcessId), RepairConstants.ProcessId);
+            ruleHead.AddArgument(new Constant(repairData.ProcessName), RepairConstants.ProcessName);
+            ruleHead.AddArgument(new Constant(repairData.ProcessStartTime), RepairConstants.ProcessStartTime);
+            ruleHead.AddArgument(new Constant(repairData.PartitionId), RepairConstants.PartitionId);
+            ruleHead.AddArgument(new Constant(repairData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
+            ruleHead.AddArgument(new Constant(repairData.ReplicaRole), RepairConstants.ReplicaRole);
+            compoundTerms.Add(ruleHead);
 
             // Run Guan query.
             // This is where the supplied rules are run with FO data that may or may not lead to mitigation of some supported SF entity in trouble (or a VM/Disk).

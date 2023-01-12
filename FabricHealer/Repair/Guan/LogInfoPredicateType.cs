@@ -13,9 +13,9 @@ namespace FabricHealer.Repair.Guan
     /// <summary>
     ///  Helper external predicate that generates health/etw/telemetry events.
     /// </summary>
-    public class EmitMessagePredicateType : PredicateType
+    public class LogInfoPredicateType : PredicateType
     {
-        private static EmitMessagePredicateType Instance;
+        private static LogInfoPredicateType Instance;
 
         private class Resolver : BooleanPredicateResolver
         {
@@ -28,15 +28,15 @@ namespace FabricHealer.Repair.Guan
             protected override async Task<bool> CheckAsync()
             {
                 int count = Input.Arguments.Count;
-                string output;
+                string output, format;
 
                 if (count == 0)
                 {
-                    throw new GuanException("At least one argument is required.");
+                    throw new GuanException("At least 1 argument is required.");
                 }
-
-                string format = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue();
-
+                
+                format = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue();
+                
                 if (string.IsNullOrWhiteSpace(format))
                 {
                     return true;
@@ -61,7 +61,7 @@ namespace FabricHealer.Repair.Guan
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        "EmitMessagePredicate",
+                        "LogInfoPredicate",
                         output,
                         FabricHealerManager.Token);
 
@@ -69,12 +69,12 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static EmitMessagePredicateType Singleton(string name)
+        public static LogInfoPredicateType Singleton(string name)
         {
-            return Instance ??= new EmitMessagePredicateType(name);
+            return Instance ??= new LogInfoPredicateType(name);
         }
 
-        private EmitMessagePredicateType(string name)
+        private LogInfoPredicateType(string name)
                  : base(name, true, 1)
         {
 
