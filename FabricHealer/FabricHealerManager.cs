@@ -292,15 +292,15 @@ namespace FabricHealer
                 return;
             }
 
-            bool initialized = await InitializeAsync();
-
-            if (!initialized)
-            {
-                return;
-            }
-
             try
             {
+                bool initialized = await InitializeAsync();
+
+                if (!initialized)
+                {
+                    return;
+                }
+
                 RepairLogger.LogInfo("Starting FabricHealer Health Detection loop.");
 
                 var nodeList =
