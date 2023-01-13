@@ -105,10 +105,7 @@ namespace FabricHealer
 
             var targetName = loggerName + "LogFile";
 
-            if (LogManager.Configuration == null)
-            {
-                LogManager.Configuration = new LoggingConfiguration();
-            }
+            LogManager.Configuration ??= new LoggingConfiguration();
 
             if ((FileTarget)LogManager.Configuration?.FindTargetByName(targetName) == null)
             {

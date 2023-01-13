@@ -25,23 +25,16 @@ namespace FabricHealer.TelemetryLib
         private static string paasClusterId;
         private static string diagnosticsClusterId;
         private static XmlDocument clusterManifestXdoc;
-        private static readonly object _lock = new object();
         private static (string ClusterId, string ClusterType, string TenantId) _clusterInfoTuple;
+        private static readonly bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
         public static (string ClusterId, string ClusterType, string TenantId) ClusterInfoTuple
         {
             get
             {
-                lock (_lock)
+                if (_clusterInfoTuple == (null, null, null))
                 {
-                    // This will only be null if ClusterInfoTuple has never been set. When it can't be determined, for whatever reason, it will be "undefined", which is legitimate.
-                    if (_clusterInfoTuple.ClusterId == null)
-                    {
-                        using (var fc = new FabricClient())
-                        {
-                            _clusterInfoTuple = TupleGetClusterIdAndTypeAsync(fc, CancellationToken.None).GetAwaiter().GetResult();
-                        }
-                    }
+                    _clusterInfoTuple = TupleGetClusterIdAndTypeAsync(CancellationToken.None).GetAwaiter().GetResult();
                 }
 
                 return _clusterInfoTuple;
@@ -53,7 +46,7 @@ namespace FabricHealer.TelemetryLib
         /// The logic to compute these values closely resembles the logic used in SF runtime's telemetry client.
         /// </summary>
         private static async Task<(string ClusterId, string ClusterType, string TenantId)>
-            TupleGetClusterIdAndTypeAsync(FabricClient fabricClient, CancellationToken token)
+            TupleGetClusterIdAndTypeAsync(CancellationToken token)
         {
             string tenantId = TelemetryConstants.Undefined;
             string clusterId = TelemetryConstants.Undefined;
@@ -61,9 +54,13 @@ namespace FabricHealer.TelemetryLib
 
             try
             {
-                string clusterManifest = await fabricClient.ClusterManager.GetClusterManifestAsync(
-                                            TimeSpan.FromSeconds(TelemetryConstants.AsyncOperationTimeoutSeconds),
-                                            token);
+                string clusterManifest;
+                using (var fc = new FabricClient())
+                {
+                    clusterManifest = await fc.ClusterManager.GetClusterManifestAsync(
+                                                TimeSpan.FromSeconds(TelemetryConstants.AsyncOperationTimeoutSeconds),
+                                                token);
+                }
 
                 // Get tenantId for PaasV1 clusters or SFRP.
                 tenantId = GetTenantId() ?? TelemetryConstants.Undefined;
@@ -148,7 +145,7 @@ namespace FabricHealer.TelemetryLib
 
         private static string GetTenantId()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (isWindows)
             {
                 return GetTenantIdWindows();
             }
@@ -158,6 +155,11 @@ namespace FabricHealer.TelemetryLib
 
         private static string GetTenantIdLinux()
         {
+            if (isWindows)
+            {
+                return null;
+            }
+
             // Implementation copied from https://github.com/microsoft/service-fabric/blob/master/src/prod/src/managed/DCA/product/host/TelemetryConsumerLinux.cs
             const string TenantIdFile = "/var/lib/waagent/HostingEnvironmentConfig.xml";
 
@@ -181,12 +183,23 @@ namespace FabricHealer.TelemetryLib
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static string GetTenantIdWindows()
         {
+            if (!isWindows)
+            {
+                return null;
+            }
+
             const string TenantIdValueName = "WATenantID";
 
             try
             {
+
+#pragma warning disable CA1416 // Validate platform compatibility
                 string tenantIdKeyName = string.Format(CultureInfo.InvariantCulture, "{0}\\{1}", Registry.LocalMachine.Name, FabricRegistryKeyPath);
+#pragma warning restore CA1416 // Validate platform compatibility
+
+#pragma warning disable CA1416 // Validate platform compatibility
                 return (string)Registry.GetValue(tenantIdKeyName, TenantIdValueName, null);
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             catch (Exception e) when (e is ArgumentException || e is FormatException || e is IOException || e is System.Security.SecurityException)
             {

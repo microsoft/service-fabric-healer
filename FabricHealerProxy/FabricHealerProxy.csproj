@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Platforms>x64</Platforms>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
-		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
+		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
 		<PackageReference Include="NLog" Version="5.1.0" />
 		<PackageReference Include="Polly" Version="7.2.3" />
 	</ItemGroup>

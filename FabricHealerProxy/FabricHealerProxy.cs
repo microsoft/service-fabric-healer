@@ -29,33 +29,28 @@ namespace FabricHealer
     public sealed class FabricHealerProxy
     {
         private const string FHProxyId = "FabricHealerProxy";
-        private static readonly FabricClientSettings _fcsettings = new FabricClientSettings
+        private static readonly FabricClientSettings _fcsettings = new()
         {
             HealthOperationTimeout = TimeSpan.FromSeconds(60),
             HealthReportSendInterval = TimeSpan.FromSeconds(1),
             HealthReportRetrySendInterval = TimeSpan.FromSeconds(3),
         };
-        private static readonly object _instanceLock = new object();
-        private static readonly object _writeLock = new object();
-        private static readonly object _lock = new object();
+        private static readonly object _instanceLock = new();
+        private static readonly object _writeLock = new();
+        private static readonly object _lock = new();
         private static readonly TimeSpan _defaultHealthReportTtl = TimeSpan.FromMinutes(15);
         private static FabricClient _fabricClient = null;
         private static FabricHealerProxy _instance = null;
 
         // Instance tuple that stores RepairData objects for a specified duration (defaultHealthReportTtl).
-        private ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairData)> _repairDataHistory =
-                 new ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairData)>();
+        private ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairData)> _repairDataHistory = new();
         private CancellationTokenRegistration _tokenRegistration;
         private CancellationTokenSource _cts = null;
         private readonly Logger _logger = null;
 
         private FabricHealerProxy()
         {
-            if (_repairDataHistory == null)
-            {
-                _repairDataHistory = new ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairFacts)>();
-            }
-
+            _repairDataHistory ??= new ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairFacts)>();
             _logger = new Logger(FHProxyId);
         }
 
@@ -112,10 +107,7 @@ namespace FabricHealer
                 {
                     lock (_instanceLock)
                     {
-                        if (_instance == null)
-                        {
-                            _instance = new FabricHealerProxy();
-                        }
+                        _instance ??= new FabricHealerProxy();
                     }
                 }
 
@@ -789,10 +781,7 @@ namespace FabricHealer
                 _cts = null;
             }
 
-            if (_tokenRegistration != null)
-            {
-                _tokenRegistration.Dispose();
-            }
+            _tokenRegistration.Dispose();
 
             if (_instance != null)
             {

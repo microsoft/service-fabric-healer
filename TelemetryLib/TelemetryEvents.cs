@@ -250,7 +250,7 @@ namespace FabricHealer.TelemetryLib
 
             try
             {
-                StringBuilder Sb = new StringBuilder();
+                StringBuilder Sb = new();
 
                 using (var hash = SHA256.Create())
                 {
