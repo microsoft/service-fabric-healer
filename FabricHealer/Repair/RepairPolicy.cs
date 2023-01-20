@@ -5,6 +5,8 @@
 
 using System;
 using System.Diagnostics.Tracing;
+using System.Fabric.Health;
+using System.Security.Policy;
 
 namespace FabricHealer.Repair
 {
@@ -74,6 +76,45 @@ namespace FabricHealer.Repair
         /// </summary>
         [EventField]
         public string RepairIdPrefix
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// The target node name;
+        /// </summary>
+        public string NodeName
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// The target service name;
+        /// </summary>
+        public string ServiceName
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// The target app name;
+        /// </summary>
+        public string AppName
+        {
+            get; set;
+        }
+
+        public string Code
+        {
+            get; set;
+        }
+
+        public string ProcessName
+        {
+            get; set;
+        }
+
+        public HealthState HealthState
         {
             get; set;
         }

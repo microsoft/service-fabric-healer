@@ -484,7 +484,7 @@ namespace FabricHealer.Repair
             var executorData = new RepairExecutorData
             {
                 ExecutorTimeoutInMinutes = (int)MaxWaitTimeForFHRepairTaskCompleted.TotalMinutes, 
-                RepairData = repairData
+                RepairPolicy = repairData.RepairPolicy
             };
 
             // Create custom FH repair task for target node.

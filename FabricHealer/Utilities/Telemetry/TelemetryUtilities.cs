@@ -24,23 +24,21 @@ namespace FabricHealer.Utilities.Telemetry
             this.serviceContext = serviceContext;
             logger = new Logger(RepairConstants.RepairData)
             {
-                EnableVerboseLogging = true,
+                EnableVerboseLogging = FabricHealerManager.ConfigSettings.EnableVerboseLogging
             };
 
-            if (!FabricHealerManager.ConfigSettings.TelemetryEnabled)
+            if (FabricHealerManager.ConfigSettings.TelemetryEnabled)
             {
-                return;
+                telemetryClient = FabricHealerManager.ConfigSettings.TelemetryProviderType switch
+                {
+                    TelemetryProviderType.AzureApplicationInsights => new AppInsightsTelemetry(FabricHealerManager.ConfigSettings.AppInsightsConnectionString),
+                    TelemetryProviderType.AzureLogAnalytics => new LogAnalyticsTelemetry(
+                                                                    FabricHealerManager.ConfigSettings.LogAnalyticsWorkspaceId,
+                                                                    FabricHealerManager.ConfigSettings.LogAnalyticsSharedKey,
+                                                                    FabricHealerManager.ConfigSettings.LogAnalyticsLogType),
+                    _ => null
+                };
             }
-
-            telemetryClient = FabricHealerManager.ConfigSettings.TelemetryProviderType switch
-            {
-                TelemetryProviderType.AzureApplicationInsights => new AppInsightsTelemetry(FabricHealerManager.ConfigSettings.AppInsightsConnectionString),
-                TelemetryProviderType.AzureLogAnalytics => new LogAnalyticsTelemetry(
-                                                                FabricHealerManager.ConfigSettings.LogAnalyticsWorkspaceId,
-                                                                FabricHealerManager.ConfigSettings.LogAnalyticsSharedKey,
-                                                                FabricHealerManager.ConfigSettings.LogAnalyticsLogType),
-                _ => null
-            };
         }
 
         /// <summary>
@@ -60,7 +58,7 @@ namespace FabricHealer.Utilities.Telemetry
                             TelemetryData telemetryData = null,
                             bool verboseLogging = true,
                             TimeSpan ttl = default,
-                            string property = "RepairStateInformation",
+                            string property = "FH::RepairStateInformation",
                             EntityType entityType = EntityType.Node)
         {
             bool isTelemetryDataEvent = string.IsNullOrWhiteSpace(description) && telemetryData != null;
@@ -82,8 +80,6 @@ namespace FabricHealer.Utilities.Telemetry
             };
 
             // Do not write ETW/send Telemetry/create health report if the data is informational-only and verbose logging is not enabled.
-            // This means only Warning and Error messages will be transmitted. In general, however, it is best to enable Verbose Logging (default)
-            // in FabricHealer as it will not generate noisy local logs and you will have a complete record of mitigation history in your AI or LA workspace.
             if (!verboseLogging && level == LogLevel.Info)
             {
                 return;
@@ -102,7 +98,7 @@ namespace FabricHealer.Utilities.Telemetry
                 HealthReportTimeToLive = ttl == default ? TimeSpan.FromMinutes(5) : ttl,
                 Property = property,
                 SourceId = source,
-                EmitLogEvent = true
+                EmitLogEvent = healthState == HealthState.Error || healthState== HealthState.Warning || FabricHealerManager.ConfigSettings.EnableVerboseLogging
             };
 
             healthReporter.ReportHealthToServiceFabric(healthReport);

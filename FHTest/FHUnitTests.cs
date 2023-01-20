@@ -316,17 +316,24 @@ namespace FHTest
                 Code = SupportedErrorCodes.AppErrorMemoryMB,
                 HealthState = HealthState.Warning,
                 ServiceName = "fabric:/test0/service0",
-                Value = 1024.0,
-                RepairPolicy = new RepairPolicy
-                {
-                    RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}{NodeName}",
-                    RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix
-                }
+                Value = 1024.0
+            };
+
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}{NodeName}",
+                AppName = repairData.ApplicationName,
+                RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
+                NodeName = repairData.NodeName,
+                Code = repairData.Code,
+                HealthState = repairData.HealthState,
+                ProcessName = repairData.ProcessName,
+                ServiceName = repairData.ServiceName
             };
 
             var executorData = new RepairExecutorData
             {
-                RepairData = repairData
+                RepairPolicy = repairData.RepairPolicy
             };
 
             var file = Path.Combine(FHRulesDirectory, "AppRules.guan");
@@ -360,17 +367,21 @@ namespace FHTest
             {
                 EntityType = EntityType.Machine,
                 NodeName = NodeName,
-                HealthState = HealthState.Error,
-                RepairPolicy = new RepairPolicy
-                {
-                    RepairId = $"Test42_MachineRepair{NodeName}",
-                    RepairIdPrefix = RepairTaskEngine.InfraTaskIdPrefix
-                }
+                HealthState = HealthState.Error
+            };
+
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_MachineRepair{NodeName}",
+                AppName = repairData.ApplicationName,
+                RepairIdPrefix = RepairTaskEngine.InfraTaskIdPrefix,
+                NodeName = repairData.NodeName,
+                HealthState = repairData.HealthState
             };
 
             var executorData = new RepairExecutorData
             {
-                RepairData = repairData
+                RepairPolicy = repairData.RepairPolicy
             };
 
             var file = Path.Combine(FHRulesDirectory, "MachineRules.guan");
@@ -404,17 +415,22 @@ namespace FHTest
             {
                 EntityType = EntityType.Disk,
                 NodeName = NodeName,
-                HealthState = HealthState.Warning,
-                RepairPolicy = new RepairPolicy
-                {
-                    RepairId = $"Test42_DiskRepair{NodeName}",
-                    RepairIdPrefix = RepairTaskEngine.InfraTaskIdPrefix
-                }
+                HealthState = HealthState.Warning
+            };
+
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_DiskRepair{NodeName}",
+                AppName = repairData.ApplicationName,
+                RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
+                NodeName = repairData.NodeName,
+                Code = repairData.Code,
+                HealthState = repairData.HealthState
             };
 
             var executorData = new RepairExecutorData
             {
-                RepairData = repairData
+                RepairPolicy = repairData.RepairPolicy
             };
 
             var file = Path.Combine(FHRulesDirectory, "DiskRules.guan");
@@ -451,18 +467,24 @@ namespace FHTest
                 PartitionId = Guid.NewGuid(),
                 NodeName = NodeName,
                 HealthState = HealthState.Warning,
-                ServiceName = "fabric:/test0/service0",
+                ServiceName = "fabric:/test0/service0"
+            };
 
-                RepairPolicy = new RepairPolicy
-                {
-                    RepairId = $"Test42_ReplicaRepair{NodeName}",
-                    RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix
-                }
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_ReplicaRepair{NodeName}",
+                AppName = repairData.ApplicationName,
+                RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
+                NodeName = repairData.NodeName,
+                Code = repairData.Code,
+                HealthState = repairData.HealthState,
+                ProcessName = repairData.ProcessName,
+                ServiceName = repairData.ServiceName
             };
 
             var executorData = new RepairExecutorData
             {
-                RepairData = repairData
+                RepairPolicy = repairData.RepairPolicy
             };
 
             var file = Path.Combine(FHRulesDirectory, "ReplicaRules.guan");
@@ -498,17 +520,24 @@ namespace FHTest
                 EntityType = EntityType.Partition,
                 PartitionId = Guid.NewGuid(),
                 NodeName = NodeName,
-                HealthState = HealthState.Warning,
-                RepairPolicy = new RepairPolicy
-                {
-                    RepairId = $"Test42_SystemServiceRepair{NodeName}",
-                    RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix
-                }
+                HealthState = HealthState.Warning
+            };
+
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_SystemServiceRepair{NodeName}",
+                AppName = repairData.ApplicationName,
+                RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
+                NodeName = repairData.NodeName,
+                Code = repairData.Code,
+                HealthState = repairData.HealthState,
+                ProcessName = repairData.ProcessName,
+                ServiceName = repairData.ServiceName
             };
 
             var executorData = new RepairExecutorData
             {
-                RepairData = repairData
+                RepairPolicy = repairData.RepairPolicy
             };
 
             var file = Path.Combine(FHRulesDirectory, "SystemServiceRules.guan");
@@ -552,16 +581,24 @@ namespace FHTest
                 ServiceName = "fabric:/test0/service0",
                 Value = 42,
                 ReplicaId = default,
-                PartitionId = default,
-                RepairPolicy = new RepairPolicy
-                {
-                    RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}{NodeName}"
-                }
+                PartitionId = default
+            };
+
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}{NodeName}",
+                AppName = repairData.ApplicationName,
+                RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
+                NodeName = repairData.NodeName,
+                Code = repairData.Code,
+                HealthState = repairData.HealthState,
+                ProcessName = repairData.ProcessName,
+                ServiceName = repairData.ServiceName
             };
 
             var executorData = new RepairExecutorData
             {
-                RepairData = repairData
+                RepairPolicy = repairData.RepairPolicy
             };
 
             try
@@ -603,15 +640,23 @@ namespace FHTest
                 Value = 42,
                 ReplicaId = default,
                 PartitionId = default,
-                RepairPolicy = new RepairPolicy
-                {
-                    RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}{NodeName}"
-                }
+            };
+
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}{NodeName}",
+                AppName = repairData.ApplicationName,
+                RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
+                NodeName = repairData.NodeName,
+                Code = repairData.Code,
+                HealthState = repairData.HealthState,
+                ProcessName = repairData.ProcessName,
+                ServiceName = repairData.ServiceName
             };
 
             var executorData = new RepairExecutorData
             {
-                RepairData = repairData
+                RepairPolicy = repairData.RepairPolicy
             };
 
             await Assert.ThrowsExceptionAsync<GuanException>(async () => { await TestInitializeGuanAndRunQuery(repairData, repairAction, executorData); });

@@ -222,10 +222,22 @@ namespace FabricHealer.Repair
                     return true;
                 }
             }
+            catch (ArgumentException ae)
+            {
+                string message = $"Unable to create repairtask:{Environment.NewLine}{ae}";
+
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Warning,
+                        "FabricRepairTasks::TryCreateRepairTaskAsync",
+                        message,
+                        token,
+                        repairData,
+                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+            }
             catch (FabricException fe)
             {
                 string message = $"Unable to create repairtask:{Environment.NewLine}{fe}";
-                FabricHealerManager.RepairLogger.LogWarning(message);
+
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
                         "FabricRepairTasks::TryCreateRepairTaskAsync",
@@ -386,12 +398,12 @@ namespace FabricHealer.Repair
                 {
                     var fhExecutorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
-                    if (fhExecutorData == null || fhExecutorData.RepairData?.RepairPolicy == null)
+                    if (fhExecutorData == null || fhExecutorData.RepairPolicy == null)
                     {
                         continue;
                     }
 
-                    if (repairData.RepairPolicy.RepairId != fhExecutorData.RepairData.RepairPolicy.RepairId)
+                    if (repairData.RepairPolicy.RepairId != fhExecutorData.RepairPolicy.RepairId)
                     {
                         continue;
                     }
@@ -456,12 +468,12 @@ namespace FabricHealer.Repair
                 {
                     var fhExecutorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
-                    if (fhExecutorData == null || fhExecutorData.RepairData?.RepairPolicy == null)
+                    if (fhExecutorData == null || fhExecutorData.RepairPolicy == null)
                     {
                         continue;
                     }
 
-                    if (repairData.RepairPolicy.RepairId != fhExecutorData.RepairData.RepairPolicy.RepairId)
+                    if (repairData.RepairPolicy.RepairId != fhExecutorData.RepairPolicy.RepairId)
                     {
                         continue;
                     }

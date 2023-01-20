@@ -29,7 +29,7 @@ namespace FabricHealer.Repair
         /// <returns></returns>
         public async Task<RepairTask> CreateFabricHealerRepairTask(RepairExecutorData executorData, CancellationToken token)
         {
-            if (executorData == null || executorData.RepairData.NodeName == null)
+            if (executorData == null)
             {
                 return null;
             }
@@ -38,13 +38,13 @@ namespace FabricHealer.Repair
 
             if (repairs?.Count > 0)
             {
-                if (repairs.Any(r => r.ExecutorData.Contains(executorData.RepairData.RepairPolicy.RepairId)))
+                if (repairs.Any(r => r.ExecutorData.Contains(executorData.RepairPolicy.RepairId)))
                 {
                     return null;
                 }
             }
 
-            NodeImpactLevel impact = executorData.RepairData.RepairPolicy.RepairAction switch
+            NodeImpactLevel impact = executorData.RepairPolicy.RepairAction switch
             {
                 RepairActionType.RestartFabricNode => NodeImpactLevel.Restart,
                 RepairActionType.RemoveFabricNodeState => NodeImpactLevel.RemoveData,
@@ -52,15 +52,15 @@ namespace FabricHealer.Repair
             };
 
             var nodeRepairImpact = new NodeRepairImpactDescription();
-            var impactedNode = new NodeImpact(executorData.RepairData.NodeName, impact);
+            var impactedNode = new NodeImpact(executorData.RepairPolicy.NodeName, impact);
             nodeRepairImpact.ImpactedNodes.Add(impactedNode);
-            RepairActionType repairAction = executorData.RepairData.RepairPolicy.RepairAction;
+            RepairActionType repairAction = executorData.RepairPolicy.RepairAction;
             string repair = repairAction.ToString();
-            string taskId = $"{FHTaskIdPrefix}/{Guid.NewGuid()}/{repair}/{executorData.RepairData.NodeName}";
+            string taskId = $"{FHTaskIdPrefix}/{Guid.NewGuid()}/{repair}/{executorData.RepairPolicy.NodeName}";
             bool doHealthChecks = impact != NodeImpactLevel.None;
 
             // Health checks for app level repairs.
-            if (executorData.RepairData.RepairPolicy.DoHealthChecks && 
+            if (executorData.RepairPolicy.DoHealthChecks && 
                 impact == NodeImpactLevel.None &&
                             (repairAction == RepairActionType.RestartCodePackage ||
                                 repairAction == RepairActionType.RestartReplica ||
@@ -71,16 +71,16 @@ namespace FabricHealer.Repair
 
             // Error health state on target SF entity can block RM from approving the job to repair it (which is the whole point of doing the job).
             // So, do not do health checks if customer configures FO to emit Error health level reports.
-            if (executorData.RepairData.HealthState == HealthState.Error)
+            if (executorData.RepairPolicy.HealthState == HealthState.Error)
             {
                 doHealthChecks = false;
             }
 
             var repairTask = new ClusterRepairTask(taskId, repair)
             {
-                Target = new NodeRepairTargetDescription(executorData.RepairData.NodeName),
+                Target = new NodeRepairTargetDescription(executorData.RepairPolicy.NodeName),
                 Impact = nodeRepairImpact,
-                Description = $"FabricHealer executing repair {repair} on node {executorData.RepairData.NodeName}",
+                Description = $"FabricHealer executing repair {repair} on node {executorData.RepairPolicy.NodeName}",
                 State = RepairTaskState.Preparing,
                 Executor = RepairConstants.FabricHealer,
                 ExecutorData = JsonSerializationUtility.TrySerializeObject(executorData, out string exData) ? exData : null,
@@ -182,13 +182,13 @@ namespace FabricHealer.Repair
                         continue;
                     }
 
-                    if (executorData.RepairData.RepairPolicy == null)
+                    if (executorData.RepairPolicy == null)
                     {
                         return false;
                     }
 
                     // This check ensures that only one repair can be scheduled at a time for the same target.
-                    if (repairData.RepairPolicy.RepairId == executorData.RepairData.RepairPolicy.RepairId)
+                    if (repairData.RepairPolicy.RepairId == executorData.RepairPolicy.RepairId)
                     {
                         return true;
                     }

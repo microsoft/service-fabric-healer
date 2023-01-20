@@ -27,7 +27,7 @@ namespace FabricHealer.Repair
         } = FabricNodeRepairStep.Scheduled;
 
         [DataMember]
-        public TelemetryData RepairData
+        public RepairPolicy RepairPolicy
         {
             get; set;
         }

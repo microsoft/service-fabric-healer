@@ -18,8 +18,9 @@ namespace FabricHealer.Utilities
         /// </summary>
         /// <typeparam name="T">Type to be evaluated.</typeparam>
         /// <param name="text">Json string.</param>
+        /// <param name="treatMissingMembersAsError">Optional boolean to treat missing type members as Error or not.</param>
         /// <returns>True if the string is a serialized instance of type T. False otherwise.</returns>
-        public static bool IsJson<T>(string text)
+        public static bool IsJson<T>(string text, bool treatMissingMembersAsError = false)
         {
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -28,12 +29,7 @@ namespace FabricHealer.Utilities
 
             try
             {
-                JsonSerializerSettings jsonSerializerSettings = new()
-                {
-                    MissingMemberHandling = MissingMemberHandling.Ignore
-                };
-
-                return TryDeserializeObject<T>(text, out _, jsonSerializerSettings);
+                return TryDeserializeObject<T>(text, out _, treatMissingMembersAsError);
             }
             catch (JsonException)
             {
@@ -71,13 +67,14 @@ namespace FabricHealer.Utilities
         }
 
         /// <summary>
-        /// Tries to deserialize a Json string into an instance of specified type T.
+        /// Tries to deserialize a Json string into an instance of specified type T. Default behavior ignores missing members.
         /// </summary>
         /// <typeparam name="T">Target type.</typeparam>
         /// <param name="obj">Json string representing an instance of type T.</param>
         /// <param name="data">out: an instance of type T.</param>
+        /// <param name="treatMissingMembersAsError">Optional boolean to treat missing type members as Error or not.</param>
         /// <returns>An instance of the specified type T or null if the string can't be deserialized into the specified type T.</returns>
-        public static bool TryDeserializeObject<T>(string obj, out T data, JsonSerializerSettings jsonSerializerSettings = null)
+        public static bool TryDeserializeObject<T>(string obj, out T data, bool treatMissingMembersAsError = false)
         {
             if (string.IsNullOrWhiteSpace(obj))
             {
@@ -87,7 +84,11 @@ namespace FabricHealer.Utilities
             
             try
             {
-                jsonSerializerSettings ??= new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Ignore };
+                var jsonSerializerSettings = new JsonSerializerSettings 
+                { 
+                    MissingMemberHandling = treatMissingMembersAsError ? MissingMemberHandling.Error : MissingMemberHandling.Ignore 
+                };
+
                 data = JsonConvert.DeserializeObject<T>(obj, jsonSerializerSettings);
                 return true;
             }
@@ -115,7 +116,7 @@ namespace FabricHealer.Utilities
 
         public static bool TryDeserializeObjectFromFile<T>(string fileName, out T obj)
         {
-            if (TryDeserializeObject(File.ReadAllText(fileName), out obj, new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Ignore }))
+            if (TryDeserializeObject(File.ReadAllText(fileName), out obj))
             {
                 return true;
             }
