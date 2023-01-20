@@ -1315,10 +1315,10 @@ namespace FabricHealer
                 {
                     RepairId = repairId,
                     AppName = repairData.ApplicationName,
-                    HealthState = repairData.HealthState,
                     RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
                     NodeName = repairData.NodeName,
                     Code = repairData.Code,
+                    HealthState = repairData.HealthState,
                     ProcessName = repairData.ProcessName,
                     ServiceName = repairData.ServiceName
                 };
@@ -1513,7 +1513,10 @@ namespace FabricHealer
                     repairData.RepairPolicy = new RepairPolicy
                     {
                         RepairId = repairId,
-                        RepairIdPrefix = RepairTaskEngine.InfraTaskIdPrefix
+                        RepairIdPrefix = RepairTaskEngine.InfraTaskIdPrefix,
+                        NodeName = repairData.NodeName,
+                        HealthState = repairData.HealthState,
+                        Code = repairData.Code
                     };
                     repairData.Property = evt.HealthInformation.Property;
                     string errOrWarn = "Error";
@@ -1534,6 +1537,7 @@ namespace FabricHealer
 
                     // Update the in-memory HealthEvent data.
                     repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, evt, DateTime.UtcNow));
+                    
                     // Start the repair workflow.
                     await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
                 }

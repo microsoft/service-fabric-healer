@@ -16,7 +16,7 @@
     <Parameter Name="EnableMachineRepair" DefaultValue="true" />
     <Parameter Name="EnableReplicaRepair" DefaultValue="false" />
     <!-- This means FH will apply some mitigation (restarts) to all instances of a target service on a node-by-node basis only (rolling). -->
-    <Parameter Name="EnableRollingServiceRestarts" DefaultValue="true" />
+    <Parameter Name="EnableRollingServiceRestarts" DefaultValue="false" />
     <Parameter Name="EnableSystemServiceRepair" DefaultValue="false" />
     <!-- Logic rule files -->
     <Parameter Name="AppRulesConfigurationFile" DefaultValue="AppRules.guan" />
