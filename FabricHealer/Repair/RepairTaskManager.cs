@@ -465,7 +465,8 @@ namespace FabricHealer.Repair
             }
 
             // Don't attempt a node-level repair on a node where there is already an active node-level repair.
-            if (await repairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(repairData, cancellationToken))
+            if (repairData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode 
+                && await repairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(repairData, cancellationToken))
             {
                 string message = $"Node {repairData.NodeName} already has a node-impactful repair in progress: " +
                                  $"{repairData.RepairPolicy.RepairAction}";

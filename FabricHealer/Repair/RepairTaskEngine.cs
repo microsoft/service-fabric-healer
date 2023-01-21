@@ -119,7 +119,7 @@ namespace FabricHealer.Repair
         {
             if (await FabricHealerManager.IsOneNodeClusterAsync())
             {
-                return null;
+                //return null;
             }
 
             if (string.IsNullOrWhiteSpace(repairData.RepairPolicy.InfrastructureRepairName))

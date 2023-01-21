@@ -1362,7 +1362,7 @@ namespace FabricHealer
                        null,
                        ConfigSettings.EnableVerboseLogging);
 
-                return;
+                //return;
             }
 
             var supportedNodeHealthStates =
@@ -1566,6 +1566,9 @@ namespace FabricHealer
             repairData.RepairPolicy = new RepairPolicy
             {
                 RepairId = repairId,
+                NodeName = repairData.NodeName,
+                HealthState = repairData.HealthState,
+                Code = repairData.Code,
                 RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix
             };
             repairData.Property = evt.HealthInformation.Property;
@@ -1773,7 +1776,11 @@ namespace FabricHealer
                                 repairData.RepairPolicy = new RepairPolicy
                                 {
                                     RepairId = repairId,
-                                    RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix
+                                    HealthState = repairData.HealthState,
+                                    RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
+                                    NodeName = nodeName,
+                                    AppName = repairData.ApplicationName,
+                                    ServiceName = repairData.ServiceName
                                 };
                                 repairData.Property = healthEvent.HealthInformation.Property;
 
