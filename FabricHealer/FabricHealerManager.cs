@@ -606,24 +606,26 @@ namespace FabricHealer
                 {
                     EventsFilter = new HealthEventsFilter
                     {
-                        HealthStateFilterValue = HealthStateFilter.All
+                        HealthStateFilterValue = HealthStateFilter.Error | HealthStateFilter.Warning
                     },
                     ApplicationsFilter = new ApplicationHealthStatesFilter
                     {
-                        HealthStateFilterValue = HealthStateFilter.All
+                        HealthStateFilterValue = HealthStateFilter.Error | HealthStateFilter.Warning
                     },
                     NodesFilter = new NodeHealthStatesFilter
                     {
-                        HealthStateFilterValue = HealthStateFilter.All
+                        HealthStateFilterValue = HealthStateFilter.Error | HealthStateFilter.Warning
                     },
-                    HealthPolicy = new ClusterHealthPolicy()
+                    HealthPolicy = new ClusterHealthPolicy(),
+                    HealthStatisticsFilter = new ClusterHealthStatisticsFilter
+                    {
+                        ExcludeHealthStatistics = true,
+                        IncludeSystemApplicationHealthStatistics = false
+                    }
                 };
 
                 ClusterHealth clusterHealth = 
                     await FabricClientSingleton.HealthManager.GetClusterHealthAsync(clusterQueryDesc, ConfigSettings.AsyncTimeout, Token);
-
-               /* ClusterHealthChunk clusterHealthChunk =
-                    await FabricClientSingleton.HealthManager.GetClusterHealthChunkAsync(clusterQueryDesc, ConfigSettings.AsyncTimeout, Token);*/
 
                 if (clusterHealth.AggregatedHealthState == HealthState.Ok)
                 {
@@ -667,7 +669,7 @@ namespace FabricHealer
                             ConfigSettings.EnableVerboseLogging);
                 }
 
-                // Process Node Health.
+                // Process Node health.
                 if (clusterHealth.NodeHealthStates != null && clusterHealth.NodeHealthStates.Count > 0)
                 {
                     if (ConfigSettings.EnableMachineRepair || ConfigSettings.EnableDiskRepair || ConfigSettings.EnableFabricNodeRepair)
@@ -690,7 +692,7 @@ namespace FabricHealer
                         }
                     }
                 }
-                // Process Application/Service health
+                // Process Application/Service health.
                 if (clusterHealth.ApplicationHealthStates != null && clusterHealth.ApplicationHealthStates.Count > 0)
                 {
                     if (ConfigSettings.EnableAppRepair || ConfigSettings.EnableSystemAppRepair)
@@ -1365,10 +1367,7 @@ namespace FabricHealer
                 //return;
             }
 
-            var supportedNodeHealthStates =
-                nodeHealthStates.Where(a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
-
-            foreach (var node in supportedNodeHealthStates)
+            foreach (var node in nodeHealthStates)
             {
                 Token.ThrowIfCancellationRequested();
 
@@ -1406,12 +1405,12 @@ namespace FabricHealer
                     // Azure tenant/platform update in progress for the target node?
                     if (await UpgradeChecker.IsAzureJobInProgressAsync(node.NodeName, Token))
                     {
-                        RepairLogger.LogInfo($"Azure Job in progress for {node.NodeName}");
-                        string telemetryDescription = $"{node.NodeName} is down due to Infra repair job (UD = {nodeUD}). Will not schedule another machine repair at this time.";
+                        string telemetryDescription = 
+                            $"{node.NodeName} is down due to Infra repair job (UD = {nodeUD}). Will not schedule another machine repair at this time.";
 
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
-                                $"{node.NodeName}_Down_InfraRepair",
+                                $"{node.NodeName}_Down_AzureJobUpdate",
                                 telemetryDescription,
                                 Token,
                                 null,
