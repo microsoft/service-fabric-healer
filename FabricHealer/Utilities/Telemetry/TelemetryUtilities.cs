@@ -58,7 +58,7 @@ namespace FabricHealer.Utilities.Telemetry
                             TelemetryData telemetryData = null,
                             bool verboseLogging = true,
                             TimeSpan ttl = default,
-                            string property = "FH::RepairStateInformation",
+                            string property = "FH::RepairStateInfo",
                             EntityType entityType = EntityType.Node)
         {
             bool isTelemetryDataEvent = string.IsNullOrWhiteSpace(description) && telemetryData != null;
@@ -79,29 +79,26 @@ namespace FabricHealer.Utilities.Telemetry
                 _ => HealthState.Ok
             };
 
-            // Do not write ETW/send Telemetry/create health report if the data is informational-only and verbose logging is not enabled.
-            if (!verboseLogging && level == LogLevel.Info)
+            if (verboseLogging)
             {
-                return;
+                // Service Fabric health report generation.
+                var healthReporter = new FabricHealthReporter(logger);
+                var healthReport = new HealthReport
+                {
+                    AppName = entityType == EntityType.Application ? new Uri("fabric:/FabricHealer") : null,
+                    Code = telemetryData?.RepairPolicy?.RepairId,
+                    HealthMessage = description,
+                    NodeName = serviceContext.NodeContext.NodeName,
+                    EntityType = entityType,
+                    State = healthState,
+                    HealthReportTimeToLive = ttl == default ? TimeSpan.FromMinutes(5) : ttl,
+                    Property = property,
+                    SourceId = source,
+                    EmitLogEvent = true
+                };
+
+                healthReporter.ReportHealthToServiceFabric(healthReport);
             }
-
-            // Service Fabric health report generation.
-            var healthReporter = new FabricHealthReporter(logger);
-            var healthReport = new HealthReport
-            {
-                AppName = entityType == EntityType.Application ? new Uri("fabric:/FabricHealer") : null,
-                Code = telemetryData?.RepairPolicy?.RepairId,
-                HealthMessage = description,
-                NodeName = serviceContext.NodeContext.NodeName,
-                EntityType = entityType,
-                State = healthState,
-                HealthReportTimeToLive = ttl == default ? TimeSpan.FromMinutes(5) : ttl,
-                Property = property,
-                SourceId = source,
-                EmitLogEvent = healthState == HealthState.Error || healthState== HealthState.Warning || FabricHealerManager.ConfigSettings.EnableVerboseLogging
-            };
-
-            healthReporter.ReportHealthToServiceFabric(healthReport);
 
             if (!FabricHealerManager.ConfigSettings.EtwEnabled && !FabricHealerManager.ConfigSettings.TelemetryEnabled)
             {

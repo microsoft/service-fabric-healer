@@ -21,6 +21,7 @@ using FabricHealer.TelemetryLib;
 using Octokit;
 using System.Fabric.Description;
 using System.Runtime.InteropServices;
+using Newtonsoft.Json.Linq;
 
 namespace FabricHealer
 {
@@ -624,8 +625,14 @@ namespace FabricHealer
                     }
                 };
 
-                ClusterHealth clusterHealth = 
-                    await FabricClientSingleton.HealthManager.GetClusterHealthAsync(clusterQueryDesc, ConfigSettings.AsyncTimeout, Token);
+                ClusterHealth clusterHealth =
+                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                            () =>
+                                FabricClientSingleton.HealthManager.GetClusterHealthAsync(
+                                    clusterQueryDesc,
+                                    ConfigSettings.AsyncTimeout,
+                                    Token),
+                            Token);
 
                 if (clusterHealth.AggregatedHealthState == HealthState.Ok)
                 {
@@ -1358,13 +1365,12 @@ namespace FabricHealer
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                        LogLevel.Info,
-                       $"ProcessNodeHealthAsync::ClusterSizeNotSupported",
+                       $"NodeRepair::ClusterSizeNotSupported",
                        "Machine/Fabric Node repair is not supported in clusters with less than 3 Fabric nodes.",
                        Token,
                        null,
                        ConfigSettings.EnableVerboseLogging);
-
-                //return;
+                return;
             }
 
             foreach (var node in nodeHealthStates)

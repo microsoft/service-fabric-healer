@@ -119,7 +119,7 @@ namespace FabricHealer.Repair
         {
             if (await FabricHealerManager.IsOneNodeClusterAsync())
             {
-                //return null;
+                return null;
             }
 
             if (string.IsNullOrWhiteSpace(repairData.RepairPolicy.InfrastructureRepairName))
@@ -151,14 +151,12 @@ namespace FabricHealer.Repair
         /// <summary>
         /// Determines if a repair task is already in flight or if the max number of concurrent repairs has been reached for the target using the information specified in repairData instance.
         /// </summary>
-        /// <param name="taskIdPrefix">The Task ID prefix.</param>
+        /// <param name="taskIdPrefix">The Custom (FH, FH_Infra) Task ID prefix.</param>
         /// <param name="repairData">TelemetryData instance.</param>
         /// <param name="token">CancellationToken.</param>
-        /// <returns></returns>
+        /// <returns>Returns true if a repair is already in progress. Otherwise, false.</returns>
         public async Task<bool> IsRepairInProgressAsync(string taskIdPrefix, TelemetryData repairData, CancellationToken token)
         {
-            // All RepairTasks are prefixed with FH, regardless of repair target type (VM/Machine, Fabric node, system service process, code package, replica).
-            // For Machine-level repairs, RM will create a new task for IS that replaces FH executor data with IS job info.
             RepairTaskList repairTasksInProgress =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             taskIdPrefix,
@@ -208,7 +206,7 @@ namespace FabricHealer.Repair
         /// </summary>
         /// <param name="repairData">TelemetryData instance.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
-        /// <returns></returns>
+        /// <returns>Returns true if a repair job is currently in flight that has node-level impact. Otherwise, false.</returns>
         public async Task<bool> IsNodeLevelRepairCurrentlyInFlightAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
             try
