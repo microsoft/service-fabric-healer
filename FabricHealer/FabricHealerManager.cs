@@ -710,20 +710,21 @@ namespace FabricHealer
 
                             try
                             {
-                                var entityHealth =
-                                    await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(app.ApplicationName, ConfigSettings.AsyncTimeout, Token);
+                                var appHealth =
+                                    await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
+                                            app.ApplicationName,
+                                            ConfigSettings.AsyncTimeout,
+                                            Token);
 
-                                if (app.AggregatedHealthState == HealthState.Ok)
+                                if (appHealth.ServiceHealthStates != null && appHealth.ServiceHealthStates.Count > 0)
                                 {
-                                    continue;
-                                }
-
-                                if (entityHealth.ServiceHealthStates != null && entityHealth.ServiceHealthStates.Any(
-                                        s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
-                                {
-                                    foreach (var service in entityHealth.ServiceHealthStates.Where(
-                                                    s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
+                                    foreach (var service in appHealth.ServiceHealthStates)
                                     {
+                                        if (service.AggregatedHealthState == HealthState.Ok)
+                                        {
+                                            continue;
+                                        }
+
                                         await ProcessServiceHealthAsync(service);
                                     }
                                 }
