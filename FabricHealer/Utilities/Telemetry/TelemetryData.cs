@@ -5,7 +5,6 @@
 
 using Newtonsoft.Json;
 using System.Runtime.InteropServices;
-using FabricHealer.Interfaces;
 using System.Fabric.Health;
 using System;
 using FabricHealer.Repair;
@@ -15,7 +14,7 @@ namespace FabricHealer.Utilities.Telemetry
 {
     [EventData]
     [Serializable]
-    public class TelemetryData : ITelemetryData
+    public class TelemetryData
     {
         private readonly string _os;
 
