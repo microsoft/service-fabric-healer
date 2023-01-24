@@ -767,9 +767,21 @@ namespace FHTest
         // By default, if you only supply NodeName and ServiceName, then FabricHealerProxy assumes the target EntityType is Service. This is a convience to limit how many facts
         // you must supply in a RepairFacts instance. For any type of repair, NodeName is always required.
 
-        static readonly RepairFacts RepairFactsServiceTarget = new()
+        static readonly RepairFacts RepairFactsExistingServiceTarget = new()
         {
-            ServiceName = "fabric:/GettingStartedApplication/MyActorService",
+            // The service here must be one that is running in your test cluster.
+            // TODO: install a local test app as part of tests.
+            ServiceName = "fabric:/BadApp/BadService",
+            NodeName = NodeName,
+            // Specifying Source is Required for unit tests.
+            // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
+            Source = "fabric:/test"
+        };
+
+        static readonly RepairFacts RepairFactsNonExistingServiceTarget = new()
+        {
+            // The service here must be one that is running in your test cluster.
+            ServiceName = "fabric:/test/foo",
             NodeName = NodeName,
             // Specifying Source is Required for unit tests.
             // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
@@ -830,7 +842,7 @@ namespace FHTest
             DiskRepairFacts,
             RepairFactsMachineTarget,
             RepairFactsNodeTarget,
-            RepairFactsServiceTarget,
+            RepairFactsExistingServiceTarget,
             SystemServiceRepairFacts
         };
 
@@ -843,12 +855,12 @@ namespace FHTest
             }
 
             // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
-            await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsServiceTarget, token);
+            await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsExistingServiceTarget, token);
 
             // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");
-            Assert.IsTrue(RepairFactsServiceTarget.Source.EndsWith(FHProxyId));
+            Assert.IsTrue(RepairFactsExistingServiceTarget.Source.EndsWith(FHProxyId));
 
-            var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, RepairFactsServiceTarget.ServiceName);
+            var (generatedWarning, data) = await IsEntityInWarningStateAsync(null, RepairFactsExistingServiceTarget.ServiceName);
             Assert.IsTrue(generatedWarning);
             Assert.IsTrue(data != null);
         }
@@ -903,27 +915,16 @@ namespace FHTest
         }
 
         [TestMethod]
-        public async Task FHProxy_Missing_Fact_Generates_ServiceNotFoundException()
+        public async Task FHProxy_NonExistent_ServiceTarget_Generates_ServiceNotFoundException()
         {
             if (!IsLocalSFRuntimePresent())
             {
                 throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
             }
 
-            var repairFacts = new RepairFacts
-            {
-                ServiceName = "fabric:/foo/bar",
-                NodeName = NodeName,
-                // Specifying Source is Required for unit tests.
-                // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
-                Source = "fabric:/Test"
-            };
-
             await Assert.ThrowsExceptionAsync<ServiceNotFoundException>(async () => 
             {
-                
-                    await FabricHealerProxy.Instance.RepairEntityAsync(repairFacts, token);
-                
+                await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsNonExistingServiceTarget, token);
             });
         }
 

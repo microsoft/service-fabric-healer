@@ -15,7 +15,7 @@ namespace FabricHealer
     /// of the related Service Fabric Health Event. FabricHealer will deserialize the serialized instance and use the facts it contains throughout its mitigation infrastructure.
     /// Effectively, this type enables structured (well-known data) inter-service communication via Service Fabric health reports.
     /// </summary>
-    public class RepairFacts : ITelemetryData
+    public class RepairFacts
     {
         private readonly string _os;
 
