@@ -15,8 +15,8 @@ There is a very simple "interface" to FabricHealer that begins with some service
 Description value: a serialized instance of a well-known (to FH) type. As mentioned above, you can use FabricHealerProxy to push FH into motion from your
 Service Fabric service. Of course, you should deploy FabricObserver to your Service Fabric clusters. :-)
 
-FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster.
-It is a .NET 6.0 application and has been tested on multiple versions of Windows Server and Ubuntu.  
+FabricHealer is implemented as a stateless singleton service that can run on one one or all nodes in a Linux or Windows Service Fabric cluster.
+It is a .NET 6.0 application and has been tested on multiple versions of Windows Server and Ubuntu. If you want FH to conduct disk or system service repairs, then you must deploy on all nodes. Else, you should deploy to one node.
 
 To learn more about FabricHealer's configuration-as-logic model, [click here.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/LogicWorkflows.md)  
 
