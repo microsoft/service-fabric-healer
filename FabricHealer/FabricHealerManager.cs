@@ -21,7 +21,6 @@ using FabricHealer.TelemetryLib;
 using Octokit;
 using System.Fabric.Description;
 using System.Runtime.InteropServices;
-using Newtonsoft.Json.Linq;
 
 namespace FabricHealer
 {
@@ -32,7 +31,7 @@ namespace FabricHealer
         internal static StatelessServiceContext ServiceContext;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.1.6";
+        private const string InternalVersionNumber = "1.1.7";
         private static FabricHealerManager singleton;
         private static FabricClient _fabricClient;
         private bool disposedValue;
@@ -733,7 +732,7 @@ namespace FabricHealer
                                             await ProcessServiceHealthAsync(service);
                                         }
                                     }
-                                    else // FO/FHProxy Application HealthReport.
+                                    else // FO/FHProxy Non-System Application HealthReport.
                                     {
                                         await ProcessApplicationHealthAsync(app);
                                     }
@@ -1012,6 +1011,7 @@ namespace FabricHealer
                     ServiceName = repairData.ServiceName
                 };
                 repairData.Property = evt.HealthInformation.Property;
+#if DEBUG
                 string errOrWarn = "Error";
 
                 if (evt.HealthInformation.HealthState == HealthState.Warning)
@@ -1030,7 +1030,7 @@ namespace FabricHealer
                         Token,
                         null,
                         ConfigSettings.EnableVerboseLogging);
-
+#endif
                 // Update the in-memory HealthEvent data.
                 this.repairTaskManager.detectedHealthEvents.Add((repairData.ApplicationName, evt, DateTime.UtcNow));
 
@@ -1339,6 +1339,7 @@ namespace FabricHealer
                     ServiceName = repairData.ServiceName
                 };
                 repairData.Property = evt.HealthInformation.Property;
+#if DEBUG
                 string errOrWarn = "Error";
 
                 if (evt.HealthInformation.HealthState == HealthState.Warning)
@@ -1357,7 +1358,7 @@ namespace FabricHealer
                         Token,
                         null,
                         ConfigSettings.EnableVerboseLogging);
-
+#endif
                 // Update the in-memory HealthEvent List.
                 repairTaskManager.detectedHealthEvents.Add((repairData.ServiceName, evt, DateTime.UtcNow));
 
@@ -1398,7 +1399,7 @@ namespace FabricHealer
                 {
                     // Cluster Upgrade in target node's UD?
                     string udInClusterUpgrade = await UpgradeChecker.GetCurrentUDWhereFabricUpgradeInProgressAsync(Token);
-                    RepairLogger.LogInfo($"udInClusterUpgrade = {udInClusterUpgrade}");
+
                     if (!string.IsNullOrWhiteSpace(udInClusterUpgrade) && udInClusterUpgrade == nodeUD)
                     {
                         string telemetryDescription =
@@ -1531,6 +1532,7 @@ namespace FabricHealer
                         Code = repairData.Code
                     };
                     repairData.Property = evt.HealthInformation.Property;
+#if DEBUG                    
                     string errOrWarn = "Error";
 
                     if (evt.HealthInformation.HealthState == HealthState.Warning)
@@ -1546,7 +1548,7 @@ namespace FabricHealer
                             Token,
                             null,
                             ConfigSettings.EnableVerboseLogging);
-
+#endif
                     // Update the in-memory HealthEvent data.
                     repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, evt, DateTime.UtcNow));
                     
@@ -1584,6 +1586,7 @@ namespace FabricHealer
                 RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix
             };
             repairData.Property = evt.HealthInformation.Property;
+#if DEBUG
             string errOrWarn = "Error";
 
             if (evt.HealthInformation.HealthState == HealthState.Warning)
@@ -1599,7 +1602,7 @@ namespace FabricHealer
                     Token,
                     null,
                     ConfigSettings.EnableVerboseLogging);
-
+#endif
             // Update the in-memory HealthEvent data.
             repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, evt, DateTime.UtcNow));
 
@@ -1649,6 +1652,7 @@ namespace FabricHealer
                 ServiceName = repairData.ServiceName
             };
             repairData.Property = repairData.Property;
+#if DEBUG
             string errOrWarn = "Error";
 
             if (repairData.HealthState == HealthState.Warning)
@@ -1664,7 +1668,7 @@ namespace FabricHealer
                     Token,
                     null,
                     ConfigSettings.EnableVerboseLogging);
-
+#endif
             // Update the in-memory HealthEvent data.
             repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, healthEvent, DateTime.UtcNow));
 
@@ -1775,13 +1779,6 @@ namespace FabricHealer
                                     Source = RepairConstants.FabricHealerAppName
                                 };
 
-                                string errOrWarn = "Error";
-
-                                if (healthEvent.HealthInformation.HealthState == HealthState.Warning)
-                                {
-                                    errOrWarn = "Warning";
-                                }
-
                                 string repairId = 
                                     $"{nodeName}_{serviceHealth.ServiceName.OriginalString.Remove(0, appName.Length + 1)}_{repairData.PartitionId}";
 
@@ -1803,6 +1800,13 @@ namespace FabricHealer
                                 {
                                     continue;
                                 }
+#if DEBUG
+                                string errOrWarn = "Error";
+
+                                if (healthEvent.HealthInformation.HealthState == HealthState.Warning)
+                                {
+                                    errOrWarn = "Warning";
+                                }
 
                                 /* Start repair workflow */
 
@@ -1816,7 +1820,10 @@ namespace FabricHealer
                                         Token,
                                         null,
                                         ConfigSettings.EnableVerboseLogging);
-
+#endif
+                                // Update the in-memory HealthEvent data.
+                                repairTaskManager.detectedHealthEvents.Add((repairData.NodeName, healthEvent, DateTime.UtcNow));
+                                
                                 // Start the repair workflow.
                                 await repairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
                             }

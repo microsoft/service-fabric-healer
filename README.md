@@ -1,4 +1,4 @@
-## FabricHealer 1.1.6
+## FabricHealer 1.1.7
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-healer%2Fnet6%2FDocumentation%2FDeployment%2Fservice-fabric-healer.json)
