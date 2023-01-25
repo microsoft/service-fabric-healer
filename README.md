@@ -21,7 +21,7 @@ It is a .NET 6.0 application and has been tested on multiple versions of Windows
 To learn more about FabricHealer's configuration-as-logic model, [click here.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/LogicWorkflows.md)  
 
 ```
-This version of FabricHealer (1.1.1) requires SF Runtime versions 9 and higher.
+FabricHealer (1.1.7 and above) requires SF Runtime versions 9 and higher.
 ```
 ```
 FabricHealer requires the Service Fabric RepairManager (RM) service. 
