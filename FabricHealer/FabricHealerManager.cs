@@ -716,19 +716,17 @@ namespace FabricHealer
                                             ConfigSettings.AsyncTimeout,
                                             Token);
 
-                                if (appHealth.ServiceHealthStates != null && appHealth.ServiceHealthStates.Count > 0)
+                                if (appHealth.ServiceHealthStates != null && appHealth.ServiceHealthStates.Count > 0 && 
+                                    appHealth.ServiceHealthStates.Any(
+                                        s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
                                 {
-                                    foreach (var service in appHealth.ServiceHealthStates)
+                                    foreach (var service in appHealth.ServiceHealthStates.Where(
+                                                s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
                                     {
-                                        if (service.AggregatedHealthState == HealthState.Ok)
-                                        {
-                                            continue;
-                                        }
-
                                         await ProcessServiceHealthAsync(service);
                                     }
                                 }
-                                else
+                                else // This would be a System service that FO/FHProxy puts into Warning or Error.
                                 {
                                     await ProcessApplicationHealthAsync(app);
                                 }

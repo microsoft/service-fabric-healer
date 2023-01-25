@@ -57,6 +57,10 @@ namespace FabricHealer
         /// <summary>
         /// Disk type.
         /// </summary>
-        Disk
+        Disk,
+        /// <summary>
+        /// Cluster (Only ClusterObserver employs this enum value).
+        /// </summary>
+        Cluster
     }
 }
