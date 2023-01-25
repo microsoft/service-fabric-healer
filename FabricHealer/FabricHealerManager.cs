@@ -710,25 +710,33 @@ namespace FabricHealer
 
                             try
                             {
-                                var appHealth =
-                                    await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
-                                            app.ApplicationName,
-                                            ConfigSettings.AsyncTimeout,
-                                            Token);
-
-                                if (appHealth.ServiceHealthStates != null && appHealth.ServiceHealthStates.Count > 0 && 
-                                    appHealth.ServiceHealthStates.Any(
-                                        s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
-                                {
-                                    foreach (var service in appHealth.ServiceHealthStates.Where(
-                                                s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
-                                    {
-                                        await ProcessServiceHealthAsync(service);
-                                    }
-                                }
-                                else // This would be a System service that FO/FHProxy puts into Warning or Error.
+                                // FO/FHProxy system service health report.
+                                if (app.ApplicationName.OriginalString == RepairConstants.SystemAppName)
                                 {
                                     await ProcessApplicationHealthAsync(app);
+                                }
+                                else
+                                {
+                                    var appHealth =
+                                        await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
+                                                app.ApplicationName,
+                                                ConfigSettings.AsyncTimeout,
+                                                Token);
+
+                                    if (appHealth.ServiceHealthStates != null && appHealth.ServiceHealthStates.Count > 0 &&
+                                        appHealth.ServiceHealthStates.Any(
+                                            s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
+                                    {
+                                        foreach (var service in appHealth.ServiceHealthStates.Where(
+                                                    s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
+                                        {
+                                            await ProcessServiceHealthAsync(service);
+                                        }
+                                    }
+                                    else // FO/FHProxy Application HealthReport.
+                                    {
+                                        await ProcessApplicationHealthAsync(app);
+                                    }
                                 }
                             }
                             catch (Exception e) when (e is FabricException || e is TimeoutException)
@@ -980,7 +988,7 @@ namespace FabricHealer
                         var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(repairId));
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
-                                $"MonitorRepairableHealthEventsAsync::{repairData.ServiceName}",
+                                $"ProcessApplicationHealthAsync::{repairData.ServiceName}",
                                 $"{appName} already has a repair in progress for service {repairData.ServiceName}(state: {repair.State})",
                                 Token,
                                 null,
