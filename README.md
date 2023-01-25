@@ -12,8 +12,8 @@ FabricHealer's Configuration-as-Logic feature is made possible by a new logic pr
 The fun starts when FabricHealer detects supported error or warning health events reported by [FabricObserver](https://github.com/microsoft/service-fabric-observer), for example.
 You can use FabricHealer if you don't also deploy FabricObserver. Just install FabricHealerProxy into your .NET Service Fabric project and you can leverage the power of FH from there.
 There is a very simple "interface" to FabricHealer that begins with some service generating a Service Fabric Health Report. This health report must contain a specially-crafted
-Description value: a serialized instance of a well-known (to FH) type (must implement ITelemetryData). As mentioned above, just use FabricHealerProxy to push FH into motion from your
-Service Fabric service.
+Description value: a serialized instance of a well-known (to FH) type. As mentioned above, you can use FabricHealerProxy to push FH into motion from your
+Service Fabric service. Of course, you should deploy FabricObserver to your Service Fabric clusters. :-)
 
 FabricHealer is implemented as a stateless singleton service that runs on all nodes in a Linux or Windows Service Fabric cluster.
 It is a .NET 6.0 application and has been tested on multiple versions of Windows Server and Ubuntu.  
