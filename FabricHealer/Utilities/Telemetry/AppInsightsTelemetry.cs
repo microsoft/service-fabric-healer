@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Interfaces;
 using FabricHealer.Repair;
+using FabricHealer.TelemetryLib;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -143,31 +144,42 @@ namespace FabricHealer.Utilities.Telemetry
             return Task.FromResult(0);
         }
 
-       /// <summary>
-       /// Sends metrics to a telemetry service.
-       /// </summary>
-       /// <typeparam name="T">type of data.</typeparam>
-       /// <param name="name">name of metric.</param>
-       /// <param name="value">value of metric.</param>
-       /// <param name="source">source of event.</param>
-       /// <param name="cancellationToken">cancellation token.</param>
-       /// <returns>A Task of bool.</returns>
-        public async Task<bool> ReportMetricAsync<T>(
-                                    string name,
-                                    T value,
-                                    string source,
-                                    CancellationToken cancellationToken)
+        public Task ReportData(string description, LogLevel level, CancellationToken cancellationToken)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested)
             {
-                return false;
+                return Task.FromResult(false);
             }
 
-            TraceTelemetry tt = new(name, SeverityLevel.Information);
+            Dictionary<string, string> properties = new()
+            {
+                { "ClusterId", ClusterInformation.ClusterInfoTuple.ClusterId },
+                { "Message", description },
+                { "Source", RepairConstants.FabricHealer },
+                { "Level", level.ToString() },
+                { "OS", OperatingSystem.IsWindows() ? "Windows" : "Linux" }
+            };
 
-            telemetryClient?.TrackTrace(tt);
+            telemetryClient.TrackEvent(RepairConstants.EventSourceEventName, properties);
+            return Task.FromResult(true);
+        }
 
-            return await Task.FromResult(true);
+        /// <summary>
+        /// Sends metrics to a telemetry service.
+        /// </summary>
+        /// <typeparam name="T">type of data.</typeparam>
+        /// <param name="name">name of metric.</param>
+        /// <param name="value">value of metric.</param>
+        /// <param name="source">source of event.</param>
+        /// <param name="cancellationToken">cancellation token.</param>
+        /// <returns>A Task of bool.</returns>
+        public Task<bool> ReportMetricAsync<T>(
+                            string name,
+                            T value,
+                            string source,
+                            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(true);
         }
 
         /// <summary>
@@ -185,20 +197,19 @@ namespace FabricHealer.Utilities.Telemetry
 
             Dictionary<string, string> properties = new()
             {
-                { "Application", telemetryData.ApplicationName ?? string.Empty },
-                { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                { "SystemServiceProcessName", telemetryData.ProcessName ?? string.Empty },
-                { "ClusterId", telemetryData.ClusterId ?? string.Empty },
-                { "ErrorCode", telemetryData.Code ?? string.Empty },
-                { "Description", telemetryData.Description ?? string.Empty },
+                { "Application", telemetryData.ApplicationName },
+                { "ServiceName", telemetryData.ServiceName },
+                { "SystemServiceProcessName", telemetryData.ProcessName },
+                { "ClusterId", telemetryData.ClusterId  },
+                { "ErrorCode", telemetryData.Code },
+                { "Description", telemetryData.Description },
                 { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
-                { "Metric", telemetryData.Metric ?? string.Empty },
-                { "NodeName", telemetryData.NodeName ?? string.Empty },
-                { "ObserverName", telemetryData.ObserverName ?? string.Empty },
-                { "Partition", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
+                { "Metric", telemetryData.Metric },
+                { "NodeName", telemetryData.NodeName },
+                { "ObserverName", telemetryData.ObserverName },
+                { "Partition", telemetryData.PartitionId?.ToString() },
                 { "Replica", telemetryData.ReplicaId.ToString() },
-                { "Source", telemetryData.Source ?? string.Empty },
-                { "Value", telemetryData.Value.ToString() },
+                { "Source", telemetryData.Source }
             };
 
             telemetryClient.TrackEvent(RepairConstants.EventSourceEventName, properties);

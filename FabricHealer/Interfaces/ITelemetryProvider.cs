@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 
 namespace FabricHealer.Interfaces
@@ -162,5 +163,13 @@ namespace FabricHealer.Interfaces
             double deviation,
             IDictionary<string, string> properties,
             CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Supports emitting telemetry data that is simply a message string and LogLevel.
+        /// </summary>
+        /// <param name="description">The message body of the telemetry event.</param>
+        /// <param name="level">the LogLevel of the event.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        public Task ReportData(string description, LogLevel level, CancellationToken cancellationToken);
     }
 }

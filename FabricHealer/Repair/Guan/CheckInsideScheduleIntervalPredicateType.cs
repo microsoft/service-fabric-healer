@@ -58,7 +58,7 @@ namespace FabricHealer.Repair.Guan
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        $"CheckInsideScheduleInterval::{RepairData.RepairPolicy.RepairAction}",
+                        $"InsideRepairScheduleInterval::{RepairData.RepairPolicy.RepairAction}_{RepairData.NodeName}",
                         message,
                         FabricHealerManager.Token);
 

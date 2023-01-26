@@ -5,6 +5,7 @@
 
 using FabricHealer.Interfaces;
 using FabricHealer.Repair;
+using FabricHealer.TelemetryLib;
 using System;
 using System.Fabric;
 using System.Fabric.Health;
@@ -124,7 +125,7 @@ namespace FabricHealer.Utilities.Telemetry
             {
                 if (FabricHealerManager.ConfigSettings.TelemetryEnabled && telemetryClient != null)
                 {
-                    await telemetryClient?.ReportMetricAsync($"FabicHealerDataEvent.{level}", description, RepairConstants.FabricHealer, token);
+                    await telemetryClient.ReportData(description, level, token);
                 }
 
                 if (FabricHealerManager.ConfigSettings.EtwEnabled)
@@ -132,6 +133,7 @@ namespace FabricHealer.Utilities.Telemetry
                     // Anonymous types are supported by FH's ETW impl.
                     var anonType = new
                     {
+                        ClusterInformation.ClusterInfoTuple.ClusterId,
                         LogLevel = level.ToString(),
                         Message = description
                     };

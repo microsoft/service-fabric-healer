@@ -9,7 +9,6 @@ using System.Fabric;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -26,7 +25,7 @@ namespace FabricHealer.TelemetryLib
         private static string diagnosticsClusterId;
         private static XmlDocument clusterManifestXdoc;
         private static (string ClusterId, string ClusterType, string TenantId) _clusterInfoTuple;
-        private static readonly bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+        private static readonly bool isWindows = OperatingSystem.IsWindows();
 
         public static (string ClusterId, string ClusterType, string TenantId) ClusterInfoTuple
         {

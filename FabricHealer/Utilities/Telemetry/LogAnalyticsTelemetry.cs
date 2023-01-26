@@ -8,12 +8,13 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Interfaces;
+using FabricHealer.Repair;
+using FabricHealer.TelemetryLib;
 using Newtonsoft.Json;
 
 namespace FabricHealer.Utilities.Telemetry
@@ -77,7 +78,7 @@ namespace FabricHealer.Utilities.Telemetry
                         healthScope = entityType.ToString(),
                         healthState = state.ToString(),
                         healthEvaluation = unhealthyEvaluations,
-                        osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                        osPlatform = OperatingSystem.IsWindows() ? "Windows" : "Linux",
                         serviceName = serviceName ?? string.Empty,
                         instanceName = instanceName ?? string.Empty,
                     });
@@ -112,7 +113,7 @@ namespace FabricHealer.Utilities.Telemetry
                         id = $"FH_{Guid.NewGuid()}",
                         datetime = DateTime.UtcNow,
                         source,
-                        osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux",
+                        osPlatform = OperatingSystem.IsWindows() ? "Windows" : "Linux",
                         property = name,
                         value,
                     });
@@ -272,6 +273,21 @@ namespace FabricHealer.Utilities.Telemetry
             using var encryptor = new HMACSHA256(Convert.FromBase64String(Key));
 
             return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
+        }
+
+        public async Task ReportData(string description, LogLevel level, CancellationToken cancellationToken)
+        {
+            string jsonPayload = JsonConvert.SerializeObject(
+                    new
+                    {
+                        ClusterInformation.ClusterInfoTuple.ClusterId,
+                        Message = description,
+                        LogLevel = level.ToString(),
+                        Source = RepairConstants.FabricHealer,
+                        OS = OperatingSystem.IsWindows() ? "Windows" : "Linux"
+                    });
+
+            await SendTelemetryAsync(jsonPayload, cancellationToken);
         }
     }
 }

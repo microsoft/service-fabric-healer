@@ -6,7 +6,6 @@
 using Newtonsoft.Json;
 using System;
 using System.Fabric.Health;
-using System.Runtime.InteropServices;
 
 namespace FabricHealer
 {
@@ -113,7 +112,7 @@ namespace FabricHealer
         [JsonConstructor]
         public RepairFacts()
         {
-            _os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
+            _os = OperatingSystem.IsWindows() ? "Windows" : "Linux";
         }
     }
 }

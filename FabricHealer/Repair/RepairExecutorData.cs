@@ -3,7 +3,6 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricHealer.Utilities.Telemetry;
 using System.Runtime.Serialization;
 
 namespace FabricHealer.Repair

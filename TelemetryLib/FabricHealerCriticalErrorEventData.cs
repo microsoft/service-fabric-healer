@@ -3,7 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using System.Runtime.InteropServices;
+using System;
 
 namespace FabricHealer.TelemetryLib
 {
@@ -39,6 +39,6 @@ namespace FabricHealer.TelemetryLib
             get; set;
         }
 
-        public string OS => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
+        public string OS => OperatingSystem.IsWindows() ? "Windows" : "Linux";
     }
 }

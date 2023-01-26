@@ -7,7 +7,6 @@ using System;
 using System.Diagnostics.Tracing;
 using System.Fabric.Health;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using FabricHealer.Utilities.Telemetry;
 using NLog;
@@ -77,7 +76,7 @@ namespace FabricHealer.Utilities
             {
                 logFolderBase = LogFolderBasePath;
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (OperatingSystem.IsWindows())
                 {
                     // Add current drive letter if not supplied for Windows path target.
                     if (!LogFolderBasePath[..3].Contains(":\\"))
@@ -97,7 +96,7 @@ namespace FabricHealer.Utilities
             }
             else
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (OperatingSystem.IsWindows())
                 {
                     string windrive = Environment.SystemDirectory.Substring(0, 3);
                     logFolderBase = windrive + "fabric_healer_logs";

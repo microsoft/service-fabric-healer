@@ -30,8 +30,8 @@
 ## | EndpointUnreachable*      |    
 ## | MemoryMB                  | 
 ## | MemoryPercent             | 
-## | FileHandles               | 
-## | FileHandlesPercent        | 
+## | Handles                   | 
+## | HandlesPercent            | 
 ## | Threads                   | 
 ## *Network-related repair is not supported today.
 
@@ -101,7 +101,7 @@ Mitigate(AppName="fabric:/MyApp", MetricName="CpuPercent") :- TimeScopedRestartC
 ## CPU - Percent In Use - Any application's service that exceeds 90% cpu usage, repair up to 5 times in a one hour window.
 Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 90, TimeScopedRestartCodePackage(5, 01:00:00).
 
-## File Handles
+## Handles
 
 ## This is also an example of how to use the Guan system predicate, match (and notmatch). It takes two args, the first is the source, the second is a regular expression, 
 ## in this case, just a string of characters (no special regex characters). 
@@ -111,12 +111,12 @@ Mitigate(MetricName="CpuPercent", MetricValue=?MetricValue) :- ?MetricValue >= 9
 ## This is because in Prolog a string is a list of characters. In Guan, a string is just a built-in .NET object, System.String. 
 ## This is one of the great things about Guan: It's .NET all the way down.
 
-## Constrained on AppName, MetricName (FileHandles). 5 repairs within 1 hour window.
-Mitigate(AppName=?AppName, MetricName="FileHandles") :- match(?AppName, "ClusterObserver"), 
+## Constrained on AppName (match string in subrule), MetricName (Handles). 5 repairs within 1 hour window.
+Mitigate(AppName=?AppName, MetricName="Handles") :- match(?AppName, "ClusterObserver"), 
 	TimeScopedRestartCodePackage(5, 01:00:00).
 
-## Constrained on AppName, MetricName (FileHandles). 5 repairs within 1 hour window.
-Mitigate(AppName="fabric:/MyApp", MetricName="FileHandles") :- TimeScopedRestartCodePackage(5, 01:00:00).
+## Constrained on AppName, MetricName (Handles). 5 repairs within 1 hour window.
+Mitigate(AppName="fabric:/MyApp", MetricName="Handles") :- TimeScopedRestartCodePackage(5, 01:00:00).
 
 ## Memory
 

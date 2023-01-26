@@ -5,8 +5,6 @@
 
 using System;
 using System.Fabric;
-using System.Fabric.Description;
-using System.Fabric.Query;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;

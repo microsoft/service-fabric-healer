@@ -8,7 +8,6 @@ using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using System.Threading.Tasks;
-using FabricHealer.TelemetryLib;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -54,7 +53,7 @@ namespace FabricHealer.Repair.Guan
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        $"CheckInsideNodeProbationPeriod::{RepairData.NodeName}",
+                        $"InsideNodeProbationPeriod::{RepairData.NodeName}",
                         message,
                         FabricHealerManager.Token);
 

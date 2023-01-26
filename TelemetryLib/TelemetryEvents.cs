@@ -35,8 +35,6 @@ namespace FabricHealer.TelemetryLib
             appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
             appInsightsTelemetryConf.ConnectionString = TelemetryConstants.ConnectionString;
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
-            
-            // Set instance fields.
             clusterId = ClusterInformation.ClusterInfoTuple.ClusterId;
             tenantId = ClusterInformation.ClusterInfoTuple.TenantId;
             clusterType = ClusterInformation.ClusterInfoTuple.ClusterType;
@@ -195,11 +193,12 @@ namespace FabricHealer.TelemetryLib
             // allow time for flushing.
             Thread.Sleep(1000);
             appInsightsTelemetryConf?.Dispose();
+            GC.SuppressFinalize(this);
         }
 
         const int Retries = 4;
 
-        private bool TryWriteLogFile(string path, string content)
+        private static bool TryWriteLogFile(string path, string content)
         {
             if (string.IsNullOrEmpty(content))
             {

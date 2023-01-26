@@ -6,18 +6,13 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric;
-using System.Fabric.Description;
-using System.Fabric.Health;
 using System.Fabric.Query;
 using System.Fabric.Repair;
 using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
-using Newtonsoft.Json;
 
 namespace FabricHealer.Repair
 {

@@ -6,7 +6,6 @@
 using System;
 using System.Diagnostics.Tracing;
 using System.Fabric.Health;
-using System.Security.Policy;
 
 namespace FabricHealer.Repair
 {

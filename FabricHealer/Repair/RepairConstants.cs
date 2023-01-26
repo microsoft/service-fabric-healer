@@ -114,8 +114,8 @@ namespace FabricHealer.Repair
         public const string FirewallRules = "FirewallRules";
         public const string MemoryMB = "MemoryMB";
         public const string MemoryPercent = "MemoryPercent";
-        public const string FileHandles = "FileHandles";
-        public const string FileHandlesPercent = "FileHandlesPercent";
+        public const string Handles = "Handles";
+        public const string HandlesPercent = "HandlesPercent";
         public const string Threads = "Threads";
 
         // Supported FabricObserver Observer Names

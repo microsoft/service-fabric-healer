@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using FabricHealer.Utilities.Telemetry;
-using NLog;
 using System;
 using System.Fabric.Health;
 

@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using Newtonsoft.Json;
-using System.Runtime.InteropServices;
 using System.Fabric.Health;
 using System;
 using FabricHealer.Repair;
@@ -148,7 +147,7 @@ namespace FabricHealer.Utilities.Telemetry
         [JsonConstructor]
         public TelemetryData()
         {
-            _os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
+            _os = OperatingSystem.IsWindows() ? "Windows" : "Linux";
         }
     }
 }

@@ -70,6 +70,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (isRepairAlreadyInProgress)
                 {
+#if DEBUG
                     string message = 
                         $"Machine Repair is already in progress for node {RepairData.NodeName}. Will not schedule machine repair at this time.";
 
@@ -78,7 +79,7 @@ namespace FabricHealer.Repair.Guan
                             $"ScheduleMachineRepair::{RepairData.RepairPolicy.InfrastructureRepairName}",
                             message,
                             FabricHealerManager.Token);
-
+#endif
                     return false;
                 }
 

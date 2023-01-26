@@ -234,7 +234,7 @@ namespace FabricHealer.Repair
 
                 return false;
             }
-
+#if DEBUG
             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
                     "ScheduleInfrastructureRepairTask::Success",
@@ -242,7 +242,7 @@ namespace FabricHealer.Repair
                     cancellationToken,
                     repairData,
                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
+#endif
             return true;
         }
 
@@ -286,6 +286,11 @@ namespace FabricHealer.Repair
             }
 
             string throttleSetting = FabricHealerManager.GetSettingParameterValue(repairPolicySectionName, RepairConstants.MaxRepairsInTimeRange);
+
+            if (string.IsNullOrWhiteSpace(throttleSetting))
+            {
+                return false;
+            }
 
             // <Parameter Name="MaxRepairsInTimeRange" Value="5, 02:00:00" />
             // <Parameter Name="MaxRepairsInTimeRange" Value="5, 02:00:00; 6, 24:00:00; 7, 48:00:00;" />

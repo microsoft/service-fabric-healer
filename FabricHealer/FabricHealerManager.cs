@@ -31,7 +31,7 @@ namespace FabricHealer
         internal static StatelessServiceContext ServiceContext;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.1.7";
+        private const string InternalVersionNumber = "1.1.8";
         private static FabricHealerManager singleton;
         private static FabricClient _fabricClient;
         private bool disposedValue;
@@ -301,8 +301,6 @@ namespace FabricHealer
                     return;
                 }
 
-                RepairLogger.LogInfo("Starting FabricHealer Health Detection loop.");
-
                 var nodeList =
                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                             () => FabricClientSingleton.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, Token),
@@ -394,7 +392,6 @@ namespace FabricHealer
             catch (Exception e)
             {
                 var message = $"Unhandeld Exception in FabricHealerManager:{Environment.NewLine}{e}";
-                RepairLogger.LogError(message);
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
                         RepairConstants.FabricHealer,
@@ -567,6 +564,11 @@ namespace FabricHealer
             }
             catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException)
             {
+                if (e is FabricException)
+                {
+                    RepairLogger.LogWarning($"Could not cancel or resume repair tasks. Failed with:{Environment.NewLine}{e}");
+                }
+#if DEBUG
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "CancelOrResumeAllRunningFHRepairsAsync",
@@ -574,6 +576,7 @@ namespace FabricHealer
                         Token,
                         null,
                         ConfigSettings.EnableVerboseLogging);
+#endif
             }
         }
 
@@ -652,7 +655,6 @@ namespace FabricHealer
                     if (!string.IsNullOrWhiteSpace(udInClusterUpgrade))
                     {
                         string telemetryDescription = $"Cluster is currently upgrading in UD \"{udInClusterUpgrade}\". Will not schedule or execute repairs at this time.";
-
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
                                 "MonitorHealthEventsAsync::ClusterUpgradeDetected",
@@ -665,7 +667,7 @@ namespace FabricHealer
                 }
                 catch (Exception e) when (e is FabricException || e is TimeoutException)
                 {
-                    RepairLogger.LogInfo($"Handled Failure in MonitorHealthEventsAsync: {e.Message}");
+#if DEBUG
                     await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
                             "MonitorHealthEventsAsync::HandledException",
@@ -673,6 +675,7 @@ namespace FabricHealer
                             Token,
                             null,
                             ConfigSettings.EnableVerboseLogging);
+#endif
                 }
 
                 // Process Node health.
@@ -901,7 +904,7 @@ namespace FabricHealer
                             {
                                 continue;
                             }
-
+#if DEBUG
                             string message = $"A Service Fabric System service repair ({repair.TaskId}) is already in progress in the cluster(state: {repair.State}). " +
                                              $"Will not attempt repair at this time.";
 
@@ -912,7 +915,7 @@ namespace FabricHealer
                                     Token,
                                     null,
                                     ConfigSettings.EnableVerboseLogging);
-
+#endif
                             return;
                         }
                     }
@@ -934,6 +937,7 @@ namespace FabricHealer
                     // There can be multiple Warnings emitted by FO for a single app at the same time.
                     if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairData.ProcessName)))
                     {
+#if DEBUG
                         var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(repairData.ProcessName));
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
@@ -942,7 +946,7 @@ namespace FabricHealer
                                 Token,
                                 null,
                                 ConfigSettings.EnableVerboseLogging);
-
+#endif
                         continue;
                     }
 
@@ -984,6 +988,7 @@ namespace FabricHealer
                     // There can be multiple Warnings emitted by FO for a single app at the same time.
                     if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
                     {
+#if DEBUG
                         var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(repairId));
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
@@ -992,7 +997,7 @@ namespace FabricHealer
                                 Token,
                                 null,
                                 ConfigSettings.EnableVerboseLogging);
-
+#endif
                         continue;
                     }
                 }
@@ -1501,6 +1506,7 @@ namespace FabricHealer
                     // Make sure that there is not already an Infra repair in progress for the target node.
                     if (await repairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(repairData, Token))
                     {
+#if DEBUG
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
                                 $"{node.NodeName}::MachineRepairAlreadyInProgress",
@@ -1508,7 +1514,7 @@ namespace FabricHealer
                                 Token,
                                 null,
                                 ConfigSettings.EnableVerboseLogging);
-
+#endif
                         continue;
                     }
 
@@ -1532,7 +1538,7 @@ namespace FabricHealer
                         Code = repairData.Code
                     };
                     repairData.Property = evt.HealthInformation.Property;
-#if DEBUG                    
+#if DEBUG
                     string errOrWarn = "Error";
 
                     if (evt.HealthInformation.HealthState == HealthState.Warning)
@@ -1851,14 +1857,14 @@ namespace FabricHealer
                 case SupportedErrorCodes.AppErrorMemoryPercent:
                 case SupportedErrorCodes.AppErrorTooManyActiveEphemeralPorts:
                 case SupportedErrorCodes.AppErrorTooManyActiveTcpPorts:
-                case SupportedErrorCodes.AppErrorTooManyOpenFileHandles:
+                case SupportedErrorCodes.AppErrorTooManyOpenHandles:
                 case SupportedErrorCodes.AppErrorTooManyThreads:
                 case SupportedErrorCodes.AppWarningCpuPercent:
                 case SupportedErrorCodes.AppWarningMemoryMB:
                 case SupportedErrorCodes.AppWarningMemoryPercent:
                 case SupportedErrorCodes.AppWarningTooManyActiveEphemeralPorts:
                 case SupportedErrorCodes.AppWarningTooManyActiveTcpPorts:
-                case SupportedErrorCodes.AppWarningTooManyOpenFileHandles:
+                case SupportedErrorCodes.AppWarningTooManyOpenHandles:
                 case SupportedErrorCodes.AppWarningTooManyThreads:
 
                     repairPolicySectionName =
@@ -1871,13 +1877,13 @@ namespace FabricHealer
                 case SupportedErrorCodes.NodeErrorMemoryPercent:
                 case SupportedErrorCodes.NodeErrorTooManyActiveEphemeralPorts:
                 case SupportedErrorCodes.NodeErrorTooManyActiveTcpPorts:
-                case SupportedErrorCodes.NodeErrorTotalOpenFileHandlesPercent:
+                case SupportedErrorCodes.NodeErrorTotalOpenHandlesPercent:
                 case SupportedErrorCodes.NodeWarningCpuPercent:
                 case SupportedErrorCodes.NodeWarningMemoryMB:
                 case SupportedErrorCodes.NodeWarningMemoryPercent:
                 case SupportedErrorCodes.NodeWarningTooManyActiveEphemeralPorts:
                 case SupportedErrorCodes.NodeWarningTooManyActiveTcpPorts:
-                case SupportedErrorCodes.NodeWarningTotalOpenFileHandlesPercent:
+                case SupportedErrorCodes.NodeWarningTotalOpenHandlesPercent:
 
                     repairPolicySectionName = RepairConstants.MachineRepairPolicySectionName;
                     break;

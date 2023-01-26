@@ -19,7 +19,6 @@ using System.Net.Sockets;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.ComponentModel;
 using Newtonsoft.Json;
 using System.Fabric.Description;
@@ -596,9 +595,9 @@ namespace FabricHealer.Repair
                 {
                     Process[] ps;
 
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && repairData.ProcessName.EndsWith(".dll"))
+                    if (!OperatingSystem.IsWindows() && repairData.ProcessName.EndsWith(".dll"))
                     {
-                        ps = GetDotnetProcessesByFirstArgument(repairData.ProcessName);
+                        ps = GetLinuxDotnetProcessesByFirstArgument(repairData.ProcessName);
                     }
                     else
                     {
@@ -674,8 +673,13 @@ namespace FabricHealer.Repair
             return true;
         }
 
-        private Process[] GetDotnetProcessesByFirstArgument(string argument)
+        private Process[] GetLinuxDotnetProcessesByFirstArgument(string argument)
         {
+            if (OperatingSystem.IsWindows())
+            {
+                return null;
+            }
+
             List<Process> result = new();
             Process[] processes = Process.GetProcessesByName("dotnet");
 
