@@ -366,9 +366,9 @@ namespace FabricHealer.Repair
 
         /// <summary>
         /// Gets the number of completed repair tasks in the provided time range for FabricHealer-initiated repairs
-        /// where either IS or FH is repair executor. This is determined by using the supplied TelemetryData instance's RepairPolicy.RepairIdPrefix value.
+        /// where either IS or FH is repair executor.
         /// </summary>
-        /// <param name="timeWindow">TimeSpan representing the window of time to look for Completed FH repair tasks.</param>
+        /// <param name="timeWindow">TimeSpan representing the window of time to look for Completed FH/FH_Infra repair tasks.</param>
         /// <param name="repairData">TelemetryData instance that contains repair data.</param>
         /// <param name="cancellationToken">CancellationToken object.</param>
         /// <returns>the count as integer</returns>
