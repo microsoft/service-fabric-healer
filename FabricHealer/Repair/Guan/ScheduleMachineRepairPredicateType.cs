@@ -49,7 +49,7 @@ namespace FabricHealer.Repair.Guan
                     switch (typeString)
                     {
                         case "String":
-                            repairAction = (string)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
+                            repairAction = Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue();
                             RepairData.RepairPolicy.InfrastructureRepairName = repairAction; 
                             break;
 
@@ -63,6 +63,11 @@ namespace FabricHealer.Repair.Guan
                                 $"{Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name}{Environment.NewLine}" +
                                 $"Only String and Boolean argument types are supported by this predicate.");
                     }
+                }
+
+                if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                {
+                    await FabricHealerManager.RandomWaitAsync();
                 }
 
                 bool isRepairAlreadyInProgress =

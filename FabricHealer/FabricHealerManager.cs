@@ -31,7 +31,7 @@ namespace FabricHealer
         internal static StatelessServiceContext ServiceContext;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.1.8";
+        private const string InternalVersionNumber = "1.1.10";
         private static FabricHealerManager singleton;
         private static FabricClient _fabricClient;
         private bool disposedValue;
@@ -42,10 +42,10 @@ namespace FabricHealer
         private readonly FabricHealthReporter healthReporter;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private readonly string sfRuntimeVersion;
-        private int nodeCount;
         private DateTime StartDateTime;
-        private long _instanceCount;
         private static readonly object lockObj = new();
+        internal static int NodeCount;
+        internal static long InstanceCount;
 
         internal static Logger RepairLogger
         {
@@ -217,12 +217,11 @@ namespace FabricHealer
             healthReporter.ReportHealthToServiceFabric(healthReport);
 
             // Set the service replica instance count (FH is a Stateless singleton service, so it will either be -1 or the number of nodes FH is deployed to).
-            _instanceCount = await GetServiceInstanceCountAsync();
-
+            InstanceCount = await GetServiceInstanceCountAsync();
             return isRmDeployed;
         }
 
-        private async Task<long> GetServiceInstanceCountAsync()
+        private static async Task<long> GetServiceInstanceCountAsync()
         {
             ServiceDescription serviceDesc =
                 await FabricClientSingleton.ServiceManager.GetServiceDescriptionAsync(ServiceContext.ServiceName, ConfigSettings.AsyncTimeout, Token);
@@ -234,7 +233,6 @@ namespace FabricHealer
         /// Gets a parameter value from the specified config section or returns supplied default value if 
         /// not specified in config.
         /// </summary>
-        /// <param name="context"></param>
         /// <param name="sectionName">Name of the section.</param>
         /// <param name="parameterName">Name of the parameter.</param>
         /// <param name="defaultValue">Default value.</param>
@@ -306,7 +304,7 @@ namespace FabricHealer
                             () => FabricClientSingleton.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, Token),
                             Token);
 
-                nodeCount = nodeList.Count;
+                NodeCount = nodeList.Count;
 
                 // First, let's clean up any orphan non-node level FabricHealer repair tasks left pending 
                 // when the FabricHealer process is killed or otherwise ungracefully closed.
@@ -511,7 +509,7 @@ namespace FabricHealer
                     }
 
                     // Don't do anything if the orphaned repair was for a different node than this one:
-                    if (_instanceCount == -1 && repairExecutorData.RepairPolicy.NodeName != ServiceContext.NodeContext.NodeName)
+                    if (InstanceCount == -1 && repairExecutorData.RepairPolicy.NodeName != ServiceContext.NodeContext.NodeName)
                     {
                         continue;
                     }
@@ -641,7 +639,7 @@ namespace FabricHealer
                     return;
                 }
 
-                if (_instanceCount == -1 || _instanceCount > 1)
+                if (InstanceCount == -1 || InstanceCount > 1)
                 {
                     await RandomWaitAsync();
                 }
@@ -860,11 +858,11 @@ namespace FabricHealer
 
                 // Since FH can run on each node (-1 InstanceCount), if this is the case then have FH only try to repair app services that are also running on the same node.
                 // This removes the need to try and orchestrate repairs across nodes (which we will have to do in the non -1 case).
-                if (_instanceCount == -1 && repairData.NodeName != ServiceContext.NodeContext.NodeName)
+                if (InstanceCount == -1 && repairData.NodeName != ServiceContext.NodeContext.NodeName)
                 {
                     continue;
                 }
-                else if (_instanceCount > 1)
+                else if (InstanceCount > 1)
                 {
                     // Randomly wait to decrease chances of simultaneous ownership among FH instances.
                     await RandomWaitAsync();
@@ -1161,11 +1159,11 @@ namespace FabricHealer
 
                 // Since FH can run on each node (-1 InstanceCount), if this is the case then have FH only try to repair app services that are also running on the same node.
                 // This removes the need to try and orchestrate repairs across nodes (which we will have to do in the non -1 case).
-                if (_instanceCount == -1 && repairData.NodeName != ServiceContext.NodeContext.NodeName)
+                if (InstanceCount == -1 && repairData.NodeName != ServiceContext.NodeContext.NodeName)
                 {
                     continue;
                 }
-                else if (_instanceCount > 1)
+                else if (InstanceCount > 1)
                 {
                     // Randomly wait to decrease chances of simultaneous ownership among FH instances.
                     await RandomWaitAsync();
@@ -1374,7 +1372,7 @@ namespace FabricHealer
 
         private async Task ProcessNodeHealthAsync(IEnumerable<NodeHealthState> nodeHealthStates)
         {
-            if (nodeCount < 3)
+            if (NodeCount < 3)
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                        LogLevel.Info,
@@ -1384,6 +1382,11 @@ namespace FabricHealer
                        null,
                        ConfigSettings.EnableVerboseLogging);
                 return;
+            }
+
+            if (InstanceCount == -1 || InstanceCount > 1)
+            {
+                await RandomWaitAsync();
             }
 
             foreach (var node in nodeHealthStates)
@@ -1444,7 +1447,7 @@ namespace FabricHealer
                     Token.ThrowIfCancellationRequested();
 
                     // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-                    if (_instanceCount == -1 || _instanceCount > 1)
+                    if (InstanceCount == -1 || InstanceCount > 1)
                     {
                         await RandomWaitAsync();
                     }
@@ -1618,6 +1621,11 @@ namespace FabricHealer
 
         private async Task ProcessFabricNodeHealthAsync(HealthEvent healthEvent, TelemetryData repairData)
         {
+            if (InstanceCount == -1 || InstanceCount > 1)
+            {
+                await RandomWaitAsync();
+            }
+
             var repairRules = GetRepairRulesForTelemetryData(repairData);
 
             if (repairRules == null || repairRules?.Count == 0)
@@ -2104,10 +2112,10 @@ namespace FabricHealer
             return repairRules;
         }
 
-        private async Task RandomWaitAsync()
+        internal static async Task RandomWaitAsync()
         {
             var random = new Random();
-            int waitTimeMS = random.Next(random.Next(500, nodeCount * 500), 1000 * nodeCount);
+            int waitTimeMS = random.Next(random.Next(500, NodeCount * 500), 1000 * NodeCount);
 
             await Task.Delay(waitTimeMS, Token);
         }

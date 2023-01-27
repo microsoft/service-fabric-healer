@@ -157,6 +157,11 @@ namespace FabricHealer.Repair
         /// <returns>Returns true if a repair is already in progress. Otherwise, false.</returns>
         public async Task<bool> IsRepairInProgressAsync(string taskIdPrefix, TelemetryData repairData, CancellationToken token)
         {
+            if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+            {
+                await FabricHealerManager.RandomWaitAsync();
+            }
+
             RepairTaskList repairTasksInProgress =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             taskIdPrefix,
@@ -211,6 +216,11 @@ namespace FabricHealer.Repair
         {
             try
             {
+                if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                {
+                    await FabricHealerManager.RandomWaitAsync();
+                }
+
                 RepairTaskList activeRepairs =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             null,

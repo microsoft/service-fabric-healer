@@ -1,4 +1,4 @@
-## FabricHealer 1.1.8
+## FabricHealer 1.1.10
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
 
 FabricHealer (FH) is a .NET 6 Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
@@ -70,23 +70,24 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH11960 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH1110 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH11960
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH1110
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.1.1   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.1.10   
 
 #Create the Service instance:  
 
+# FH can be deployed with a single instance or run on all nodes. It's up to you. Note that for certain repairs, it must run as -1 (Disk repairs (file deletion), System service process restarts).
 New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName fabric:/FabricHealer -ServiceName fabric:/FabricHealer/FabricHealerService -ServiceTypeName FabricHealerType -InstanceCount -1
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.1.1 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.1.10 -Monitored -FailureAction rollback
 ```  
 
 ## Using FabricHealer  
