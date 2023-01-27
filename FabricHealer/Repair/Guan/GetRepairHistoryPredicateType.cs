@@ -46,6 +46,7 @@ namespace FabricHealer.Repair.Guan
 
                             if (RepairData.EntityType == EntityType.Machine)
                             {
+                                RepairData.RepairPolicy.RepairIdPrefix = RepairTaskEngine.InfraTaskIdPrefix;
                                 RepairData.RepairPolicy.InfrastructureRepairName = Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue();
                             }
                             break;

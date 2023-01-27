@@ -73,10 +73,10 @@
         </Settings>
       </ConfigOverride>
     </ConfigOverrides>
-    <!-- Because of certain actions FabricHealer takes in a cluster (deleting files created by or restarting services running at higher elevation, for example), 
-         it may need to run as System user on Windows and root on Linux. Note that you should test FH out NOT running as System and validate that it works for your scenarios.
-         For user service-level SF API mitigations (RestartCodePackage, RestartReplica, etc), it can (and therefore should) run as default (Network Service on Windows, sfappsuser on Linux). 
-         Test it out and do what works best for your security configuration. Keep in mind that running as System or root is non-optimal and should be thoughtfully considered.
+    <!-- Because of certain actions FabricHealer takes in a cluster (deleting files or restarting system service processes running at higher elevation than FabricHealer, for example), 
+         FH may need to run as System user on Windows and root on Linux. Note that you should test FH out NOT running as System and validate that it works for your scenarios.
+         For repairs that require SF API calls (RestartCodePackage, RestartReplica, etc) or simply schdule infrastructure repairs via RM (see MachineRules.guan), FH can (and therefore should) 
+         run as default user (that is Network Service on Windows, sfappsuser on Linux).
     <Policies>
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" />
     </Policies> -->

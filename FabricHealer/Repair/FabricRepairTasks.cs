@@ -397,19 +397,21 @@ namespace FabricHealer.Repair
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // Non-Machine repairs scheduled and executed by FH.
+                // Non-infra SF repair job scheduled and executed by FH.
                 if (repairData.RepairPolicy.RepairIdPrefix == RepairTaskEngine.FHTaskIdPrefix)
                 {
-                    // FH ExecutorData will always be a serialized instance of RepairExecutorData.
-                    var fhExecutorData =
-                        JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
-
-                    if (fhExecutorData == null || fhExecutorData.RepairPolicy == null)
+                    // FH-owned RepairTask ExecutorData field will always hold a serialized instance of RepairExecutorData type.
+                    if (!JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData))
                     {
                         continue;
                     }
 
-                    if (repairData.RepairPolicy.RepairId != fhExecutorData.RepairPolicy.RepairId)
+                    if (exData?.RepairPolicy == null)
+                    {
+                        continue;
+                    }
+
+                    if (repairData.RepairPolicy.RepairId != exData.RepairPolicy.RepairId)
                     {
                         continue;
                     }
@@ -421,11 +423,18 @@ namespace FabricHealer.Repair
                 }
                 else // FH_Infra
                 {
-                    if (repairData.RepairPolicy.InfrastructureRepairName == repair.Action)
+                    // This redundant check should always be true given the supplied repair ID prefix filter, but this check sets the NodeRepairTargetDescription variable
+                    // and also protects against the improbable cases when Target is not of expected type. This is not a performance critical code path, but it must always 
+                    // be correct to ensure count is accurate..
+                    if (repair.Target is NodeRepairTargetDescription nodeRepairTargetDesc)
                     {
-                        if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= timeWindow)
+                        // Ensure both the repair Action and target node carried in the RepairData instance match the historical repair's information.
+                        if (repairData.RepairPolicy.InfrastructureRepairName == repair.Action && nodeRepairTargetDesc.Nodes.Any(n => n == repairData.NodeName))
                         {
-                            count++;
+                            if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= timeWindow)
+                            {
+                                count++;
+                            }
                         }
                     }
                 }
