@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric;
+using System.Fabric.Management.ServiceModel;
 using System.Fabric.Query;
 using System.Fabric.Repair;
 using System.Linq;
@@ -363,7 +364,15 @@ namespace FabricHealer.Repair
             return false;
         }
 
-        public static async Task<int> GetCompletedRepairCountWithinTimeRangeAsync(
+        /// <summary>
+        /// Gets the number of completed repair tasks in the provided time range for FabricHealer-initiated repairs
+        /// where either IS or FH is repair executor. This is determined by using the supplied TelemetryData instance's RepairPolicy.RepairIdPrefix value.
+        /// </summary>
+        /// <param name="timeWindow">TimeSpan representing the window of time to look for Completed FH repair tasks.</param>
+        /// <param name="repairData">TelemetryData instance that contains repair data.</param>
+        /// <param name="cancellationToken">CancellationToken object.</param>
+        /// <returns>the count as integer</returns>
+        public static async Task<int> GetCompletedFHRepairCountWithinTimeRangeAsync(
                                          TimeSpan timeWindow,
                                          TelemetryData repairData,
                                          CancellationToken cancellationToken)
@@ -389,9 +398,11 @@ namespace FabricHealer.Repair
                 cancellationToken.ThrowIfCancellationRequested();
 
                 // Non-Machine repairs scheduled and executed by FH.
-                if (repair.Executor == RepairConstants.FabricHealer)
+                if (repairData.RepairPolicy.RepairIdPrefix == RepairTaskEngine.FHTaskIdPrefix)
                 {
-                    var fhExecutorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
+                    // FH ExecutorData will always be a serialized instance of RepairExecutorData.
+                    var fhExecutorData =
+                        JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
                     if (fhExecutorData == null || fhExecutorData.RepairPolicy == null)
                     {
@@ -408,12 +419,14 @@ namespace FabricHealer.Repair
                         count++;
                     }
                 }
-                // Machine repairs scheduled by FH.
-                else if (repairData.RepairPolicy.InfrastructureRepairName == repair.Action)
+                else // FH_Infra
                 {
-                    if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= timeWindow)
+                    if (repairData.RepairPolicy.InfrastructureRepairName == repair.Action)
                     {
-                        count++;
+                        if (DateTime.UtcNow.Subtract(repair.CompletedTimestamp.Value) <= timeWindow)
+                        {
+                            count++;
+                        }
                     }
                 }
             }
