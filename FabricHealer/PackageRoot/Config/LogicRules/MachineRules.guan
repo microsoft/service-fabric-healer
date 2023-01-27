@@ -47,7 +47,7 @@ Mitigate() :- CheckInsideScheduleInterval(00:10:00), !.
 ## Mitigations (RM repair scheduling logic - InfrastructureService for the target node type will be the repair Executor, not FH).
 ## The logic below demonstrates how to specify a repair escalation path: Reboot -> Reimage -> Heal -> Triage (human intervention required).
 
-## Reboot. Note that employing the internal predicate TimeScopedScheduleRepair will not work given the placement of the cut operator in the rules below.
+## Reboot.
 ## Don't process any other rules if scheduling succeeds OR fails (note the position of ! (cut operator)) and there are less than 2 of these repairs that have completed in the last 4 hours.
 Mitigate() :- GetRepairHistory(?repairCount, 04:00:00, System.Reboot), ?repairCount < 2, !, ScheduleMachineRepair(System.Reboot).
 
