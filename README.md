@@ -8,7 +8,11 @@ Repair workflow configuration is written as [Prolog](http://www.let.rug.nl/bos/l
 
 FabricHealer's Configuration-as-Logic feature requires [Guan](https://github.com/microsoft/guan), a Prolog-like logic programming library for .NET.
 Repair workflow starts when FabricHealer detects supported error or warning health events reported by [FabricObserver](https://github.com/microsoft/service-fabric-observer) or [FabricHealerProxy](https://www.nuget.org/packages/Microsoft.ServiceFabricApps.FabricHealerProxy), for example.
-Note that you can use FabricHealer if you don't also employ FabricObserver or FabricHealerProxy. For [machine-level repairs](https://github.com/microsoft/service-fabric-healer/blob/develop/FabricHealer/PackageRoot/Config/LogicRules/MachineRules.guan) you do not need either. For all other repairs, you must install FabricHealerProxy into a .NET Service Fabric project to leverage the power of FabricHealer if you do not deploy FabricObserver.
+Note that you can use FabricHealer if you don't also employ FabricObserver or FabricHealerProxy. For [machine-level repairs](https://github.com/microsoft/service-fabric-healer/blob/develop/FabricHealer/PackageRoot/Config/LogicRules/MachineRules.guan) you do not need either of these if you want to automatically schedule machine repair jobs based on node health states alone (like, Error state, specifically). For all other repairs, you must install FabricHealerProxy into a .NET Service Fabric project to leverage the power of FabricHealer if you do not deploy FabricObserver. 
+
+```
+The FabricObserver and FabricHealer duo is very powerful and highly recommended for most use cases of this repair technology.
+```
 
 FabricHealer is implemented as a stateless singleton service that runs on one or all nodes in a Linux or Windows Service Fabric cluster. For Disk and Fabric system service repairs, you must run FabricHealer on all nodes.
 FabricHealer is built as a .NET 6.0 application and has been tested on multiple versions of Windows Server and Ubuntu.  
