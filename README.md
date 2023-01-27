@@ -11,8 +11,7 @@ Repair workflow starts when FabricHealer detects supported error or warning heal
 Note that you can use FabricHealer if you don't also employ FabricObserver or FabricHealerProxy. For [machine-level repairs](https://github.com/microsoft/service-fabric-healer/blob/develop/FabricHealer/PackageRoot/Config/LogicRules/MachineRules.guan) you do not need either of these if you want to automatically schedule machine repair jobs based on node health states alone (like, Error state, specifically). For all other repairs, you must install FabricHealerProxy into a .NET Service Fabric project to leverage the power of FabricHealer if you do not deploy FabricObserver. 
 
 ```
-The FabricObserver and FabricHealer duo is very powerful and highly recommended 
-for most use cases of this repair technology.
+FabricObserver and FabricHealer work great together.
 ```
 
 FabricHealer is implemented as a stateless singleton service that runs on one or all nodes in a Linux or Windows Service Fabric cluster. For Disk and Fabric system service repairs, you must run FabricHealer on all nodes.
