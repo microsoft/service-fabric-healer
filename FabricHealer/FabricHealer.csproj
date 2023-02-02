@@ -31,8 +31,8 @@
 	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
-    <PackageReference Include="NLog" Version="5.1.0" />
-    <PackageReference Include="Octokit" Version="4.0.3" />
+    <PackageReference Include="NLog" Version="5.1.1" />
+    <PackageReference Include="Octokit" Version="5.0.0" />
     <PackageReference Include="System.Configuration.Abstractions" Version="2.0.2.45" />
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="7.0.0" />

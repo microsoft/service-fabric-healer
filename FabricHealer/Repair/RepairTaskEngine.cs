@@ -258,11 +258,11 @@ namespace FabricHealer.Repair
                             // then treat as any other node level repair?
 
                             if (repair.Executor.Contains(RepairConstants.InfrastructureServiceName) ||
-                                repair.Action.ToLower().Contains("reboot") ||
-                                repair.Action.ToLower().Contains("reimage") ||
+                                repair.Action.ToLower().Contains("azure.host") ||
                                 repair.Action.ToLower().Contains("azure.heal") ||
-                                // TOTHINK: should all platform/tenant updates be treated as node-level repairs and counted at this stage?
-                                repair.Action.ToLower().Contains("azure.job"))
+                                repair.Action.ToLower().Contains("azure.job") ||
+                                repair.Action.ToLower().Contains("reboot") ||
+                                repair.Action.ToLower().Contains("reimage"))
                             {
                                 return true;
                             }
@@ -272,7 +272,7 @@ namespace FabricHealer.Repair
             }
             catch (Exception e) when (e is ArgumentException || e is FabricException || e is TaskCanceledException || e is TimeoutException)
             {
-
+                
             }
 
             return false;
@@ -333,11 +333,11 @@ namespace FabricHealer.Repair
                     else if (repair.Target is NodeRepairTargetDescription target)
                     {
                         if (repair.Executor.Contains(RepairConstants.InfrastructureServiceName) ||
-                            repair.Action.ToLower().Contains("reboot") ||
-                            repair.Action.ToLower().Contains("reimage") ||
-                            repair.Action.ToLower().Contains("azure.heal") ||
-                            // TOTHINK: should all platform/tenant updates be treated as node-level repairs and counted at this stage?
-                            repair.Action.ToLower().Contains("azure.job"))
+                               repair.Action.ToLower().Contains("azure.host") ||
+                               repair.Action.ToLower().Contains("azure.heal") ||
+                               repair.Action.ToLower().Contains("azure.job") ||
+                               repair.Action.ToLower().Contains("reboot") ||
+                               repair.Action.ToLower().Contains("reimage"))
                         {
                             count++;
                         }
