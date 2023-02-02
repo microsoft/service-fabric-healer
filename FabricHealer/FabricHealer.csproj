@@ -1,13 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <ProjectGuid>{9A19103F-16F7-4668-BE54-9A1E7A4F7556}</ProjectGuid>
 	<RootNamespace>FabricHealer</RootNamespace>
 	<AssemblyName>FabricHealer</AssemblyName>
 	<TargetFramework>net6.0</TargetFramework>
 	<Nullable>disable</Nullable>
 	<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
-	<ServerGarbageCollection>False</ServerGarbageCollection>
-	<TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <OutputType>Exe</OutputType>
     <!-- ***NOTE***: 
          If deploying to SF cluster directly from Visual Studio, you must use single target RID.
@@ -15,27 +12,17 @@
          <RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 	<Product>FabricHealer</Product>
-	<Version>1.1.10</Version>
-    <FileVersion>1.1.10</FileVersion>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+	<Version>1.1.11</Version>
+    <FileVersion>1.1.11</FileVersion>
     <StartupObject>FabricHealer.Program</StartupObject>
-    <SignAssembly>false</SignAssembly>
-    <DelaySign>false</DelaySign>
-    <NoWarn>CA1822;$(NoWarn)</NoWarn>
-    <ResolveComReferenceSilent>true</ResolveComReferenceSilent>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.21.0" />
     <PackageReference Include="Microsoft.Logic.Guan" Version="1.0.4" />
-	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+	<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <PackageReference Include="NLog" Version="5.1.1" />
     <PackageReference Include="Octokit" Version="5.0.0" />
-    <PackageReference Include="System.Configuration.Abstractions" Version="2.0.2.45" />
-    <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />

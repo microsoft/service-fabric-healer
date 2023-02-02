@@ -31,7 +31,7 @@ namespace FabricHealer
         internal static StatelessServiceContext ServiceContext;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.1.10";
+        private const string InternalVersionNumber = "1.1.11";
         private static FabricHealerManager singleton;
         private static FabricClient _fabricClient;
         private bool disposedValue;

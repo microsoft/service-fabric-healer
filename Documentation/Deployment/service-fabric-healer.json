@@ -11,7 +11,7 @@
     },
     "applicationTypeVersionFabricHealer": {
       "type": "string",
-      "defaultValue": "1.1.10",
+      "defaultValue": "1.1.11",
       "metadata": {
         "description": "Provide the app version number of FabricHealer. This must be identical to the version specified in the sfpkg."
       }

@@ -233,7 +233,7 @@ namespace FabricHealer.Repair
                 {
                     foreach (RepairTask repair in activeRepairs)
                     {
-                        // This would mean that the job has node-level impact and its state is at least Approved.
+                        // This would mean that the job has node-level Impact and its state is at least Approved.
                         if (repair.Impact is NodeRepairImpactDescription impact)
                         {
                             if (!impact.ImpactedNodes.Any(
@@ -246,7 +246,7 @@ namespace FabricHealer.Repair
                             return true;
                         }
 
-                        // State == Created/Claimed if we get here.
+                        // State == Created/Claimed if we get here (there is no Impact established yet).
                         if (repair.Target is NodeRepairTargetDescription target) 
                         {
                             if (!target.Nodes.Any(n => n == repairData.NodeName))
