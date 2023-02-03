@@ -118,7 +118,7 @@ namespace FabricHealer.Utilities.Telemetry
                 // ETW.
                 if (FabricHealerManager.ConfigSettings.EtwEnabled)
                 {
-                    logger.LogEtw(RepairConstants.FabricHealerDataEvent, telemetryData);
+                    Logger.LogEtw(RepairConstants.FabricHealerDataEvent, telemetryData);
                 }
             }
             else // Untyped or anonymous-typed operational data.
@@ -138,7 +138,7 @@ namespace FabricHealer.Utilities.Telemetry
                         Message = description
                     };
 
-                    logger.LogEtw(RepairConstants.FabricHealerDataEvent, anonType);
+                    Logger.LogEtw(RepairConstants.FabricHealerDataEvent, anonType);
                 }
             }
         }

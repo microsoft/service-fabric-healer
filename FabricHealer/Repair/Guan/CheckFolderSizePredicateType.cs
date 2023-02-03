@@ -144,7 +144,7 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static CheckFolderSizePredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
+        public static CheckFolderSizePredicateType Singleton(string name, TelemetryData repairData)
         {
             RepairData = repairData;
             return Instance ??= new CheckFolderSizePredicateType(name);

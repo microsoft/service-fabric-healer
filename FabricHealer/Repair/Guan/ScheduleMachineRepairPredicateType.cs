@@ -16,7 +16,6 @@ namespace FabricHealer.Repair.Guan
     /// </summary>
     public class ScheduleMachineRepairPredicateType : PredicateType
     {
-        private static RepairTaskManager RepairTaskManager;
         private static TelemetryData RepairData;
         private static ScheduleMachineRepairPredicateType Instance;
 
@@ -71,20 +70,21 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 bool isRepairAlreadyInProgress =
-                    await repairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(RepairData, FabricHealerManager.Token);
+                    await RepairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(RepairData, FabricHealerManager.Token);
 
                 if (isRepairAlreadyInProgress)
                 {
-#if DEBUG
                     string message = 
-                        $"Machine Repair is already in progress for node {RepairData.NodeName}. Will not schedule machine repair at this time.";
+                        $"Machine Repair is already in progress for node {RepairData.NodeName}. Will not schedule another machine repair at this time.";
 
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
                             $"ScheduleMachineRepair::{RepairData.RepairPolicy.InfrastructureRepairName}",
                             message,
-                            FabricHealerManager.Token);
-#endif
+                            FabricHealerManager.Token,
+                            null,
+                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
                     return false;
                 }
 
@@ -98,9 +98,8 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static ScheduleMachineRepairPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
+        public static ScheduleMachineRepairPredicateType Singleton(string name, TelemetryData repairData)
         {
-            RepairTaskManager = repairTaskManager;
             RepairData = repairData;
             return Instance ??= new ScheduleMachineRepairPredicateType(name);
         }

@@ -14,7 +14,6 @@ namespace FabricHealer.Repair.Guan
     {
         private static TelemetryData RepairData;
         private static CheckInsideHealthStateMinDurationPredicateType Instance;
-        private static RepairTaskManager RepairTaskManager;
 
         private class Resolver : BooleanPredicateResolver
         {
@@ -53,10 +52,9 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static CheckInsideHealthStateMinDurationPredicateType Singleton(string name, TelemetryData repairData, RepairTaskManager repairTaskManager)
+        public static CheckInsideHealthStateMinDurationPredicateType Singleton(string name, TelemetryData repairData)
         {
             RepairData = repairData;
-            RepairTaskManager = repairTaskManager;
             return Instance ??= new CheckInsideHealthStateMinDurationPredicateType(name);
         }
 

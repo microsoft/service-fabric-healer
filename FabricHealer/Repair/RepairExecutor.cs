@@ -44,7 +44,7 @@ namespace FabricHealer.Repair
             }
         }
 
-        public async Task<RestartDeployedCodePackageResult> RestartDeployedCodePackageAsync(TelemetryData repairData, CancellationToken cancellationToken)
+        public static async Task<RestartDeployedCodePackageResult> RestartDeployedCodePackageAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
             try
             {
@@ -195,7 +195,7 @@ namespace FabricHealer.Repair
         /// <param name="repairTask">The scheduled Repair Task</param>
         /// <param name="cancellationToken">Task cancellation token</param>
         /// <returns></returns>
-        public async Task<bool> SafeRestartFabricNodeAsync(
+        public static async Task<bool> SafeRestartFabricNodeAsync(
                                     TelemetryData repairData,
                                     RepairTask repairTask, 
                                     CancellationToken cancellationToken)
@@ -487,7 +487,7 @@ namespace FabricHealer.Repair
         /// <param name="repairData">repairData instance.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns></returns>
-        public async Task<bool> RestartReplicaAsync(TelemetryData repairData, CancellationToken cancellationToken)
+        public static async Task<bool> RestartReplicaAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
             string actionMessage = $"Attempting to restart stateful replica {repairData.ReplicaId} " +
                                    $"on partition {repairData.PartitionId} on node {repairData.NodeName}.";
@@ -580,7 +580,7 @@ namespace FabricHealer.Repair
             return true;
         }
 
-        public async Task<bool> RestartSystemServiceProcessAsync(TelemetryData repairData, CancellationToken cancellationToken)
+        public static async Task<bool> RestartSystemServiceProcessAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
             Process p = null;
 
@@ -673,7 +673,7 @@ namespace FabricHealer.Repair
             return true;
         }
 
-        private Process[] GetLinuxDotnetProcessesByFirstArgument(string argument)
+        private static Process[] GetLinuxDotnetProcessesByFirstArgument(string argument)
         {
             if (OperatingSystem.IsWindows())
             {
@@ -725,7 +725,7 @@ namespace FabricHealer.Repair
         /// <param name="repairData">repairData instance.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns></returns>
-        public async Task<bool> RemoveReplicaAsync(TelemetryData repairData, CancellationToken cancellationToken)
+        public static async Task<bool> RemoveReplicaAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
             string actionMessage = 
                 $"Attempting to remove stateless instance {repairData.ReplicaId} " +
@@ -808,7 +808,7 @@ namespace FabricHealer.Repair
             return true;
         }
 
-        internal async Task<bool> DeleteFilesAsync(TelemetryData repairData, CancellationToken cancellationToken)
+        internal static async Task<bool> DeleteFilesAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
            string actionMessage =
                 $"Attempting to delete files in folder {(repairData.RepairPolicy as DiskRepairPolicy).FolderPath} " +
@@ -952,7 +952,7 @@ namespace FabricHealer.Repair
         /// </summary>
         /// <param name="nodeName">Fabric node name</param>
         /// <param name="cancellationToken"></param>
-        internal async Task<string> GetMachineHostNameFromFabricNodeNameAsync(string nodeName, CancellationToken cancellationToken)
+        internal static async Task<string> GetMachineHostNameFromFabricNodeNameAsync(string nodeName, CancellationToken cancellationToken)
         {
             try
             {
@@ -987,7 +987,7 @@ namespace FabricHealer.Repair
         /// Clears existing health warnings for target repair entity. This should only be called after a repair operation succeeds.
         /// </summary>
         /// <param name="repairData">repairData instance.</param>
-        private void ClearEntityHealthWarnings(TelemetryData repairData)
+        private static void ClearEntityHealthWarnings(TelemetryData repairData)
         {
             try
             {

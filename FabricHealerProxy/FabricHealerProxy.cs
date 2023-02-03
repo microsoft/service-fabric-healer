@@ -624,7 +624,7 @@ namespace FabricHealer
             return true;
         }
 
-        private bool TryValidateFixFabricUriString(string uriString, out Uri fixedUri)
+        private static bool TryValidateFixFabricUriString(string uriString, out Uri fixedUri)
         {
             try
             {

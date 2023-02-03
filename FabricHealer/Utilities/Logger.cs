@@ -19,6 +19,7 @@ namespace FabricHealer.Utilities
     public sealed class Logger
     {
         private const int Retries = 5;
+        private const int MaxArchiveFileLifetimeDays = 7;
         private readonly string loggerName;
 
         // Text file logger.
@@ -125,24 +126,39 @@ namespace FabricHealer.Utilities
                 var target = new FileTarget
                 {
                     Name = targetName,
+                    //ConcurrentWrites = true,
+                    EnableFileDelete = true,
                     FileName = file,
                     Layout = "${longdate}--${uppercase:${level}}--${message}",
                     OpenFileCacheTimeout = 5,
-                    ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
                     ArchiveEvery = FileArchivePeriod.Day,
-                    AutoFlush = true,
+                    ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
+                    MaxArchiveDays = MaxArchiveFileLifetimeDays,
+                    AutoFlush = true
                 };
 
                 LogManager.Configuration.AddTarget(loggerName + "LogFile", target);
-
                 var ruleInfo = new LoggingRule(loggerName, NLog.LogLevel.Debug, target);
-
                 LogManager.Configuration.LoggingRules.Add(ruleInfo);
                 LogManager.ReconfigExistingLoggers();
             }
 
             TimeSource.Current = new AccurateUtcTimeSource();
             OLogger = LogManager.GetLogger(loggerName);
+
+            // FileTarget settings are not preserved across FH deployments, so try and clean old files on FH start up. \\
+
+            if (string.IsNullOrWhiteSpace(FolderName))
+            {
+                return;
+            }
+
+            string folder = Path.Combine(logFolderBase, FolderName);
+
+            if (MaxArchiveFileLifetimeDays > 0)
+            {
+                TryCleanFolder(folder, "*.log", TimeSpan.FromDays(MaxArchiveFileLifetimeDays));
+            }
         }
 
         public void LogInfo(string format, params object[] parameters)
@@ -171,7 +187,7 @@ namespace FabricHealer.Utilities
         /// <typeparam name="T">Generic type. Must be a class or struct attributed as EventData (EventSource.EventDataAttribute).</typeparam>
         /// <param name="eventName">The name of the ETW event. This corresponds to the table name in Kusto.</param>
         /// <param name="eventData">The data of generic type that will be the event Payload.</param>
-        public void LogEtw<T>(string eventName, T eventData)
+        public static void LogEtw<T>(string eventName, T eventData)
         {
             if (eventData == null || string.IsNullOrWhiteSpace(eventName))
             {
@@ -226,6 +242,40 @@ namespace FabricHealer.Utilities
             }
 
             return false;
+        }
+
+        public void TryCleanFolder(string folderPath, string searchPattern, TimeSpan maxAge)
+        {
+            if (!Directory.Exists(folderPath))
+            {
+                return;
+            }
+
+            string[] files = Array.Empty<string>();
+
+            try
+            {
+                files = Directory.GetFiles(folderPath, searchPattern, SearchOption.AllDirectories);
+            }
+            catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+            {
+                return;
+            }
+
+            foreach (string file in files)
+            {
+                try
+                {
+                    if (DateTime.UtcNow.Subtract(File.GetCreationTime(file)) >= maxAge)
+                    {
+                        Retry.Do(() => File.Delete(file), TimeSpan.FromSeconds(1), CancellationToken.None);
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException || e is AggregateException)
+                {
+                    LogWarning($"Unable to delete file {file}:{Environment.NewLine}{e.Message}");
+                }
+            }
         }
     }
 }

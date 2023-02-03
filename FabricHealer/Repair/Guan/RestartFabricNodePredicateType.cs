@@ -14,9 +14,7 @@ namespace FabricHealer.Repair.Guan
 {
     public class RestartFabricNodePredicateType : PredicateType
     {
-        private static RepairTaskManager RepairTaskManager;
         private static RepairExecutorData RepairExecutorData;
-        private static RepairTaskEngine RepairTaskEngine;
         private static TelemetryData RepairData;
         private static RestartFabricNodePredicateType Instance;
 
@@ -71,8 +69,8 @@ namespace FabricHealer.Repair.Guan
                 // Block attempts to create node-level repair tasks if one is already running in the cluster.
                 var repairTaskEngine = new RepairTaskEngine();
                 var isNodeRepairAlreadyInProgress =
-                    await repairTaskEngine.IsRepairInProgressAsync(
-                            RepairTaskEngine.FHTaskIdPrefix,
+                    await RepairTaskEngine.IsRepairInProgressAsync(
+                            RepairConstants.FHTaskIdPrefix,
                             RepairData,
                             FabricHealerManager.Token);
 
@@ -115,14 +113,10 @@ namespace FabricHealer.Repair.Guan
 
         public static RestartFabricNodePredicateType Singleton(
                         string name,
-                        RepairTaskManager repairTaskManager,
                         RepairExecutorData repairExecutorData,
-                        RepairTaskEngine repairTaskEngine,
                         TelemetryData repairData)
         {
-            RepairTaskManager = repairTaskManager;
             RepairExecutorData = repairExecutorData;
-            RepairTaskEngine = repairTaskEngine;
             RepairData = repairData;
 
             return Instance ??= new RestartFabricNodePredicateType(name);

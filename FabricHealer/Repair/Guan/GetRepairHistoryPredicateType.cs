@@ -46,7 +46,7 @@ namespace FabricHealer.Repair.Guan
 
                             if (RepairData.EntityType == EntityType.Machine)
                             {
-                                RepairData.RepairPolicy.RepairIdPrefix = RepairTaskEngine.InfraTaskIdPrefix;
+                                RepairData.RepairPolicy.RepairIdPrefix = RepairConstants.InfraTaskIdPrefix;
                                 RepairData.RepairPolicy.InfrastructureRepairName = Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue();
                             }
                             break;
@@ -67,7 +67,7 @@ namespace FabricHealer.Repair.Guan
                     throw new GuanException("You must supply a valid TimeSpan string for TimeWindow argument of GetRepairHistoryPredicate.");
                 }
 
-                var result = new CompoundTerm(this.Input.Functor);
+                var result = new CompoundTerm(Input.Functor);
                 result.AddArgument(new Constant(repairCount), "0");
                 return result;
             }

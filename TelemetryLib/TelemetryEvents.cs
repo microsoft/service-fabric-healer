@@ -63,7 +63,7 @@ namespace FabricHealer.TelemetryLib
                     { "FHVersion", repairData.Version },
                     { "UpTime", repairData.UpTime },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
-                    { "OS", repairData.OS }
+                    { "OS", FabricHealerOperationalEventData.OS }
                 };
 
                 if (eventProperties.TryGetValue("ClusterType", out string clustType))
@@ -162,7 +162,7 @@ namespace FabricHealer.TelemetryLib
                     { "ErrorMessage", fhErrorData.ErrorMessage },
                     { "CrashData", fhErrorData.ErrorStack },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
-                    { "OS", fhErrorData.OS }
+                    { "OS", FabricHealerCriticalErrorEventData.OS }
                 };
 
                 telemetryClient?.TrackEvent($"{TaskName}.{CriticalErrorEventName}", eventProperties);

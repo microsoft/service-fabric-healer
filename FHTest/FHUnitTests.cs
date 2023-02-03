@@ -323,7 +323,7 @@ namespace FHTest
             {
                 RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}{NodeName}",
                 AppName = repairData.ApplicationName,
-                RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
+                RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
                 NodeName = repairData.NodeName,
                 Code = repairData.Code,
                 HealthState = repairData.HealthState,
@@ -374,7 +374,7 @@ namespace FHTest
             {
                 RepairId = $"Test42_MachineRepair{NodeName}",
                 AppName = repairData.ApplicationName,
-                RepairIdPrefix = RepairTaskEngine.InfraTaskIdPrefix,
+                RepairIdPrefix = RepairConstants.InfraTaskIdPrefix,
                 NodeName = repairData.NodeName,
                 HealthState = repairData.HealthState
             };
@@ -422,7 +422,7 @@ namespace FHTest
             {
                 RepairId = $"Test42_DiskRepair{NodeName}",
                 AppName = repairData.ApplicationName,
-                RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
+                RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
                 NodeName = repairData.NodeName,
                 Code = repairData.Code,
                 HealthState = repairData.HealthState
@@ -474,7 +474,7 @@ namespace FHTest
             {
                 RepairId = $"Test42_ReplicaRepair{NodeName}",
                 AppName = repairData.ApplicationName,
-                RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
+                RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
                 NodeName = repairData.NodeName,
                 Code = repairData.Code,
                 HealthState = repairData.HealthState,
@@ -527,7 +527,7 @@ namespace FHTest
             {
                 RepairId = $"Test42_SystemServiceRepair{NodeName}",
                 AppName = repairData.ApplicationName,
-                RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
+                RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
                 NodeName = repairData.NodeName,
                 Code = repairData.Code,
                 HealthState = repairData.HealthState,
@@ -588,7 +588,7 @@ namespace FHTest
             {
                 RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}{NodeName}",
                 AppName = repairData.ApplicationName,
-                RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
+                RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
                 NodeName = repairData.NodeName,
                 Code = repairData.Code,
                 HealthState = repairData.HealthState,
@@ -646,7 +646,7 @@ namespace FHTest
             {
                 RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}{NodeName}",
                 AppName = repairData.ApplicationName,
-                RepairIdPrefix = RepairTaskEngine.FHTaskIdPrefix,
+                RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
                 NodeName = repairData.NodeName,
                 Code = repairData.Code,
                 HealthState = repairData.HealthState,
@@ -667,8 +667,7 @@ namespace FHTest
         private async Task TestInitializeGuanAndRunQuery(TelemetryData repairData, List<string> repairRules, RepairExecutorData executorData)
         {
             _ = FabricHealerManager.Instance(TestServiceContext, token);
-            var repairTaskManager = new RepairTaskManager();
-            await repairTaskManager.RunGuanQueryAsync(repairData, repairRules, executorData);
+            await RepairTaskManager.RunGuanQueryAsync(repairData, repairRules, executorData);
         }
 
         private static List<string> ParseRulesFile(string[] rules)

@@ -13,7 +13,6 @@ namespace FabricHealer.Repair.Guan
 {
     public class GetHealthEventHistoryPredicateType : PredicateType
     {
-        private static RepairTaskManager RepairTaskManager;
         private static TelemetryData RepairData;
         private static GetHealthEventHistoryPredicateType Instance;
 
@@ -52,11 +51,9 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static GetHealthEventHistoryPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
+        public static GetHealthEventHistoryPredicateType Singleton(string name, TelemetryData repairData)
         {
-            RepairTaskManager = repairTaskManager;
             RepairData = repairData;
-
             return Instance ??= new GetHealthEventHistoryPredicateType(name);
         }
 

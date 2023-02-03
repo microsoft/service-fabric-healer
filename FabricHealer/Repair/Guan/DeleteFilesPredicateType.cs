@@ -15,7 +15,6 @@ namespace FabricHealer.Repair.Guan
 {
     public class DeleteFilesPredicateType : PredicateType
     {
-        private static RepairTaskManager RepairTaskManager;
         private static TelemetryData RepairData;
         private static DeleteFilesPredicateType Instance;
 
@@ -146,11 +145,9 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static DeleteFilesPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
+        public static DeleteFilesPredicateType Singleton(string name, TelemetryData repairData)
         {
             RepairData = repairData;
-            RepairTaskManager = repairTaskManager;
-
             return Instance ??= new DeleteFilesPredicateType(name);
         }
 

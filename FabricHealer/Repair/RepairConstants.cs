@@ -135,5 +135,8 @@ namespace FabricHealer.Repair
         public const string FabricHealer = "FabricHealer";
         public const string FabricHealerDataEvent = "FabricHealerDataEvent";
         public const string FabricHealerETWProvider = "FabricHealerETWProvider";
+        public const string FHTaskIdPrefix = "FH";
+        public const string InfraTaskIdPrefix = "FH_Infra";
+        public const string AzureTaskIdPrefix = "Azure";
     }
 }

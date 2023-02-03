@@ -13,7 +13,6 @@ namespace FabricHealer.Repair.Guan
 {
     public class RestartReplicaPredicateType : PredicateType
     {
-        private static RepairTaskManager RepairTaskManager;
         private static TelemetryData RepairData;
         private static RestartReplicaPredicateType Instance;
 
@@ -72,11 +71,9 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static RestartReplicaPredicateType Singleton(string name, RepairTaskManager repairTaskManager, TelemetryData repairData)
+        public static RestartReplicaPredicateType Singleton(string name, TelemetryData repairData)
         {
-            RepairTaskManager = repairTaskManager;
             RepairData = repairData;
-
             return Instance ??= new RestartReplicaPredicateType(name);
         }
 

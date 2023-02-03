@@ -29,6 +29,6 @@ namespace FabricHealer.TelemetryLib
             get; set;
         }
 
-        public string OS => OperatingSystem.IsWindows() ? "Windows" : "Linux";
+        public static string OS => OperatingSystem.IsWindows() ? "Windows" : "Linux";
     }
 }

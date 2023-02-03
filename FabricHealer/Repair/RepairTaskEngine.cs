@@ -17,24 +17,20 @@ namespace FabricHealer.Repair
 {
     public sealed class RepairTaskEngine
     {
-        public const string FHTaskIdPrefix = "FH";
-        public const string InfraTaskIdPrefix = "FH_Infra";
-        public const string AzureTaskIdPrefix = "Azure";
-
         /// <summary>
         /// Creates a repair task where FabricHealer is the executor.
         /// </summary>
         /// <param name="executorData"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        public async Task<RepairTask> CreateFabricHealerRepairTask(RepairExecutorData executorData, CancellationToken token)
+        public static async Task<RepairTask> CreateFabricHealerRepairTask(RepairExecutorData executorData, CancellationToken token)
         {
             if (executorData == null)
             {
                 return null;
             }
 
-            var repairs = await GetFHRepairTasksCurrentlyProcessingAsync(FHTaskIdPrefix, token);
+            var repairs = await GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, token);
 
             if (repairs?.Count > 0)
             {
@@ -56,7 +52,7 @@ namespace FabricHealer.Repair
             nodeRepairImpact.ImpactedNodes.Add(impactedNode);
             RepairActionType repairAction = executorData.RepairPolicy.RepairAction;
             string repair = repairAction.ToString();
-            string taskId = $"{FHTaskIdPrefix}/{Guid.NewGuid()}/{repair}/{executorData.RepairPolicy.NodeName}";
+            string taskId = $"{RepairConstants.FHTaskIdPrefix}/{Guid.NewGuid()}/{repair}/{executorData.RepairPolicy.NodeName}";
             bool doHealthChecks = impact != NodeImpactLevel.None;
 
             // Health checks for app level repairs.
@@ -95,7 +91,7 @@ namespace FabricHealer.Repair
         /// This function returns the list of currently processing FH repair tasks.
         /// </summary>
         /// <returns>List of repair tasks in Preparing, Approved, Executing or Restoring state</returns>
-        public async Task<RepairTaskList> GetFHRepairTasksCurrentlyProcessingAsync(string taskIdPrefix, CancellationToken cancellationToken)
+        public static async Task<RepairTaskList> GetFHRepairTasksCurrentlyProcessingAsync(string taskIdPrefix, CancellationToken cancellationToken)
         {
             var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                                         taskIdPrefix,
@@ -115,7 +111,7 @@ namespace FabricHealer.Repair
         /// <param name="repairData"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task<RepairTask> CreateInfrastructureRepairTaskAsync(TelemetryData repairData, CancellationToken cancellationToken)
+        public static async Task<RepairTask> CreateInfrastructureRepairTaskAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
             if (await FabricHealerManager.IsOneNodeClusterAsync())
             {
@@ -127,7 +123,7 @@ namespace FabricHealer.Repair
                 return null;
             }
 
-            bool isRepairInProgress = await IsRepairInProgressAsync(InfraTaskIdPrefix, repairData, cancellationToken);
+            bool isRepairInProgress = await IsRepairInProgressAsync(RepairConstants.InfraTaskIdPrefix, repairData, cancellationToken);
 
             if (isRepairInProgress)
             {
@@ -135,11 +131,11 @@ namespace FabricHealer.Repair
             }
 
             bool doHealthChecks = repairData.HealthState != HealthState.Error;
-            string taskId = $"{InfraTaskIdPrefix}/{Guid.NewGuid()}/{repairData.NodeName}";
+            string taskId = $"{RepairConstants.InfraTaskIdPrefix}/{Guid.NewGuid()}/{repairData.NodeName}";
             var repairTask = new ClusterRepairTask(taskId, repairData.RepairPolicy.InfrastructureRepairName)
             {
                 Target = new NodeRepairTargetDescription(repairData.NodeName),
-                Description = $"{repairData.RepairPolicy}",
+                Description = $"{repairData.RepairPolicy.RepairId}",
                 PerformPreparingHealthCheck = doHealthChecks,
                 PerformRestoringHealthCheck = doHealthChecks,
                 State = RepairTaskState.Created
@@ -155,7 +151,7 @@ namespace FabricHealer.Repair
         /// <param name="repairData">TelemetryData instance.</param>
         /// <param name="token">CancellationToken.</param>
         /// <returns>Returns true if a repair is already in progress. Otherwise, false.</returns>
-        public async Task<bool> IsRepairInProgressAsync(string taskIdPrefix, TelemetryData repairData, CancellationToken token)
+        public static async Task<bool> IsRepairInProgressAsync(string taskIdPrefix, TelemetryData repairData, CancellationToken token)
         {
             if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
             {
@@ -178,7 +174,7 @@ namespace FabricHealer.Repair
             foreach (var repair in repairTasksInProgress)
             {
                 // FH is executor. Repair Task's ExecutorData field will always be a JSON-serialized instance of RepairExecutorData.
-                if (taskIdPrefix == FHTaskIdPrefix)
+                if (taskIdPrefix == RepairConstants.FHTaskIdPrefix)
                 {
                     if (!JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData executorData))
                     {
@@ -212,7 +208,7 @@ namespace FabricHealer.Repair
         /// <param name="repairData">TelemetryData instance.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>Returns true if a repair job is currently in flight that has node-level impact. Otherwise, false.</returns>
-        public async Task<bool> IsNodeLevelRepairCurrentlyInFlightAsync(TelemetryData repairData, CancellationToken cancellationToken)
+        public static async Task<bool> IsNodeLevelRepairCurrentlyInFlightAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
             try
             {
@@ -224,7 +220,7 @@ namespace FabricHealer.Repair
                 RepairTaskList activeRepairs =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             null,
-                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing | RepairTaskStateFilter.ReadyToExecute,
                             null,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
@@ -237,8 +233,10 @@ namespace FabricHealer.Repair
                         if (repair.Impact is NodeRepairImpactDescription impact)
                         {
                             if (!impact.ImpactedNodes.Any(
-                                n => n.NodeName == repairData.NodeName 
-                                  && (n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData)))
+                                n => n.NodeName == repairData.NodeName
+                                  && (n.ImpactLevel == NodeImpactLevel.Restart ||
+                                      n.ImpactLevel == NodeImpactLevel.RemoveData ||
+                                      n.ImpactLevel == NodeImpactLevel.RemoveNode)))
                             {
                                 continue;
                             }
@@ -257,7 +255,7 @@ namespace FabricHealer.Repair
                             // TOTHINK: If there is an active Azure tenant/platform update for the target node,
                             // then treat as any other node level repair?
 
-                            if (repair.Executor.Contains(RepairConstants.InfrastructureServiceName) ||
+                            if (repair.Executor.ToLower().Contains(RepairConstants.InfrastructureServiceName.ToLower()) ||
                                 repair.Action.ToLower().Contains("azure.host") ||
                                 repair.Action.ToLower().Contains("azure.heal") ||
                                 repair.Action.ToLower().Contains("azure.job") ||
@@ -278,9 +276,9 @@ namespace FabricHealer.Repair
             return false;
         }
 
-        public async Task<int> GetAllOutstandingFHRepairsCountAsync(string taskIdPrefix, CancellationToken token)
+        public static async Task<int> GetAllOutstandingFHRepairsCountAsync(string taskIdPrefix, CancellationToken token)
         {
-            if (taskIdPrefix == InfraTaskIdPrefix) 
+            if (taskIdPrefix == RepairConstants.InfraTaskIdPrefix) 
             {
                 return await GetAllOutstandingNodeRepairsCountAsync(token);   
             }
@@ -306,7 +304,7 @@ namespace FabricHealer.Repair
             return repairTasksInProgress.Count(r => r.TaskId.StartsWith(taskIdPrefix));
         }
 
-        private async Task<int> GetAllOutstandingNodeRepairsCountAsync(CancellationToken token)
+        private static async Task<int> GetAllOutstandingNodeRepairsCountAsync(CancellationToken token)
         {
             RepairTaskList repairTasksInProgress =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
@@ -332,12 +330,12 @@ namespace FabricHealer.Repair
                     // Claimed/Created (no Impact has been established yet).
                     else if (repair.Target is NodeRepairTargetDescription target)
                     {
-                        if (repair.Executor.Contains(RepairConstants.InfrastructureServiceName) ||
-                               repair.Action.ToLower().Contains("azure.host") ||
-                               repair.Action.ToLower().Contains("azure.heal") ||
-                               repair.Action.ToLower().Contains("azure.job") ||
-                               repair.Action.ToLower().Contains("reboot") ||
-                               repair.Action.ToLower().Contains("reimage"))
+                        if (repair.Executor.ToLower().Contains(RepairConstants.InfrastructureServiceName.ToLower()) ||
+                            repair.Action.ToLower().Contains("azure.host") ||
+                            repair.Action.ToLower().Contains("azure.heal") ||
+                            repair.Action.ToLower().Contains("azure.job") ||
+                            repair.Action.ToLower().Contains("reboot") ||
+                            repair.Action.ToLower().Contains("reimage"))
                         {
                             count++;
                         }

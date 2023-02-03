@@ -100,7 +100,7 @@ namespace FabricHealer.Repair
         internal static async Task<bool> IsAzureJobInProgressAsync(string nodeName, CancellationToken token)
         {
             var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                                        RepairTaskEngine.AzureTaskIdPrefix,
+                                        RepairConstants.AzureTaskIdPrefix,
                                         System.Fabric.Repair.RepairTaskStateFilter.Approved |
                                         System.Fabric.Repair.RepairTaskStateFilter.Active |
                                         System.Fabric.Repair.RepairTaskStateFilter.Executing,
