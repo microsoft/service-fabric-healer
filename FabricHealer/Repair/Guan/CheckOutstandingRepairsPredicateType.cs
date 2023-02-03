@@ -26,7 +26,6 @@ namespace FabricHealer.Repair.Guan
             protected override async Task<bool> CheckAsync()
             {
                 int count = Input.Arguments.Count;
-                var repairTaskEngine = new RepairTaskEngine();
 
                 if (count == 0 || Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() != typeof(long))
                 {
@@ -48,10 +47,11 @@ namespace FabricHealer.Repair.Guan
                 {
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                            LogLevel.Info,
-                           "CheckOutstandingRepairs::MaxOustanding",
-                           $"The number of outstanding machine repairs is currently at the specified limit ({maxRepairs}). " +
-                           $"Will not schedule any other machine repairs at this time.",
-                           FabricHealerManager.Token);
+                           "CheckOutstandingRepairs",
+                           $"Current number of outstanding machine repairs ({outstandingRepairCount}) >= Max ({maxRepairs}).",
+                           FabricHealerManager.Token,
+                           null,
+                           FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                     return true;
                 }

@@ -37,7 +37,6 @@ namespace FabricHealer.Repair.Guan
                 // FH does not execute repairs for VM level mitigation. InfrastructureService (IS) does,
                 // so, FH schedules VM repairs via RM and the execution is taken care of by IS (the executor).
                 // Block attempts to create duplicate repair tasks or more than specified concurrent machine-level repairs.
-                var repairTaskEngine = new RepairTaskEngine();
                 int count = Input.Arguments.Count;
                 string repairAction = null;
 

@@ -67,7 +67,6 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 // Block attempts to create node-level repair tasks if one is already running in the cluster.
-                var repairTaskEngine = new RepairTaskEngine();
                 var isNodeRepairAlreadyInProgress =
                     await RepairTaskEngine.IsRepairInProgressAsync(
                             RepairConstants.FHTaskIdPrefix,
