@@ -40,15 +40,13 @@ namespace FabricHealer.Repair
         /// </summary>
         /// <param name="repairTask"><see cref="RepairTask"/> to be cancelled</param>
         /// <returns></returns>
+        /// <exception cref="FabricException">Throws FabricException if it can't complete the task.</exception>
         public static async Task CancelRepairTaskAsync(RepairTask repairTask)
         {
-            await Task.Delay(1000);
-
             switch (repairTask.State)
             {
                 case RepairTaskState.Restoring:
                 case RepairTaskState.Completed:
-
                     break;
 
                 case RepairTaskState.Created:
@@ -59,11 +57,14 @@ namespace FabricHealer.Repair
                     {
                         _ = await FabricHealerManager.FabricClientSingleton.RepairManager.CancelRepairTaskAsync(repairTask.TaskId, repairTask.Version, true);
                     }
+                    catch (FabricException)
+                    {
+                        throw;
+                    }
                     catch (InvalidOperationException)
                     {
-                        // RM throws IOE if state is already Completed or in some state that is not supported for transition. Ignore.
+                        // RM throws IOE if state is already Completed or in some state that is not supported for state transition. Ignore.
                     }
-
                     break;
                 
                 case RepairTaskState.Approved:
@@ -76,23 +77,21 @@ namespace FabricHealer.Repair
                     {
                         _ = await FabricHealerManager.FabricClientSingleton.RepairManager.UpdateRepairExecutionStateAsync(repairTask);
                     }
-                    catch (FabricException fe)
+                    catch (FabricException)
                     {
-                        // TOTHINK
-                        if (fe.ErrorCode == FabricErrorCode.SequenceNumberCheckFailed)
-                        {
-                            // Not sure what to do here. This can randomly take place (timing).
-                        }
+                        throw;
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        //..
                     }
                     break;
 
                 case RepairTaskState.Invalid:
-
                     break;
 
                 default:
-
-                    throw new FabricException($"Repair task {repairTask.TaskId} is in invalid state {repairTask.State}");
+                    throw new FabricException($"Repair task {repairTask.TaskId} is in an invalid state for this operation. State = {repairTask.State}.");
             }
         }
 
@@ -157,7 +156,7 @@ namespace FabricHealer.Repair
             {
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        $"CreateRepair::{taskIdPrefix}",
+                        $"CreateRepair::{repairData.RepairPolicy.RepairId}",
                         $"Repair {repairData.RepairPolicy.RepairId} has already been created.",
                         token,
                         null,

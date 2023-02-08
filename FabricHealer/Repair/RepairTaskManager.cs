@@ -18,13 +18,13 @@ using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
 using System.Fabric.Description;
+using System.Runtime.CompilerServices;
 
 namespace FabricHealer.Repair
 {
     public sealed class RepairTaskManager
     {
         private static readonly TimeSpan MaxWaitTimeForFHRepairTaskCompleted = TimeSpan.FromHours(1);
-        private static readonly TimeSpan AsyncTimeout = TimeSpan.FromSeconds(60);
         private static readonly DateTime HealthEventsListCreationTime = DateTime.UtcNow;
         private static readonly TimeSpan MaxLifeTimeHealthEventsData = TimeSpan.FromHours(4);
         private static DateTime LastHealthEventsListClearDateTime;
@@ -37,12 +37,12 @@ namespace FabricHealer.Repair
 
         public async static Task RemoveServiceFabricNodeStateAsync(string nodeName, CancellationToken cancellationToken)
         {
-            await FabricHealerManager.FabricClientSingleton.ClusterManager.RemoveNodeStateAsync(nodeName, AsyncTimeout, cancellationToken);
+            await FabricHealerManager.FabricClientSingleton.ClusterManager.RemoveNodeStateAsync(nodeName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
         }
 
         public static async Task ActivateServiceFabricNodeAsync(string nodeName, CancellationToken cancellationToken)
         {
-            await FabricHealerManager.FabricClientSingleton.ClusterManager.ActivateNodeAsync(nodeName, AsyncTimeout, cancellationToken);
+            await FabricHealerManager.FabricClientSingleton.ClusterManager.ActivateNodeAsync(nodeName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
         }
 
         public static async Task<bool> SafeRestartServiceFabricNodeAsync(TelemetryData repairData, RepairTask repairTask, CancellationToken cancellationToken)
@@ -343,6 +343,17 @@ namespace FabricHealer.Repair
 
         public static async Task<bool> RestartReplicaAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
+            string actionMessage = $"Attempting to restart stateful replica {repairData.ReplicaId} " +
+                                   $"on partition {repairData.PartitionId} on node {repairData.NodeName}.";
+
+            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                    LogLevel.Info,
+                    "RepairExecutor.RestartReplicaAsync::Start",
+                    actionMessage,
+                    cancellationToken,
+                    repairData,
+                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
             return await RepairExecutor.RestartReplicaAsync(
                             repairData ?? throw new ArgumentException("repairData can't be null."),
                             cancellationToken);
@@ -350,6 +361,18 @@ namespace FabricHealer.Repair
 
         public static async Task<bool> RemoveReplicaAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
+            string actionMessage =
+                $"Attempting to remove stateless instance {repairData.ReplicaId} " +
+                $"on partition {repairData.PartitionId} on node {repairData.NodeName}.";
+
+            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                    LogLevel.Info,
+                    "RepairExecutor.RemoveReplicaAsync::Start",
+                    actionMessage,
+                    cancellationToken,
+                    repairData,
+                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
             return await RepairExecutor.RemoveReplicaAsync(
                             repairData ?? throw new ArgumentException("repairData can't be null."),
                             cancellationToken);
@@ -418,7 +441,7 @@ namespace FabricHealer.Repair
         {
             try
             {
-                var nodes = await FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(nodeName, AsyncTimeout, cancellationToken);
+                var nodes = await FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(nodeName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
                 return nodes.Count > 0 ? nodes[0] : null;
             }
             catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
@@ -428,6 +451,12 @@ namespace FabricHealer.Repair
             }
         }
 
+        /// <summary>
+        /// Repair task scheduling for jobs that are executed by FabriHealer.
+        /// </summary>
+        /// <param name="repairData">TelemetryData instance containing repair and state information.</param>
+        /// <param name="cancellationToken">CancellationToken instance. This should generally be the SF runtime cancellation token (RunAsync).</param>
+        /// <returns></returns>
         public static async Task<RepairTask> ScheduleFabricHealerRepairTaskAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
             await Task.Delay(new Random().Next(500, 1500), cancellationToken);
@@ -475,7 +504,6 @@ namespace FabricHealer.Repair
 
             var executorData = new RepairExecutorData
             {
-                ExecutorTimeoutInMinutes = (int)MaxWaitTimeForFHRepairTaskCompleted.TotalMinutes, 
                 RepairPolicy = repairData.RepairPolicy
             };
 
@@ -495,114 +523,120 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            TimeSpan approvalTimeout = TimeSpan.FromMinutes(10);
+            TimeSpan approvalTimeout = TimeSpan.FromMinutes(15);
             Stopwatch stopWatch = Stopwatch.StartNew();
             bool isApproved = false;
-
-            var repairs = 
-                await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, cancellationToken);
-
-            if (repairs.All(repair => repair.TaskId != repairTask.TaskId))
+            bool success;
+            
+            try
             {
-               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
-                        $"Failed to find scheduled repair task {repairTask.TaskId}.",
-                        FabricHealerManager.Token,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                RepairTaskList repairs = 
+                    await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
+                            RepairConstants.FHTaskIdPrefix,
+                            cancellationToken);
 
-                return false;
-            }
-
-           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairTaskManager::WaitingForApproval",
-                    $"Waiting for RM to Approve repair task {repairTask.TaskId}.",
-                    cancellationToken,
-                    repairData,
-                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-            while (approvalTimeout >= stopWatch.Elapsed)
-            {
-                repairs = await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, cancellationToken);
-
-                // Was repair cancelled (or cancellation requested) by another FH instance for some reason? Could be due to FH going down or a new deployment or a bug (fix it...).
-                if (repairs.Any(repair => repair.TaskId == repairTask.TaskId
-                                       && (repair.State == RepairTaskState.Completed && repair.ResultStatus == RepairTaskResult.Cancelled
-                                           || repair.Flags == RepairTaskFlags.CancelRequested || repair.Flags == RepairTaskFlags.AbortRequested)))
+                if (repairs.All(repair => repair.TaskId != repairTask.TaskId))
                 {
                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
-                            $"Repair Task {repairTask.TaskId} was aborted or cancelled.",
-                            FabricHealerManager.Token,
+                            "ExecuteFabricHealerRepairTaskAsync",
+                            $"Failed to find scheduled repair task {repairTask.TaskId}.",
+                            cancellationToken,
                             repairData,
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                     return false;
                 }
 
-                if (!repairs.Any(repair => repair.TaskId == repairTask.TaskId && repair.State == RepairTaskState.Approved))
+               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        "ExecuteFabricHealerRepairTaskAsync::WaitingForApproval",
+                        $"Waiting for RM to Approve repair task {repairTask.TaskId}.",
+                        cancellationToken,
+                        repairData,
+                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                while (approvalTimeout >= stopWatch.Elapsed)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
-                    continue;
+                    repairs =
+                        await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
+                                RepairConstants.FHTaskIdPrefix,
+                                cancellationToken,
+                                RepairConstants.FabricHealer);
+
+                    // Was repair cancelled (or cancellation requested) by another FH instance for some reason? Could be due to FH going down or a new deployment or a bug (fix it...).
+                    if (repairs.Any(repair => repair.TaskId == repairTask.TaskId
+                                           && (repair.State == RepairTaskState.Completed && repair.ResultStatus == RepairTaskResult.Cancelled
+                                               || repair.Flags == RepairTaskFlags.CancelRequested || repair.Flags == RepairTaskFlags.AbortRequested)))
+                    {
+                       await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                "ExecuteFabricHealerRepairTaskAsync",
+                                $"Repair Task {repairTask.TaskId} was aborted or cancelled.",
+                                cancellationToken,
+                                repairData,
+                                FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                        return false;
+                    }
+
+                    if (!repairs.Any(repair => repair.TaskId == repairTask.TaskId && repair.State == RepairTaskState.Approved))
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                        continue;
+                    }
+
+                    isApproved = true;
+                    break;
                 }
 
-                isApproved = true;
-                break;
-            }
+                stopWatch.Stop();
+                stopWatch.Reset();
 
-            stopWatch.Stop();
-            stopWatch.Reset();
+                if (isApproved)
+                {
+                   await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            "ExecuteFabricHealerRepairTaskAsync::Approved",
+                            $"RM has Approved repair task {repairTask.TaskId}.",
+                            cancellationToken,
+                            repairData,
+                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                }
+                else
+                {
+                   await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            "ExecuteFabricHealerRepairTaskAsync::NotApproved",
+                            $"RM did not Approve repair task {repairTask.TaskId}. Cancelling...",
+                            cancellationToken,
+                            repairData,
+                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-            if (isApproved)
-            {
+                    await FabricRepairTasks.CancelRepairTaskAsync(repairTask);
+                    return false;
+                }
+
+                _ = await FabricRepairTasks.SetFabricRepairJobStateAsync(
+                            repairTask,
+                            RepairTaskState.Executing,
+                            RepairTaskResult.Pending,
+                            cancellationToken);
+
                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync_Approved",
-                        $"RM has Approved repair task {repairTask.TaskId}.",
+                        "ExecuteFabricHealerRepairTaskAsync::MovedExecuting",
+                        $"Executing repair {repairTask.TaskId}.",
                         cancellationToken,
                         repairData,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-            }
-            else
-            {
-               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync_NotApproved",
-                        $"RM did not Approve repair task {repairTask.TaskId}. Cancelling...",
-                        cancellationToken,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-                await FabricRepairTasks.CancelRepairTaskAsync(repairTask);
-                return false;
-            }
+                var repairAction = repairData.RepairPolicy.RepairAction;
 
-            _ = await FabricRepairTasks.SetFabricRepairJobStateAsync(
-                        repairTask,
-                        RepairTaskState.Executing,
-                        RepairTaskResult.Pending,
-                        cancellationToken);
-
-           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync_MovedExecuting",
-                    $"Executing repair {repairTask.TaskId}.",
-                    cancellationToken,
-                    repairData,
-                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-            bool success;
-            var repairAction = repairData.RepairPolicy.RepairAction;
-
-            try
-            {
                 switch (repairAction)
                 {
                     case RepairActionType.DeleteFiles:
-                            
+
                         success = await DeleteFilesAsyncAsync(repairData, cancellationToken);
                         break;
 
@@ -621,7 +655,7 @@ namespace FabricHealer.Repair
                                 success = false;
                                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                         LogLevel.Info,
-                                        "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoPartition",
+                                        "ExecuteFabricHealerRepairTaskAsync::NoPartition",
                                         $"No partition specified.",
                                         cancellationToken,
                                         repairData,
@@ -667,7 +701,7 @@ namespace FabricHealer.Repair
                             success = false;
                             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
-                                    "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoPartition",
+                                    "ExecuteFabricHealerRepairTaskAsync::NoPartition",
                                     $"No partition specified.",
                                     cancellationToken,
                                     repairData,
@@ -687,7 +721,7 @@ namespace FabricHealer.Repair
                             success = false;
                             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
-                                    "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoReplica",
+                                    "ExecuteFabricHealerRepairTaskAsync::NoReplica",
                                     $"Stateless Instance {repairData.ReplicaId} not found on partition " +
                                     $"{repairData.PartitionId}.",
                                     cancellationToken,
@@ -701,10 +735,10 @@ namespace FabricHealer.Repair
                         break;
                     }
                     case RepairActionType.RestartProcess:
-                    
+
                         success = await RestartSystemServiceProcessAsync(repairData, cancellationToken);
                         break;
-                    
+
                     case RepairActionType.RestartReplica:
                     {
                         if (repairData.PartitionId == null)
@@ -712,7 +746,7 @@ namespace FabricHealer.Repair
                             success = false;
                             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
-                                    "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoPartition",
+                                    "ExecuteFabricHealerRepairTaskAsync::NoPartition",
                                     $"No partition specified.",
                                     cancellationToken,
                                     repairData,
@@ -722,28 +756,28 @@ namespace FabricHealer.Repair
                         }
 
                         var repList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                            (Guid)repairData.PartitionId,
-                                            repairData.ReplicaId,
-                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                            cancellationToken);
+                                                (Guid)repairData.PartitionId,
+                                                repairData.ReplicaId,
+                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                cancellationToken);
 
                         if (repList.Count == 0)
                         {
                             success = false;
-                               await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                        LogLevel.Info,
-                                        "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync::NoReplica",
-                                        $"Stateful replica {repairData.ReplicaId} not found on partition " +
-                                        $"{repairData.PartitionId}.",
-                                        cancellationToken,
-                                        repairData,
-                                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                    LogLevel.Info,
+                                    "ExecuteFabricHealerRepairTaskAsync::NoReplica",
+                                    $"Stateful replica {repairData.ReplicaId} not found on partition " +
+                                    $"{repairData.PartitionId}.",
+                                    cancellationToken,
+                                    repairData,
+                                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-                                break;
+                            break;
                         }
 
                         var replica = repList[0];
-  
+
                         // Restart - stateful replica.
                         if (replica.ServiceKind == ServiceKind.Stateful)
                         {
@@ -765,9 +799,9 @@ namespace FabricHealer.Repair
                         if (string.IsNullOrWhiteSpace(executorData))
                         {
 
-                           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
-                                    "RepairTaskManager.SafeRestartFabricNode",
+                                    $"RestartFabricNode::{repairData.NodeName}",
                                     $"Repair {repairTask.TaskId} is missing ExecutorData.",
                                     cancellationToken,
                                     repairData,
@@ -785,196 +819,201 @@ namespace FabricHealer.Repair
                     default:
                         return false;
                 }
-            }
-            catch (FabricException)
-            {
-                return false;
-            }
+            
 
-            // What was the target (a node, app, replica, etc..)?
-            string repairTarget = null;
-
-            switch (repairData.EntityType)
-            {
-                // Try and handle the case where EntityType is not specified (facts from FHProxy, for example)
-                // or is explicitly set to Invalid for some reason.
-                case EntityType.Unknown:
-
-                    if (!string.IsNullOrWhiteSpace(repairData.ServiceName))
-                    {
-                        goto case EntityType.Service;
-                    }
-                    else if (!string.IsNullOrWhiteSpace(repairData.ApplicationName))
-                    {
-                        goto case EntityType.Application;
-                    }
-                    else if (!string.IsNullOrWhiteSpace(repairData.NodeName))
-                    {
-                        goto case EntityType.Node;
-                    }
-                    else if (repairData.ReplicaId > 0)
-                    {
-                        goto case EntityType.Replica;
-                    }
-                    else if (!string.IsNullOrWhiteSpace(repairData.ProcessName) || repairData.ProcessId > 0)
-                    {
-                        goto case EntityType.Process;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-
-                case EntityType.Application:
-
-                    repairTarget = $"{repairData.ApplicationName} on node {repairData.NodeName}";
-
-                    if (repairData.ApplicationName == RepairConstants.SystemAppName && !string.IsNullOrWhiteSpace(repairData.ProcessName))
-                    {
-                        repairTarget = $"{repairData.ProcessName} on node {repairData.NodeName}";
-                    }
-                    break;
-
-                case EntityType.Disk:
-
-                    repairTarget = $"{(repairData.RepairPolicy as DiskRepairPolicy)?.FolderPath} on machine hosting Fabric node {repairData.NodeName}";
-                    break;
-
-                case EntityType.Service:
-
-                    repairTarget = $"{repairData.ServiceName} on node {repairData.NodeName}";
-                    break;
-
-                case EntityType.Process:
-
-                    repairTarget = $"{repairData.ProcessName} on node {repairData.NodeName}";
-                    break;
-
-                case EntityType.Node:
-
-                    repairTarget = $"{repairData.NodeName}";
-                    break;
-
-                case EntityType.Replica:
-
-                    repairTarget = $"{repairData.ReplicaId}";
-                    break;
-
-                case EntityType.Partition:
-
-                    repairTarget = $"{repairData.PartitionId}";
-                    break;
-
-                case EntityType.Machine:
-
-                    repairTarget = $"Machine hosting Fabric node {repairData.NodeName}";
-                    break;
-
-                default:
-
-                    throw new ArgumentException("Unknown repair target type.");
-            }
-
-            if (success)
-            {
-                string target = Enum.GetName(typeof(EntityType), repairData.EntityType);
-                TimeSpan maxWaitForHealthStateOk = TimeSpan.FromMinutes(30);
+                // What was the target (a node, app, replica, etc..)?
+                string repairTarget = null;
 
                 switch (repairData.EntityType)
                 {
-                    case EntityType.Application when repairData.ApplicationName != RepairConstants.SystemAppName:
-                    case EntityType.Replica:
-                        maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
-                            ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                            : TimeSpan.FromMinutes(10);
-                        break;
+                    // Try and handle the case where EntityType is not specified (facts from FHProxy, for example)
+                    // or is explicitly set to Unknown for some reason.
+                    case EntityType.Unknown:
 
-                    case EntityType.Application when repairData.ApplicationName == RepairConstants.SystemAppName && repairData.RepairPolicy.RepairAction == RepairActionType.RestartProcess:
-                        maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
-                           ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                           : TimeSpan.FromMinutes(5);
-                        break;
+                        if (!string.IsNullOrWhiteSpace(repairData.ServiceName))
+                        {
+                            goto case EntityType.Service;
+                        }
+                        else if (!string.IsNullOrWhiteSpace(repairData.ApplicationName))
+                        {
+                            goto case EntityType.Application;
+                        }
+                        else if (!string.IsNullOrWhiteSpace(repairData.NodeName))
+                        {
+                            goto case EntityType.Node;
+                        }
+                        else if (repairData.ReplicaId > 0)
+                        {
+                            goto case EntityType.Replica;
+                        }
+                        else if (!string.IsNullOrWhiteSpace(repairData.ProcessName) || repairData.ProcessId > 0)
+                        {
+                            goto case EntityType.Process;
+                        }
+                        else
+                        {
+                            return false;
+                        }
 
-                    case EntityType.Application when repairData.ApplicationName == RepairConstants.SystemAppName && repairData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode:
-                        maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
-                            ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                            : TimeSpan.FromMinutes(30);
-                        break;
+                    case EntityType.Application:
 
-                    case EntityType.Service:
-                        maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
-                            ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                            : TimeSpan.FromMinutes(10);
-                        break;
+                        repairTarget = $"{repairData.ApplicationName} on node {repairData.NodeName}";
 
-                    case EntityType.Node:
-                        maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
-                            ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                            : TimeSpan.FromMinutes(30);
-                        break;
-
-                    case EntityType.Partition:
-                        maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
-                            ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                            : TimeSpan.FromMinutes(15);
+                        if (repairData.ApplicationName == RepairConstants.SystemAppName && !string.IsNullOrWhiteSpace(repairData.ProcessName))
+                        {
+                            repairTarget = $"{repairData.ProcessName} on node {repairData.NodeName}";
+                        }
                         break;
 
                     case EntityType.Disk:
-                        maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.MinValue
-                            ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                            : TimeSpan.FromSeconds(5);
+
+                        repairTarget = $"{(repairData.RepairPolicy as DiskRepairPolicy)?.FolderPath} on machine hosting Fabric node {repairData.NodeName}";
+                        break;
+
+                    case EntityType.Service:
+
+                        repairTarget = $"{repairData.ServiceName} on node {repairData.NodeName}";
+                        break;
+
+                    case EntityType.Process:
+
+                        repairTarget = $"{repairData.ProcessName} on node {repairData.NodeName}";
+                        break;
+
+                    case EntityType.Node:
+
+                        repairTarget = $"{repairData.NodeName}";
+                        break;
+
+                    case EntityType.Replica:
+
+                        repairTarget = $"{repairData.ReplicaId}";
+                        break;
+
+                    case EntityType.Partition:
+
+                        repairTarget = $"{repairData.PartitionId}";
+                        break;
+
+                    case EntityType.Machine:
+
+                        repairTarget = $"Machine hosting Fabric node {repairData.NodeName}";
                         break;
 
                     default:
-                        throw new ArgumentException("Unsupported repair target type.");
+
+                        throw new ArgumentException("Unknown repair target type.");
                 }
 
-                // Check healthstate of repair target to see if the repair worked.
-                bool isHealthy = await IsRepairTargetHealthyAfterCompletedRepair(repairData, maxWaitForHealthStateOk, cancellationToken);
-
-                if (isHealthy)
+                if (success)
                 {
-                   await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
-                            $"{repairData.RepairPolicy.RepairAction} repair for {repairTarget} has succeeded.",
-                            cancellationToken,
-                            repairData,
-                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-                }
-                else
-                {
-                   await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
-                            $"{repairData.RepairPolicy.RepairAction} repair for {repairTarget} has failed. {repairTarget} is still in an unhealthy state.",
-                            cancellationToken,
-                            repairData,
-                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-                }
+                    string target = Enum.GetName(typeof(EntityType), repairData.EntityType);
+                    TimeSpan maxWaitForHealthStateOk = TimeSpan.FromMinutes(30);
 
-                // Tell RM we are ready to move to Completed state as our custom code has completed its repair execution successfully.
-                // This is done by setting the repair task to Restoring State with ResultStatus Succeeded. RM will then move forward to Restoring
-                // (and do any restoring health checks if specified), then Complete the repair job.
-                _ = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                            () => FabricRepairTasks.CompleteCustomActionRepairJobAsync(
-                                    repairTask,
-                                    cancellationToken),
-                            cancellationToken);
+                    switch (repairData.EntityType)
+                    {
+                        case EntityType.Application when repairData.ApplicationName != RepairConstants.SystemAppName:
+                        case EntityType.Replica:
+                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
+                                : TimeSpan.FromMinutes(10);
+                            break;
 
-                // Let RM catch up.
-                await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
-                return isHealthy;
+                        case EntityType.Application when repairData.ApplicationName == RepairConstants.SystemAppName && repairData.RepairPolicy.RepairAction == RepairActionType.RestartProcess:
+                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                               ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
+                               : TimeSpan.FromMinutes(5);
+                            break;
+
+                        case EntityType.Application when repairData.ApplicationName == RepairConstants.SystemAppName && repairData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode:
+                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
+                                : TimeSpan.FromMinutes(30);
+                            break;
+
+                        case EntityType.Service:
+                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
+                                : TimeSpan.FromMinutes(10);
+                            break;
+
+                        case EntityType.Node:
+                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
+                                : TimeSpan.FromMinutes(30);
+                            break;
+
+                        case EntityType.Partition:
+                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
+                                : TimeSpan.FromMinutes(15);
+                            break;
+
+                        case EntityType.Disk:
+                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
+                                : TimeSpan.FromSeconds(5);
+                            break;
+
+                        default:
+                            throw new ArgumentException("Unsupported repair target type.");
+                    }
+
+                    // Check healthstate of repair target to see if the repair worked.
+                    bool isHealthy = await IsRepairTargetHealthyAfterCompletedRepair(repairData, maxWaitForHealthStateOk, cancellationToken);
+
+                    if (isHealthy)
+                    {
+                       await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
+                                $"{repairData.RepairPolicy.RepairAction} repair for {repairTarget} has succeeded.",
+                                cancellationToken,
+                                repairData,
+                                FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                    }
+                    else
+                    {
+                       await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync",
+                                $"{repairData.RepairPolicy.RepairAction} repair for {repairTarget} has failed. {repairTarget} is still in an unhealthy state.",
+                                cancellationToken,
+                                repairData,
+                                FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                    }
+
+                    // Tell RM we are ready to move to Completed state as our custom code has completed its repair execution successfully.
+                    // This is done by setting the repair task to Restoring State with ResultStatus Succeeded. RM will then move forward to Restoring
+                    // (and do any restoring health checks if specified), then Complete the repair job.
+                    _ = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                () => FabricRepairTasks.CompleteCustomActionRepairJobAsync(
+                                        repairTask,
+                                        cancellationToken),
+                                cancellationToken);
+
+                    // Let RM catch up.
+                    await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
+                    return isHealthy;
+                }
             }
-
-            // Executor failure. Cancel repair task.
-           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairTaskManager.ExecuteFabricHealerRmRepairTaskAsync_ExecuteFailed",
-                    $"Executor failed for repair {repairTask.TaskId}. See logs for details. Cancelling repair task.",
-                    cancellationToken,
-                    repairData,
-                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+            catch (Exception e) when (e is ArgumentException ||
+                                      e is FabricException ||
+                                      e is OperationCanceledException ||
+                                      e is TaskCanceledException)
+            {
+#if DEBUG
+                FabricHealerManager.RepairLogger.LogWarning($"Handled ExecuteFabricHealerRepairTaskAsync Failure:{Environment.NewLine}{e}");
+#endif
+                // Executor failure. Cancel repair task.
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        "ExecuteFabricHealerRepairTaskAsync_ExecuteFailed",
+                        $"Execution or post-repair validation failed for job {repairTask.TaskId}: {e.Message}. Cancelling repair task. Expected = {cancellationToken.IsCancellationRequested}.",
+                        cancellationToken,
+                        repairData,
+                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+            }
 
             await FabricRepairTasks.CancelRepairTaskAsync(repairTask);
             return false;
@@ -1074,7 +1113,7 @@ namespace FabricHealer.Repair
 
                         if (appHealth == null || appHealth.HealthEvents.Count == 0)
                         {
-                            return TimeSpan.MinValue;
+                            return TimeSpan.Zero;
                         }  
 
                         // How many times has the entity been put into Error health within the specified time window?
@@ -1101,7 +1140,7 @@ namespace FabricHealer.Repair
                     }
                     catch (FabricException)
                     {
-                        return TimeSpan.MinValue;
+                        return TimeSpan.Zero;
                     }
 
                 case EntityType.Service:
@@ -1119,7 +1158,7 @@ namespace FabricHealer.Repair
 
                         if (serviceHealth == null || serviceHealth.HealthEvents.Count == 0)
                         {
-                            return TimeSpan.MinValue;
+                            return TimeSpan.Zero;
                         }
 
                         // How many times has the entity been put into Error health state in the last 2 hours ?
@@ -1143,7 +1182,7 @@ namespace FabricHealer.Repair
                     }
                     catch (FabricException)
                     {
-                        return TimeSpan.MinValue;
+                        return TimeSpan.Zero;
                     }
 
                 case EntityType.Disk:
@@ -1163,7 +1202,7 @@ namespace FabricHealer.Repair
 
                         if (nodeHealth == null || nodeHealth.HealthEvents.Count == 0)
                         {
-                            return TimeSpan.MinValue;
+                            return TimeSpan.Zero;
                         }
 
                         // How many times has the entity been put into Error health state.
@@ -1190,11 +1229,11 @@ namespace FabricHealer.Repair
                     {
                         string message = $"Unable to get {repairData.HealthState} health state duration for {repairData.EntityType}: {e.Message}";
                         FabricHealerManager.RepairLogger.LogWarning(message);
-                        return TimeSpan.MinValue;
+                        return TimeSpan.Zero;
                     }
 
                 default:
-                    return TimeSpan.MinValue;
+                    return TimeSpan.Zero;
             }
         }
 
@@ -1217,10 +1256,7 @@ namespace FabricHealer.Repair
 
             while (stopwatch.Elapsed <= maxTimeToWait)
             {
-                if (token.IsCancellationRequested)
-                {
-                    break;
-                }
+                token.ThrowIfCancellationRequested();
 
                 if (await GetCurrentAggregatedHealthStateAsync(repairData, token) == HealthState.Ok)
                 {

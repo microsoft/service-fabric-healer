@@ -34,5 +34,11 @@ namespace FabricHealer
             // Blocks until cancellationToken cancellation.
             await healerManager.StartAsync();
         }
+
+        protected override void OnAbort()
+        {
+            _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync(isClosing: true);
+            base.OnAbort();
+        }
     }
 }

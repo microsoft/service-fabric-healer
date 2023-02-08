@@ -18,6 +18,14 @@ namespace FabricHealer.Repair
     public sealed class RepairTaskEngine
     {
         /// <summary>
+        /// Typical repair action name parts in lower case.
+        /// </summary>
+        private static readonly string[] nodeRepairActionSubstrings = new string[]
+        {
+            "azure.heal", "azure.host", "azure.job", "platform", "reboot", "reimage", "repave", "tenant"
+        };
+
+        /// <summary>
         /// Creates a repair task where FabricHealer is the executor.
         /// </summary>
         /// <param name="executorData"></param>
@@ -91,14 +99,17 @@ namespace FabricHealer.Repair
         /// This function returns the list of currently processing FH repair tasks.
         /// </summary>
         /// <returns>List of repair tasks in Preparing, Approved, Executing or Restoring state</returns>
-        public static async Task<RepairTaskList> GetFHRepairTasksCurrentlyProcessingAsync(string taskIdPrefix, CancellationToken cancellationToken)
+        public static async Task<RepairTaskList> GetFHRepairTasksCurrentlyProcessingAsync(
+                                                  string taskIdPrefix,
+                                                  CancellationToken cancellationToken,
+                                                  string executor = null)
         {
             var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                                         taskIdPrefix,
                                         RepairTaskStateFilter.Active |
                                         RepairTaskStateFilter.Approved |
                                         RepairTaskStateFilter.Executing,
-                                        null,
+                                        executor,
                                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                                         cancellationToken);
 
@@ -252,15 +263,9 @@ namespace FabricHealer.Repair
                                 continue;
                             }
 
-                            // TOTHINK: If there is an active Azure tenant/platform update for the target node,
-                            // then treat as any other node level repair?
-
-                            if (repair.Executor.ToLower().Contains(RepairConstants.InfrastructureServiceName.ToLower()) ||
-                                repair.Action.ToLower().Contains("azure.host") ||
-                                repair.Action.ToLower().Contains("azure.heal") ||
-                                repair.Action.ToLower().Contains("azure.job") ||
-                                repair.Action.ToLower().Contains("reboot") ||
-                                repair.Action.ToLower().Contains("reimage"))
+                            if ((!string.IsNullOrWhiteSpace(repair.Executor)
+                                   && repair.Executor.ToLower().Contains(RepairConstants.InfrastructureServiceName.ToLower()))
+                                || MatchStringInArray(haystack: nodeRepairActionSubstrings, needle: repair.Action.ToLower(), matchWholeStrings: false))
                             {
                                 return true;
                             }
@@ -330,12 +335,9 @@ namespace FabricHealer.Repair
                     // Claimed/Created (no Impact has been established yet).
                     else if (repair.Target is NodeRepairTargetDescription target)
                     {
-                        if (repair.Executor.ToLower().Contains(RepairConstants.InfrastructureServiceName.ToLower()) ||
-                            repair.Action.ToLower().Contains("azure.host") ||
-                            repair.Action.ToLower().Contains("azure.heal") ||
-                            repair.Action.ToLower().Contains("azure.job") ||
-                            repair.Action.ToLower().Contains("reboot") ||
-                            repair.Action.ToLower().Contains("reimage"))
+                        if ((!string.IsNullOrWhiteSpace(repair.Executor)
+                               && repair.Executor.ToLower().Contains(RepairConstants.InfrastructureServiceName.ToLower()))
+                            || MatchStringInArray(haystack: nodeRepairActionSubstrings, needle: repair.Action.ToLower(), matchWholeStrings: false))
                         {
                             count++;
                         }
@@ -344,6 +346,37 @@ namespace FabricHealer.Repair
             }
 
             return count;
+        }
+
+        /// <summary>
+        /// Determines whether the supplied string is present in the supplied string array, either as a whole string or substring.
+        /// </summary>
+        /// <param name="haystack">The string array containing values to match.</param>
+        /// <param name="needle">The string to match in the array.</param>
+        /// <param name="matchWholeStrings">Optional (true). Whether or not to match whole strings. Passing false means you want to see if any of the strings 
+        /// in the haystack are substrings of the supplied string, needle.</param>
+        /// <returns></returns>
+        private static bool MatchStringInArray(string[] haystack, string needle, bool matchWholeStrings = true)
+        {
+            for (int i = 0; i < haystack.Length; i++)
+            {
+                if (matchWholeStrings)
+                {
+                    // 0 means the two strings are equal.
+                    if (string.CompareOrdinal(needle, haystack[i]) != 0)
+                    {
+                        continue;
+                    }
+                }
+                else if (!needle.Contains(haystack[i])) // Contains just wraps IndexOf, but is more readable.
+                {
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
         }
     }
 }

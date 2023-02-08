@@ -20,8 +20,15 @@
 		<Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
 		<!-- Required-If EnableTelemetry is set to true in ApplicationManifest. Values can be either AzureApplicationInsights or AzureLogAnalytics -->
 		<Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
+		
+		<!-- ApplicationInsights -->
 		<!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
+		<Parameter Name="AppInsightsConnectionString" Value="" />
+		<!-- OBSOLETE. DO NOT USE. Use AppInsightsConnectionString instead. InstrumentationKey is deprecated for ApplicationInsights ingestion.
+		     NOTE: Specifying this has no effect as FabricHealer requires a ConnectionString for ApplicationInsights. -->
 		<Parameter Name="AppInsightsInstrumentationKey" Value="" />
+		
+		<!-- LogAnalytics -->
 		<!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
 		<Parameter Name="LogAnalyticsWorkspaceId" Value="" />
 		<!-- Required-If TelemetryProvider is AzureLogAnalytics. -->

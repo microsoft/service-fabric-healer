@@ -48,7 +48,7 @@ namespace FabricHealer.Repair.Guan
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                            LogLevel.Info,
                            "CheckOutstandingRepairs",
-                           $"Current number of outstanding machine repairs ({outstandingRepairCount}) >= Max ({maxRepairs}).",
+                           $"Current number of outstanding machine repairs ({outstandingRepairCount}) >= Max ({maxRepairs}). Will not schedule another repair at this time.",
                            FabricHealerManager.Token,
                            null,
                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);

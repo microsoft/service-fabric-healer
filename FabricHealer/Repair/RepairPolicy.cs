@@ -13,7 +13,6 @@ namespace FabricHealer.Repair
     /// Defines the type of repair to execute.
     /// </summary>
     [EventData]
-    [Serializable]
     public class RepairPolicy
     {
         /// <summary>
@@ -23,6 +22,14 @@ namespace FabricHealer.Repair
         {
             get; set;
         }
+
+        /// <summary>
+        /// Maximum amount of time a repair can execute. This is related to repairs where FabricHealer is the executor.
+        /// </summary>
+        public TimeSpan MaxExecutionTime
+        { 
+            get; set; 
+        } = TimeSpan.Zero;
 
         /// <summary>
         /// The type of repair execution (RestartCodePackage, RestartReplica, etc..)
@@ -36,7 +43,6 @@ namespace FabricHealer.Repair
         /// <summary>
         /// The name of the infrastucture repair to provide to RM that IS will execute.
         /// </summary>
-        [EventField]
         public string InfrastructureRepairName
         {
             get; set;
@@ -45,17 +51,15 @@ namespace FabricHealer.Repair
         /// <summary>
         /// Maximum amount of time to check if health state of repaired target entity is Ok.
         /// </summary>
-        [EventField]
         public TimeSpan MaxTimePostRepairHealthCheck
         {
             get; set;
-        } = TimeSpan.MinValue;
+        } = TimeSpan.Zero;
 
         /// <summary>
         /// Whether or not RepairManager should do preparing and restoring health checks before approving the target repair job.
         /// Setting this to true will increase the time it takes to complete a repair.
         /// </summary>
-        [EventField]
         public bool DoHealthChecks
         {
             get; set;
@@ -64,7 +68,6 @@ namespace FabricHealer.Repair
         /// <summary>
         /// The maximum number of currently executing machine repairs in the cluster allowed.
         /// </summary>
-        [EventField]
         public long MaxConcurrentRepairs
         {
             get; set;
@@ -73,7 +76,6 @@ namespace FabricHealer.Repair
         /// <summary>
         /// The repair ID prefix used to associate an FH repair to its executor (FH or FH_Infra, for example).
         /// </summary>
-        [EventField]
         public string RepairIdPrefix
         {
             get; set;
@@ -113,6 +115,7 @@ namespace FabricHealer.Repair
             get; set;
         }
 
+        [EventField]
         public HealthState HealthState
         {
             get; set;

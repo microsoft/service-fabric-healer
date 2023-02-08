@@ -8,6 +8,7 @@ using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -32,42 +33,73 @@ namespace FabricHealer.Repair.Guan
                 for (int i = 0; i < count; i++)
                 {
                     var typeString = Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name;
+
                     switch (typeString)
                     {
-                        case "TimeSpan":
-                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
-                            break;
-
-                        case "Boolean":
+                        case "Boolean" when i == 0 && count == 3 || Input.Arguments[i].Name.ToLower() == "dohealthchecks":
                             RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
                             break;
 
+                        case "TimeSpan" when i == 1 && count == 3 || Input.Arguments[i].Name.ToLower() == "maxwaittimeforhealthstateok":
+                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
+                            break;
+
+                        case "TimeSpan" when i == 2 && count == 3 || Input.Arguments[i].Name.ToLower() == "maxexecutiontime":
+                            RepairData.RepairPolicy.MaxExecutionTime = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
+                            break;
+
                         default:
-                            throw new GuanException(
-                                $"RestartCodePackagePredicateType failure. Unsupported argument type: {Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name}");
+                            throw new GuanException($"Unsupported argument type for RestartCodePackage: {typeString}");
                     }
                 }
 
-                // Try to schedule repair with RM.
-                var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                                RepairData,
-                                                FabricHealerManager.Token),
-                                        FabricHealerManager.Token);
-
-                if (repairTask == null)
+                using (CancellationTokenSource tokenSource = new())
                 {
-                    return false;
-                }
+                    using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(
+                                                                    tokenSource.Token,
+                                                                    FabricHealerManager.Token))
+                    {
+                        TimeSpan maxExecutionTime = TimeSpan.FromMinutes(60);
+                        
+                        if (RepairData.RepairPolicy.MaxExecutionTime > TimeSpan.Zero)
+                        {
+                            maxExecutionTime = RepairData.RepairPolicy.MaxExecutionTime;
+                        }
 
-                // Try to execute repair (FH executor does this work and manages repair state).
-                bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
-                                                repairTask,
-                                                RepairData,
-                                                FabricHealerManager.Token),
-                                        FabricHealerManager.Token);
-                return success;
+                        tokenSource.CancelAfter(maxExecutionTime);
+                        tokenSource.Token.Register(() =>
+                        {
+                             _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
+                        });
+
+                        // Try to schedule repair with RM.
+                        var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
+                                                        RepairData,
+                                                        linkedCTS.Token),
+                                                linkedCTS.Token);
+
+                        if (repairTask == null)
+                        {
+                            return false;
+                        }
+
+                        // Try to execute repair (FH executor does this work and manages repair state).
+                        bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
+                                                        repairTask,
+                                                        RepairData,
+                                                        linkedCTS.Token),
+                                                linkedCTS.Token);
+                        
+                        if (!success && linkedCTS.IsCancellationRequested)
+                        {
+                            await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
+                        }
+
+                        return success;
+                    }
+                }
             }
         }
 

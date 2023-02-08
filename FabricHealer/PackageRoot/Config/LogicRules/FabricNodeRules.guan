@@ -8,4 +8,4 @@
 ## This rule means that whatever the Fabric node-level warning data from the issuing service happens to be, restart the target Fabric node if 
 ## the repair hasn't run 4 times in the last 8 hours.
 
-Mitigate() :- GetRepairHistory(?repairCount, 08:00:00), ?repairCount < 4, RestartFabricNode().
+Mitigate() :- GetRepairHistory(?repairCount, 08:00:00), ?repairCount < 4, RestartFabricNode(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:45:00, MaxExecutionTime=02:00:00).

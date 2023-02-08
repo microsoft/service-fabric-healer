@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using Newtonsoft.Json;
 using System.Fabric.Description;
+using Newtonsoft.Json.Linq;
 
 namespace FabricHealer.Repair
 {
@@ -80,9 +81,8 @@ namespace FabricHealer.Repair
                 {
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            "RepairExecutor.RestartCodePackageAsync",
-                            $"Execution failure: Replica {repairData.ReplicaId} " +
-                            $"not found in partition {repairData.PartitionId}.",
+                            $"RestartCodePackage::Failure({repairData.ReplicaId})",
+                            $"Replica {repairData.ReplicaId} not found in partition {repairData.PartitionId}.",
                             cancellationToken,
                             repairData,
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
@@ -90,26 +90,35 @@ namespace FabricHealer.Repair
                     return null;
                 }
 
-                ReplicaSelector replicaSelector = ReplicaSelector.ReplicaIdOf(partitionSelector, replicaId);
+                ReplicaSelector replicaSelector = ReplicaSelector.ReplicaIdOf(partitionSelector, replica.Id);
 
-                // There is a bug with Verify for Stateless services...
-                // CompletionMode must be set to DoNotVerify for stateless services.
+                // CompletionMode must be set to DoNotVerify for stateless and stateful volatile services.
                 CompletionMode completionMode = CompletionMode.DoNotVerify;
 
                 if (replica.ServiceKind == ServiceKind.Stateful)
                 {
-                    completionMode = CompletionMode.Verify;
+                    ServiceDescription serviceDesc =
+                        await FabricHealerManager.FabricClientSingleton.ServiceManager.GetServiceDescriptionAsync(
+                                new Uri(repairData.ServiceName), FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
+
+                    if (serviceDesc is StatefulServiceDescription statefulReplicaDesc)
+                    {
+                        if (statefulReplicaDesc.HasPersistedState)
+                        {
+                            completionMode = CompletionMode.Verify;
+                        }
+                    }
                 }
 
-                var restartCodePackageResult = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                        () =>
-                                                        FabricHealerManager.FabricClientSingleton.FaultManager.RestartDeployedCodePackageAsync(
-                                                            new Uri(repairData.ApplicationName),
-                                                            replicaSelector,
-                                                            completionMode, 
-                                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                            cancellationToken), 
-                                                        cancellationToken);
+                RestartDeployedCodePackageResult restartCodePackageResult = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                        () =>
+                        FabricHealerManager.FabricClientSingleton.FaultManager.RestartDeployedCodePackageAsync(
+                            new Uri(repairData.ApplicationName),
+                            replicaSelector,
+                            completionMode, 
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            cancellationToken), 
+                        cancellationToken);
 
                 if (restartCodePackageResult != null)
                 {
@@ -150,9 +159,9 @@ namespace FabricHealer.Repair
             catch (Exception e) when (e is FabricException || e is InvalidOperationException || e is TimeoutException)
             {              
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Warning,
-                        "RepairExecutor.RestartCodePackageAsync",
-                        $"Execution failure:{Environment.NewLine}{e}",
+                        LogLevel.Info,
+                        "RestartCodePackageAsync::Exception",
+                        $"Execution failure:{e.Message}",
                         cancellationToken,
                         repairData,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
@@ -489,16 +498,6 @@ namespace FabricHealer.Repair
         /// <returns></returns>
         public static async Task<bool> RestartReplicaAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
-            string actionMessage = $"Attempting to restart stateful replica {repairData.ReplicaId} " +
-                                   $"on partition {repairData.PartitionId} on node {repairData.NodeName}.";
-            
-            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairExecutor.RestartReplicaAsync::Start",
-                    actionMessage,
-                    cancellationToken,
-                    repairData,
-                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
             try
             {
                 // Make sure the replica still exists. \\
@@ -537,6 +536,15 @@ namespace FabricHealer.Repair
                     // This would mean the stateful service replica is volatile (no persisted state), so we have to Remove it.
                     if (fe.ErrorCode == FabricErrorCode.InvalidReplicaOperation && fe.InnerException.Message == "0x80071C3A")
                     {
+                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        "RestartReplicaAsync::Volatile",
+                        $"Attempting to remove volatile stateful replica {repairData.ReplicaId} on partition {repairData.PartitionId} " +
+                        $"on node {repairData.NodeName}.",
+                        cancellationToken,
+                        repairData,
+                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
                         return await RemoveReplicaAsync(repairData, cancellationToken);                    
                     }
                 }
@@ -548,7 +556,7 @@ namespace FabricHealer.Repair
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        "RepairExecutor.RestartReplicaAsync::Success",
+                        "RestartReplicaAsync::Success",
                         statusSuccess,
                         cancellationToken,
                         repairData,
@@ -563,11 +571,11 @@ namespace FabricHealer.Repair
                     $"Unable to restart stateful replica {repairData.ReplicaId} " +
                     $"on partition {repairData.PartitionId} " +
                     $"on node {repairData.NodeName}.{Environment.NewLine}" +
-                    $"Exception Info:{Environment.NewLine}{e}";
+                    $"Exception Info:{Environment.NewLine}{e.Message}";
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
-                        "RepairExecutor.RestartReplicaAsync::Exception",
+                        "RestartReplicaAsync::Exception",
                         err,
                         cancellationToken,
                         repairData,
@@ -727,17 +735,6 @@ namespace FabricHealer.Repair
         /// <returns></returns>
         public static async Task<bool> RemoveReplicaAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
-            string actionMessage = 
-                $"Attempting to remove stateless instance {repairData.ReplicaId} " +
-                $"on partition {repairData.PartitionId} on node {repairData.NodeName}.";
-
-            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "RepairExecutor.RemoveReplicaAsync::Start",
-                    actionMessage,
-                    cancellationToken,
-                    repairData,
-                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
             try
             {
                 // Make sure the replica still exists. \\

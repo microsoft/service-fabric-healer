@@ -167,11 +167,11 @@ Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPortsPercent", MetricVa
 Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?AppName != "fabric:/FabricObserver", ?MetricValue >= 400, TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Threads - Any app service. 5 repairs within 5 hour window. This means if FO warns on Thread count, then heal. There are no conditional checks (on MetricValue) to take place.
-Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
+Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(1000, 05:00:00).
 
 ## Generic rule for restarting any service in Warning or Error. This means any service that is in Error or Warning state and
 ## also specified in the serialized TelemetryData instance that forms the Description of the related Service level Health Event will be restarted.
-Mitigate() :- TimeScopedRestartReplica(10, 05:00:00).
+##Mitigate() :- TimeScopedRestartReplica(10, 05:00:00).
 
 ## Internal Predicates
 
@@ -186,14 +186,13 @@ TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, ?time)
 	LogInfo("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartReplica repair at this time.", ?count, ?time).
 
 ## If we get here, it means the number of repairs for a target has not exceeded the maximum number specified to run within a time window.
-## Note you can add up to two optional arguments to RestartCodePackage/RestartReplica, name them whatever you want or omit the names, it just has to be either a TimeSpan value for how long to wait 
-## for the repair target to become healthy and/or a bool for whether or not RM should do health checks before and after the repair executes. 
-## See below for an example using both optional arguments. Named arguments are just used for clarity below; you could also just specify RestartCodePackage(true, 00:10:00), for example.
-## Note: It's up to you to decide if you want RepairManager to conduct pre and post health checks and how long to wait to determine if the repair worked. For stateful
-## replicas with a lot of data to rehydrate (rebuild), it can take awhile, do adjust MaxWaitTimeForHealthStateOk to your empirical needs (you know how much state a replica holds).
+## Note you can add up to three optional arguments to RestartCodePackage/RestartReplica. The way FabricHealer implements optional arguments for Guan predicates provides some flexibility:
+## You can supply optional args as named (as below) or just as values. However, do note that in the predicates below if you want to include only one of the optional args and it is
+## a timespan type, you must name it and the name must be what you see below for each argument. You can of course not provide any arguments and the default values will be used
+## by the repair executor (FabricHealer).
 
-## Restart all replicas hosted in the process.
-TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:10:00).
+## Restart all replicas hosted in the process. If you do not specify a value for MaxExecutionTime argument, the default is 60 minutes.
+TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:10:00, MaxExecutionTime=00:30:00).
 
-## Restart individual replica hosted in the process.
-TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:05:00).
+## Restart individual replica hosted in the process. If you do not specify a value for MaxExecutionTime argument, the default is 60 minutes.
+TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:05:00, MaxExecutionTime=00:15:00).

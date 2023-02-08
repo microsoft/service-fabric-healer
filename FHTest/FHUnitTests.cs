@@ -26,6 +26,7 @@ using System.Xml;
 using ServiceFabric.Mocks;
 using static ServiceFabric.Mocks.MockConfigurationPackage;
 using System.Fabric.Description;
+using System.Xml.Linq;
 
 namespace FHTest
 {
@@ -568,7 +569,7 @@ namespace FHTest
                 TelemetryEnabled = false
             };
 
-            string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed");
+            string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed.guan");
             string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
             List<string> repairRules = ParseRulesFile(rules);
             var repairData = new TelemetryData
@@ -625,7 +626,7 @@ namespace FHTest
                 TelemetryEnabled = false
             };
 
-            string[] rules = await File.ReadAllLinesAsync(Path.Combine(Environment.CurrentDirectory, "testrules_malformed"), token);
+            string[] rules = await File.ReadAllLinesAsync(Path.Combine(Environment.CurrentDirectory, "testrules_malformed.guan"), token);
             List<string> repairAction = ParseRulesFile(rules);
 
             var repairData = new TelemetryData
@@ -660,6 +661,79 @@ namespace FHTest
             };
 
             await Assert.ThrowsExceptionAsync<GuanException>(async () => { await TestInitializeGuanAndRunQuery(repairData, repairAction, executorData); });
+        }
+
+        [TestMethod]
+        public async Task Test_MaxExecutionTime_Cancels_Repair()
+        {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
+            FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
+            {
+                TelemetryEnabled = false
+            };
+
+            string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed_maxexecution.guan");
+            string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
+            List<string> repairRules = ParseRulesFile(rules);
+            var repairData = new TelemetryData
+            {
+                ApplicationName = "fabric:/test0",
+                NodeName = NodeName,
+                Metric = "ThreadCount",
+                HealthState = HealthState.Warning,
+                Code = SupportedErrorCodes.AppErrorTooManyThreads,
+                ServiceName = "fabric:/test0/service0",
+                Value = 42,
+                ReplicaId = default,
+                PartitionId = default
+            };
+
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_{SupportedErrorCodes.AppErrorTooManyThreads}{NodeName}",
+                AppName = repairData.ApplicationName,
+                RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
+                NodeName = repairData.NodeName,
+                Code = repairData.Code,
+                HealthState = repairData.HealthState,
+                ProcessName = repairData.ProcessName,
+                ServiceName = repairData.ServiceName
+            };
+
+            var executorData = new RepairExecutorData
+            {
+                RepairPolicy = repairData.RepairPolicy
+            };
+
+            try
+            {
+                await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
+            }
+            catch (GuanException ge)
+            {
+                throw new AssertFailedException(ge.Message, ge);
+            }
+
+            // Verify that the repair task was Cancelled.
+            try
+            {
+                var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync();
+                var testRepairTasks =
+                    repairTasks.Where(r => r.ExecutorData != null && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData exData)
+                                        && exData != null && exData.RepairPolicy.RepairId == $"Test42_{SupportedErrorCodes.AppErrorTooManyThreads}{NodeName}"
+                                        && r.State == RepairTaskState.Completed && r.ResultStatus == RepairTaskResult.Cancelled
+                                        && r.CompletedTimestamp.Value.Subtract(r.CreatedTimestamp.Value) <= exData.RepairPolicy.MaxExecutionTime);
+
+                Assert.IsTrue(testRepairTasks != null && testRepairTasks.Any());
+            }
+            catch (FabricException fe)
+            {
+                throw new AssertFailedException(fe.Message, fe);
+            }
         }
 
         /* private Helpers */

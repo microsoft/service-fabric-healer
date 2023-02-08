@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
 using System.Runtime.Serialization;
 
 namespace FabricHealer.Repair
@@ -13,12 +14,6 @@ namespace FabricHealer.Repair
     [DataContract]
     public class RepairExecutorData
     {
-        [DataMember] 
-        public int ExecutorTimeoutInMinutes
-        {
-            get; set;
-        }
-
         [DataMember]
         public FabricNodeRepairStep LatestRepairStep
         {

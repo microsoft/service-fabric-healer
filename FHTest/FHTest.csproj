@@ -34,11 +34,14 @@
         <None Update="PackageRoot\Config\Settings.xml">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="testrules_wellformed">
+        <None Update="testrules_wellformed.guan">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="testrules_malformed">
+        <None Update="testrules_malformed.guan">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="testrules_wellformed_maxexecution.guan">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>
 </Project>
