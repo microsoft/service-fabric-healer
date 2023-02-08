@@ -22,7 +22,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using Newtonsoft.Json;
 using System.Fabric.Description;
-using Newtonsoft.Json.Linq;
 
 namespace FabricHealer.Repair
 {

@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric;
-using System.Fabric.Management.ServiceModel;
 using System.Fabric.Query;
 using System.Fabric.Repair;
 using System.Linq;
@@ -89,9 +88,6 @@ namespace FabricHealer.Repair
 
                 case RepairTaskState.Invalid:
                     break;
-
-                default:
-                    throw new FabricException($"Repair task {repairTask.TaskId} is in an invalid state for this operation. State = {repairTask.State}.");
             }
         }
 

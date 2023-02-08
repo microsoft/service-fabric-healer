@@ -18,13 +18,12 @@ using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
 using System.Fabric.Description;
-using System.Runtime.CompilerServices;
+using Newtonsoft.Json.Linq;
 
 namespace FabricHealer.Repair
 {
     public sealed class RepairTaskManager
     {
-        private static readonly TimeSpan MaxWaitTimeForFHRepairTaskCompleted = TimeSpan.FromHours(1);
         private static readonly DateTime HealthEventsListCreationTime = DateTime.UtcNow;
         private static readonly TimeSpan MaxLifeTimeHealthEventsData = TimeSpan.FromHours(4);
         private static DateTime LastHealthEventsListClearDateTime;
@@ -73,6 +72,11 @@ namespace FabricHealer.Repair
 
         public static async Task StartRepairWorkflowAsync(TelemetryData repairData, List<string> repairRules, CancellationToken cancellationToken)
         {
+            if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
+            {
+                return;
+            }
+
             Node node = null;
 
             if (repairData.NodeName != null)
@@ -100,7 +104,7 @@ namespace FabricHealer.Repair
 
             try
             {
-                await RunGuanQueryAsync(repairData, repairRules);
+                await RunGuanQueryAsync(repairData, repairRules, cancellationToken);
             }
             catch (GuanException ge)
             {
@@ -122,8 +126,17 @@ namespace FabricHealer.Repair
         /// <param name="repairRules">Repair rules that are related to target SF entity</param>
         /// <param name="repairExecutorData">Optional Repair data that is used primarily when some repair is being restarted (after an FH restart, for example)</param>
         /// <returns></returns>
-        public static async Task RunGuanQueryAsync(TelemetryData repairData, List<string> repairRules, RepairExecutorData repairExecutorData = null)
+        public static async Task RunGuanQueryAsync(
+                TelemetryData repairData,
+                List<string> repairRules,
+                CancellationToken cancellationToken,
+                RepairExecutorData repairExecutorData = null)
         {
+            if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
+            {
+                return;
+            }
+
             // Add predicate types to functor table. Note that all health information data from FO are automatically passed to all predicates.
             FunctorTable functorTable = new();
 
@@ -189,13 +202,23 @@ namespace FabricHealer.Repair
 
             // Run Guan query.
             // This is where the supplied rules are run with FO data that may or may not lead to mitigation of some supported SF entity in trouble (or a VM/Disk).
-            await queryDispatcher.RunQueryAsync(compoundTerms);
+            await queryDispatcher.RunQueryAsync(compoundTerms, cancellationToken);
         }
 
         // The repair will be executed by SF Infrastructure service, not FH. This is the case for all
         // Machine-level repairs.
         public static async Task<bool> ScheduleInfrastructureRepairTask(TelemetryData repairData, CancellationToken cancellationToken)
         {
+            if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+            {
+                await FabricHealerManager.RandomWaitAsync();
+            }
+
+            if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
+            {
+                return false;
+            }
+
             // Internal throttling to protect against bad rules (over scheduling of repair tasks within a fixed time range). 
             if (await CheckRepairCountThrottle(repairData, cancellationToken))
             {
@@ -459,7 +482,15 @@ namespace FabricHealer.Repair
         /// <returns></returns>
         public static async Task<RepairTask> ScheduleFabricHealerRepairTaskAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
-            await Task.Delay(new Random().Next(500, 1500), cancellationToken);
+            if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+            {
+                await FabricHealerManager.RandomWaitAsync();
+            }
+
+            if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
+            {
+                return null;
+            }
 
             // Internal throttling to protect against bad rules (over-scheduling of repair tasks within a fixed time range). 
             if (await CheckRepairCountThrottle(repairData, cancellationToken))
@@ -530,6 +561,17 @@ namespace FabricHealer.Repair
             
             try
             {
+                if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                {
+                    await FabricHealerManager.RandomWaitAsync();
+                }
+
+                if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
+                {
+                    await FabricRepairTasks.CancelRepairTaskAsync(repairTask);
+                    return false;
+                }
+
                 RepairTaskList repairs = 
                     await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
                             RepairConstants.FHTaskIdPrefix,
@@ -1067,9 +1109,8 @@ namespace FabricHealer.Repair
         /// <summary>
         /// Returns the anount of time the target entity (application, node, etc) has been in the specified health state.
         /// </summary>
-        /// <param name="entityType">EntityType</param>
-        /// <param name="nameOrIdFilter">String representation of the target entity's name or ID (e.g., application name or node name or partition id)</param>
-        /// <param name="healthState">Target HealthState to match.</param>
+        /// <param name="repairData">TelemetryData instance.</param>
+        /// <param name="timeWindow">Time window to look in.</param>
         /// <param name="token">CancellationToken</param>
         /// <returns></returns>
         internal static async Task<TimeSpan> GetEntityCurrentHealthStateDurationAsync(

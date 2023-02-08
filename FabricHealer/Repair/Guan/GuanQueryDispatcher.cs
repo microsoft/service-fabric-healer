@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Guan.Logic;
 
@@ -29,8 +30,13 @@ namespace FabricHealer.Repair.Guan
             await query.GetNextAsync();
         }
 
-        public async Task RunQueryAsync(List<CompoundTerm> queryExpressions)
+        public async Task RunQueryAsync(List<CompoundTerm> queryExpressions, CancellationToken cancellationToken)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
             ResolveOrder order = ResolveOrder.None;
             ModuleProvider moduleProvider = new();
             moduleProvider.Add(module_);

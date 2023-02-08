@@ -26,7 +26,6 @@ using System.Xml;
 using ServiceFabric.Mocks;
 using static ServiceFabric.Mocks.MockConfigurationPackage;
 using System.Fabric.Description;
-using System.Xml.Linq;
 
 namespace FHTest
 {
@@ -726,7 +725,7 @@ namespace FHTest
                     repairTasks.Where(r => r.ExecutorData != null && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData exData)
                                         && exData != null && exData.RepairPolicy.RepairId == $"Test42_{SupportedErrorCodes.AppErrorTooManyThreads}{NodeName}"
                                         && r.State == RepairTaskState.Completed && r.ResultStatus == RepairTaskResult.Cancelled
-                                        && r.CompletedTimestamp.Value.Subtract(r.CreatedTimestamp.Value) <= exData.RepairPolicy.MaxExecutionTime);
+                                        && r.CompletedTimestamp.Value.Subtract(r.ExecutingTimestamp.Value) <= exData.RepairPolicy.MaxExecutionTime);
 
                 Assert.IsTrue(testRepairTasks != null && testRepairTasks.Any());
             }
@@ -741,7 +740,7 @@ namespace FHTest
         private async Task TestInitializeGuanAndRunQuery(TelemetryData repairData, List<string> repairRules, RepairExecutorData executorData)
         {
             _ = FabricHealerManager.Instance(TestServiceContext, token);
-            await RepairTaskManager.RunGuanQueryAsync(repairData, repairRules, executorData);
+            await RepairTaskManager.RunGuanQueryAsync(repairData, repairRules, token, executorData);
         }
 
         private static List<string> ParseRulesFile(string[] rules)

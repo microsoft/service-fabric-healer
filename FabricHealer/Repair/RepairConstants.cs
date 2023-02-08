@@ -138,5 +138,7 @@ namespace FabricHealer.Repair
         public const string FHTaskIdPrefix = "FH";
         public const string InfraTaskIdPrefix = "FH_Infra";
         public const string AzureTaskIdPrefix = "Azure";
+        public const string FabricHealerStartAction = "FabricHealer.Start";
+        public const string FabricHealerStopAction = "FabricHealer.Stop";
     }
 }

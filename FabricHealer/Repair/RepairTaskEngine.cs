@@ -265,7 +265,7 @@ namespace FabricHealer.Repair
 
                             if ((!string.IsNullOrWhiteSpace(repair.Executor)
                                    && repair.Executor.ToLower().Contains(RepairConstants.InfrastructureServiceName.ToLower()))
-                                || MatchStringInArray(haystack: nodeRepairActionSubstrings, needle: repair.Action.ToLower(), matchWholeStrings: false))
+                                || MatchSubstring(nodeRepairActionSubstrings, repair.Action.ToLower()))
                             {
                                 return true;
                             }
@@ -275,7 +275,13 @@ namespace FabricHealer.Repair
             }
             catch (Exception e) when (e is ArgumentException || e is FabricException || e is TaskCanceledException || e is TimeoutException)
             {
-                
+#if DEBUG
+                // This is not interesting. Means a one of FH's token source's was canceled in an expected way.
+                if (e is not TaskCanceledException)
+                {
+                    FabricHealerManager.RepairLogger.LogWarning($"Handled Exception in IsNodeLevelRepairCurrentlyInFlightAsync:{Environment.NewLine}{e}");
+                }
+#endif
             }
 
             return false;
@@ -337,7 +343,7 @@ namespace FabricHealer.Repair
                     {
                         if ((!string.IsNullOrWhiteSpace(repair.Executor)
                                && repair.Executor.ToLower().Contains(RepairConstants.InfrastructureServiceName.ToLower()))
-                            || MatchStringInArray(haystack: nodeRepairActionSubstrings, needle: repair.Action.ToLower(), matchWholeStrings: false))
+                            || MatchSubstring(nodeRepairActionSubstrings, repair.Action.ToLower()))
                         {
                             count++;
                         }
@@ -348,27 +354,66 @@ namespace FabricHealer.Repair
             return count;
         }
 
-        /// <summary>
-        /// Determines whether the supplied string is present in the supplied string array, either as a whole string or substring.
-        /// </summary>
-        /// <param name="haystack">The string array containing values to match.</param>
-        /// <param name="needle">The string to match in the array.</param>
-        /// <param name="matchWholeStrings">Optional (true). Whether or not to match whole strings. Passing false means you want to see if any of the strings 
-        /// in the haystack are substrings of the supplied string, needle.</param>
-        /// <returns></returns>
-        private static bool MatchStringInArray(string[] haystack, string needle, bool matchWholeStrings = true)
+        internal static async Task<bool> CheckForActiveStopFHRepairJob(CancellationToken token)
         {
-            for (int i = 0; i < haystack.Length; i++)
+            RepairTaskList repairTasksInProgress =
+                   await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                           null,
+                           RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                           null,
+                           FabricHealerManager.ConfigSettings.AsyncTimeout,
+                           token);
+
+            if (repairTasksInProgress.Count > 0)
             {
-                if (matchWholeStrings)
+                foreach (RepairTask repair in repairTasksInProgress)
                 {
-                    // 0 means the two strings are equal.
-                    if (string.CompareOrdinal(needle, haystack[i]) != 0)
+                    // This means FH should stop scheduling/executing repairs.
+                    if (repair.Action == RepairConstants.FabricHealerStopAction)
                     {
-                        continue;
+                        return true;
                     }
                 }
-                else if (!needle.Contains(haystack[i])) // Contains just wraps IndexOf, but is more readable.
+            }
+
+            return false;
+        }
+
+        internal static async Task<bool> CheckForActiveStartFHRepairJob(CancellationToken token)
+        {
+            RepairTaskList repairTasksInProgress =
+                   await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                           null,
+                           RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                           null,
+                           FabricHealerManager.ConfigSettings.AsyncTimeout,
+                           token);
+
+            if (repairTasksInProgress.Count > 0)
+            {
+                foreach (RepairTask repair in repairTasksInProgress)
+                {
+                    // This means FH should resume scheduling/executing repairs.
+                    if (repair.Action == RepairConstants.FabricHealerStartAction)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool MatchSubstring(string[] array, string source)
+        {
+            if (string.IsNullOrWhiteSpace(source))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < array.Length; i++)
+            {
+                if (string.IsNullOrWhiteSpace(array[i]) || !source.Contains(array[i]))
                 {
                     continue;
                 }
