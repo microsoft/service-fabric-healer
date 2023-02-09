@@ -464,7 +464,7 @@ namespace FHTest
             {
                 ApplicationName = "fabric:/test",
                 EntityType = EntityType.Partition,
-                PartitionId = Guid.NewGuid(),
+                PartitionId = Guid.NewGuid().ToString(),
                 NodeName = NodeName,
                 HealthState = HealthState.Warning,
                 ServiceName = "fabric:/test0/service0"
@@ -518,7 +518,7 @@ namespace FHTest
             {
                 ApplicationName = "fabric:/System",
                 EntityType = EntityType.Partition,
-                PartitionId = Guid.NewGuid(),
+                PartitionId = Guid.NewGuid().ToString(),
                 NodeName = NodeName,
                 HealthState = HealthState.Warning
             };

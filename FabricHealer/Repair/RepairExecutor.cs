@@ -61,13 +61,13 @@ namespace FabricHealer.Repair
                         repairData,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-                PartitionSelector partitionSelector = PartitionSelector.PartitionIdOf(new Uri(repairData.ServiceName), (Guid)repairData.PartitionId);
+                PartitionSelector partitionSelector = PartitionSelector.PartitionIdOf(new Uri(repairData.ServiceName), Guid.Parse(repairData.PartitionId));
                 long replicaId = repairData.ReplicaId;
                 Replica replica = null;
 
                 // Verify target replica still exists.
                 var replicaList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                            (Guid)repairData.PartitionId,
+                                            Guid.Parse(repairData.PartitionId),
                                             replicaId,
                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                             cancellationToken);
@@ -502,7 +502,7 @@ namespace FabricHealer.Repair
                 // Make sure the replica still exists. \\
 
                 var replicaList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                            (Guid)repairData.PartitionId,
+                                            Guid.Parse(repairData.PartitionId),
                                             repairData.ReplicaId,
                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                             cancellationToken);
@@ -525,7 +525,7 @@ namespace FabricHealer.Repair
                 {
                     await FabricHealerManager.FabricClientSingleton.ServiceManager.RestartReplicaAsync(
                             repairData.NodeName,
-                            (Guid)repairData.PartitionId,
+                            Guid.Parse(repairData.PartitionId),
                             repairData.ReplicaId,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
@@ -739,7 +739,7 @@ namespace FabricHealer.Repair
                 // Make sure the replica still exists. \\
 
                 var replicaList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                            (Guid)repairData.PartitionId,
+                                            Guid.Parse(repairData.PartitionId),
                                             repairData.ReplicaId,
                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                             cancellationToken);
@@ -760,7 +760,7 @@ namespace FabricHealer.Repair
 
                 await FabricHealerManager.FabricClientSingleton.ServiceManager.RemoveReplicaAsync(
                         repairData.NodeName,
-                        (Guid)repairData.PartitionId,
+                        Guid.Parse(repairData.PartitionId),
                         repairData.ReplicaId,
                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                         cancellationToken);
@@ -1013,18 +1013,18 @@ namespace FabricHealer.Repair
 
                     case EntityType.StatefulService when repairData.PartitionId != null && repairData.ReplicaId > 0:
 
-                        var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport((Guid)repairData.PartitionId, repairData.ReplicaId, healthInformation);
+                        var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(Guid.Parse(repairData.PartitionId), repairData.ReplicaId, healthInformation);
                         FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
                         break;
 
                     case EntityType.StatelessService when repairData.PartitionId != null && repairData.ReplicaId > 0:
 
-                        var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport((Guid)repairData.PartitionId, repairData.ReplicaId, healthInformation);
+                        var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(Guid.Parse(repairData.PartitionId), repairData.ReplicaId, healthInformation);
                         FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
                         break;
 
                     case EntityType.Partition when repairData.PartitionId != null:
-                        var partitionHealthReport = new PartitionHealthReport((Guid)repairData.PartitionId, healthInformation);
+                        var partitionHealthReport = new PartitionHealthReport(Guid.Parse(repairData.PartitionId), healthInformation);
                         FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                         break;
 

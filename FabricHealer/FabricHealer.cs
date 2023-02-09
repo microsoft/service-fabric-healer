@@ -40,5 +40,11 @@ namespace FabricHealer
             _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync(isClosing: true);
             base.OnAbort();
         }
+
+        protected override Task OnCloseAsync(CancellationToken cancellationToken)
+        {
+            _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync(isClosing: true);
+            return base.OnCloseAsync(cancellationToken);
+        }
     }
 }

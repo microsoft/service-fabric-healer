@@ -25,7 +25,8 @@ namespace FabricHealer.Utilities.Telemetry
             this.serviceContext = serviceContext;
             logger = new Logger(RepairConstants.RepairData)
             {
-                EnableVerboseLogging = FabricHealerManager.ConfigSettings.EnableVerboseLogging
+                EnableVerboseLogging = FabricHealerManager.ConfigSettings.EnableVerboseLogging,
+                EnableETWLogging = FabricHealerManager.ConfigSettings.EtwEnabled
             };
 
             if (FabricHealerManager.ConfigSettings.TelemetryEnabled)
@@ -118,7 +119,7 @@ namespace FabricHealer.Utilities.Telemetry
                 // ETW.
                 if (FabricHealerManager.ConfigSettings.EtwEnabled)
                 {
-                    Logger.LogEtw(RepairConstants.FabricHealerDataEvent, telemetryData);
+                    logger.LogEtw(RepairConstants.FabricHealerDataEvent, telemetryData);
                 }
             }
             else // Untyped or anonymous-typed operational data.
@@ -138,7 +139,7 @@ namespace FabricHealer.Utilities.Telemetry
                         Message = description
                     };
 
-                    Logger.LogEtw(RepairConstants.FabricHealerDataEvent, anonType);
+                    logger.LogEtw(RepairConstants.FabricHealerDataEvent, anonType);
                 }
             }
         }

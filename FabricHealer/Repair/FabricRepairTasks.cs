@@ -119,7 +119,7 @@ namespace FabricHealer.Repair
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "FabricRepairTasks.CompleteCustomActionRepairJobAsync",
-                        $"Failed to Complete Repair Job {repairTask.TaskId} due to invalid state transition.{Environment.NewLine}:{e}",
+                        $"Failed to Complete Repair Job {repairTask.TaskId} due to invalid state transition.{Environment.NewLine}:{e.Message}",
                         token);
 
                 return false;

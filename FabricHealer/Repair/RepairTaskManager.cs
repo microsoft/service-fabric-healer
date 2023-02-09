@@ -692,7 +692,7 @@ namespace FabricHealer.Repair
                         }
                         else
                         {
-                            if (repairData.PartitionId == null)
+                            if (string.IsNullOrWhiteSpace(repairData.PartitionId))
                             {
                                 success = false;
                                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -708,7 +708,7 @@ namespace FabricHealer.Repair
 
                             // Need replica or instance details..
                             var repList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                                (Guid)repairData.PartitionId,
+                                                Guid.Parse(repairData.PartitionId),
                                                 repairData.ReplicaId,
                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                 cancellationToken);
@@ -738,7 +738,7 @@ namespace FabricHealer.Repair
                     }
                     case RepairActionType.RemoveReplica:
                     {
-                        if (repairData.PartitionId == null)
+                        if (string.IsNullOrWhiteSpace(repairData.PartitionId))
                         {
                             success = false;
                             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -753,7 +753,7 @@ namespace FabricHealer.Repair
                         }
 
                         var repList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                                (Guid)repairData.PartitionId,
+                                                Guid.Parse(repairData.PartitionId),
                                                 repairData.ReplicaId,
                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                 cancellationToken);
@@ -783,7 +783,7 @@ namespace FabricHealer.Repair
 
                     case RepairActionType.RestartReplica:
                     {
-                        if (repairData.PartitionId == null)
+                        if (string.IsNullOrWhiteSpace(repairData.PartitionId))
                         {
                             success = false;
                             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -798,7 +798,7 @@ namespace FabricHealer.Repair
                         }
 
                         var repList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                                (Guid)repairData.PartitionId,
+                                                Guid.Parse(repairData.PartitionId),
                                                 repairData.ReplicaId,
                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                 cancellationToken);
@@ -1399,7 +1399,7 @@ namespace FabricHealer.Repair
                     // Make sure the Partition where the restarted replica was located is now healthy.
                     var partitionHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                     () => FabricHealerManager.FabricClientSingleton.HealthManager.GetPartitionHealthAsync(
-                                                                (Guid)repairData.PartitionId,
+                                                                Guid.Parse(repairData.PartitionId),
                                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                                 token),
                                                     token);

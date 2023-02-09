@@ -297,11 +297,11 @@ namespace FabricHealer
                 // Support for repair data that does not contain replica/partition facts for service level repair.
                 switch (repairData.EntityType)
                 {
-                    case EntityType.Application when repairData.PartitionId == Guid.Empty || repairData.ReplicaId == 0:
-                    case EntityType.DeployedApplication when repairData.PartitionId == Guid.Empty || repairData.ReplicaId == 0:
-                    case EntityType.Service when repairData.PartitionId == Guid.Empty || repairData.ReplicaId == 0:
-                    case EntityType.StatefulService when repairData.PartitionId == Guid.Empty || repairData.ReplicaId == 0:
-                    case EntityType.StatelessService when repairData.PartitionId == Guid.Empty || repairData.ReplicaId == 0:
+                    case EntityType.Application when repairData.PartitionId == null || repairData.ReplicaId == 0:
+                    case EntityType.DeployedApplication when repairData.PartitionId == null || repairData.ReplicaId == 0:
+                    case EntityType.Service when repairData.PartitionId == null || repairData.ReplicaId == 0:
+                    case EntityType.StatefulService when repairData.PartitionId == null || repairData.ReplicaId == 0:
+                    case EntityType.StatelessService when repairData.PartitionId == null || repairData.ReplicaId == 0:
 
                         Uri appName, serviceName;
 
@@ -331,7 +331,7 @@ namespace FabricHealer
                         }
 
                         // Figure out PartitionId and Replica Id based on NodeName, ApplicationName and ServiceName facts.
-                        if (repairData.ApplicationName != "fabric:/System" && (repairData.PartitionId == null || repairData.ReplicaId == 0))
+                        if (repairData.ApplicationName != "fabric:/System" && (repairData.PartitionId != null || repairData.ReplicaId == 0))
                         {
                             DeployedServiceReplicaList depReplicas = await fabricClient.QueryManager.GetDeployedReplicaListAsync(repairData.NodeName, appName);
 
@@ -361,7 +361,7 @@ namespace FabricHealer
                                 replicaId = (depReplica as DeployedStatelessServiceInstance).InstanceId;
                             }
 
-                            repairData.PartitionId = partitionId;
+                            repairData.PartitionId = partitionId.ToString();
                             repairData.ProcessId = depReplica.HostProcessId;
                             repairData.ReplicaId = replicaId;
                         }
@@ -505,20 +505,20 @@ namespace FabricHealer
                     FabricClientSingleton.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
                     break;
 
-                case EntityType.StatefulService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
+                case EntityType.StatefulService when repairFacts.PartitionId != null && repairFacts.ReplicaId > 0:
 
-                    var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport((Guid)repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
+                    var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(Guid.Parse(repairFacts.PartitionId), repairFacts.ReplicaId, healthInformation);
                     FabricClientSingleton.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
                     break;
 
-                case EntityType.StatelessService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
+                case EntityType.StatelessService when repairFacts.PartitionId != null && repairFacts.ReplicaId > 0:
 
-                    var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport((Guid)repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
+                    var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(Guid.Parse(repairFacts.PartitionId), repairFacts.ReplicaId, healthInformation);
                     FabricClientSingleton.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
                     break;
 
-                case EntityType.Partition when repairFacts.PartitionId != Guid.Empty:
-                    var partitionHealthReport = new PartitionHealthReport((Guid)repairFacts.PartitionId, healthInformation);
+                case EntityType.Partition when repairFacts.PartitionId != string.Empty:
+                    var partitionHealthReport = new PartitionHealthReport(Guid.Parse(repairFacts.PartitionId), healthInformation);
                     FabricClientSingleton.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                     break;
 
@@ -710,20 +710,20 @@ namespace FabricHealer
                             FabricClientSingleton.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
                             break;
 
-                        case EntityType.StatefulService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
+                        case EntityType.StatefulService when repairFacts.PartitionId != null && repairFacts.ReplicaId > 0:
 
-                            var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport((Guid)repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
+                            var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(Guid.Parse(repairFacts.PartitionId), repairFacts.ReplicaId, healthInformation);
                             FabricClientSingleton.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
                             break;
 
-                        case EntityType.StatelessService when repairFacts.PartitionId != Guid.Empty && repairFacts.ReplicaId > 0:
+                        case EntityType.StatelessService when repairFacts.PartitionId != null && repairFacts.ReplicaId > 0:
 
-                            var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport((Guid)repairFacts.PartitionId, repairFacts.ReplicaId, healthInformation);
+                            var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(Guid.Parse(repairFacts.PartitionId), repairFacts.ReplicaId, healthInformation);
                             FabricClientSingleton.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
                             break;
 
-                        case EntityType.Partition when repairFacts.PartitionId != Guid.Empty:
-                            var partitionHealthReport = new PartitionHealthReport((Guid)repairFacts.PartitionId, healthInformation);
+                        case EntityType.Partition when repairFacts.PartitionId != null:
+                            var partitionHealthReport = new PartitionHealthReport(Guid.Parse(repairFacts.PartitionId), healthInformation);
                             FabricClientSingleton.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                             break;
 

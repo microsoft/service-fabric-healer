@@ -12,7 +12,6 @@ using System.Diagnostics.Tracing;
 namespace FabricHealer.Utilities.Telemetry
 {
     [EventData]
-    [Serializable]
     public class TelemetryData
     {
         private readonly string _os;
@@ -77,8 +76,7 @@ namespace FabricHealer.Utilities.Telemetry
             get { return _os; }
         }
        
-        [EventField]
-        public Guid? PartitionId
+        public string PartitionId
         {
             get; set;
         }

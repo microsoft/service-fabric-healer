@@ -69,7 +69,7 @@ namespace FabricHealer
             get { return _os; }
         }
         /// <inheritdoc/>
-        public Guid? PartitionId
+        public string PartitionId
         {
             get; set;
         }

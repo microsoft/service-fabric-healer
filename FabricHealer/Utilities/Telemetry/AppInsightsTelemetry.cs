@@ -207,7 +207,7 @@ namespace FabricHealer.Utilities.Telemetry
                 { "Metric", telemetryData.Metric },
                 { "NodeName", telemetryData.NodeName },
                 { "ObserverName", telemetryData.ObserverName },
-                { "Partition", telemetryData.PartitionId?.ToString() },
+                { "Partition", telemetryData.PartitionId },
                 { "Replica", telemetryData.ReplicaId.ToString() },
                 { "Source", telemetryData.Source }
             };

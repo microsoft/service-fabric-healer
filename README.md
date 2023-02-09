@@ -1,4 +1,4 @@
-## FabricHealer 1.1.14
+## FabricHealer 1.1.15
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
 
 FabricHealer (FH) is a .NET 6 Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
@@ -78,7 +78,7 @@ Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH1110
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.1.14   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.1.15   
 
 #Create the Service instance:  
 
@@ -87,7 +87,7 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.1.14 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.1.15 -Monitored -FailureAction rollback
 ```  
 
 ## Using FabricHealer  

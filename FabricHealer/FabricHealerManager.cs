@@ -31,7 +31,7 @@ namespace FabricHealer
         internal static StatelessServiceContext ServiceContext;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.1.14";
+        private const string InternalVersionNumber = "1.1.15";
         private static FabricHealerManager singleton;
         private static FabricClient _fabricClient;
         private bool disposedValue;
@@ -130,7 +130,8 @@ namespace FabricHealer
             TelemetryUtilities = new TelemetryUtilities(context);
             RepairLogger = new Logger(RepairConstants.FabricHealer, ConfigSettings.LocalLogPathParameter)
             {
-                EnableVerboseLogging = ConfigSettings.EnableVerboseLogging
+                EnableVerboseLogging = ConfigSettings.EnableVerboseLogging,
+                EnableETWLogging = ConfigSettings.EtwEnabled
             };
             RepairHistory = new RepairData();
             healthReporter = new FabricHealthReporter(RepairLogger);
@@ -1223,8 +1224,8 @@ namespace FabricHealer
                     continue;
                 }
 
-                // PartitionId is Guid? in ITelemetryData.
-                if (repairData.PartitionId == null)
+                // PartitionId is string in TelemetryData.
+                if (string.IsNullOrWhiteSpace(repairData.PartitionId))
                 {
                     continue;
                 }
@@ -1887,7 +1888,7 @@ namespace FabricHealer
                                     HealthState = healthEvent.HealthInformation.HealthState,
                                     NodeName = nodeName,
                                     ReplicaId = rep.Id,
-                                    PartitionId = rep.PartitionId,
+                                    PartitionId = rep.PartitionId.ToString(),
                                     ServiceName = serviceHealth.ServiceName.OriginalString,
                                     Source = RepairConstants.FabricHealerAppName
                                 };

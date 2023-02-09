@@ -43,6 +43,11 @@ namespace FabricHealer.Utilities
             get; set;
         }
 
+        public bool EnableETWLogging
+        {
+            get; set;
+        }
+
         public string LogFolderBasePath
         {
             get; set;
@@ -187,9 +192,9 @@ namespace FabricHealer.Utilities
         /// <typeparam name="T">Generic type. Must be a class or struct attributed as EventData (EventSource.EventDataAttribute).</typeparam>
         /// <param name="eventName">The name of the ETW event. This corresponds to the table name in Kusto.</param>
         /// <param name="eventData">The data of generic type that will be the event Payload.</param>
-        public static void LogEtw<T>(string eventName, T eventData)
+        public void LogEtw<T>(string eventName, T eventData)
         {
-            if (eventData == null || string.IsNullOrWhiteSpace(eventName))
+            if (!EnableETWLogging || eventData == null || string.IsNullOrWhiteSpace(eventName))
             {
                 return;
             }
