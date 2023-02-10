@@ -237,7 +237,7 @@ namespace FabricHealer.Repair
             }
 
             // Create repair task for target node.
-            var repairTask = await FabricRepairTasks.CreateRepairTaskAsync(repairData, null, RepairConstants.InfraTaskIdPrefix, cancellationToken);
+            var repairTask = await FabricRepairTasks.CreateRepairTaskAsync(repairData, null, cancellationToken);
 
             if (repairTask == null)
             {
@@ -510,7 +510,7 @@ namespace FabricHealer.Repair
             }
 
             // Has the repair already been scheduled?
-            if (await RepairTaskEngine.IsRepairInProgressAsync(RepairConstants.FHTaskIdPrefix, repairData, cancellationToken))
+            if (await RepairTaskEngine.IsRepairInProgressAsync(repairData, cancellationToken))
             {
                 return null;
             }
@@ -539,11 +539,7 @@ namespace FabricHealer.Repair
             };
 
             // Create custom FH repair task for target node.
-            var repairTask = await FabricRepairTasks.CreateRepairTaskAsync(
-                                    repairData,
-                                    executorData,
-                                    RepairConstants.FHTaskIdPrefix,
-                                    cancellationToken);
+            var repairTask = await FabricRepairTasks.CreateRepairTaskAsync(repairData, executorData, cancellationToken);
             return repairTask;
         }
 

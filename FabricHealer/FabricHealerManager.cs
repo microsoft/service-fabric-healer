@@ -31,7 +31,7 @@ namespace FabricHealer
         internal static StatelessServiceContext ServiceContext;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.1.15";
+        private const string InternalVersionNumber = "1.1.16";
         private static FabricHealerManager singleton;
         private static FabricClient _fabricClient;
         private bool disposedValue;
@@ -1592,7 +1592,7 @@ namespace FabricHealer
                                 $"{node.NodeName}::MachineRepairAlreadyInProgress",
                                 $"There is currently a Machine-level repair in progress for node {node.NodeName}. Will not schedule another repair at this time.",
                                 Token,
-                                null,
+                                repairData,
                                 ConfigSettings.EnableVerboseLogging);
 
                         continue;

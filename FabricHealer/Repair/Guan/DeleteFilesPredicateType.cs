@@ -121,6 +121,7 @@ namespace FabricHealer.Repair.Guan
                 };
 
                 RepairData.RepairPolicy = diskRepairPolicy;
+                RepairData.RepairPolicy.RepairIdPrefix = RepairConstants.FHTaskIdPrefix;
 
                 // Try to schedule repair with RM.
                 var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(

@@ -204,9 +204,9 @@ namespace FabricHealer.Repair
         /// <param name="cancellationToken">Task cancellation token</param>
         /// <returns></returns>
         public static async Task<bool> SafeRestartFabricNodeAsync(
-                                    TelemetryData repairData,
-                                    RepairTask repairTask, 
-                                    CancellationToken cancellationToken)
+                                        TelemetryData repairData,
+                                        RepairTask repairTask, 
+                                        CancellationToken cancellationToken)
         {
             if (await FabricHealerManager.IsOneNodeClusterAsync())
             {
@@ -237,7 +237,7 @@ namespace FabricHealer.Repair
 
             if (nodeList.Count < 3)
             {
-                string info = $"Unsupported repair for a {nodeList.Count} node cluster. Aborting fabric node restart operation.";
+                string info = $"Unsupported repair for a {nodeList.Count}-node cluster. Aborting fabric node restart operation.";
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,

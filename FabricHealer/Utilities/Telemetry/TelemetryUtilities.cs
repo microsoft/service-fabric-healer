@@ -65,13 +65,13 @@ namespace FabricHealer.Utilities.Telemetry
         {
             bool isTelemetryDataEvent = string.IsNullOrWhiteSpace(description) && telemetryData != null;
 
-            if (source != null && source != "FabricHealer")
+            if (!string.IsNullOrWhiteSpace(source) && source != RepairConstants.FabricHealer)
             {
-                source = source.Insert(0, "FabricHealer.");
+                source = source.Insert(0, $"{RepairConstants.FabricHealer}.");
             }
             else
             {
-                source = "FabricHealer";
+                source = RepairConstants.FabricHealer;
             }
 
             HealthState healthState = level switch
@@ -87,7 +87,7 @@ namespace FabricHealer.Utilities.Telemetry
                 var healthReporter = new FabricHealthReporter(logger);
                 var healthReport = new HealthReport
                 {
-                    AppName = entityType == EntityType.Application ? new Uri("fabric:/FabricHealer") : null,
+                    AppName = entityType == EntityType.Application ? new Uri($"fabric:/{RepairConstants.FabricHealer}") : null,
                     Code = telemetryData?.RepairPolicy?.RepairId,
                     HealthMessage = description,
                     NodeName = serviceContext.NodeContext.NodeName,

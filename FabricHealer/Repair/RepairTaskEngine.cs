@@ -18,11 +18,11 @@ namespace FabricHealer.Repair
     public sealed class RepairTaskEngine
     {
         /// <summary>
-        /// Typical repair action name parts in lower case.
+        /// Supported repair action name substrings.
         /// </summary>
         private static readonly string[] nodeRepairActionSubstrings = new string[]
         {
-            "azure.heal", "azure.host", "azure.job", "platform", "reboot", "reimage", "repave", "tenant"
+            "azure.heal", "azure.host", "azure.job", "platform", "reboot", "reimage", "repave", "tenant", "triage"
         };
 
         /// <summary>
@@ -134,7 +134,7 @@ namespace FabricHealer.Repair
                 return null;
             }
 
-            bool isRepairInProgress = await IsRepairInProgressAsync(RepairConstants.InfraTaskIdPrefix, repairData, cancellationToken);
+            bool isRepairInProgress = await IsRepairInProgressAsync(repairData, cancellationToken);
 
             if (isRepairInProgress)
             {
@@ -146,7 +146,7 @@ namespace FabricHealer.Repair
             var repairTask = new ClusterRepairTask(taskId, repairData.RepairPolicy.InfrastructureRepairName)
             {
                 Target = new NodeRepairTargetDescription(repairData.NodeName),
-                Description = $"{repairData.RepairPolicy.RepairId}",
+                Description = repairData.RepairPolicy.RepairId,
                 PerformPreparingHealthCheck = doHealthChecks,
                 PerformRestoringHealthCheck = doHealthChecks,
                 State = RepairTaskState.Created
@@ -156,14 +156,18 @@ namespace FabricHealer.Repair
         }
 
         /// <summary>
-        /// Determines if a repair task is already in flight or if the max number of concurrent repairs has been reached for the target using the information specified in repairData instance.
+        /// Determines if a repair task is already in flight.
         /// </summary>
-        /// <param name="taskIdPrefix">The Custom (FH, FH_Infra) Task ID prefix.</param>
         /// <param name="repairData">TelemetryData instance.</param>
         /// <param name="token">CancellationToken.</param>
         /// <returns>Returns true if a repair is already in progress. Otherwise, false.</returns>
-        public static async Task<bool> IsRepairInProgressAsync(string taskIdPrefix, TelemetryData repairData, CancellationToken token)
+        public static async Task<bool> IsRepairInProgressAsync(TelemetryData repairData, CancellationToken token)
         {
+            if (repairData.RepairPolicy == null || string.IsNullOrWhiteSpace(repairData.RepairPolicy.RepairIdPrefix))
+            {
+                return false;
+            }
+
             if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
             {
                 await FabricHealerManager.RandomWaitAsync();
@@ -171,8 +175,8 @@ namespace FabricHealer.Repair
 
             RepairTaskList repairTasksInProgress =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                            taskIdPrefix,
-                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                            repairData.RepairPolicy.RepairIdPrefix,
+                            RepairTaskStateFilter.Active,
                             null,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             token);
@@ -185,28 +189,42 @@ namespace FabricHealer.Repair
             foreach (var repair in repairTasksInProgress)
             {
                 // FH is executor. Repair Task's ExecutorData field will always be a JSON-serialized instance of RepairExecutorData.
-                if (taskIdPrefix == RepairConstants.FHTaskIdPrefix)
+                if (repairData.RepairPolicy.RepairIdPrefix == RepairConstants.FHTaskIdPrefix)
                 {
                     if (!JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData executorData))
                     {
                         continue;
                     }
 
-                    if (executorData.RepairPolicy == null)
+                    if (executorData?.RepairPolicy == null)
                     {
                         return false;
                     }
 
                     // This check ensures that only one repair can be scheduled at a time for the same target.
-                    if (repairData.RepairPolicy.RepairId == executorData.RepairPolicy.RepairId)
+                    if (repairData.RepairPolicy.RepairId.Equals(executorData.RepairPolicy.RepairId, StringComparison.OrdinalIgnoreCase))
                     {
                         return true;
                     }
                 }
-                // InfrastructureService is executor. The related Repair Task's Description field is always the custom FH Repair ID.
-                else if (!string.IsNullOrWhiteSpace(repairData.RepairPolicy.InfrastructureRepairName) && repair.Description == repairData.RepairPolicy.RepairId)
+                // InfrastructureService is executor. The related Repair Task's Description field is always the custom (internal) FH Repair ID.
+                else
                 {
-                    return true;
+                    if (!string.IsNullOrWhiteSpace(repairData.RepairPolicy.InfrastructureRepairName) &&
+                        repair.Description.Equals(repairData.RepairPolicy.RepairId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+
+                    // Default is 0, which means unlimited.
+                    if (repairData.RepairPolicy.MaxConcurrentRepairs > 0)
+                    {
+                        if (await GetAllOutstandingFHRepairsCountAsync(
+                            RepairConstants.InfraTaskIdPrefix, token) >= repairData.RepairPolicy.MaxConcurrentRepairs)
+                        {
+                            return true;
+                        }
+                    }
                 }
             }
 
@@ -231,7 +249,7 @@ namespace FabricHealer.Repair
                 RepairTaskList activeRepairs =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             null,
-                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing | RepairTaskStateFilter.ReadyToExecute,
+                            RepairTaskStateFilter.Active,
                             null,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
@@ -240,6 +258,12 @@ namespace FabricHealer.Repair
                 {
                     foreach (RepairTask repair in activeRepairs)
                     {
+                        // FH does not execute machine level repairs.
+                        if (repair.TaskId.StartsWith(RepairConstants.FHTaskIdPrefix + "/") || repair.Executor == RepairConstants.FabricHealer)
+                        {
+                            continue;
+                        }
+
                         // This would mean that the job has node-level Impact and its state is at least Approved.
                         if (repair.Impact is NodeRepairImpactDescription impact)
                         {
@@ -264,8 +288,8 @@ namespace FabricHealer.Repair
                             }
 
                             if ((!string.IsNullOrWhiteSpace(repair.Executor)
-                                   && repair.Executor.ToLower().Contains(RepairConstants.InfrastructureServiceName.ToLower()))
-                                || MatchSubstring(nodeRepairActionSubstrings, repair.Action.ToLower()))
+                                   && repair.Executor.Contains(RepairConstants.InfrastructureService, StringComparison.OrdinalIgnoreCase))
+                                || MatchSubstring(nodeRepairActionSubstrings, repair.Action))
                             {
                                 return true;
                             }
@@ -289,6 +313,11 @@ namespace FabricHealer.Repair
 
         public static async Task<int> GetAllOutstandingFHRepairsCountAsync(string taskIdPrefix, CancellationToken token)
         {
+            if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+            {
+                await FabricHealerManager.RandomWaitAsync();
+            }
+
             if (taskIdPrefix == RepairConstants.InfraTaskIdPrefix) 
             {
                 return await GetAllOutstandingNodeRepairsCountAsync(token);   
@@ -297,7 +326,7 @@ namespace FabricHealer.Repair
             RepairTaskList repairTasksInProgress =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             taskIdPrefix,
-                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                            RepairTaskStateFilter.Active,
                             null,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             token);
@@ -320,7 +349,7 @@ namespace FabricHealer.Repair
             RepairTaskList repairTasksInProgress =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             null,
-                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                            RepairTaskStateFilter.Active,
                             null,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             token);
@@ -330,20 +359,29 @@ namespace FabricHealer.Repair
             {
                 foreach (RepairTask repair in repairTasksInProgress)
                 {
+                    // FH does not execute machine level repairs.
+                    if (repair.TaskId.StartsWith(RepairConstants.FHTaskIdPrefix + "/") || repair.Executor == RepairConstants.FabricHealer)
+                    {
+                        continue;
+                    }
+
                     // This would mean that the job has node-level impact and its state is at least Approved (Impact and ImpactLevel have been set).
                     if (repair.Impact is NodeRepairImpactDescription impact)
                     {
-                        if (impact.ImpactedNodes.Any(n => n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData))
+                        if (impact.ImpactedNodes.Any(
+                                n => n.ImpactLevel == NodeImpactLevel.Restart ||
+                                     n.ImpactLevel == NodeImpactLevel.RemoveData || 
+                                     n.ImpactLevel == NodeImpactLevel.RemoveNode))
                         {
                             count++;
                         }
                     }
                     // Claimed/Created (no Impact has been established yet).
-                    else if (repair.Target is NodeRepairTargetDescription target)
+                    else if (repair.Target is NodeRepairTargetDescription)
                     {
                         if ((!string.IsNullOrWhiteSpace(repair.Executor)
-                               && repair.Executor.ToLower().Contains(RepairConstants.InfrastructureServiceName.ToLower()))
-                            || MatchSubstring(nodeRepairActionSubstrings, repair.Action.ToLower()))
+                               && repair.Executor.Contains(RepairConstants.InfrastructureService, StringComparison.OrdinalIgnoreCase))
+                            || MatchSubstring(nodeRepairActionSubstrings, repair.Action))
                         {
                             count++;
                         }
@@ -359,7 +397,7 @@ namespace FabricHealer.Repair
             RepairTaskList repairTasksInProgress =
                    await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                            null,
-                           RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                           RepairTaskStateFilter.Active,
                            null,
                            FabricHealerManager.ConfigSettings.AsyncTimeout,
                            token);
@@ -384,7 +422,7 @@ namespace FabricHealer.Repair
             RepairTaskList repairTasksInProgress =
                    await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                            null,
-                           RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                           RepairTaskStateFilter.Active,
                            null,
                            FabricHealerManager.ConfigSettings.AsyncTimeout,
                            token);
@@ -413,7 +451,7 @@ namespace FabricHealer.Repair
 
             for (int i = 0; i < array.Length; i++)
             {
-                if (string.IsNullOrWhiteSpace(array[i]) || !source.Contains(array[i]))
+                if (string.IsNullOrWhiteSpace(array[i]) || !source.Contains(array[i], StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }

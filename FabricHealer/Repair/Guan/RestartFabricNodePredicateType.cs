@@ -109,10 +109,7 @@ namespace FabricHealer.Repair.Guan
             
                 // Block attempts to create node-level repair tasks if one is already running in the cluster.
                 var isNodeRepairAlreadyInProgress =
-                    await RepairTaskEngine.IsRepairInProgressAsync(
-                            RepairConstants.FHTaskIdPrefix,
-                            RepairData,
-                            FabricHealerManager.Token);
+                    await RepairTaskEngine.IsRepairInProgressAsync(RepairData, FabricHealerManager.Token);
 
                 if (isNodeRepairAlreadyInProgress)
                 {
@@ -123,7 +120,9 @@ namespace FabricHealer.Repair.Guan
                             LogLevel.Info,
                             $"RestartFabricNode::{RepairData.RepairPolicy.RepairId}",
                             message,
-                            FabricHealerManager.Token);
+                            FabricHealerManager.Token,
+                            RepairData,
+                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                     return false;
                 }

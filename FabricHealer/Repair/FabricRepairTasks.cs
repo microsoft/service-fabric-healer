@@ -141,12 +141,11 @@ namespace FabricHealer.Repair
         public static async Task<RepairTask> CreateRepairTaskAsync(
                                                 TelemetryData repairData,
                                                 RepairExecutorData executorData,
-                                                string taskIdPrefix,
                                                 CancellationToken token)
         {
             RepairActionType repairAction = repairData.RepairPolicy.RepairAction;
             RepairTask repairTask;
-            bool isRepairInProgress = await RepairTaskEngine.IsRepairInProgressAsync(taskIdPrefix, repairData, token);
+            bool isRepairInProgress = await RepairTaskEngine.IsRepairInProgressAsync(repairData, token);
 
             if (isRepairInProgress)
             {
@@ -206,7 +205,7 @@ namespace FabricHealer.Repair
             try
             {
                 var isRepairAlreadyInProgress =
-                    await RepairTaskEngine.IsRepairInProgressAsync(repairTask.Executor, repairData, token);
+                    await RepairTaskEngine.IsRepairInProgressAsync(repairData, token);
 
                 if (!isRepairAlreadyInProgress)
                 {

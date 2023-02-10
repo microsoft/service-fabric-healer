@@ -51,14 +51,18 @@ Mitigate() :- CheckInsideHealthStateMinDuration(02:00:00), !.
 
 ## Reboot.
 ## Don't process any other rules if scheduling succeeds OR fails (note the position of ! (cut operator)) and there are less than 2 of these repairs that have completed in the last 4 hours.
-Mitigate() :- GetRepairHistory(?repairCount, 04:00:00, System.Reboot), ?repairCount < 2, !, ScheduleMachineRepair(System.Reboot).
+Mitigate() :- GetRepairHistory(?repairCount, 08:00:00, System.Reboot), ?repairCount < 2, !, ScheduleMachineRepair(System.Reboot).
 
 ## ReimageOS escalation.
-Mitigate() :- GetRepairHistory(?repairCount, 04:00:00, System.ReimageOS), ?repairCount < 2, !, ScheduleMachineRepair(System.ReimageOS).
+Mitigate() :- GetRepairHistory(?repairCount, 08:00:00, System.ReimageOS), ?repairCount < 2, !, ScheduleMachineRepair(System.ReimageOS).
 
 ## Azure.Heal escalation.
-Mitigate() :- GetRepairHistory(?repairCount, 04:00:00, System.Azure.Heal), ?repairCount < 2, !, ScheduleMachineRepair(System.Azure.Heal).
+Mitigate() :- GetRepairHistory(?repairCount, 08:00:00, System.Azure.Heal), ?repairCount < 2, !, ScheduleMachineRepair(System.Azure.Heal).
 
 ## Triage escalation.
-## If we end up here, then human intervention is required. LogWarning will generate ETW/Telemetry/Health events containing the level and message.
-Mitigate(NodeName=?nodeName) :- LogWarning("0042_{0}: Specified Machine repair escalations have been exhausted for node {0}. Human intervention is required.", ?nodeName).
+## If we end up here, then human intervention is required. LogInfo will generate ETW/Telemetry/Health events containing the message.
+## FabricHealer will also schedule a ManualTriageNeeded repair task. Once you manually solve the problem, then cancel this repair task as it will block any other
+## repair by FabricHealer for the target node while it is not Completed. It also counts against the number of concurrent Active repairs you specified above in the
+## CheckOutstandingRepairs predicate. Note: Scheduling a custom repair (ManualTriageNeeded) will block any attempts to schedule another machine repair for the target node.
+Mitigate(NodeName=?nodeName) :- LogInfo("0042_{0}: Specified Machine repair escalations have been exhausted for node {0}. Human intervention is required.", ?nodeName), 
+	ScheduleMachineRepair(ManualTriageNeeded).

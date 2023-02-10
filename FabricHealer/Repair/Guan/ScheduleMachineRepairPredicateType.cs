@@ -59,7 +59,7 @@ namespace FabricHealer.Repair.Guan
                             throw new GuanException(
                                 "Failure in ScheduleMachineRepair. Unsupported argument type specified: " +
                                 $"{Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name}{Environment.NewLine}" +
-                                $"Only String and Boolean argument types are supported by this predicate.");
+                                "Only String and Boolean argument types are supported by this predicate.");
                     }
                 }
 
@@ -73,22 +73,23 @@ namespace FabricHealer.Repair.Guan
 
                 if (isRepairAlreadyInProgress)
                 {
-                    string message = 
-                        $"Machine Repair is already in progress for node {RepairData.NodeName}. Will not schedule another machine repair at this time.";
+                    string message =
+                        $"Will not schedule {RepairData.RepairPolicy.InfrastructureRepairName}: " +
+                        $"There is already a machine repair in progress for node {RepairData.NodeName}.";
 
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            $"ScheduleMachineRepair::{RepairData.RepairPolicy.InfrastructureRepairName}",
+                            $"{RepairData.NodeName}::{RepairData.RepairPolicy.InfrastructureRepairName}",
                             message,
                             FabricHealerManager.Token,
-                            null,
+                            RepairData,
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                     return false;
                 }
 
                 // Attempt to schedule an Infrastructure Repair Job (where IS is the executor).
-               bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => RepairTaskManager.ScheduleInfrastructureRepairTask(
                                                 RepairData,
                                                 FabricHealerManager.Token),
