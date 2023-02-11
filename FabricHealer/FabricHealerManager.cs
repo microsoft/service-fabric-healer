@@ -31,7 +31,7 @@ namespace FabricHealer
         internal static StatelessServiceContext ServiceContext;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.1.16";
+        private const string InternalVersionNumber = "1.1.17";
         private static FabricHealerManager singleton;
         private static FabricClient _fabricClient;
         private bool disposedValue;
@@ -366,7 +366,7 @@ namespace FabricHealer
                 }
 
                 RepairLogger.LogInfo("Shutdown signaled. Stopping.");
-                await ClearExistingHealthReportsAsync();
+                await TryClearExistingHealthReportsAsync();
             }
             catch (AggregateException)
             {
@@ -377,7 +377,7 @@ namespace FabricHealer
                 {
                     RepairLogger.LogInfo("Shutdown signaled. Stopping.");
                     await TryCleanUpOrphanedFabricHealerRepairJobsAsync(isClosing: true);
-                    await ClearExistingHealthReportsAsync();
+                    await TryClearExistingHealthReportsAsync();
                 }
             }
             catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
@@ -389,7 +389,7 @@ namespace FabricHealer
                 {
                     RepairLogger.LogInfo("Shutdown signaled. Stopping.");
                     await TryCleanUpOrphanedFabricHealerRepairJobsAsync(isClosing: true);
-                    await ClearExistingHealthReportsAsync();
+                    await TryClearExistingHealthReportsAsync();
                 }
             }
             catch (Exception e)
@@ -431,7 +431,7 @@ namespace FabricHealer
                 }
 
                 await TryCleanUpOrphanedFabricHealerRepairJobsAsync(isClosing: true);
-                await ClearExistingHealthReportsAsync();
+                await TryClearExistingHealthReportsAsync();
 
                 // Don't swallow the exception.
                 // Take down FH process. Fix the bug.
@@ -444,20 +444,20 @@ namespace FabricHealer
         /// </summary>
         /// <param name="isClosing">This means ignore the timing constraint and just cancel all active FH-as-executor repairs.</param>
         /// <returns>Task</returns>
-        internal static async Task TryCleanUpOrphanedFabricHealerRepairJobsAsync(bool isClosing = false)
+        public static async Task TryCleanUpOrphanedFabricHealerRepairJobsAsync(bool isClosing = false)
         {
             TimeSpan maxFHExecutorTime = TimeSpan.FromMinutes(60);
 
-            RepairTaskList currentFHRepairs =
-                await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                        () => RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                                RepairConstants.FHTaskIdPrefix,
-                                Token,
-                                RepairConstants.FabricHealer),
-                        Token);
-
             try
             {
+                RepairTaskList currentFHRepairs =
+                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                            () => RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
+                                    RepairConstants.FHTaskIdPrefix,
+                                    Token,
+                                    RepairConstants.FabricHealer),
+                            Token);
+
                 if (currentFHRepairs == null || !currentFHRepairs.Any())
                 {
                     return;
@@ -489,7 +489,7 @@ namespace FabricHealer
                     }
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is FabricException || e is InvalidOperationException)
+            catch (Exception e) when (e is ArgumentException || e is FabricException || e is InvalidOperationException || e is TimeoutException)
             {
 #if DEBUG
                 RepairLogger.LogWarning($"TryCleanUpOrphanedFabricHealerRepairJobsAsync Failure:{Environment.NewLine}{e}");
@@ -648,7 +648,7 @@ namespace FabricHealer
 
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
-            await ClearExistingHealthReportsAsync();
+            await TryClearExistingHealthReportsAsync();
             ConfigSettings.UpdateConfigSettings(e.NewPackage.Settings);
         }
 
@@ -2261,7 +2261,7 @@ namespace FabricHealer
             }
         }
 
-        private static async Task ClearExistingHealthReportsAsync()
+        public static async Task TryClearExistingHealthReportsAsync()
         {
             try
             {
@@ -2302,7 +2302,7 @@ namespace FabricHealer
                     Thread.Sleep(50);
                 }
             }
-            catch (FabricException)
+            catch (Exception e) when (e is ArgumentException || e is FabricException || e is TimeoutException)
             {
 
             }

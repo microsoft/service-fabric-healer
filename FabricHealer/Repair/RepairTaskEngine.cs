@@ -259,7 +259,7 @@ namespace FabricHealer.Repair
                     foreach (RepairTask repair in activeRepairs)
                     {
                         // FH does not execute machine level repairs.
-                        if (repair.TaskId.StartsWith(RepairConstants.FHTaskIdPrefix + "/") || repair.Executor == RepairConstants.FabricHealer)
+                        if (repair.TaskId.StartsWith($"{RepairConstants.FHTaskIdPrefix}/") || repair.Executor == RepairConstants.FabricHealer)
                         {
                             continue;
                         }
@@ -359,8 +359,13 @@ namespace FabricHealer.Repair
             {
                 foreach (RepairTask repair in repairTasksInProgress)
                 {
+                    if (string.IsNullOrWhiteSpace(repair.TaskId) || repair.Target.Kind != RepairTargetKind.Node)
+                    {
+                        continue;
+                    }
+
                     // FH does not execute machine level repairs.
-                    if (repair.TaskId.StartsWith(RepairConstants.FHTaskIdPrefix + "/") || repair.Executor == RepairConstants.FabricHealer)
+                    if (repair.TaskId.StartsWith($"{RepairConstants.FHTaskIdPrefix}/") || repair.Executor == RepairConstants.FabricHealer)
                     {
                         continue;
                     }
@@ -370,7 +375,7 @@ namespace FabricHealer.Repair
                     {
                         if (impact.ImpactedNodes.Any(
                                 n => n.ImpactLevel == NodeImpactLevel.Restart ||
-                                     n.ImpactLevel == NodeImpactLevel.RemoveData || 
+                                     n.ImpactLevel == NodeImpactLevel.RemoveData ||
                                      n.ImpactLevel == NodeImpactLevel.RemoveNode))
                         {
                             count++;
@@ -442,16 +447,16 @@ namespace FabricHealer.Repair
             return false;
         }
 
-        private static bool MatchSubstring(string[] array, string source)
+        private static bool MatchSubstring(string[] substringArray, string source)
         {
             if (string.IsNullOrWhiteSpace(source))
             {
                 return false;
             }
 
-            for (int i = 0; i < array.Length; i++)
+            for (int i = 0; i < substringArray.Length; i++)
             {
-                if (string.IsNullOrWhiteSpace(array[i]) || !source.Contains(array[i], StringComparison.OrdinalIgnoreCase))
+                if (string.IsNullOrWhiteSpace(substringArray[i]) || !source.Contains(substringArray[i], StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }

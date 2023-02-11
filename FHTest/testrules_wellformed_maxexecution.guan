@@ -1,7 +1,7 @@
 ﻿## Threads
 
 Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?AppName != "fabric:/FabricObserver", ?MetricValue >= 400, TimeScopedRestartCodePackage(5, 05:00:00).
-Mitigate(ServiceName=?ServiceName) :- ?ServiceName != null, TimeScopedRestartReplica(5, 05:00:00).
+Mitigate(ServiceName=?ServiceName) :- not(?ServiceName == null), TimeScopedRestartReplica(5, 05:00:00).
 
 ## Internal Predicates
 
@@ -10,5 +10,5 @@ TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, ?t
 TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount >= ?count,
 	LogInfo("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartReplica repair at this time.", ?count, ?time).
 
-TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:10:00, MaxExecutionTime=00:00:02).
-TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:10:00, MaxExecutionTime=00:00:02).
+TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=false, MaxExecutionTime=00:00:02).
+TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=false, MaxExecutionTime=00:00:02).

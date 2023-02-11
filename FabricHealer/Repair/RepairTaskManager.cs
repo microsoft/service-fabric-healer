@@ -18,7 +18,6 @@ using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
 using System.Fabric.Description;
-using Newtonsoft.Json.Linq;
 
 namespace FabricHealer.Repair
 {

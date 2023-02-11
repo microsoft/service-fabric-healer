@@ -1,21 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
 	<Section Name="RepairManagerConfiguration">
-	<!-- ***Overridable Parameters*** These must be set in ApplicationManifest.xml -->
 		<!-- Interval in seconds for how often FabricHealer wakes up and scans health states to schedule repairs. -->
-		<Parameter Name="HealthCheckIntervalInSeconds" Value="" MustOverride="true" />
-		<Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-		<Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
-		<Parameter Name="EnableETW" Value="" MustOverride="true" />
+		<Parameter Name="HealthCheckIntervalInSeconds" Value="5" />
+		<Parameter Name="EnableVerboseLogging" Value="true" />
+		<Parameter Name="EnableTelemetry" Value="false" />
+		<Parameter Name="EnableETW" Value="true" />
 		<!-- Big Red Button: You can turn FabricHealer on and off with a versionless parameter-only application upgrade. -->
-		<Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
-		<Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
-		<Parameter Name="EnableRollingServiceRestarts" Value="" MustOverride="true" />
+		<Parameter Name="EnableAutoMitigation" Value="true" />
+		<Parameter Name="EnableOperationalTelemetry" Value="false" />
+		<Parameter Name="EnableRollingServiceRestarts" Value="true" />
 		<!-- Folder name for local log output. You can use a full path or just a folder name. -->
-		<Parameter Name="LocalLogPath" Value="" MustOverride="true" />
+		<Parameter Name="LocalLogPath" Value="fabric_healer_testlogs" />
     
-		<!-- ***Non-Overridable Parameters*** These must be set in this file. -->
-	  
 		<!-- Default timeout for async SF API calls. -->
 		<Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
 		<!-- Required-If EnableTelemetry is set to true in ApplicationManifest. Values can be either AzureApplicationInsights or AzureLogAnalytics -->
@@ -39,35 +36,35 @@
 
 	<!-- Repair Policies -->
 	<Section Name="AppRepairPolicy">
-		<Parameter Name="Enabled" Value="" MustOverride="true" />
-		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+		<Parameter Name="Enabled" Value="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="AppRules.guan" />
 		<Parameter Name="MaxRepairsInTimeRange" Value="10, 01:00:00" />
 	</Section>
 	<Section Name="DiskRepairPolicy">
-		<Parameter Name="Enabled" Value="" MustOverride="true" />
-		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+		<Parameter Name="Enabled" Value="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="DiskRules.guan" />
 		<Parameter Name="MaxRepairsInTimeRange" Value="5, 02:00:00" />
 	</Section>
 	<Section Name="FabricNodeRepairPolicy">
-		<Parameter Name="Enabled" Value="" MustOverride="true" />
-		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+		<Parameter Name="Enabled" Value="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="FabricNodeRules.guan" />
 		<Parameter Name="MaxRepairsInTimeRange" Value="5, 02:00:00" />
 	</Section>
 	<Section Name="ReplicaRepairPolicy">
-		<Parameter Name="Enabled" Value="" MustOverride="true" />
-		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+		<Parameter Name="Enabled" Value="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="ReplicaRules.guan" />
 		<Parameter Name="MaxRepairsInTimeRange" Value="10, 01:00:00" />
 	</Section>
 	<Section Name="SystemServiceRepairPolicy">
-		<Parameter Name="Enabled" Value="" MustOverride="true" />
-		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+		<Parameter Name="Enabled" Value="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="SystemServiceRules.guan" />
 		<Parameter Name="MaxRepairsInTimeRange" Value="5, 02:00:00" />
 	</Section>
 	
 	<!-- Machine Repair. -->
 	<Section Name="MachineRepairPolicy">
-		<Parameter Name="Enabled" Value="" MustOverride="true" />
-		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+		<Parameter Name="Enabled" Value="true" />
+		<Parameter Name="LogicRulesConfigurationFile" Value="MachineRules.guan" />
 		<!-- This prevents rules from over-scheduling repairs, which can be detrimental to cluster health. 
 		     Think of this as a guardrail that overrides faulty logic with respect to repair count. 
 			 The below setting translates to if 5 machine repairs have been scheduled in the last two 2 hours, do not schedule 

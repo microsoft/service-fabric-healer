@@ -688,6 +688,12 @@ namespace FabricHealer
                 try
                 {
                     var repairFacts = _repairDataHistory.ElementAt(i).Value.RepairData;
+                    
+                    if (repairFacts == null)
+                    {
+                        continue;
+                    }
+
                     var healthInformation = new HealthInformation(repairFacts.Source, repairFacts.Property, HealthState.Ok)
                     {
                         Description = $"Clearing existing {repairFacts.EntityType} health report created by FabricHealerProxy",
@@ -699,7 +705,9 @@ namespace FabricHealer
                     switch (repairFacts.EntityType)
                     {
                         case EntityType.Application when repairFacts.ApplicationName != null:
-
+                        
+                        // System Service repair (which is a process restart, ApplicationName = fabric:/System).
+                        case EntityType.Process when repairFacts.ProcessName != null:
                             var appHealthReport = new ApplicationHealthReport(new Uri(repairFacts.ApplicationName), healthInformation);
                             FabricClientSingleton.HealthManager.ReportHealth(appHealthReport, sendOptions);
                             break;

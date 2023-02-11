@@ -35,16 +35,19 @@ namespace FabricHealer
             await healerManager.StartAsync();
         }
 
+        // OnAbort is called when OnCloseAsync can't be called due to some underlying failure.
         protected override void OnAbort()
         {
             _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync(isClosing: true);
+            _ = FabricHealerManager.TryClearExistingHealthReportsAsync();
             base.OnAbort();
         }
 
-        protected override Task OnCloseAsync(CancellationToken cancellationToken)
+        protected override async Task OnCloseAsync(CancellationToken cancellationToken)
         {
-            _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync(isClosing: true);
-            return base.OnCloseAsync(cancellationToken);
+            await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync(isClosing: true);
+            await FabricHealerManager.TryClearExistingHealthReportsAsync();
+            await base.OnCloseAsync(cancellationToken);
         }
     }
 }

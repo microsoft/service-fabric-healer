@@ -20,7 +20,6 @@ using System.Fabric.Repair;
 using System.Diagnostics;
 using System.Fabric.Health;
 using SupportedErrorCodes = FabricHealer.Utilities.SupportedErrorCodes;
-using HealthReport = FabricHealer.Utilities.HealthReport;
 using EntityType = FabricHealer.Utilities.Telemetry.EntityType;
 using System.Xml;
 using ServiceFabric.Mocks;
@@ -80,7 +79,7 @@ namespace FHTest
                 new StatelessServiceContext(
                         new NodeContext(NodeName, new NodeId(0, 1), 0, "NodeType0", "TEST.MACHINE"),
                         CodePackageContext,
-                        "FabricObserver.FabricObserverType",
+                        "FabricHealer.FabricHealerType",
                         TestServiceName,
                         null,
                         Guid.NewGuid(),
@@ -160,131 +159,11 @@ namespace FHTest
             }
         }
 
-        /// <summary>
-        /// This function cancels the local repair tasks created by the tests.
-        /// </summary>
-        /// <returns></returns>
-        private static async Task CleanupTestRepairJobsAsync()
-        {
-            // Complete (Cancel) any existing Test Repair Jobs.
-            try
-            {
-                var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync();
-                var testRepairTasks =
-                    repairTasks.Where(r => r.TaskId.EndsWith(NodeName) || r.TaskId.EndsWith("_Node_0") || r.TaskId.EndsWith("TEST_0"));
-
-                foreach (var repairTask in testRepairTasks)
-                {
-                    if (repairTask.State != RepairTaskState.Completed)
-                    {
-                        await FabricRepairTasks.CancelRepairTaskAsync(repairTask);
-                    }
-                }
-            }
-            catch (FabricException)
-            {
-                throw;
-            }
-        }
-
-        private static async Task CleanupTestHealthReportsAsync()
-        {
-            Logger logger = new("TestLogger");
-            var fabricClient = new FabricClient();
-            var apps = await fabricClient.QueryManager.GetApplicationListAsync();
-
-            foreach (var app in apps)
-            {
-                var replicas = await fabricClient.QueryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName);
-
-                foreach (var replica in replicas)
-                {
-                    var serviceHealth = await fabricClient.HealthManager.GetServiceHealthAsync(replica.ServiceName);
-                    var fabricObserverServiceHealthEvents =
-                        serviceHealth.HealthEvents?.Where(
-                           s => s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning);
-
-                    foreach (var evt in fabricObserverServiceHealthEvents)
-                    {
-                        var healthReport = new HealthReport
-                        {
-                            EntityType = EntityType.Service,
-                            HealthMessage = $"Clearing existing AppObserver Test health reports.",
-                            State = HealthState.Ok,
-                            NodeName = NodeName,
-                            EmitLogEvent = false,
-                            ServiceName = replica.ServiceName,
-                            Property = evt.HealthInformation.Property,
-                            SourceId = evt.HealthInformation.SourceId
-                        };
-
-                        var healthReporter = new FabricHealthReporter(logger);
-                        healthReporter.ReportHealthToServiceFabric(healthReport);
-                        await Task.Delay(250);
-                    }
-                }
-            }
-
-            // System app reports.
-            var sysAppHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(new Uri(RepairConstants.SystemAppName));
-
-            if (sysAppHealth != null)
-            {
-                foreach (var evt in sysAppHealth.HealthEvents.Where(
-                              s => s.HealthInformation.HealthState == HealthState.Error
-                                || s.HealthInformation.HealthState == HealthState.Warning))
-                {
-                    var healthReport = new HealthReport
-                    {
-                        EntityType = EntityType.Application,
-                        HealthMessage = $"Clearing existing FSO Test health reports.",
-                        State = HealthState.Ok,
-                        NodeName = NodeName,
-                        EmitLogEvent = false,
-                        AppName = new Uri(RepairConstants.SystemAppName),
-                        Property = evt.HealthInformation.Property,
-                        SourceId = evt.HealthInformation.SourceId
-                    };
-
-                    var healthReporter = new FabricHealthReporter(logger);
-                    healthReporter.ReportHealthToServiceFabric(healthReport);
-                    await Task.Delay(250);
-                }
-            }
-
-            // Node reports.
-            var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(NodeName);
-
-            if (nodeHealth != null)
-            {
-                var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(
-                        s => s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning);
-
-                foreach (var evt in fabricObserverNodeHealthEvents)
-                {
-                    var healthReport = new HealthReport
-                    {
-                        EntityType = EntityType.Machine,
-                        HealthMessage = $"Clearing existing FSO Test health reports.",
-                        State = HealthState.Ok,
-                        NodeName = NodeName,
-                        EmitLogEvent = false,
-                        Property = evt.HealthInformation.Property,
-                        SourceId = evt.HealthInformation.SourceId
-                    };
-
-                    var healthReporter = new FabricHealthReporter(logger);
-                    healthReporter.ReportHealthToServiceFabric(healthReport);
-                    await Task.Delay(250);
-                }
-            }
-        }
-
         [ClassCleanup]
         public static async Task TestClassCleanupAsync()
         {
-            await CleanupTestRepairJobsAsync();
-            await CleanupTestHealthReportsAsync();
+            await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync(isClosing: true);
+            await FabricHealerManager.TryClearExistingHealthReportsAsync();
 
             // Ensure FHProxy cleans up its health reports.
             FabricHealerProxy.Instance.Close();
@@ -691,9 +570,10 @@ namespace FHTest
                 PartitionId = default
             };
 
+            string repairId = $"Test42_{SupportedErrorCodes.AppErrorTooManyThreads}_{Guid.NewGuid()}";
             repairData.RepairPolicy = new RepairPolicy
             {
-                RepairId = $"Test42_{SupportedErrorCodes.AppErrorTooManyThreads}{NodeName}",
+                RepairId = repairId,
                 AppName = repairData.ApplicationName,
                 RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
                 NodeName = repairData.NodeName,
@@ -717,13 +597,16 @@ namespace FHTest
                 throw new AssertFailedException(ge.Message, ge);
             }
 
-            // Verify that the repair task was Cancelled.
+            // Verify that the repair task was Cancelled within max execution time.
             try
             {
+                await Task.Delay(TimeSpan.FromSeconds(5));
+
                 var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync();
                 var testRepairTasks =
-                    repairTasks.Where(r => r.ExecutorData != null && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData exData)
-                                        && exData != null && exData.RepairPolicy.RepairId == $"Test42_{SupportedErrorCodes.AppErrorTooManyThreads}{NodeName}"
+                    repairTasks.OrderByDescending(r => r.CreatedTimestamp)
+                               .Where(r => r.ExecutorData != null && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData exData)
+                                        && exData != null && exData.RepairPolicy.RepairId.Equals(repairId)
                                         && r.State == RepairTaskState.Completed && r.ResultStatus == RepairTaskResult.Cancelled
                                         && r.CompletedTimestamp.Value.Subtract(r.ExecutingTimestamp.Value) <= exData.RepairPolicy.MaxExecutionTime);
 

@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.1.16</version>
+    <version>1.1.17</version>
     <releaseNotes>
 This release requires Service Fabric runtime version 9 and higher and at least Service Fabric SDK version 6.0.1017. There are several changes and improvements in this 
 release including a new machine repair model, updated logic rules, bug fixes, and many code improvements.
