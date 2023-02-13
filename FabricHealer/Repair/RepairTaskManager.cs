@@ -23,15 +23,9 @@ namespace FabricHealer.Repair
 {
     public sealed class RepairTaskManager
     {
-        private static readonly DateTime HealthEventsListCreationTime = DateTime.UtcNow;
-        private static readonly TimeSpan MaxLifeTimeHealthEventsData = TimeSpan.FromHours(4);
-        private static DateTime LastHealthEventsListClearDateTime;
+        private static readonly TimeSpan MaxLifeTimeHealthEventsData = TimeSpan.FromHours(8);
+        private static DateTime LastHealthEventsListClearDateTime = DateTime.UtcNow;
         internal static readonly List<(string entityName, HealthEvent healthEvent, DateTime DateTimeAdded)> DetectedHealthEvents = new();
-
-        public RepairTaskManager()
-        {
-            LastHealthEventsListClearDateTime = HealthEventsListCreationTime;
-        }
 
         public async static Task RemoveServiceFabricNodeStateAsync(string nodeName, CancellationToken cancellationToken)
         {
@@ -1091,7 +1085,7 @@ namespace FabricHealer.Repair
                             && evt.healthEvent.HealthInformation.Property == repairData.Property
                             && DateTime.UtcNow.Subtract(evt.healthEvent.SourceUtcTimestamp) <= timeWindow);
 
-            // Lifetime management of Health Events list data. Data is kept in-memory only for 2 days. If FH process restarts, data is not preserved.
+            // Lifetime management of Health Events list data. Cache lifecycle is 8 hours. If FH process restarts, data is not preserved.
             if (DateTime.UtcNow.Subtract(LastHealthEventsListClearDateTime) >= MaxLifeTimeHealthEventsData)
             {
                 DetectedHealthEvents.Clear();

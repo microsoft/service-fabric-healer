@@ -156,7 +156,7 @@ namespace FabricHealer.Repair
         }
 
         /// <summary>
-        /// Determines if a repair task is already in flight.
+        /// Determines if a repair task is already in flight for the entity specified in the supplied TelemetryData instance.
         /// </summary>
         /// <param name="repairData">TelemetryData instance.</param>
         /// <param name="token">CancellationToken.</param>

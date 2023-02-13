@@ -70,6 +70,7 @@ namespace FabricHealer.Repair.Guan
                         return false;
                     }
 
+                    // MaxExecutionTime impl.
                     using (CancellationTokenSource tokenSource = new())
                     {
                         using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(

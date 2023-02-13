@@ -101,9 +101,7 @@ namespace FabricHealer.Repair
         {
             var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                                         RepairConstants.AzureTaskIdPrefix,
-                                        System.Fabric.Repair.RepairTaskStateFilter.Approved |
-                                        System.Fabric.Repair.RepairTaskStateFilter.Active |
-                                        System.Fabric.Repair.RepairTaskStateFilter.Executing,
+                                        System.Fabric.Repair.RepairTaskStateFilter.Active,
                                         null,
                                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                                         token);
@@ -115,8 +113,8 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            if (repairTasks.ToList().Any(
-                n => JsonSerializationUtility.TryDeserializeObject(n.ExecutorData, out ISExecutorData data) && data.StepId == nodeName))
+            if (repairTasks.Any(
+                    n => JsonSerializationUtility.TryDeserializeObject(n.ExecutorData, out ISExecutorData data) && data.StepId == nodeName))
             {
                 string message = $"Azure Platform or Tenant Update in progress for {nodeName}. Will not attempt repairs at this time.";
 

@@ -195,11 +195,6 @@ namespace FabricHealer.Utilities.Telemetry
                 return;
             }
 
-            if (token.IsCancellationRequested)
-            {
-                return;
-            }
-
             var requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
             string date = DateTime.UtcNow.ToString("r");
             string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
@@ -216,11 +211,6 @@ namespace FabricHealer.Utilities.Telemetry
             httpClient.DefaultRequestHeaders.Add("x-ms-date", date);
             httpClient.DefaultRequestHeaders.Add("Authorization", signature);
 
-            if (token.IsCancellationRequested)
-            {
-                return;
-            }
-
             try
             {
                 using HttpResponseMessage response = await httpClient.SendAsync(message, token);
@@ -235,10 +225,14 @@ namespace FabricHealer.Utilities.Telemetry
                     $"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}" +
                     $"{response.StatusCode}: {response.ReasonPhrase}");
             }
+            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            {
+                return;
+            }
             catch (Exception e)
             {
                 // An Exception during telemetry data submission should never take down CO process. Log it. Don't throw it. Fix it.
-                logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{e}");
+                logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync: {e.Message}");
             }
 
             if (retries < MaxRetries)

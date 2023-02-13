@@ -29,21 +29,6 @@ namespace FabricHealer.Repair
     {
         private const double MaxWaitTimeMinutesForNodeOperation = 60.0;
 
-        public RepairExecutor()
-        {
-            try
-            {
-                if (FabricHealerManager.ConfigSettings == null)
-                {
-                    return;
-                }
-            }
-            catch (FabricException fe)
-            {
-                FabricHealerManager.RepairLogger.LogWarning($"Unable to determine cluster size:{Environment.NewLine}{fe}");
-            }
-        }
-
         public static async Task<RestartDeployedCodePackageResult> RestartDeployedCodePackageAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
             try
@@ -252,7 +237,10 @@ namespace FabricHealer.Repair
             }
 
             ServiceDescription serviceDesc =
-               await FabricHealerManager.FabricClientSingleton.ServiceManager.GetServiceDescriptionAsync(FabricHealerManager.ServiceContext.ServiceName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
+               await FabricHealerManager.FabricClientSingleton.ServiceManager.GetServiceDescriptionAsync(
+                        FabricHealerManager.ServiceContext.ServiceName,
+                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                        cancellationToken);
 
             int instanceCount = (serviceDesc as StatelessServiceDescription).InstanceCount;
 
@@ -501,19 +489,32 @@ namespace FabricHealer.Repair
             {
                 // Make sure the replica still exists. \\
 
+                if (!Guid.TryParse(repairData.PartitionId, out Guid partitionId))
+                {
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            "RestartReplicaAsync::MissingPartition",
+                            $"{repairData.PartitionId} does not exist.",
+                            cancellationToken,
+                            repairData,
+                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                    return false;
+                }
+
                 var replicaList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                            Guid.Parse(repairData.PartitionId),
+                                            partitionId,
                                             repairData.ReplicaId,
                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                             cancellationToken);
 
-                if (!replicaList.Any(r => r.ReplicaStatus == ServiceReplicaStatus.Ready))
+                if (!replicaList.Any())
                 {
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
                             "RepairExecutor.RestartReplicaAsync",
                             $"Execution failure: Stateful replica {repairData.ReplicaId} " +
-                            $"not found in partition {repairData.PartitionId}.",
+                            $"not found in partition {partitionId}.",
                             cancellationToken,
                             repairData,
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
@@ -525,7 +526,7 @@ namespace FabricHealer.Repair
                 {
                     await FabricHealerManager.FabricClientSingleton.ServiceManager.RestartReplicaAsync(
                             repairData.NodeName,
-                            Guid.Parse(repairData.PartitionId),
+                            partitionId,
                             repairData.ReplicaId,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
@@ -538,7 +539,7 @@ namespace FabricHealer.Repair
                         await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "RestartReplicaAsync::Volatile",
-                        $"Attempting to remove volatile stateful replica {repairData.ReplicaId} on partition {repairData.PartitionId} " +
+                        $"Attempting to remove volatile stateful replica {repairData.ReplicaId} on partition {partitionId} " +
                         $"on node {repairData.NodeName}.",
                         cancellationToken,
                         repairData,
@@ -550,8 +551,7 @@ namespace FabricHealer.Repair
 
                 string statusSuccess =
                         $"Successfully restarted stateful replica {repairData.ReplicaId} " +
-                        $"on partition {repairData.PartitionId} " +
-                        $"on node {repairData.NodeName}.";
+                        $"on partition {partitionId} on node {repairData.NodeName}.";
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
@@ -570,11 +570,11 @@ namespace FabricHealer.Repair
                     $"Unable to restart stateful replica {repairData.ReplicaId} " +
                     $"on partition {repairData.PartitionId} " +
                     $"on node {repairData.NodeName}.{Environment.NewLine}" +
-                    $"Exception Info:{Environment.NewLine}{e.Message}";
+                    $"Exception Info: {e.Message}";
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
-                        "RestartReplicaAsync::Exception",
+                        $"RestartReplica::Exception",
                         err,
                         cancellationToken,
                         repairData,
@@ -618,7 +618,7 @@ namespace FabricHealer.Repair
 
                         await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Warning,
-                                "RepairExecutor.RestartSystemServiceProcessAsync",
+                                "RestartSystemServiceProcess::Failure",
                                 err,
                                 cancellationToken,
                                 repairData,
@@ -639,14 +639,15 @@ namespace FabricHealer.Repair
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException  || e is NotSupportedException || e is Win32Exception)
             {
                 FabricHealerManager.RepairHistory.FailedRepairs++;
+
                 string err =
-                   $"Exception in RestartSystemServiceProcessAsync: Unable to restart process {repairData.ProcessName} " +
+                   $"Handled Exception in RestartSystemServiceProcessAsync: Unable to restart process {repairData.ProcessName} " +
                    $"on node {repairData.NodeName}.{Environment.NewLine}" +
-                   $"Exception Info:{Environment.NewLine}{e}";
+                   $"Exception Info: {e.Message}";
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Warning,
-                        "RepairExecutor.RestartSystemServiceProcessAsync",
+                        LogLevel.Info,
+                        "RestartSystemServiceProcess::HandledException",
                         err,
                         cancellationToken,
                         repairData,
@@ -656,20 +657,21 @@ namespace FabricHealer.Repair
             }
             catch (Exception e)
             {
+                FabricHealerManager.RepairHistory.FailedRepairs++;
+
                 string err =
                    $"Unhandled Exception in RestartSystemServiceProcessAsync: Unable to restart process {repairData.ProcessName} " +
                    $"on node {repairData.NodeName}.{Environment.NewLine}" +
-                   $"Exception Info:{Environment.NewLine}{e}";
+                   $"Exception Info: {e.Message}";
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
-                        "RepairExecutor.RestartSystemServiceProcessAsync",
+                        "RestartSystemServiceProcess::UnhandledException",
                         err,
                         cancellationToken,
                         repairData,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-                FabricHealerManager.RepairHistory.FailedRepairs++;
                 return false;
             }
             finally
@@ -746,9 +748,11 @@ namespace FabricHealer.Repair
 
                 if (!replicaList.Any(r => r.ReplicaStatus == ServiceReplicaStatus.Ready))
                 {
+                    FabricHealerManager.RepairHistory.FailedRepairs++;
+
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            "RepairExecutor.RemoveReplicaAsync",
+                            "RemoveReplica::ReplicaNotFound",
                             $"Execution failure: Stateless instance {repairData.ReplicaId} " +
                             $"not found in partition {repairData.PartitionId}.",
                             cancellationToken,
@@ -772,7 +776,7 @@ namespace FabricHealer.Repair
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        "RepairExecutor.RemoveReplicaAsync::Success",
+                        "RemoveReplicaAsync::Success",
                         statusSuccess,
                         cancellationToken,
                         repairData,
@@ -783,21 +787,22 @@ namespace FabricHealer.Repair
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException || e is OperationCanceledException)
             {
+                FabricHealerManager.RepairHistory.FailedRepairs++;
+
                 string err =
                     $"Unable to remove stateless instance {repairData.ReplicaId} " +
                     $"on partition {repairData.PartitionId} " +
                     $"on node {repairData.NodeName}.{Environment.NewLine}" +
-                    $"Exception Info:{Environment.NewLine}{e}";
+                    $"Exception Info: {e.Message}";
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
-                        "RepairExecutor.RemoveReplicaAsync::Exception",
+                        "RemoveReplica::Exception",
                         err,
                         cancellationToken,
                         repairData,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-                FabricHealerManager.RepairHistory.FailedRepairs++;
                 return false;
             }
 
@@ -812,7 +817,7 @@ namespace FabricHealer.Repair
 
             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
-                    "RepairExecutor.DeleteFilesAsync::Start",
+                    "DeleteFiles::Start",
                     actionMessage,
                     cancellationToken,
                     repairData,
@@ -824,7 +829,7 @@ namespace FabricHealer.Repair
             {
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        "RepairExecutor.DeleteFilesAsync::DirectoryDoesNotExist",
+                        "DeleteFiles::DirectoryDoesNotExist",
                         $"The specified directory, {targetFolderPath}, does not exist.",
                         cancellationToken,
                         repairData,
@@ -865,7 +870,7 @@ namespace FabricHealer.Repair
                 {
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            "RepairExecutor.DeleteFilesAsync::NoFilesMatchSearchPattern",
+                            "DeleteFiles::NoFilesMatchSearchPattern",
                             $"No files match specified search pattern, {searchPattern}, in {targetFolderPath}. Nothing to do here.",
                             cancellationToken,
                             repairData,
@@ -892,8 +897,8 @@ namespace FabricHealer.Repair
                     {
                         await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
-                                "RepairExecutor.DeleteFilesAsync::HandledException",
-                                $"Unable to delete {file}:{Environment.NewLine}{e}",
+                                "DeleteFiles::HandledException",
+                                $"Unable to delete {file}: {e.Message}",
                                 cancellationToken,
                                 repairData,
                                 FabricHealerManager.ConfigSettings.EnableVerboseLogging);
@@ -902,35 +907,38 @@ namespace FabricHealer.Repair
 
                 if (maxFiles > 0 && initialCount > maxFiles && deletedFiles < maxFiles)
                 {
+                    FabricHealerManager.RepairHistory.FailedRepairs++;
+
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            "RepairExecutor.DeleteFilesAsync::IncompleteOperation",
+                            "DeleteFiles::IncompleteOperation",
                             $"Unable to delete specified number of files ({maxFiles}).",
                             cancellationToken,
                             repairData,
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
                     
-                    FabricHealerManager.RepairHistory.FailedRepairs++;
                     return false;
                 }
             
                 if (maxFiles == 0 && deletedFiles < initialCount)
                 {
+                    FabricHealerManager.RepairHistory.FailedRepairs++;
+
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            "RepairExecutor.DeleteFilesAsync::IncompleteOperation",
+                            "DeleteFiles::IncompleteOperation",
                             "Unable to delete all files.",
                             cancellationToken,
                             repairData,
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-                    FabricHealerManager.RepairHistory.FailedRepairs++;
+
                     return false;
                 }
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        "RepairExecutor.DeleteFilesAsync::Success",
+                        "DeleteFiles::Success",
                         $"Successfully deleted {(maxFiles > 0 ? "up to " + maxFiles : "all")} files in {targetFolderPath}",
                         cancellationToken,
                         repairData,

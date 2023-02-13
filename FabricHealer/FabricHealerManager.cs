@@ -302,10 +302,8 @@ namespace FabricHealer
 
                 NodeCount = nodeList.Count;
 
-                // First, let's clean up any orphan non-node level FabricHealer repair tasks left pending 
-                // when the FabricHealer process is killed or otherwise ungracefully closed.
-                // This call will return quickly if FH was gracefully closed as there will be
-                // no outstanding repair tasks left orphaned.
+                // First, let's clean up any orphaned non-node level FabricHealer repair tasks left pending. This will also resume Fabric Node repairs that
+                // FH owns and was executing at the time FH exited. Only FH-owned repairs will be canceled, not repairs conducted by other executors.
                 await CancelOrResumeAllRunningFHRepairsAsync();
 
                 // Run until RunAsync token is cancelled.
@@ -316,6 +314,7 @@ namespace FabricHealer
                         break;
                     }
 
+                    // This call will try to cancel any FH-owned (and executed) repair that has exceeded the specified (in logic rule or default) max execution duration.
                     await TryCleanUpOrphanedFabricHealerRepairJobsAsync();
 
                     // FH can be turned "off" easily by creating a special repair task: E.g., Start-ServiceFabricRepairTask -NodeNames _Node_0 -CustomAction FabricHealer.Stop
@@ -454,9 +453,9 @@ namespace FabricHealer
                     await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                             () => RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
                                     RepairConstants.FHTaskIdPrefix,
-                                    Token,
+                                    isClosing ? CancellationToken.None : Token,
                                     RepairConstants.FabricHealer),
-                            Token);
+                            isClosing ? CancellationToken.None : Token);
 
                 if (currentFHRepairs == null || !currentFHRepairs.Any())
                 {

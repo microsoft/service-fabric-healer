@@ -53,6 +53,7 @@ namespace FabricHealer.Repair.Guan
                     }
                 }
 
+                // MaxExecutionTime impl.
                 using (CancellationTokenSource tokenSource = new())
                 {
                     using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(
@@ -92,6 +93,7 @@ namespace FabricHealer.Repair.Guan
                                                         linkedCTS.Token),
                                                 linkedCTS.Token);
                         
+                        // Best effort FH repair job cleanup retry.
                         if (!success && linkedCTS.IsCancellationRequested)
                         {
                             await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();

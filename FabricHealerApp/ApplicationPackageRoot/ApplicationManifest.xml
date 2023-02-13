@@ -3,9 +3,9 @@
   <Parameters>
     <!-- FabricHealerManager Settings  -->
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
-    <Parameter Name="EnableETW" DefaultValue="true" />
+    <Parameter Name="EnableETW" DefaultValue="false" />
     <Parameter Name="HealthCheckIntervalInSeconds" DefaultValue="60" />
-    <Parameter Name="EnableTelemetry" DefaultValue="true" />
+    <Parameter Name="EnableTelemetry" DefaultValue="false" />
     <Parameter Name="EnableVerboseLogging" DefaultValue="true" />
     <Parameter Name="OperationalTelemetryEnabled" DefaultValue="true" />
     <Parameter Name="LocalLogPath" DefaultValue="fabric_healer_logs" />

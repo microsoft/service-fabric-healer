@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
 using System.Fabric;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,21 +34,6 @@ namespace FabricHealer
 
             // Blocks until cancellationToken cancellation.
             await healerManager.StartAsync();
-        }
-
-        // OnAbort is called when OnCloseAsync can't be called due to some underlying failure.
-        protected override void OnAbort()
-        {
-            _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync(isClosing: true);
-            _ = FabricHealerManager.TryClearExistingHealthReportsAsync();
-            base.OnAbort();
-        }
-
-        protected override async Task OnCloseAsync(CancellationToken cancellationToken)
-        {
-            await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync(isClosing: true);
-            await FabricHealerManager.TryClearExistingHealthReportsAsync();
-            await base.OnCloseAsync(cancellationToken);
         }
     }
 }

@@ -110,7 +110,7 @@ namespace FabricHealer.Utilities.Telemetry
                         string serviceName = null,
                         string instanceName = null)
         {
-            if (!IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled)
             {
                 return Task.FromResult(1);
             }
@@ -146,7 +146,7 @@ namespace FabricHealer.Utilities.Telemetry
 
         public Task ReportData(string description, LogLevel level, CancellationToken cancellationToken)
         {
-            if (!IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled)
             {
                 return Task.FromResult(false);
             }
@@ -190,7 +190,7 @@ namespace FabricHealer.Utilities.Telemetry
         /// <returns>A task.</returns>
         public Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
         {
-            if (telemetryData == null)
+            if (telemetryData == null || cancellationToken.IsCancellationRequested)
             {
                 return Task.CompletedTask;
             }
@@ -306,7 +306,7 @@ namespace FabricHealer.Utilities.Telemetry
                         IDictionary<string, string> properties,
                         CancellationToken cancellationToken)
         {
-            if (!IsEnabled || cancellationToken.IsCancellationRequested)
+            if (!IsEnabled)
             {
                 return Task.FromResult(false);
             }

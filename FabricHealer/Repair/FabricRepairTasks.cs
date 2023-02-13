@@ -19,19 +19,19 @@ namespace FabricHealer.Repair
     public static class FabricRepairTasks
     {
         public static async Task<bool> IsRepairTaskInDesiredStateAsync(
-                                        string taskId,
+                                        string taskIdPrefix,
                                         IList<RepairTaskState> desiredStates,
                                         CancellationToken cancellationToken)
         {
             IList<RepairTask> repairTaskList = 
                 await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                        taskId,
+                        taskIdPrefix,
                         RepairTaskStateFilter.All,
                         null,
                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                         cancellationToken);
 
-            return desiredStates.Any(desiredState => repairTaskList.Count(rt => rt.State == desiredState) > 0);
+            return desiredStates.Any(desiredState => repairTaskList.Any(rt => rt.State == desiredState));
         }
 
         /// <summary>
@@ -106,9 +106,9 @@ namespace FabricHealer.Repair
                 repairTask.ResultStatus = RepairTaskResult.Succeeded;
 
                 _ =  await FabricHealerManager.FabricClientSingleton.RepairManager.UpdateRepairExecutionStateAsync(
-                                                            repairTask,
-                                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                            token);
+                                                repairTask,
+                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                token);
             }
             catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is OperationCanceledException || e is TimeoutException)
             {
@@ -335,7 +335,7 @@ namespace FabricHealer.Repair
             var allCurrentFHRepairTasks =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             repairData.RepairPolicy.RepairIdPrefix,
-                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                            RepairTaskStateFilter.Active,
                             null,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
@@ -458,7 +458,7 @@ namespace FabricHealer.Repair
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                             // Should this filter be applied? Does it matter if FH scheduled the repairs?
                             repairData.RepairPolicy.RepairIdPrefix,
-                            RepairTaskStateFilter.Active | RepairTaskStateFilter.Approved | RepairTaskStateFilter.Executing,
+                            RepairTaskStateFilter.Active,
                             null,
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
