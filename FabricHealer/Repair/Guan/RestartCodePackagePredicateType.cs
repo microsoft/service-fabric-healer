@@ -53,6 +53,17 @@ namespace FabricHealer.Repair.Guan
                     }
                 }
 
+                // Try to schedule repair with RM.
+                var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                        () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
+                                                RepairData,
+                                                FabricHealerManager.Token),
+                                        FabricHealerManager.Token);
+                if (repairTask == null)
+                {
+                    return false;
+                }
+
                 // MaxExecutionTime impl.
                 using (CancellationTokenSource tokenSource = new())
                 {
@@ -72,18 +83,6 @@ namespace FabricHealer.Repair.Guan
                         {
                              _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
                         });
-
-                        // Try to schedule repair with RM.
-                        var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                                        RepairData,
-                                                        linkedCTS.Token),
-                                                linkedCTS.Token);
-
-                        if (repairTask == null)
-                        {
-                            return false;
-                        }
 
                         // Try to execute repair (FH executor does this work and manages repair state).
                         bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(

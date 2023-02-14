@@ -53,6 +53,17 @@ namespace FabricHealer.Repair.Guan
                     }
                 }
 
+                // Try to schedule repair with RM.
+                var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                        () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
+                                                RepairData,
+                                                FabricHealerManager.Token),
+                                        FabricHealerManager.Token);
+                if (repairTask == null)
+                {
+                    return false;
+                }
+
                 // MaxExecutionTime impl.
                 using (CancellationTokenSource tokenSource = new())
                 {
@@ -72,13 +83,6 @@ namespace FabricHealer.Repair.Guan
                         {
                             _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
                         });
-
-                        // Try to schedule repair with RM.
-                        var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                                        RepairData,
-                                                        linkedCTS.Token),
-                                                linkedCTS.Token);
 
                         if (repairTask == null)
                         {

@@ -52,23 +52,25 @@ namespace FabricHealer.Repair
 
         // Mitigate Argument names.
         public const string AppName = "AppName";
+        public const string ErrorCode = "ErrorCode";
         public const string EntityType = "EntityType";
-        public const string ServiceName = "ServiceName";
-        public const string ServiceKind = "ServiceKind";
+        public const string HealthState = "HealthState";
+        public const string MetricName = "MetricName";
+        public const string MetricValue = "MetricValue";
         public const string NodeName = "NodeName";
         public const string NodeType = "NodeType";
+        public const string ObserverName = "ObserverName";
+        public const string OS = "OS";
         public const string PartitionId = "PartitionId";
         public const string ReplicaOrInstanceId = "ReplicaOrInstanceId";
         public const string ReplicaRole = "ReplicaRole";
-        public const string ErrorCode = "ErrorCode";
-        public const string MetricName = "MetricName";
-        public const string MetricValue = "MetricValue";
-        public const string ObserverName = "ObserverName";
-        public const string OS = "OS";
         public const string ProcessId = "ProcessId";
         public const string ProcessName = "ProcessName";
         public const string ProcessStartTime = "ProcessStartTime";
-        public const string HealthState = "HealthState";
+        public const string Property = "Property";
+        public const string ServiceName = "ServiceName";
+        public const string ServiceKind = "ServiceKind";
+        public const string Source = "Source";
 
         // Repair Actions.
         public const string DeleteFiles = "DeleteFiles";

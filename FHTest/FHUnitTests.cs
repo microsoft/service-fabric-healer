@@ -46,10 +46,6 @@ namespace FHTest
         private const string NodeName = "_Node_0";
         private const string FHProxyId = "FabricHealerProxy";
 
-        // Set this to the full path to your Rules directory in the FabricHealer project's PackageRoot\Config directory.
-        // e.g., if developing on Windows, then something like @"C:\Users\[me]\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\LogicRules\";
-        private const string FHRulesDirectory = @"C:\Users\ctorre\source\repos\service-fabric-healer\FabricHealer\PackageRoot\Config\LogicRules\";
-
         static FHUnitTests()
         {
             /* SF runtime mocking care of ServiceFabric.Mocks by loekd.
@@ -215,8 +211,8 @@ namespace FHTest
                 RepairPolicy = repairData.RepairPolicy
             };
 
-            var file = Path.Combine(FHRulesDirectory, "AppRules.guan");
-            List<string> repairRules = ParseRulesFile(await File.ReadAllLinesAsync(file, token));
+            var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "AppRules.guan");
+            List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
 
             try
             {
@@ -263,8 +259,8 @@ namespace FHTest
                 RepairPolicy = repairData.RepairPolicy
             };
 
-            var file = Path.Combine(FHRulesDirectory, "MachineRules.guan");
-            List<string> repairRules = ParseRulesFile(await File.ReadAllLinesAsync(file, token));
+            var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "MachineRules.guan");
+            List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
 
             try
             {
@@ -312,8 +308,8 @@ namespace FHTest
                 RepairPolicy = repairData.RepairPolicy
             };
 
-            var file = Path.Combine(FHRulesDirectory, "DiskRules.guan");
-            List<string> repairRules = ParseRulesFile(await File.ReadAllLinesAsync(file, token));
+            var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "DiskRules.guan");
+            List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
 
             try
             {
@@ -366,8 +362,8 @@ namespace FHTest
                 RepairPolicy = repairData.RepairPolicy
             };
 
-            var file = Path.Combine(FHRulesDirectory, "ReplicaRules.guan");
-            List<string> repairRules = ParseRulesFile(await File.ReadAllLinesAsync(file, token));
+            var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "ReplicaRules.guan");
+            List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
 
             try
             {
@@ -419,8 +415,8 @@ namespace FHTest
                 RepairPolicy = repairData.RepairPolicy
             };
 
-            var file = Path.Combine(FHRulesDirectory, "SystemServiceRules.guan");
-            List<string> repairRules = ParseRulesFile(await File.ReadAllLinesAsync(file, token));
+            var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "SystemServiceRules.guan");
+            List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
 
             try
             {
@@ -449,7 +445,7 @@ namespace FHTest
 
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed.guan");
             string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
-            List<string> repairRules = ParseRulesFile(rules);
+            List<string> repairRules = FabricHealerManager.ParseRulesFile(rules);
             var repairData = new TelemetryData
             {
                 ApplicationName = "fabric:/test0",
@@ -505,7 +501,7 @@ namespace FHTest
             };
 
             string[] rules = await File.ReadAllLinesAsync(Path.Combine(Environment.CurrentDirectory, "testrules_malformed.guan"), token);
-            List<string> repairAction = ParseRulesFile(rules);
+            List<string> repairAction = FabricHealerManager.ParseRulesFile(rules);
 
             var repairData = new TelemetryData
             {
@@ -541,6 +537,182 @@ namespace FHTest
             await Assert.ThrowsExceptionAsync<GuanException>(async () => { await TestInitializeGuanAndRunQuery(repairData, repairAction, executorData); });
         }
 
+        // Ensure that all machine repair escalations (repair actions) are scheduled.
+        // The test logic program used here includes the following rule to also test FH scheduling behavior when a
+        // watchdog service creates an SF health event with specific source and/or property facts:
+        // Mitigate(Property=?property, Source=?source) :- not(?property == InfrastructureError42 || ?source == TestMachineWatchdog), !.
+        // You can use either Source or Property as a constraint in the logic rule. The TelemetryData instance (repairData) in this function specifies both,
+        // but the logic rule requires that only one of the facts be present. If neither are present, then stop processing rules (ending with a ! (cut)).
+        [TestMethod]
+        public async Task Ensure_MachineRepair_ErrorDetected_RepairJobCreated_AllEscalations()
+        {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
+            FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
+            {
+                TelemetryEnabled = false
+            };
+
+            string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "MachineRules.guan");
+            string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
+            List<string> repairRules = FabricHealerManager.ParseRulesFile(rules);
+            int escalationCount = 4; // reboot, reimage, heal, triage.
+            RepairTaskList repairTasks = null;
+
+            for (int i = 0; i < escalationCount; i++)
+            {
+                var repairData = new TelemetryData
+                {
+                    EntityType = EntityType.Machine,
+                    Source = "TestMachineWatchdog", // When FH runs, this value comes from a health event (HealthInformation.SourceId).
+                    Property = "InfrastructureError42", // When FH runs, this value comes from a health event (HealthInformation.Property).
+                    HealthState = HealthState.Error,
+                    NodeName = FHUnitTests.NodeName
+                };
+
+                repairData.RepairPolicy = new RepairPolicy
+                {
+                    RepairIdPrefix = RepairConstants.InfraTaskIdPrefix,
+                    NodeName = repairData.NodeName,
+                    HealthState = repairData.HealthState
+                };
+
+                var executorData = new RepairExecutorData
+                {
+                    RepairPolicy = repairData.RepairPolicy
+                };
+
+                try
+                {
+                    await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
+                }
+                catch (GuanException ge)
+                {
+                    throw new AssertFailedException(ge.Message, ge);
+                }
+
+                await Task.Delay(5000, token);
+                repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
+                                        RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Active, null);
+
+                Assert.IsTrue(repairTasks.Any());
+
+                await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First());
+            }
+
+            // Verify that all the specified escalations ran. \\
+
+            try
+            {
+                await Task.Delay(5000, token);
+
+                repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
+                                        RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Completed, null);
+                var testRepairTasks = repairTasks.Where(r => r.ResultStatus == RepairTaskResult.Cancelled);
+
+                Assert.IsTrue(testRepairTasks.Any());
+            }
+            catch (FabricException fe)
+            {
+                throw new AssertFailedException(fe.Message, fe);
+            }
+
+            try
+            {
+                var testRepairTasks =
+                    repairTasks.Where(r => DateTime.UtcNow.Subtract(r.CompletedTimestamp.Value) < TimeSpan.FromSeconds(60) &&
+                                           RepairTaskEngine.MatchSubstring(RepairTaskEngine.NodeRepairActionSubstrings, r.Action));
+
+                Assert.IsTrue(testRepairTasks.Count() == escalationCount);
+
+                // Clean up.
+                foreach (RepairTask repair in testRepairTasks)
+                {
+                    await fabricClient.RepairManager.DeleteRepairTaskAsync(repair.TaskId, repair.Version);
+                }
+            }
+            catch (FabricException)
+            {
+                throw;
+            }
+        }
+
+        // Ensure all machine repair escalations run, where the workflow is initiated by FabricHealerProxy.
+        [TestMethod]
+        public async Task Ensure_MachineRepair_ErrorDetected_RepairJobsCreated_AllEscalations_FHProxy()
+        {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+            }
+
+            // Create FabricHealerManager singleton (required).
+            _ = FabricHealerManager.Instance(TestServiceContext, token);
+            int escalationCount = 4; // reboot, reimage, heal, triage.
+            RepairTaskList repairTasks = null;
+
+            for (int i = 0; i < escalationCount; i++)
+            {
+                await FabricHealerProxy.Instance.RepairEntityAsync(WatchDogMachineRepairFacts, token);
+
+                try
+                {
+                    await FabricHealerManager.MonitorHealthEventsAsync();
+                }
+                catch (Exception e)
+                {
+                    throw new AssertFailedException(e.Message, e);
+                }
+
+                await Task.Delay(5000, token);
+                repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
+                                        RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Active, null);
+
+                Assert.IsTrue(repairTasks.Any());
+
+                await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First());
+            }
+
+            // Verify that all the specified escalations ran. \\
+
+            try
+            {
+                await Task.Delay(5000, token);
+
+                repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
+                                        RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Completed, null);
+                var testRepairTasks = repairTasks.Where(r => r.ResultStatus == RepairTaskResult.Cancelled);
+
+                Assert.IsTrue(testRepairTasks.Any());
+            }
+            catch (FabricException fe)
+            {
+                throw new AssertFailedException(fe.Message, fe);
+            }
+
+            try
+            {
+                var testRepairTasks =
+                    repairTasks.Where(r => DateTime.UtcNow.Subtract(r.CompletedTimestamp.Value) < TimeSpan.FromSeconds(60) &&
+                                           RepairTaskEngine.MatchSubstring(RepairTaskEngine.NodeRepairActionSubstrings, r.Action));
+
+                Assert.IsTrue(testRepairTasks.Count() == escalationCount);
+
+                // Clean up.
+                foreach (RepairTask repair in testRepairTasks)
+                {
+                    await fabricClient.RepairManager.DeleteRepairTaskAsync(repair.TaskId, repair.Version);
+                }
+            }
+            catch (FabricException)
+            {
+                throw;
+            }
+        }
+
         [TestMethod]
         public async Task Test_MaxExecutionTime_Cancels_Repair()
         {
@@ -556,7 +728,7 @@ namespace FHTest
 
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed_maxexecution.guan");
             string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
-            List<string> repairRules = ParseRulesFile(rules);
+            List<string> repairRules = FabricHealerManager.ParseRulesFile(rules);
             var repairData = new TelemetryData
             {
                 ApplicationName = "fabric:/test0",
@@ -602,12 +774,13 @@ namespace FHTest
             {
                 await Task.Delay(TimeSpan.FromSeconds(5));
 
-                var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync();
+                var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
+                                            RepairConstants.FHTaskIdPrefix, RepairTaskStateFilter.Completed, null);
                 var testRepairTasks =
                     repairTasks.OrderByDescending(r => r.CreatedTimestamp)
                                .Where(r => r.ExecutorData != null && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData exData)
-                                        && exData != null && exData.RepairPolicy.RepairId.Equals(repairId)
-                                        && r.State == RepairTaskState.Completed && r.ResultStatus == RepairTaskResult.Cancelled
+                                        && exData.RepairPolicy.RepairId.Equals(repairId)
+                                        && r.ResultStatus == RepairTaskResult.Cancelled
                                         && r.CompletedTimestamp.Value.Subtract(r.ExecutingTimestamp.Value) <= exData.RepairPolicy.MaxExecutionTime);
 
                 Assert.IsTrue(testRepairTasks != null && testRepairTasks.Any());
@@ -624,51 +797,6 @@ namespace FHTest
         {
             _ = FabricHealerManager.Instance(TestServiceContext, token);
             await RepairTaskManager.RunGuanQueryAsync(repairData, repairRules, token, executorData);
-        }
-
-        private static List<string> ParseRulesFile(string[] rules)
-        {
-            var repairRules = new List<string>();
-            int ptr1 = 0, ptr2 = 0;
-            rules = rules.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
-
-            while (ptr1 < rules.Length && ptr2 < rules.Length)
-            {
-                // Single line comments removal.
-                if (rules[ptr2].TrimStart().StartsWith("##"))
-                {
-                    ptr1++;
-                    ptr2++;
-                    continue;
-                }
-
-                if (rules[ptr2].TrimEnd().EndsWith("."))
-                {
-                    if (ptr1 == ptr2)
-                    {
-                        repairRules.Add(rules[ptr2].TrimEnd().Remove(rules[ptr2].Length - 1, 1));
-                    }
-                    else
-                    {
-                        string rule = rules[ptr1].Trim();
-
-                        for (int i = ptr1 + 1; i <= ptr2; i++)
-                        {
-                            rule = rule + ' ' + rules[i].Replace('\t', ' ').Trim();
-                        }
-
-                        repairRules.Add(rule.Remove(rule.Length - 1, 1));
-                    }
-                    ptr2++;
-                    ptr1 = ptr2;
-                }
-                else
-                {
-                    ptr2++;
-                }
-            }
-
-            return repairRules;
         }
 
         private static async Task<(bool, TelemetryData data)> 
@@ -789,6 +917,16 @@ namespace FHTest
             // Specifying Source is Required for unit tests.
             // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
             Source = "fabric:/Test"
+        };
+
+        // Custom Source and Property, like from a watchdog service that wants FH to schedule a machine repair for a target node.
+        static readonly RepairFacts WatchDogMachineRepairFacts = new()
+        {
+            HealthState = HealthState.Error,
+            NodeName = NodeName,
+            EntityType = FabricHealer.EntityType.Machine,
+            Property = "InfrastructureError42",
+            Source = "MyMachineWatchdog"
         };
 
         // For use in the IEnumerable<RepairFacts> RepairEntityAsync overload.

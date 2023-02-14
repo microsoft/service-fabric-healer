@@ -31,7 +31,25 @@
         <ProjectReference Include="..\FabricHealer\FabricHealer.csproj" />
     </ItemGroup>
     <ItemGroup>
+        <None Update="PackageRoot\Config\LogicRules\AppRules.guan">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="PackageRoot\Config\LogicRules\DiskRules.guan">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="PackageRoot\Config\LogicRules\FabricNodeRules.guan">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="PackageRoot\Config\LogicRules\ReplicaRules.guan">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="PackageRoot\Config\LogicRules\SystemServiceRules.guan">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
         <None Update="PackageRoot\Config\Settings.xml">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="PackageRoot\Config\LogicRules\MachineRules.guan">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
         <None Update="testrules_wellformed.guan">

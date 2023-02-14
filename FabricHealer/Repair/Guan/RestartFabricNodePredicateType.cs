@@ -128,6 +128,17 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
+                // Try to schedule repair with RM.
+                repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                        () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
+                                                RepairData,
+                                                FabricHealerManager.Token),
+                                        FabricHealerManager.Token);
+                if (repairTask == null)
+                {
+                    return false;
+                }
+
                 using (CancellationTokenSource tokenSource = new())
                 {
                     using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(
@@ -147,25 +158,13 @@ namespace FabricHealer.Repair.Guan
                             _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
                         });
 
-                        // Try to schedule repair with RM.
-                        repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                                        RepairData,
-                                                        linkedCTS.Token),
-                                                linkedCTS.Token);
-
-                        if (repairTask == null)
-                        {
-                            return false;
-                        }
-
                         // Try to execute repair (FH executor does this work and manages repair state).
                         success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
-                                                        repairTask,
-                                                        RepairData,
-                                                        linkedCTS.Token),
-                                                linkedCTS.Token);
+                                            () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
+                                                    repairTask,
+                                                    RepairData,
+                                                    linkedCTS.Token),
+                                            linkedCTS.Token);
 
                         if (!success && linkedCTS.IsCancellationRequested)
                         {

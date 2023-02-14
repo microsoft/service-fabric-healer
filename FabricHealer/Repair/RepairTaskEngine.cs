@@ -20,7 +20,7 @@ namespace FabricHealer.Repair
         /// <summary>
         /// Supported repair action name substrings.
         /// </summary>
-        private static readonly string[] nodeRepairActionSubstrings = new string[]
+        public static readonly string[] NodeRepairActionSubstrings = new string[]
         {
             "azure.heal", "azure.host", "azure.job", "platform", "reboot", "reimage", "repave", "tenant", "triage"
         };
@@ -124,11 +124,6 @@ namespace FabricHealer.Repair
         /// <returns></returns>
         public static async Task<RepairTask> CreateInfrastructureRepairTaskAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
-            if (await FabricHealerManager.IsOneNodeClusterAsync())
-            {
-                return null;
-            }
-
             if (string.IsNullOrWhiteSpace(repairData.RepairPolicy.InfrastructureRepairName))
             {
                 return null;
@@ -289,7 +284,7 @@ namespace FabricHealer.Repair
 
                             if ((!string.IsNullOrWhiteSpace(repair.Executor)
                                    && repair.Executor.Contains(RepairConstants.InfrastructureService, StringComparison.OrdinalIgnoreCase))
-                                || MatchSubstring(nodeRepairActionSubstrings, repair.Action))
+                                || MatchSubstring(NodeRepairActionSubstrings, repair.Action))
                             {
                                 return true;
                             }
@@ -386,7 +381,7 @@ namespace FabricHealer.Repair
                     {
                         if ((!string.IsNullOrWhiteSpace(repair.Executor)
                                && repair.Executor.Contains(RepairConstants.InfrastructureService, StringComparison.OrdinalIgnoreCase))
-                            || MatchSubstring(nodeRepairActionSubstrings, repair.Action))
+                            || MatchSubstring(NodeRepairActionSubstrings, repair.Action))
                         {
                             count++;
                         }
@@ -447,7 +442,7 @@ namespace FabricHealer.Repair
             return false;
         }
 
-        private static bool MatchSubstring(string[] substringArray, string source)
+        public static bool MatchSubstring(string[] substringArray, string source)
         {
             if (string.IsNullOrWhiteSpace(source))
             {

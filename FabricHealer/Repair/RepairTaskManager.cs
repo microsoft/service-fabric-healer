@@ -188,9 +188,11 @@ namespace FabricHealer.Repair
             ruleHead.AddArgument(new Constant(repairData.ProcessId), RepairConstants.ProcessId);
             ruleHead.AddArgument(new Constant(repairData.ProcessName), RepairConstants.ProcessName);
             ruleHead.AddArgument(new Constant(repairData.ProcessStartTime), RepairConstants.ProcessStartTime);
+            ruleHead.AddArgument(new Constant(repairData.Property), RepairConstants.Property);
             ruleHead.AddArgument(new Constant(repairData.PartitionId), RepairConstants.PartitionId);
             ruleHead.AddArgument(new Constant(repairData.ReplicaId), RepairConstants.ReplicaOrInstanceId);
             ruleHead.AddArgument(new Constant(repairData.ReplicaRole), RepairConstants.ReplicaRole);
+            ruleHead.AddArgument(new Constant(repairData.Source), RepairConstants.Source);
             compoundTerms.Add(ruleHead);
 
             // Run Guan query.
@@ -475,65 +477,72 @@ namespace FabricHealer.Repair
         /// <returns></returns>
         public static async Task<RepairTask> ScheduleFabricHealerRepairTaskAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
-            if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+            try
             {
-                await FabricHealerManager.RandomWaitAsync();
-            }
+                if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                {
+                    await FabricHealerManager.RandomWaitAsync();
+                }
 
-            if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
+                if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
+                {
+                    return null;
+                }
+
+                // Internal throttling to protect against bad rules (over-scheduling of repair tasks within a fixed time range). 
+                if (await CheckRepairCountThrottle(repairData, cancellationToken))
+                {
+                    string message = $"Too many repairs of this type have been scheduled in the last 15 minutes: " +
+                                     $"{repairData.RepairPolicy.RepairId}. Will not schedule another repair at this time.";
+
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            $"InternalThrottling({repairData.RepairPolicy.RepairId})",
+                            message,
+                            cancellationToken,
+                            repairData,
+                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                    return null;
+                }
+
+                // Has the repair already been scheduled?
+                if (await RepairTaskEngine.IsRepairInProgressAsync(repairData, cancellationToken))
+                {
+                    return null;
+                }
+
+                // Don't attempt a node-level repair on a node where there is already an active node-level repair.
+                if (repairData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode
+                    && await RepairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(repairData, cancellationToken))
+                {
+                    string message = $"Node {repairData.NodeName} already has a node-impactful repair in progress: " +
+                                     $"{repairData.RepairPolicy.RepairAction}";
+
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            $"NodeRepairAlreadyInProgress::{repairData.NodeName}",
+                            message,
+                            cancellationToken,
+                            repairData,
+                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                    return null;
+                }
+
+                var executorData = new RepairExecutorData
+                {
+                    RepairPolicy = repairData.RepairPolicy
+                };
+
+                // Create custom FH repair task for target node.
+                var repairTask = await FabricRepairTasks.CreateRepairTaskAsync(repairData, executorData, cancellationToken);
+                return repairTask;
+            }
+            catch (Exception e) when (e is TaskCanceledException)
             {
                 return null;
             }
-
-            // Internal throttling to protect against bad rules (over-scheduling of repair tasks within a fixed time range). 
-            if (await CheckRepairCountThrottle(repairData, cancellationToken))
-            {
-                string message = $"Too many repairs of this type have been scheduled in the last 15 minutes: " +
-                                 $"{repairData.RepairPolicy.RepairId}. Will not schedule another repair at this time.";
-
-                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        $"InternalThrottling({repairData.RepairPolicy.RepairId})",
-                        message,
-                        cancellationToken,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-                return null;
-            }
-
-            // Has the repair already been scheduled?
-            if (await RepairTaskEngine.IsRepairInProgressAsync(repairData, cancellationToken))
-            {
-                return null;
-            }
-
-            // Don't attempt a node-level repair on a node where there is already an active node-level repair.
-            if (repairData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode 
-                && await RepairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(repairData, cancellationToken))
-            {
-                string message = $"Node {repairData.NodeName} already has a node-impactful repair in progress: " +
-                                 $"{repairData.RepairPolicy.RepairAction}";
-
-                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        $"NodeRepairAlreadyInProgress::{repairData.NodeName}",
-                        message,
-                        cancellationToken,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-                return null;
-            }
-
-            var executorData = new RepairExecutorData
-            {
-                RepairPolicy = repairData.RepairPolicy
-            };
-
-            // Create custom FH repair task for target node.
-            var repairTask = await FabricRepairTasks.CreateRepairTaskAsync(repairData, executorData, cancellationToken);
-            return repairTask;
         }
 
         public static async Task<bool> ExecuteFabricHealerRepairTaskAsync(RepairTask repairTask, TelemetryData repairData, CancellationToken cancellationToken)

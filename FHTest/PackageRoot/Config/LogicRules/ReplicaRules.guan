@@ -1,0 +1,35 @@
+﻿## *Experimental* Replica repair rules. One type of replica Warning is supported: stuck stateful replicas. They can block application upgrades, so restart them to let the upgrade progress.
+
+## These rules demonstrates a workflow that employs multiple internal and external predicates to get to a solution for a single unhealthy replica scenario:
+##		[SourceId] ='System.RAP' reported Warning/Error for property...
+##		[Property] = 'IStatefulServiceReplica.ChangeRole(N)Duration'.
+##		[Description] = The api IStatefulServiceReplica.ChangeRole(N) on node [NodeName] is stuck. 
+##		Start Time (UTC): 2022-04-26 19:22:55.492.
+
+## First, check if we are inside run interval. If so, then cut (!), which effectively means stop processing rules (no backtracking to subsequent rules in the file).
+## This is commented out by default. Just uncomment and set the global run interval for replica level repairs to suit your needs.
+
+## Mitigate() :- CheckInsideRunInterval(00:15:00), !.
+
+## Set a repair count variable for use by any rule in this file (NOTE: all rules must have the same TimeWindow value) as an internal predicate, _mitigate(?count),
+## where ?repairCount and ?count variables are unified when _mitigate(?count) predicate runs. The concept here is sharing a variable value across different rules.
+
+Mitigate() :- GetRepairHistory(?repairCount, 01:00:00), _mitigate(?repairCount).
+
+## Now, let's say you wanted to only repair specific Apps or Paritions where related repair TimeWindow values are *not* the same, unlike the above "global" variable rule.
+## You could do something like the below three rules, which would mean the _mitigate internal predicate would only run if the supplied Mitigate argument values are matched:
+##	Mitigate(AppName="fabric:/foo") :- GetRepairHistory(?repairCount, 01:00:00), _mitigate(?repairCount)
+##	Mitigate(AppName="fabric:/bar") :- GetRepairHistory(?repairCount, 02:00:00), _mitigate(?repairCount)
+##	Mitigate(ParititionId="34fb55e9-3d36-451c-8744-5518716acbc1") :- GetRepairHistory(?repairCount, 03:00:00), _mitigate(?repairCount)
+
+## The external predicates here (RestartReplica, RestartCodePackage, RestartFabricNode) implement a BooleanPredicateResolver dervied Resolver type (see /Repair/Guan folder for source code). 
+## This means that these predicates either succeed (pass true back) or fail (pass false back) as the result of their execution. So, if one fails, then the next rule will be run, etc.
+
+## Try this.
+_mitigate(?count) :- ?count < 4, RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:15:00, MaxExecutionTime=00:10:00).
+
+## Else, try this.
+_mitigate(?count) :- ?count < 4, RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:15:00, MaxExecutionTime=00:30:00).
+
+## Else, try this.
+_mitigate(?count) :- ?count < 2, RestartFabricNode(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:45:00, MaxExecutionTime=02:00:00).

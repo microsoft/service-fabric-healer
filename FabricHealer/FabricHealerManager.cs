@@ -666,7 +666,7 @@ namespace FabricHealer
             Primary replica for system service in IB state forever	Restart the primary replica 
         */
 
-        private static async Task MonitorHealthEventsAsync()
+        public static async Task MonitorHealthEventsAsync()
         {
             try
             {
@@ -1458,7 +1458,7 @@ namespace FabricHealer
                        Token,
                        null,
                        ConfigSettings.EnableVerboseLogging);
-                return;
+                //return;
             }
 
             if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(Token))
@@ -2166,7 +2166,7 @@ namespace FabricHealer
             Dispose(true);
         }
 
-        private static List<string> ParseRulesFile(string[] rules)
+        public static List<string> ParseRulesFile(string[] rules)
         {
             var repairRules = new List<string>();
             int ptr1 = 0, ptr2 = 0;
