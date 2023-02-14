@@ -11,7 +11,7 @@
     <icon>icon.png</icon>
 	 <readme>FabricHealerProxy.md</readme>
     <language>en-US</language>
-    <description>This package contains FabricHealerProxy, a .NET Standard 2.0 library that provides a very simple and reliable way to share Service Fabric entity repair information to FabricHealer service instances running in the same cluster.</description>
+    <description>This package contains FabricHealerProxy, a .NET 6 library that provides a very simple and reliable way to share Service Fabric entity repair information to FabricHealer service instances running in the same cluster.</description>
     <contentFiles>
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>

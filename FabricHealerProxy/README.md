@@ -1,6 +1,6 @@
 ﻿# FabricHealerProxy 1.0.2
 
-FabricHealerProxy is a .NET Standard 2.0 library that provides a very simple and reliable way for any .NET Service Fabric service to initiate Service Fabric entity repair by the FabricHealer service running in the same cluster. You can install FabricHealerProxy into your .NET Service Fabric service from the [nuget.org package gallery](...). 
+FabricHealerProxy is a .NET 6 library that provides a very simple and reliable way for any .NET Service Fabric service to initiate Service Fabric entity repair by the FabricHealer service running in the same cluster. You can install FabricHealerProxy into your .NET Service Fabric service from the [nuget.org package gallery](...). 
 
 ### How to use FabricHealerProxy
 
@@ -50,43 +50,43 @@ namespace Stateless1
             // the specified service below, deployed to the a specified Fabric node. 
             // By default, if you only supply NodeName and ServiceName, then FabricHealerProxy assumes the target EntityType is Service. This is a convience to limit how many facts
             // you must supply in a RepairFacts instance. For any type of repair, NodeName is always required.
-            var RepairFactsServiceTarget1 = new RepairFacts
+            RepairFacts RepairFactsServiceTarget1 = new()
             {
                 ServiceName = "fabric:/GettingStartedApplication/MyActorService",
                 NodeName = "_Node_0"
             };
 
-            var RepairFactsServiceTarget2 = new RepairFacts
+            RepairFacts RepairFactsServiceTarget2 = new()
             {
                 ServiceName = "fabric:/GettingStartedApplication/StatefulBackendService",
                 NodeName = "_Node_0"
             };
 
-            var RepairFactsServiceTarget3 = new RepairFacts
+            RepairFacts RepairFactsServiceTarget3 = new()
             {
                 ServiceName = "fabric:/GettingStartedApplication/StatelessBackendService",
                 NodeName = "_Node_0"
             };
 
-            var RepairFactsServiceTarget4 = new RepairFacts
+            RepairFacts RepairFactsServiceTarget4 = new()
             {
                 ServiceName = "fabric:/BadApp/BadService",
                 NodeName = "_Node_0"
             };
 
-            var RepairFactsServiceTarget5 = new RepairFacts
+            RepairFacts RepairFactsServiceTarget5 = new()
             {
                 ServiceName = "fabric:/Voting/VotingData",
                 NodeName = "_Node_0"
             };
 
-            var RepairFactsServiceTarget6 = new RepairFacts
+            RepairFacts RepairFactsServiceTarget6 = new()
             {
                 ServiceName = "fabric:/Voting/VotingWeb",
                 NodeName = "_Node_0"
             };
 
-            var RepairFactsServiceTarget7 = new RepairFacts
+            RepairFacts RepairFactsServiceTarget7 = new()
             {
                 ServiceName = "fabric:/GettingStartedApplication/WebService",
                 NodeName = "_Node_0"
@@ -95,21 +95,21 @@ namespace Stateless1
             // This specifies that you want FabricHealer to repair a Fabric node named _Node_0. The only supported Fabric node repair in FabricHealer is a Restart.
             // Related rules can be found in FabricNodeRules.guan file in the FabricHealer project's PackageRoot/Config/LogicRules folder.
             // So, implicitly, this means you want FabricHealer to restart _Node_0. By default, if you only supply NodeName, then FabricHealerProxy assumes the target EntityType is Node.
-            var RepairFactsNodeTarget = new RepairFacts
+            RepairFacts RepairFactsNodeTarget = new()
             {
                 NodeName = "_Node_0"
             };
 
             // Initiate a reboot of the machine hosting the specified Fabric node. This will be executed by the InfrastructureService for the related node type.
             // The related logic rules for this repair target are housed in FabricHealer's MachineRules.guan file.
-            var RepairFactsMachineTarget = new RepairFacts
+            RepairFacts RepairFactsMachineTarget = new()
             {
                 NodeName = "_Node_0",
                 EntityType = EntityType.Machine
             };
 
             // Restart system service process.
-            var SystemServiceRepairFacts = new RepairFacts
+            RepairFacts SystemServiceRepairFacts = new()
             {
                 ApplicationName = "fabric:/System",
                 NodeName = "_Node_0",
@@ -120,7 +120,7 @@ namespace Stateless1
 
             // Disk - Delete files. This only works if FabricHealer instance is present on the same target node.
             // Note the rules in FabricHealer\PackageRoot\LogicRules\DiskRules.guan file in the FabricHealer project.
-            var DiskRepairFacts = new RepairFacts
+            RepairFacts DiskRepairFacts = new()
             {
                 NodeName = "_Node_0",
                 EntityType = EntityType.Disk,
