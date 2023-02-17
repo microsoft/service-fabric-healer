@@ -108,7 +108,7 @@ namespace FabricHealer.Utilities
                 case EntityType.Disk:
                 case EntityType.Machine:
                 case EntityType.Node:
-                    _logger.LogInfo($"ReportHealthToServiceFabric: reporting health for node {healthReport.NodeName}..");
+
                     var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
                     FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                     break;

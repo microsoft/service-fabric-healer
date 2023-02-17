@@ -23,7 +23,9 @@ namespace FabricHealer.Repair.Guan
 
             }
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
             protected override async Task<bool> CheckAsync()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
             {
                 TimeSpan timeWindow, duration;
 

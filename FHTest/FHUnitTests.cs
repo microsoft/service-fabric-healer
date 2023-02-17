@@ -536,7 +536,7 @@ namespace FHTest
                     Source = "TestMachineWatchdog", // When FH runs, this value comes from a health event (HealthInformation.SourceId).
                     Property = "InfrastructureError42", // When FH runs, this value comes from a health event (HealthInformation.Property).
                     HealthState = HealthState.Error,
-                    NodeName = FHUnitTests.NodeName
+                    NodeName = NodeName
                 };
 
                 repairData.RepairPolicy = new RepairPolicy

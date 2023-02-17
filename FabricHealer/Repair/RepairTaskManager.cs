@@ -25,7 +25,7 @@ namespace FabricHealer.Repair
     {
         private static readonly TimeSpan MaxLifeTimeHealthEventsData = TimeSpan.FromHours(8);
         private static DateTime LastHealthEventsListClearDateTime = DateTime.UtcNow;
-        internal static readonly List<(string entityName, HealthEvent healthEvent, DateTime DateTimeAdded)> DetectedHealthEvents = new();
+        internal static readonly List<HealthEventData> DetectedHealthEvents = new();
 
         public async static Task RemoveServiceFabricNodeStateAsync(string nodeName, CancellationToken cancellationToken)
         {
@@ -1089,11 +1089,11 @@ namespace FabricHealer.Repair
             }
 
             count = DetectedHealthEvents.Count(
-                evt => evt.entityName == id
-                    && evt.healthEvent.HealthInformation.HealthState == repairData.HealthState
-                    && evt.healthEvent.HealthInformation.SourceId == repairData.Source
-                    && evt.healthEvent.HealthInformation.Property == repairData.Property
-                    && DateTime.UtcNow.Subtract(evt.healthEvent.SourceUtcTimestamp) <= timeWindow);
+                evt => evt.EntityName == id
+                    && evt.HealthState == repairData.HealthState
+                    && evt.SourceId == repairData.Source
+                    && evt.Property == repairData.Property
+                    && DateTime.UtcNow.Subtract(evt.SourceUtcTimestamp) <= timeWindow);
 
             // Lifetime management of Health Events list data. Cache lifecycle is 8 hours. If FH process restarts, data is not preserved.
             if (DateTime.UtcNow.Subtract(LastHealthEventsListClearDateTime) >= MaxLifeTimeHealthEventsData)
@@ -1128,17 +1128,17 @@ namespace FabricHealer.Repair
 
             try
             {
-                if (!DetectedHealthEvents.Any(d => d.entityName == entityName))
+                if (!DetectedHealthEvents.Any(d => d.EntityName == entityName))
                 {
                     return TimeSpan.Zero;
                 }
 
                 var orderedEvents = DetectedHealthEvents.Where(
-                        evt => evt.entityName == entityName
-                            && evt.healthEvent.HealthInformation.HealthState == repairData.HealthState
-                            && evt.healthEvent.HealthInformation.SourceId == repairData.Source
-                            && evt.healthEvent.HealthInformation.Property == repairData.Property)
-                        .OrderByDescending(o => o.healthEvent.SourceUtcTimestamp).ToList();
+                        evt => evt.EntityName == entityName
+                            && evt.HealthState == repairData.HealthState
+                            && evt.SourceId == repairData.Source
+                            && evt.Property == repairData.Property)
+                        .OrderByDescending(o => o.SourceUtcTimestamp).ToList();
 
                 // Lifetime management of volatile (in-memory) Health Events data. DetectedHealthEvents cache lifespan is 8 hours.
                 // If the FH process restarts, data is not preserved.
@@ -1156,13 +1156,13 @@ namespace FabricHealer.Repair
                 // Error state transitions - up/down Error state for node or multiple same error events,
                 // e.g., from a watchdog that runs periodically and produces the same Error event each time it runs
                 // or some entity cycles between Error->Ok.
-                if (orderedEvents.First().healthEvent.LastErrorTransitionAt != DateTime.MinValue)
+                if (orderedEvents.First().LastErrorTransitionAt != DateTime.MinValue)
                 {
-                    return DateTime.UtcNow.Subtract(orderedEvents.First().healthEvent.LastErrorTransitionAt);
+                    return DateTime.UtcNow.Subtract(orderedEvents.First().LastErrorTransitionAt);
                 }
 
                 // No LastErrorTransitionAt. Use the healthEvent.SourceUtcTimestamp or even orderedEvents.First().DateTimeAdded.
-                return DateTime.UtcNow.Subtract(orderedEvents.First().healthEvent.SourceUtcTimestamp);
+                return DateTime.UtcNow.Subtract(orderedEvents.First().SourceUtcTimestamp);
             }
             catch (Exception e) when (
                     e is ArgumentException || e is FabricException || e is InvalidOperationException || e is TaskCanceledException || e is TimeoutException)

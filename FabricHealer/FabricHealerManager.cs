@@ -21,6 +21,7 @@ using FabricHealer.TelemetryLib;
 using Octokit;
 using System.Fabric.Description;
 using System.Runtime.InteropServices;
+using static FabricHealer.Repair.RepairTaskManager;
 
 namespace FabricHealer
 {
@@ -187,7 +188,7 @@ namespace FabricHealer
                 HealthMessage = okMessage,
                 State = HealthState.Ok,
                 Property = "RequirementCheck::RMDeployed",
-                HealthReportTimeToLive = TimeSpan.FromMinutes(5),
+                HealthReportTimeToLive = TimeSpan.FromDays(1),
                 SourceId = RepairConstants.FabricHealer,
             };
             ServiceList serviceList = await FabricClientSingleton.QueryManager.GetServiceListAsync(
@@ -623,7 +624,7 @@ namespace FabricHealer
                         Code = errorCode,
                     };
 
-                    await RepairTaskManager.RunGuanQueryAsync(repairData, repairRules, Token, repairExecutorData);
+                    await RunGuanQueryAsync(repairData, repairRules, Token, repairExecutorData);
                     RepairLogger.LogInfo("Exiting CancelOrResumeAllRunningFHRepairsAsync: Completed.");
                 }
             }
@@ -1106,11 +1107,21 @@ namespace FabricHealer
                         null,
                         ConfigSettings.EnableVerboseLogging);
 
-                // Update the in-memory HealthEvent data.
-                RepairTaskManager.DetectedHealthEvents.Add((repairData.ApplicationName, evt, DateTime.UtcNow));
+                HealthEventData eventData = new()
+                {
+                    EntityName = repairData.ApplicationName,
+                    EntityType = repairData.EntityType,
+                    HealthState = repairData.HealthState,
+                    LastErrorTransitionAt = evt.LastErrorTransitionAt,
+                    SourceId = evt.HealthInformation.SourceId,
+                    SourceUtcTimestamp = evt.SourceUtcTimestamp,
+                    Property = evt.HealthInformation.Property
+                };
+
+                DetectedHealthEvents.Add(eventData);
 
                 // Start the repair workflow.
-                await RepairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
+                await StartRepairWorkflowAsync(repairData, repairRules, Token);
             }
         }
 
@@ -1439,30 +1450,29 @@ namespace FabricHealer
                         null,
                         ConfigSettings.EnableVerboseLogging);
 
-                // Update the in-memory HealthEvent List.
-                RepairTaskManager.DetectedHealthEvents.Add((repairData.ServiceName, evt, DateTime.UtcNow));
+                HealthEventData eventData = new()
+                {
+                    EntityName = repairData.ServiceName,
+                    EntityType = repairData.EntityType,
+                    HealthState = repairData.HealthState,
+                    LastErrorTransitionAt = evt.LastErrorTransitionAt,
+                    SourceId = evt.HealthInformation.SourceId,
+                    SourceUtcTimestamp = evt.SourceUtcTimestamp,
+                    Property = evt.HealthInformation.Property
+                };
+
+                DetectedHealthEvents.Add(eventData);
 
                 // Start the repair workflow.
-                await RepairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
+                await StartRepairWorkflowAsync(repairData, repairRules, Token);
             }
         }
 
         private static async Task ProcessNodeHealthAsync(IEnumerable<NodeHealthState> nodeHealthStates)
         {
-            if (NodeCount < 3)
-            {
-                await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                       LogLevel.Info,
-                       $"NodeRepair::ClusterSizeNotSupported",
-                       "Machine/Fabric Node repair is not supported in clusters with less than 3 Fabric nodes.",
-                       Token,
-                       null,
-                       ConfigSettings.EnableVerboseLogging);
-                //return;
-            }
-
             if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(Token))
             {
+                RepairLogger.LogInfo("FabricHealer.Stop repair job detected. Exiting ProcessNodeHealthAsync..");
                 return;
             }
 
@@ -1635,10 +1645,21 @@ namespace FabricHealer
                             ConfigSettings.EnableVerboseLogging);
 
                     // Update the in-memory HealthEvent data.
-                    RepairTaskManager.DetectedHealthEvents.Add((repairData.NodeName, evt, DateTime.UtcNow));
+                    HealthEventData eventData = new()
+                    {
+                        EntityName = repairData.NodeName,
+                        EntityType = repairData.EntityType,
+                        HealthState = repairData.HealthState,
+                        LastErrorTransitionAt = evt.LastErrorTransitionAt,
+                        SourceId = evt.HealthInformation.SourceId,
+                        SourceUtcTimestamp = evt.SourceUtcTimestamp,
+                        Property= evt.HealthInformation.Property
+                    };
+
+                    DetectedHealthEvents.Add(eventData);
 
                     // Start the repair workflow.
-                    await RepairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
+                    await StartRepairWorkflowAsync(repairData, repairRules, Token);
                 }
             }
         }
@@ -1693,11 +1714,21 @@ namespace FabricHealer
                     null,
                     ConfigSettings.EnableVerboseLogging);
 
-            // Update the in-memory HealthEvent data.
-            RepairTaskManager.DetectedHealthEvents.Add((repairData.NodeName, evt, DateTime.UtcNow));
+            HealthEventData eventData = new()
+            {
+                EntityName = repairData.NodeName,
+                EntityType = repairData.EntityType,
+                HealthState = repairData.HealthState,
+                LastErrorTransitionAt = evt.LastErrorTransitionAt,
+                SourceId = evt.HealthInformation.SourceId,
+                SourceUtcTimestamp = evt.SourceUtcTimestamp,
+                Property = evt.HealthInformation.Property
+            };
+
+            DetectedHealthEvents.Add(eventData);
 
             // Start the repair workflow.
-            await RepairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
+            await StartRepairWorkflowAsync(repairData, repairRules, Token);
         }
 
         private static async Task ProcessFabricNodeHealthAsync(HealthEvent healthEvent, TelemetryData repairData)
@@ -1770,10 +1801,21 @@ namespace FabricHealer
                     ConfigSettings.EnableVerboseLogging);
 
             // Update the in-memory HealthEvent data.
-            RepairTaskManager.DetectedHealthEvents.Add((repairData.NodeName, healthEvent, DateTime.UtcNow));
+            HealthEventData eventData = new()
+            {
+                EntityName = repairData.NodeName,
+                EntityType = repairData.EntityType,
+                HealthState = repairData.HealthState,
+                LastErrorTransitionAt = healthEvent.LastErrorTransitionAt,
+                SourceId = healthEvent.HealthInformation.SourceId,
+                SourceUtcTimestamp = healthEvent.SourceUtcTimestamp,
+                Property = healthEvent.HealthInformation.Property
+            };
+
+            DetectedHealthEvents.Add(eventData);
 
             // Start the repair workflow.
-            await RepairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
+            await StartRepairWorkflowAsync(repairData, repairRules, Token);
         }
 
         // This is an example of a repair for a non-FO-originating health event. This function needs some work, but you get the basic idea here.
@@ -1935,10 +1977,21 @@ namespace FabricHealer
                                         ConfigSettings.EnableVerboseLogging);
 
                                 // Update the in-memory HealthEvent data.
-                                RepairTaskManager.DetectedHealthEvents.Add((repairData.NodeName, healthEvent, DateTime.UtcNow));
-                                
+                                HealthEventData eventData = new()
+                                {
+                                    EntityName = repairData.ReplicaId.ToString(),
+                                    EntityType = repairData.EntityType,
+                                    HealthState = repairData.HealthState,
+                                    LastErrorTransitionAt = healthEvent.LastErrorTransitionAt,
+                                    SourceId = healthEvent.HealthInformation.SourceId,
+                                    SourceUtcTimestamp = healthEvent.SourceUtcTimestamp,
+                                    Property = healthEvent.HealthInformation.Property
+                                };
+
+                                DetectedHealthEvents.Add(eventData);
+
                                 // Start the repair workflow.
-                                await RepairTaskManager.StartRepairWorkflowAsync(repairData, repairRules, Token);
+                                await StartRepairWorkflowAsync(repairData, repairRules, Token);
                             }
                         }
                     }

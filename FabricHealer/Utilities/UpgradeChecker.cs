@@ -5,9 +5,11 @@
 
 using System;
 using System.Fabric;
+using System.Fabric.Repair;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricHealer.TelemetryLib;
 using FabricHealer.Utilities;
 
 namespace FabricHealer.Repair
@@ -94,14 +96,13 @@ namespace FabricHealer.Repair
         /// <summary>
         /// Determines if an Azure tenant/platform update is in progress in the cluster.
         /// </summary>
-        /// <param name="nodeType">NodeType string</param>
         /// <param name="token">CancellationToken instance</param>
         /// <returns>true if tenant update is in progress, false otherwise</returns>
         internal static async Task<bool> IsAzureJobInProgressAsync(string nodeName, CancellationToken token)
         {
             var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                                         RepairConstants.AzureTaskIdPrefix,
-                                        System.Fabric.Repair.RepairTaskStateFilter.Active,
+                                        RepairTaskStateFilter.Active,
                                         null,
                                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                                         token);
@@ -113,18 +114,44 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            if (repairTasks.Any(
-                    n => JsonSerializationUtility.TryDeserializeObject(n.ExecutorData, out ISExecutorData data) && data.StepId == nodeName))
+            foreach (var repair in repairTasks)
             {
-                string message = $"Azure Platform or Tenant Update in progress for {nodeName}. Will not attempt repairs at this time.";
+                // Job state is at least Approved.
+                if (repair.Impact is NodeRepairImpactDescription impact)
+                {
+                    if (!impact.ImpactedNodes.Any(n => n.NodeName == nodeName))
+                    {
+                        continue;
+                    }
 
-                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        $"AzurePlatformOrTenantUpdateInProgress_{nodeName}",
-                        message,
-                        token);
+                    string message = $"Azure Platform or Tenant Update in progress for {nodeName}. Will not attempt repairs at this time.";
 
-                return true;
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            $"AzurePlatformOrTenantUpdateInProgress_{nodeName}",
+                            message,
+                            token);
+
+                    return true;
+                }
+                // Job state is Created/Claimed if we get here (there is no Impact established yet).
+                else if (repair.Target is NodeRepairTargetDescription target)
+                {
+                    if (!target.Nodes.Any(n => n == nodeName))
+                    {
+                        continue;
+                    }
+
+                    string message = $"Azure Platform or Tenant Update in progress for {nodeName}. Will not attempt repairs at this time.";
+
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            $"AzurePlatformOrTenantUpdateInProgress_{nodeName}",
+                            message,
+                            token);
+
+                    return true;
+                }
             }
 
             return false;
