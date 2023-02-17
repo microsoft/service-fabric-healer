@@ -34,6 +34,9 @@
 ## Don't proceed if the target entity is not in Error.
 Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
 
+## Don't proceed is FabricObserver's NodeObserver is not the source of the Error event.
+##Mitigate(Source=?source) :- not(match(?source, "NodeObserver")), !.
+
 ## Don't proceed if there are already 2 or more machine repairs currently active in the cluster.
 Mitigate() :- CheckOutstandingRepairs(2), !.
 
@@ -44,7 +47,7 @@ Mitigate() :- CheckInsideScheduleInterval(00:10:00), !.
 Mitigate() :- CheckInsideNodeProbationPeriod(00:30:00), !.
 
 ## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours.
-Mitigate() :- CheckInsideHealthStateMinDuration(02:00:00), !.
+Mitigate() :- CheckInsideHealthStateMinDuration(00:05:00), !.
 
 ## Mitigations (RM repair scheduling logic - InfrastructureService for the target node type will be the repair Executor, not FH).
 ## The logic below demonstrates how to specify a repair escalation path: Reboot -> Reimage -> Heal -> Triage (human intervention required).

@@ -38,16 +38,22 @@ namespace FHTest
     {
         private static readonly Uri TestServiceName = new("fabric:/app/service");
         private static readonly FabricClient fabricClient = new();
-        private static readonly ICodePackageActivationContext CodePackageContext = null;
-        private static readonly StatelessServiceContext TestServiceContext = null;
+        private static ICodePackageActivationContext CodePackageContext = null;
+        private static StatelessServiceContext TestServiceContext = null;
         private readonly CancellationToken token = new();
 
         // This is the name of the node used on your local dev machine's SF cluster. If you customize this, then change it.
         private const string NodeName = "_Node_0";
         private const string FHProxyId = "FabricHealerProxy";
 
-        static FHUnitTests()
+        [ClassInitialize]
+        public static void TestClassStartUp(TestContext testContext)
         {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new Exception("Local dev cluster must be running to execute these tests correctly.");
+            }
+
             /* SF runtime mocking care of ServiceFabric.Mocks by loekd.
                https://github.com/loekd/ServiceFabric.Mocks */
 
@@ -172,11 +178,6 @@ namespace FHTest
         [TestMethod]
         public async Task AllAppRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
             {
                 TelemetryEnabled = false
@@ -227,11 +228,6 @@ namespace FHTest
         [TestMethod]
         public async Task AllMachineRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
             {
                 TelemetryEnabled = false
@@ -275,11 +271,6 @@ namespace FHTest
         [TestMethod]
         public async Task AllDiskRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
             {
                 TelemetryEnabled = false
@@ -324,11 +315,6 @@ namespace FHTest
         [TestMethod]
         public async Task AllReplicaRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
             {
                 TelemetryEnabled = false
@@ -378,11 +364,6 @@ namespace FHTest
         [TestMethod]
         public async Task AllSystemServiceRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
             {
                 TelemetryEnabled = false
@@ -433,11 +414,6 @@ namespace FHTest
         [TestMethod]
         public async Task TestGuanLogicRule_GoodRule_QueryInitialized()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
             {
                 TelemetryEnabled = false
@@ -490,11 +466,6 @@ namespace FHTest
         [TestMethod]
         public async Task TestGuanLogicRule_BadRule_ShouldThrowGuanException()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
             {
                 TelemetryEnabled = false
@@ -546,11 +517,6 @@ namespace FHTest
         [TestMethod]
         public async Task Ensure_MachineRepair_ErrorDetected_RepairJobCreated_AllEscalations()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
             {
                 TelemetryEnabled = false
@@ -644,11 +610,6 @@ namespace FHTest
         [TestMethod]
         public async Task Ensure_MachineRepair_ErrorDetected_RepairJobsCreated_AllEscalations_FHProxy()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             // Create FabricHealerManager singleton (required).
             _ = FabricHealerManager.Instance(TestServiceContext, token);
             int escalationCount = 4; // reboot, reimage, heal, triage.
@@ -716,11 +677,6 @@ namespace FHTest
         [TestMethod]
         public async Task Test_MaxExecutionTime_Cancels_Repair()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
             {
                 TelemetryEnabled = false
@@ -942,12 +898,6 @@ namespace FHTest
         [TestMethod]
         public async Task FHProxy_Service_Facts_Generate_Entity_Health_Warning()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
-            // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
             await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsExistingServiceTarget, token);
 
             // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");
@@ -961,11 +911,6 @@ namespace FHTest
         [TestMethod]
         public async Task FHProxy_Node_Facts_Generates_Entity_Health_Warning()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
             await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsNodeTarget, token);
 
@@ -980,11 +925,6 @@ namespace FHTest
         [TestMethod]
         public async Task FHProxy_Missing_Fact_Generates_MissingRepairFactsException()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             var repairFacts = new RepairFacts
             {
                 ServiceName = "fabric:/foo/bar",
@@ -1010,11 +950,6 @@ namespace FHTest
         [TestMethod]
         public async Task FHProxy_NonExistent_ServiceTarget_Generates_ServiceNotFoundException()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             await Assert.ThrowsExceptionAsync<ServiceNotFoundException>(async () => 
             {
                 await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsNonExistingServiceTarget, token);
@@ -1024,11 +959,6 @@ namespace FHTest
         [TestMethod]
         public async Task FHProxy_Missing_Fact_Generates_NodeNotFoundException()
         {
-            if (!IsLocalSFRuntimePresent())
-            {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
-            }
-
             var repairFacts = new RepairFacts
             {
                 NodeName = "_Node_007x",

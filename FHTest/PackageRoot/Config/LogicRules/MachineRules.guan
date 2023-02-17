@@ -5,10 +5,6 @@ Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
 ## Don't proceed if the Source of the health event is not FabricHealer.TestMachineWatchdog or event Property InfrastructureError42.
 Mitigate(Property=?property, Source=?source) :- not(?property == InfrastructureError42 || ?source == TestMachineWatchdog), !.
 
-## Mitigations (RM repair scheduling logic - InfrastructureService for the target node type will be the repair Executor, not FH).
-## The logic below demonstrates how to specify a repair escalation path: Reboot -> Reimage -> Heal -> Triage (human intervention required).
-## ScheduleMachineRepair predicate takes any repair action string. There are a handful that are supported by RepairManager/InfrastructureService, like below.
-
 ## Reboot.
 ## Don't process any other rules if scheduling succeeds OR fails (note the position of ! (cut operator)) and there are less than 1 of these repairs that have completed in the last 8 hours.
 Mitigate() :- GetRepairHistory(?repairCount, 08:00:00, System.Reboot), ?repairCount < 1, !, ScheduleMachineRepair(System.Reboot).
@@ -20,9 +16,5 @@ Mitigate() :- GetRepairHistory(?repairCount, 08:00:00, System.ReimageOS), ?repai
 Mitigate() :- GetRepairHistory(?repairCount, 08:00:00, System.Azure.Heal), ?repairCount < 1, !, ScheduleMachineRepair(System.Azure.Heal).
 
 ## Triage escalation.
-## If we end up here, then human intervention is required. LogInfo will generate ETW/Telemetry/Health events containing the message.
-## FabricHealer will also schedule a ManualTriageNeeded repair task. Once you manually solve the problem, then cancel this repair task as it will block FabricHealer
-## from scheduling any other machine repairs for the target node until canceled. It also counts against the number of concurrent Active repairs you specified
-## above in the CheckOutstandingRepairs predicate.
 Mitigate(NodeName=?nodeName) :- LogInfo("0042_{0}: Specified Machine repair escalations have been exhausted for node {0}. Human intervention is required.", ?nodeName), 
 	ScheduleMachineRepair(ManualTriageNeeded).

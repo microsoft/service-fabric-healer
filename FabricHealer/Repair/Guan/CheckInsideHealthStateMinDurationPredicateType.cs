@@ -41,7 +41,7 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                duration = await RepairTaskManager.GetEntityCurrentHealthStateDurationAsync(RepairData, timeWindow, FabricHealerManager.Token);
+                duration = RepairTaskManager.GetEntityCurrentHealthStateDuration(RepairData);
 
                 if (duration <= timeWindow)
                 {
