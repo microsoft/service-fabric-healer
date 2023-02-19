@@ -704,9 +704,15 @@ namespace FabricHealer.Repair
                                 break;
                             }
 
+                            if (!RepairExecutor.TryGetGuid(repairData.PartitionId, out Guid partitionId))
+                            {
+                                success = false;
+                                break;
+                            }
+
                             // Need replica or instance details..
                             var repList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                                Guid.Parse(repairData.PartitionId),
+                                                partitionId,
                                                 repairData.ReplicaId,
                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                 cancellationToken);
@@ -750,8 +756,14 @@ namespace FabricHealer.Repair
                             break;
                         }
 
+                        if (!RepairExecutor.TryGetGuid(repairData.PartitionId, out Guid partitionId))
+                        {
+                            success = false;
+                            break;
+                        }
+
                         var repList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                                Guid.Parse(repairData.PartitionId),
+                                                partitionId,
                                                 repairData.ReplicaId,
                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                 cancellationToken);
@@ -781,7 +793,7 @@ namespace FabricHealer.Repair
 
                     case RepairActionType.RestartReplica:
                     {
-                        if (string.IsNullOrWhiteSpace(repairData.PartitionId))
+                        if (!RepairExecutor.TryGetGuid(repairData.PartitionId, out Guid partitionId))
                         {
                             success = false;
                             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -796,7 +808,7 @@ namespace FabricHealer.Repair
                         }
 
                         var repList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                                Guid.Parse(repairData.PartitionId),
+                                                partitionId,
                                                 repairData.ReplicaId,
                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                 cancellationToken);
@@ -807,8 +819,7 @@ namespace FabricHealer.Repair
                             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
                                     "ExecuteFabricHealerRepairTaskAsync::NoReplica",
-                                    $"Stateful replica {repairData.ReplicaId} not found on partition " +
-                                    $"{repairData.PartitionId}.",
+                                    $"Stateful replica {repairData.ReplicaId} not found on partition {partitionId}.",
                                     cancellationToken,
                                     repairData,
                                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
@@ -1089,7 +1100,7 @@ namespace FabricHealer.Repair
             }
 
             count = DetectedHealthEvents.Count(
-                evt => evt.EntityName == id
+                evt => evt.Name == id
                     && evt.HealthState == repairData.HealthState
                     && evt.SourceId == repairData.Source
                     && evt.Property == repairData.Property
@@ -1113,9 +1124,7 @@ namespace FabricHealer.Repair
         /// <returns>TimeSpan representing how long the specified entity has been in the specified health state.</returns>
         internal static TimeSpan GetEntityCurrentHealthStateDuration(TelemetryData repairData)
         {
-            string entityName = null;
-
-            entityName = repairData.EntityType switch
+            string name = repairData.EntityType switch
             {
                 EntityType.Application => repairData.ApplicationName,
                 EntityType.Partition => repairData.PartitionId.ToString(),
@@ -1128,13 +1137,13 @@ namespace FabricHealer.Repair
 
             try
             {
-                if (!DetectedHealthEvents.Any(d => d.EntityName == entityName))
+                if (!DetectedHealthEvents.Any(d => d.Name == name))
                 {
                     return TimeSpan.Zero;
                 }
 
                 var orderedEvents = DetectedHealthEvents.Where(
-                        evt => evt.EntityName == entityName
+                        evt => evt.Name == name
                             && evt.HealthState == repairData.HealthState
                             && evt.SourceId == repairData.Source
                             && evt.Property == repairData.Property)
@@ -1153,15 +1162,23 @@ namespace FabricHealer.Repair
                     return TimeSpan.Zero;
                 }
 
-                // Error state transitions - up/down Error state for node or multiple same error events,
-                // e.g., from a watchdog that runs periodically and produces the same Error event each time it runs
-                // or some entity cycles between Error->Ok.
+                /* Error/Warning state transitions - up/down Error/Warning state for node or multiple same error/warning events,
+                   e.g., from a watchdog that runs periodically and produces the same Error/Warning event each time it runs
+                   or some entity cycles between Error/Warning->Ok. */
+
+                // Errors
                 if (orderedEvents.First().LastErrorTransitionAt != DateTime.MinValue)
                 {
                     return DateTime.UtcNow.Subtract(orderedEvents.First().LastErrorTransitionAt);
                 }
+                
+                // Warnings
+                if (orderedEvents.First().LastWarningTransitionAt != DateTime.MinValue)
+                {
+                    return DateTime.UtcNow.Subtract(orderedEvents.First().LastWarningTransitionAt);
+                }
 
-                // No LastErrorTransitionAt. Use the healthEvent.SourceUtcTimestamp or even orderedEvents.First().DateTimeAdded.
+                // Catch-all (We shouldn't ever get here, but just in case)
                 return DateTime.UtcNow.Subtract(orderedEvents.First().SourceUtcTimestamp);
             }
             catch (Exception e) when (
@@ -1291,11 +1308,16 @@ namespace FabricHealer.Repair
                     return isTargetNodeHealed ? HealthState.Ok : nodeHealth.AggregatedHealthState;
                    
                 case EntityType.Replica:
-                
+
+                    if (!RepairExecutor.TryGetGuid(repairData.PartitionId, out Guid partitionId))
+                    {
+                        return HealthState.Unknown;
+                    }
+
                     // Make sure the Partition where the restarted replica was located is now healthy.
                     var partitionHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                     () => FabricHealerManager.FabricClientSingleton.HealthManager.GetPartitionHealthAsync(
-                                                                Guid.Parse(repairData.PartitionId),
+                                                                partitionId,
                                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                                 token),
                                                     token);

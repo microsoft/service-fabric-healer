@@ -11,10 +11,11 @@ namespace FabricHealer.Repair
 {
     public sealed class HealthEventData
     {
-        public string EntityName { get; set; }
+        public string Name { get; set; }
         public EntityType EntityType { get; set; }
         public HealthState HealthState { get; set; }
         public DateTime LastErrorTransitionAt { get; set; }
+        public DateTime LastWarningTransitionAt { get; set; }
         public DateTime SourceUtcTimestamp { get; set; }
         public string SourceId { get; set; }
         public string Property { get; set; }

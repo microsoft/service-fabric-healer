@@ -40,7 +40,7 @@ namespace FHTest
         private static readonly FabricClient fabricClient = new();
         private static ICodePackageActivationContext CodePackageContext = null;
         private static StatelessServiceContext TestServiceContext = null;
-        private readonly CancellationToken token = new();
+        private static readonly CancellationToken token = new();
 
         // This is the name of the node used on your local dev machine's SF cluster. If you customize this, then change it.
         private const string NodeName = "_Node_0";
@@ -86,6 +86,13 @@ namespace FHTest
                         null,
                         Guid.NewGuid(),
                         long.MaxValue);
+
+
+            _ = FabricHealerManager.Instance(TestServiceContext, token);
+            FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
+            {
+                TelemetryEnabled = false
+            };
         }
 
         /* Helpers */
@@ -178,11 +185,6 @@ namespace FHTest
         [TestMethod]
         public async Task AllAppRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
-            FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
-            {
-                TelemetryEnabled = false
-            };
-
             // This will be the data used to create a repair task.
             var repairData = new TelemetryData
             {
@@ -228,11 +230,6 @@ namespace FHTest
         [TestMethod]
         public async Task AllMachineRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
-            FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
-            {
-                TelemetryEnabled = false
-            };
-
             // This will be the data used to create a repair task.
             var repairData = new TelemetryData
             {
@@ -271,11 +268,6 @@ namespace FHTest
         [TestMethod]
         public async Task AllDiskRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
-            FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
-            {
-                TelemetryEnabled = false
-            };
-
             // This will be the data used to create a repair task.
             var repairData = new TelemetryData
             {
@@ -315,11 +307,6 @@ namespace FHTest
         [TestMethod]
         public async Task AllReplicaRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
-            FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
-            {
-                TelemetryEnabled = false
-            };
-
             // This will be the data used to create a repair task.
             var repairData = new TelemetryData
             {
@@ -364,12 +351,6 @@ namespace FHTest
         [TestMethod]
         public async Task AllSystemServiceRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
-            FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
-            {
-                TelemetryEnabled = false
-            };
-
-            // This will be the data used to create a repair task.
             var repairData = new TelemetryData
             {
                 ApplicationName = "fabric:/System",
@@ -414,11 +395,6 @@ namespace FHTest
         [TestMethod]
         public async Task TestGuanLogicRule_GoodRule_QueryInitialized()
         {
-            FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
-            {
-                TelemetryEnabled = false
-            };
-
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed.guan");
             string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
             List<string> repairRules = FabricHealerManager.ParseRulesFile(rules);
@@ -466,11 +442,6 @@ namespace FHTest
         [TestMethod]
         public async Task TestGuanLogicRule_BadRule_ShouldThrowGuanException()
         {
-            FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
-            {
-                TelemetryEnabled = false
-            };
-
             string[] rules = await File.ReadAllLinesAsync(Path.Combine(Environment.CurrentDirectory, "testrules_malformed.guan"), token);
             List<string> repairAction = FabricHealerManager.ParseRulesFile(rules);
 
@@ -517,11 +488,6 @@ namespace FHTest
         [TestMethod]
         public async Task Ensure_MachineRepair_ErrorDetected_RepairJobCreated_AllEscalations()
         {
-            FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
-            {
-                TelemetryEnabled = false
-            };
-
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "MachineRules.guan");
             string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
             List<string> repairRules = FabricHealerManager.ParseRulesFile(rules);
@@ -677,11 +643,6 @@ namespace FHTest
         [TestMethod]
         public async Task Test_MaxExecutionTime_Cancels_Repair()
         {
-            FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
-            {
-                TelemetryEnabled = false
-            };
-
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed_maxexecution.guan");
             string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
             List<string> repairRules = FabricHealerManager.ParseRulesFile(rules);
@@ -704,6 +665,7 @@ namespace FHTest
                 RepairId = repairId,
                 AppName = repairData.ApplicationName,
                 RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
+                MaxExecutionTime = TimeSpan.FromSeconds(2),
                 NodeName = repairData.NodeName,
                 Code = repairData.Code,
                 HealthState = repairData.HealthState,
@@ -728,7 +690,7 @@ namespace FHTest
             // Verify that the repair task was Cancelled within max execution time.
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                await Task.Delay(TimeSpan.FromSeconds(7));
 
                 var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
                                             RepairConstants.FHTaskIdPrefix, RepairTaskStateFilter.Completed, null);
@@ -749,9 +711,8 @@ namespace FHTest
 
         /* private Helpers */
 
-        private async Task TestInitializeGuanAndRunQuery(TelemetryData repairData, List<string> repairRules, RepairExecutorData executorData)
+        private static async Task TestInitializeGuanAndRunQuery(TelemetryData repairData, List<string> repairRules, RepairExecutorData executorData)
         {
-            _ = FabricHealerManager.Instance(TestServiceContext, token);
             await RepairTaskManager.RunGuanQueryAsync(repairData, repairRules, token, executorData);
         }
 
@@ -1000,6 +961,25 @@ namespace FHTest
                 // FHProxy creates or renames Source with trailing id ("FabricHealerProxy");
                 Assert.IsTrue(repair.Source.EndsWith(FHProxyId));
             }
+        }
+
+        [TestMethod]
+        public void Multi_Type_Guid_Support_Compatibility_Test()
+        {
+            Guid? nullableGuid = new();
+            Guid? nullGuid = null;
+            string guidString = Guid.NewGuid().ToString();
+            string empty = "";
+            string whitespace = "   ";
+            string randomChars = "---------d-d-d---d";
+
+            Assert.IsFalse(RepairExecutor.TryGetGuid(nullGuid, out _));
+            Assert.IsFalse(RepairExecutor.TryGetGuid(whitespace, out _));
+            Assert.IsFalse(RepairExecutor.TryGetGuid(empty, out _));
+            Assert.IsFalse(RepairExecutor.TryGetGuid(randomChars, out _));
+
+            Assert.IsTrue(RepairExecutor.TryGetGuid(nullableGuid, out _));
+            Assert.IsTrue(RepairExecutor.TryGetGuid(guidString, out _));
         }
     }
 }

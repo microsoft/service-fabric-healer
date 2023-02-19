@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using Newtonsoft.Json;
 using System.Fabric.Description;
+using System.Security.Cryptography.X509Certificates;
 
 namespace FabricHealer.Repair
 {
@@ -46,13 +47,26 @@ namespace FabricHealer.Repair
                         repairData,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-                PartitionSelector partitionSelector = PartitionSelector.PartitionIdOf(new Uri(repairData.ServiceName), Guid.Parse(repairData.PartitionId));
+                if (!TryGetGuid(repairData.PartitionId, out Guid partitionId)) 
+                {
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        "RestartDeployedCodePackageAsync::MissingPartition",
+                        "Missing partition information (repairData.PartitionId is not a Guid representation)",
+                        cancellationToken,
+                        repairData,
+                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                    return null;
+                }
+
+                PartitionSelector partitionSelector = PartitionSelector.PartitionIdOf(new Uri(repairData.ServiceName), partitionId);
                 long replicaId = repairData.ReplicaId;
                 Replica replica = null;
 
                 // Verify target replica still exists.
                 var replicaList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                            Guid.Parse(repairData.PartitionId),
+                                            partitionId,
                                             replicaId,
                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                             cancellationToken);
@@ -489,7 +503,7 @@ namespace FabricHealer.Repair
             {
                 // Make sure the replica still exists. \\
 
-                if (!Guid.TryParse(repairData.PartitionId, out Guid partitionId))
+                if (!TryGetGuid(repairData.PartitionId, out Guid partitionId))
                 {
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
@@ -739,9 +753,14 @@ namespace FabricHealer.Repair
             try
             {
                 // Make sure the replica still exists. \\
+                
+                if (!TryGetGuid(repairData.PartitionId, out Guid partitionId))
+                {
+                    return false;
+                }
 
                 var replicaList = await FabricHealerManager.FabricClientSingleton.QueryManager.GetReplicaListAsync(
-                                            Guid.Parse(repairData.PartitionId),
+                                            partitionId,
                                             repairData.ReplicaId,
                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                             cancellationToken);
@@ -764,7 +783,7 @@ namespace FabricHealer.Repair
 
                 await FabricHealerManager.FabricClientSingleton.ServiceManager.RemoveReplicaAsync(
                         repairData.NodeName,
-                        Guid.Parse(repairData.PartitionId),
+                        partitionId,
                         repairData.ReplicaId,
                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                         cancellationToken);
@@ -973,7 +992,7 @@ namespace FabricHealer.Repair
                 }
 
                 string ipOrDnsName = targetNode.IpAddressOrFQDN;
-                var hostEntry = await Dns.GetHostEntryAsync(ipOrDnsName);
+                var hostEntry = await Dns.GetHostEntryAsync(ipOrDnsName, cancellationToken);
                 var machineName = hostEntry.HostName;
 
                 return machineName;
@@ -1019,20 +1038,20 @@ namespace FabricHealer.Repair
                         FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(serviceHealthReport, sendOptions);
                         break;
 
-                    case EntityType.StatefulService when repairData.PartitionId != null && repairData.ReplicaId > 0:
+                    case EntityType.StatefulService when TryGetGuid(repairData.PartitionId, out Guid partitionId) && repairData.ReplicaId > 0:
 
-                        var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(Guid.Parse(repairData.PartitionId), repairData.ReplicaId, healthInformation);
+                        var statefulServiceHealthReport = new StatefulServiceReplicaHealthReport(partitionId, repairData.ReplicaId, healthInformation);
                         FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(statefulServiceHealthReport, sendOptions);
                         break;
 
-                    case EntityType.StatelessService when repairData.PartitionId != null && repairData.ReplicaId > 0:
+                    case EntityType.StatelessService when TryGetGuid(repairData.PartitionId, out Guid partitionId) && repairData.ReplicaId > 0:
 
-                        var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(Guid.Parse(repairData.PartitionId), repairData.ReplicaId, healthInformation);
+                        var statelessServiceHealthReport = new StatelessServiceInstanceHealthReport(partitionId, repairData.ReplicaId, healthInformation);
                         FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(statelessServiceHealthReport, sendOptions);
                         break;
 
-                    case EntityType.Partition when repairData.PartitionId != null:
-                        var partitionHealthReport = new PartitionHealthReport(Guid.Parse(repairData.PartitionId), healthInformation);
+                    case EntityType.Partition when TryGetGuid(repairData.PartitionId, out Guid partitionId):
+                        var partitionHealthReport = new PartitionHealthReport(partitionId, healthInformation);
                         FabricHealerManager.FabricClientSingleton.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                         break;
 
@@ -1055,6 +1074,36 @@ namespace FabricHealer.Repair
             {
 
             }
+        }
+
+        public static bool TryGetGuid<T>(T guid, out Guid g)
+        {
+            if (guid == null)
+            {
+                g = Guid.Empty;
+                return false;
+            }
+
+            try
+            {
+                if (guid.GetType() == typeof(Guid))
+                {
+                    g = Guid.Parse(guid.ToString());
+                    return true;
+                }
+
+                if (guid.GetType() == typeof(string))
+                {
+                    return Guid.TryParse(guid.ToString(), out g);
+                }
+            }
+            catch (Exception e) when (e is ArgumentException || e is FormatException || e is InvalidOperationException || e is OverflowException)
+            {
+
+            }
+
+            g = Guid.Empty;
+            return false;
         }
     }
 }

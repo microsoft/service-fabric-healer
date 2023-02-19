@@ -29,7 +29,7 @@ namespace FabricHealer
     {
         internal static TelemetryUtilities TelemetryUtilities;
         internal static RepairData RepairHistory;
-        internal static StatelessServiceContext ServiceContext;
+        public static StatelessServiceContext ServiceContext;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
         private const string InternalVersionNumber = "1.1.17";
@@ -1109,10 +1109,11 @@ namespace FabricHealer
 
                 HealthEventData eventData = new()
                 {
-                    EntityName = repairData.ApplicationName,
+                    Name = repairData.ApplicationName,
                     EntityType = repairData.EntityType,
                     HealthState = repairData.HealthState,
                     LastErrorTransitionAt = evt.LastErrorTransitionAt,
+                    LastWarningTransitionAt = evt.LastWarningTransitionAt,
                     SourceId = evt.HealthInformation.SourceId,
                     SourceUtcTimestamp = evt.SourceUtcTimestamp,
                     Property = evt.HealthInformation.Property
@@ -1452,7 +1453,7 @@ namespace FabricHealer
 
                 HealthEventData eventData = new()
                 {
-                    EntityName = repairData.ServiceName,
+                    Name = repairData.ServiceName,
                     EntityType = repairData.EntityType,
                     HealthState = repairData.HealthState,
                     LastErrorTransitionAt = evt.LastErrorTransitionAt,
@@ -1647,10 +1648,11 @@ namespace FabricHealer
                     // Update the in-memory HealthEvent data.
                     HealthEventData eventData = new()
                     {
-                        EntityName = repairData.NodeName,
+                        Name = repairData.NodeName,
                         EntityType = repairData.EntityType,
                         HealthState = repairData.HealthState,
                         LastErrorTransitionAt = evt.LastErrorTransitionAt,
+                        LastWarningTransitionAt = evt.LastWarningTransitionAt,
                         SourceId = evt.HealthInformation.SourceId,
                         SourceUtcTimestamp = evt.SourceUtcTimestamp,
                         Property= evt.HealthInformation.Property
@@ -1716,10 +1718,11 @@ namespace FabricHealer
 
             HealthEventData eventData = new()
             {
-                EntityName = repairData.NodeName,
+                Name = repairData.NodeName,
                 EntityType = repairData.EntityType,
                 HealthState = repairData.HealthState,
                 LastErrorTransitionAt = evt.LastErrorTransitionAt,
+                LastWarningTransitionAt = evt.LastWarningTransitionAt,
                 SourceId = evt.HealthInformation.SourceId,
                 SourceUtcTimestamp = evt.SourceUtcTimestamp,
                 Property = evt.HealthInformation.Property
@@ -1803,10 +1806,11 @@ namespace FabricHealer
             // Update the in-memory HealthEvent data.
             HealthEventData eventData = new()
             {
-                EntityName = repairData.NodeName,
+                Name = repairData.NodeName,
                 EntityType = repairData.EntityType,
                 HealthState = repairData.HealthState,
                 LastErrorTransitionAt = healthEvent.LastErrorTransitionAt,
+                LastWarningTransitionAt = healthEvent.LastWarningTransitionAt,
                 SourceId = healthEvent.HealthInformation.SourceId,
                 SourceUtcTimestamp = healthEvent.SourceUtcTimestamp,
                 Property = healthEvent.HealthInformation.Property
@@ -1979,10 +1983,11 @@ namespace FabricHealer
                                 // Update the in-memory HealthEvent data.
                                 HealthEventData eventData = new()
                                 {
-                                    EntityName = repairData.ReplicaId.ToString(),
+                                    Name = repairData.ReplicaId.ToString(),
                                     EntityType = repairData.EntityType,
                                     HealthState = repairData.HealthState,
                                     LastErrorTransitionAt = healthEvent.LastErrorTransitionAt,
+                                    LastWarningTransitionAt = healthEvent.LastWarningTransitionAt,
                                     SourceId = healthEvent.HealthInformation.SourceId,
                                     SourceUtcTimestamp = healthEvent.SourceUtcTimestamp,
                                     Property = healthEvent.HealthInformation.Property
