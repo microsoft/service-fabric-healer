@@ -857,7 +857,7 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            var dirInfo = new DirectoryInfo(targetFolderPath);
+            DirectoryInfo dirInfo = new(targetFolderPath);
             FileSortOrder direction = (repairData.RepairPolicy as DiskRepairPolicy).FileAgeSortOrder;
             string searchPattern = (repairData.RepairPolicy as DiskRepairPolicy).FileSearchPattern;
             List<string> files = direction switch
