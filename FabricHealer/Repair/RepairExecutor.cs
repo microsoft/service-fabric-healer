@@ -1076,6 +1076,7 @@ namespace FabricHealer.Repair
             }
         }
 
+        // This is for support of older versions of FabricObserver where TelemetryData.PartitionId is a nullable type (Guid?).
         public static bool TryGetGuid<T>(T guid, out Guid g)
         {
             if (guid == null)
