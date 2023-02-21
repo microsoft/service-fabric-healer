@@ -1076,35 +1076,34 @@ namespace FabricHealer.Repair
             }
         }
 
-        // This is for support of older versions of FabricObserver where TelemetryData.PartitionId is a nullable type (Guid?).
-        public static bool TryGetGuid<T>(T guid, out Guid g)
+        /// <summary>
+        /// This function ensures the input is in fact a Guid.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="input">An value representation (string or Guid) of a Guid structure.</param>
+        /// <param name="guid">Guid that will be returned.</param>
+        /// <returns>Boolean representing successful conversion and a Guid object instance (out).</returns>
+        public static bool TryGetGuid<T>(T input, out Guid guid)
         {
-            if (guid == null)
+            if (input == null)
             {
-                g = Guid.Empty;
+                guid = Guid.Empty;
                 return false;
             }
 
-            try
+            switch (input)
             {
-                if (guid.GetType() == typeof(Guid))
-                {
-                    g = Guid.Parse(guid.ToString());
+                case Guid g:
+                    guid = g;
                     return true;
-                }
 
-                if (guid.GetType() == typeof(string))
-                {
-                    return Guid.TryParse(guid.ToString(), out g);
-                }
+                case string s:
+                    return Guid.TryParse(s, out guid);
+
+                default:
+                    guid = Guid.Empty;
+                    return false;
             }
-            catch (Exception e) when (e is ArgumentException || e is FormatException || e is InvalidOperationException || e is OverflowException)
-            {
-
-            }
-
-            g = Guid.Empty;
-            return false;
         }
     }
 }

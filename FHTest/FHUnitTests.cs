@@ -966,12 +966,12 @@ namespace FHTest
         [TestMethod]
         public void Multi_Type_Guid_Support_Compatibility_Test()
         {
-            Guid? nullableGuid = new();
+            Guid? nullableGuid = (Guid?)Guid.NewGuid();
             Guid? nullGuid = null;
-            string guidString = Guid.NewGuid().ToString();
-            string empty = "";
+            string guidString = nullableGuid.ToString();
+            string empty = string.Empty;
             string whitespace = "   ";
-            string randomChars = "---------d-d-d---d";
+            string randomChars = ".-$--%->-d-e-c-[}-o";
 
             Assert.IsFalse(RepairExecutor.TryGetGuid(nullGuid, out _));
             Assert.IsFalse(RepairExecutor.TryGetGuid(whitespace, out _));

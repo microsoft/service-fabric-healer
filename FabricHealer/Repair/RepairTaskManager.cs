@@ -690,7 +690,7 @@ namespace FabricHealer.Repair
                         }
                         else
                         {
-                            if (string.IsNullOrWhiteSpace(repairData.PartitionId))
+                            if (!RepairExecutor.TryGetGuid(repairData.PartitionId, out Guid partitionId))
                             {
                                 success = false;
                                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -701,12 +701,6 @@ namespace FabricHealer.Repair
                                         repairData,
                                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-                                break;
-                            }
-
-                            if (!RepairExecutor.TryGetGuid(repairData.PartitionId, out Guid partitionId))
-                            {
-                                success = false;
                                 break;
                             }
 
@@ -742,7 +736,7 @@ namespace FabricHealer.Repair
                     }
                     case RepairActionType.RemoveReplica:
                     {
-                        if (string.IsNullOrWhiteSpace(repairData.PartitionId))
+                        if (!RepairExecutor.TryGetGuid(repairData.PartitionId, out Guid partitionId))
                         {
                             success = false;
                             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -753,12 +747,6 @@ namespace FabricHealer.Repair
                                     repairData,
                                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-                            break;
-                        }
-
-                        if (!RepairExecutor.TryGetGuid(repairData.PartitionId, out Guid partitionId))
-                        {
-                            success = false;
                             break;
                         }
 
@@ -1100,11 +1088,11 @@ namespace FabricHealer.Repair
             }
 
             count = DetectedHealthEvents.Count(
-                evt => evt.Name == id
-                    && evt.HealthState == repairData.HealthState
-                    && evt.SourceId == repairData.Source
-                    && evt.Property == repairData.Property
-                    && DateTime.UtcNow.Subtract(evt.SourceUtcTimestamp) <= timeWindow);
+                        evt => evt.Name == id
+                            && evt.HealthState == repairData.HealthState
+                            && evt.SourceId == repairData.Source
+                            && evt.Property == repairData.Property
+                            && DateTime.UtcNow.Subtract(evt.SourceUtcTimestamp) <= timeWindow);
 
             // Lifetime management of Health Events list data. Cache lifecycle is 8 hours. If FH process restarts, data is not preserved.
             if (DateTime.UtcNow.Subtract(LastHealthEventsListClearDateTime) >= MaxLifeTimeHealthEventsData)

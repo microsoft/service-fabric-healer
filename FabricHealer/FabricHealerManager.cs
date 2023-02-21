@@ -1235,8 +1235,7 @@ namespace FabricHealer
                     continue;
                 }
 
-                // PartitionId is string in TelemetryData.
-                if (string.IsNullOrWhiteSpace(repairData.PartitionId))
+                if (!RepairExecutor.TryGetGuid(repairData.PartitionId, out _))
                 {
                     continue;
                 }
