@@ -540,7 +540,8 @@ namespace FabricHealer.Repair
             }
 
             if (!allCompletedRepairTasks.Any(
-                    r => r.Impact is NodeRepairImpactDescription nodeImpact
+                    r => r.ResultStatus == RepairTaskResult.Succeeded 
+                      && r.Impact is NodeRepairImpactDescription nodeImpact
                       && nodeImpact.ImpactedNodes.Any(
                         n => n.NodeName == nodeName && (n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData))))
             {
@@ -548,10 +549,11 @@ namespace FabricHealer.Repair
             }
 
             var orderedNodeRepairList =
-                    allCompletedRepairTasks
-                        .Where(r => r.Impact is NodeRepairImpactDescription nodeImpact
-                                 && nodeImpact.ImpactedNodes.Any(
-                                   n => n.NodeName == nodeName && (n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData)))
+                    allCompletedRepairTasks.Where(
+                        r => r.ResultStatus == RepairTaskResult.Succeeded
+                          && r.Impact is NodeRepairImpactDescription nodeImpact
+                          && nodeImpact.ImpactedNodes.Any(
+                                n => n.NodeName == nodeName && (n.ImpactLevel == NodeImpactLevel.Restart || n.ImpactLevel == NodeImpactLevel.RemoveData)))
                         .OrderByDescending(o => o.CompletedTimestamp);
 
             foreach (RepairTask repair in orderedNodeRepairList)
