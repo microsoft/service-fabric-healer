@@ -66,7 +66,7 @@ Mitigate() :- GetRepairHistory(?repairCount, 08:00:00, System.Azure.Heal), ?repa
 ## Triage escalation.
 ## If we end up here, then human intervention is required. LogInfo will generate ETW/Telemetry/Health events containing the message.
 ## FabricHealer will also schedule a ManualTriageNeeded repair task. Once you manually solve the problem, then cancel this repair task as it will block FabricHealer
-## from scheduling any other machine repairs for the target node until canceled. It also counts against the number of concurrent Active repairs you specified
+## from scheduling any other machine repairs for the target node until canceled: The ManualTriageNeeded repair action counts against the number of concurrent Active repairs constraint that you specified
 ## above in the CheckOutstandingRepairs predicate.
 Mitigate(NodeName=?nodeName) :- LogInfo("0042_{0}: Specified Machine repair escalations have been exhausted for node {0}. Human intervention is required.", ?nodeName), 
 	ScheduleMachineRepair(ManualTriageNeeded).
