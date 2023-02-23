@@ -34,7 +34,7 @@
 ## Don't proceed if the target entity is not in Error.
 Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
 
-## Don't proceed is FabricObserver's NodeObserver is not the source of the Error event.
+## Don't proceed if FabricObserver's NodeObserver is not the source of the Error event.
 ##Mitigate(Source=?source) :- not(match(?source, "NodeObserver")), !.
 
 ## Don't proceed if there are already 2 or more machine repairs currently active in the cluster.
