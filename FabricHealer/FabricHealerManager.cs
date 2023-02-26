@@ -29,10 +29,15 @@ namespace FabricHealer
     {
         internal static TelemetryUtilities TelemetryUtilities;
         internal static RepairData RepairHistory;
-        public static StatelessServiceContext ServiceContext;
+
+        internal static bool EnableRuleTracing { get; set; } = true;
+
+        public static StatelessServiceContext ServiceContext { get; private set; }
+        
+        public static string CurrentlyExecutingLogicRulesFileName { get; set; }
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.1.17";
+        private const string InternalVersionNumber = "1.1.18";
         private static FabricHealerManager singleton;
         private static FabricClient _fabricClient;
         private bool disposedValue;
@@ -305,7 +310,7 @@ namespace FabricHealer
 
                 // First, let's clean up any orphaned non-node level FabricHealer repair tasks left pending. This will also resume Fabric Node repairs that
                 // FH owns and was executing at the time FH exited. Only FH-owned repairs will be canceled, not repairs conducted by other executors.
-                await CancelOrResumeAllRunningFHRepairsAsync();
+                await CancelAbandonedFHRepairsAsync();
 
                 // Run until RunAsync token is cancelled.
                 while (!Token.IsCancellationRequested)
@@ -467,17 +472,26 @@ namespace FabricHealer
                 {
                     // FH looks for and resumes FabricNode restart repair jobs when it starts up (so, it will pick up where it left off in the safe restart sequence
                     // when the Fabric node hosting FH is the one FH restarted).
-                    if (JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData, true)
-                        && exData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)
+                    if (!JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData, true))
                     {
-                        if (isClosing)
+                        continue;
+                    }
+
+                    // This would mean that the job has node-level Impact and its state is at least Approved.
+                    if (repair.Impact is NodeRepairImpactDescription impact)
+                    {
+                        if (impact.ImpactedNodes.Any(
+                            n => n.NodeName == exData.RepairPolicy.NodeName
+                              && (n.ImpactLevel == NodeImpactLevel.Restart ||
+                                  n.ImpactLevel == NodeImpactLevel.RemoveData ||
+                                  n.ImpactLevel == NodeImpactLevel.RemoveNode)))
                         {
                             continue;
                         }
                     }
 
                     // Was max execution time configured by user?
-                    if (exData != null && exData.RepairPolicy.MaxExecutionTime > TimeSpan.Zero)
+                    if (exData.RepairPolicy.MaxExecutionTime > TimeSpan.Zero)
                     {
                         maxFHExecutorTime = exData.RepairPolicy.MaxExecutionTime;
                     }
@@ -492,7 +506,7 @@ namespace FabricHealer
             catch (Exception e) when (e is ArgumentException || e is FabricException || e is InvalidOperationException || e is TimeoutException)
             {
 #if DEBUG
-                RepairLogger.LogWarning($"TryCleanUpOrphanedFabricHealerRepairJobsAsync Failure:{Environment.NewLine}{e}");
+                RepairLogger.LogWarning($"TryCleanUpOrphanedFabricHealerRepairJobs Failure:{Environment.NewLine}{e}");
 #endif
             }
         }
@@ -531,15 +545,13 @@ namespace FabricHealer
         }
 
         /// <summary>
-        /// Cancels all FabricHealer repair tasks currently in flight (unless in Restoring state).
-        /// OR Resumes fabric node-level repairs that were abandoned due to FH going down while they were processing.
+        /// Cancels all FabricHealer repair tasks currently in flight.
         /// </summary>
         /// <returns>A Task.</returns>
-        private static async Task CancelOrResumeAllRunningFHRepairsAsync()
+        private static async Task CancelAbandonedFHRepairsAsync()
         {
             try
             {
-
                 var currentFHRepairTasksInProgress =
                         await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                 () => RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
@@ -582,49 +594,11 @@ namespace FabricHealer
                         continue;
                     }
 
-                    // Try and cancel existing repair. We may need to create a new one for abandoned repairs where FH goes down for some reason.
-                    // Note: CancelRepairTaskAsync handles exceptions (IOE) that may be thrown by RM due to state change policy. 
-                    // The repair state could change to Completed after this call is made, for example, and before RM API call.
                     if (repair.State != RepairTaskState.Completed)
                     {
                         await FabricRepairTasks.CancelRepairTaskAsync(repair);
                     }
 
-                    /* Resume interrupted Fabric Node restart repairs */
-
-                    // There is no need to resume simple repairs that do not require multiple repair steps (e.g., codepackage/process/replica restarts).
-                    if (repairExecutorData.RepairPolicy.RepairAction != RepairActionType.RestartFabricNode)
-                    {
-                        continue;
-                    }
-
-                    string errorCode = repairExecutorData.RepairPolicy.Code;
-
-                    if (string.IsNullOrWhiteSpace(errorCode))
-                    {
-                        continue;
-                    }
-
-                    // File Deletion repair is a node-level (VM) repair, but is not multi-step. Ignore.
-                    if (repairExecutorData.RepairPolicy.RepairAction == RepairActionType.DeleteFiles)
-                    {
-                        continue;
-                    }
-
-                    // Fabric System service warnings/errors from FO can be Node level repair targets (e.g., Fabric binary needs to be restarted).
-                    // FH will restart the node hosting the troubled SF system service if specified in related logic rules.
-                    var repairRules =
-                        GetRepairRulesFromConfiguration(
-                            !string.IsNullOrWhiteSpace(
-                                repairExecutorData.RepairPolicy.ProcessName) ? RepairConstants.SystemServiceRepairPolicySectionName : RepairConstants.FabricNodeRepairPolicySectionName);
-
-                    var repairData = new TelemetryData
-                    {
-                        NodeName = repairExecutorData.RepairPolicy.NodeName,
-                        Code = errorCode,
-                    };
-
-                    await RunGuanQueryAsync(repairData, repairRules, Token, repairExecutorData);
                     RepairLogger.LogInfo("Exiting CancelOrResumeAllRunningFHRepairsAsync: Completed.");
                 }
             }
@@ -632,13 +606,13 @@ namespace FabricHealer
             {
                 if (e is FabricException)
                 {
-                    RepairLogger.LogWarning($"Could not cancel or resume repair tasks. Failed with:{Environment.NewLine}{e}");
+                    RepairLogger.LogWarning($"Could not cancel FH repair tasks. Failed with:{Environment.NewLine}{e}");
                 }
 
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "CancelOrResumeAllRunningFHRepairsAsync",
-                        $"Could not cancel or resume repair tasks. Failed with:{Environment.NewLine}{e}",
+                        $"Could not cancel abandoned FH repair tasks. Failed with:{Environment.NewLine}{e}",
                         Token,
                         null,
                         ConfigSettings.EnableVerboseLogging);
@@ -1561,7 +1535,7 @@ namespace FabricHealer
                             continue;
                         }
 
-                        // Disk?
+                        // Disk repair?
                         if (repairData.EntityType == EntityType.Disk)
                         {
                             if (!ConfigSettings.EnableDiskRepair)
@@ -1573,7 +1547,7 @@ namespace FabricHealer
                             continue;
                         }
 
-                        // Fabric node?
+                        // Fabric Node repair?
                         if (repairData.EntityType == EntityType.Node)
                         {
                             if (!ConfigSettings.EnableFabricNodeRepair)
@@ -1581,17 +1555,13 @@ namespace FabricHealer
                                 continue;
                             }
 
-                            // FabricHealerProxy-generated report, so a restart fabric node request, for example.
+                            // FabricObserver/FabricHealerProxy-generated health report.
                             await ProcessFabricNodeHealthAsync(evt, repairData);
                             continue;
                         }
                     }
 
-                    // Machine repair \\
-                    if (!ConfigSettings.EnableMachineRepair)
-                    {
-                        continue;
-                    }
+                    // Machine-level repair \\
 
                     // Make sure that there is not already an Infra repair in progress for the target node.
                     if (await RepairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(repairData, Token))
@@ -1617,7 +1587,7 @@ namespace FabricHealer
 
                     /* Start repair workflow */
 
-                    string repairId = $"MachineRepair_{nodeType}_{repairData.NodeName}";
+                    string repairId = $"MachineRepair_{repairData.NodeName}";
                     repairData.RepairPolicy = new RepairPolicy
                     {
                         RepairId = repairId,
@@ -1752,8 +1722,8 @@ namespace FabricHealer
                 return;
             }
 
-            // There is only one supported repair for a FabricNode: Restart.
-            string repairId = $"{repairData.NodeName}_{repairData.NodeType}_Restart";
+            string action = repairData.RepairPolicy.RepairAction == RepairActionType.DeactivateNode ? "Deactivate" : "Restart";
+            string repairId = $"{repairData.NodeName}_{repairData.NodeType}_{action}";
 
             var currentRepairs =
                 await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, Token);
@@ -2173,6 +2143,7 @@ namespace FabricHealer
                     return null;
                 }
 
+                CurrentlyExecutingLogicRulesFileName = logicRulesConfigFileName;
                 List<string> repairRules = ParseRulesFile(rules);
                 return repairRules;
             }

@@ -9,7 +9,6 @@ using System.Fabric.Repair;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricHealer.TelemetryLib;
 using FabricHealer.Utilities;
 
 namespace FabricHealer.Repair

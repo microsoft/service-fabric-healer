@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Guan.Logic;
@@ -27,7 +28,7 @@ namespace FabricHealer.Repair.Guan
             QueryContext queryContext = new(moduleProvider);
             queryContext.SetDirection(null, order);
             Query query = Query.Create(queryExpression, queryContext);
-            await query.GetNextAsync();
+            _ = await query.GetNextAsync();
         }
 
         public async Task RunQueryAsync(List<CompoundTerm> queryExpressions, CancellationToken cancellationToken)
@@ -43,7 +44,7 @@ namespace FabricHealer.Repair.Guan
             QueryContext queryContext = new(moduleProvider);
             queryContext.SetDirection(null, order);
             Query query = Query.Create(queryExpressions, queryContext, moduleProvider);
-            await query.GetNextAsync();
+            _ = await query.GetNextAsync();
         }
     }
 }

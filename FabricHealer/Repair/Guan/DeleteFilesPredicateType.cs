@@ -34,6 +34,11 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
+                if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
+                {
+                    _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRule(Input.ToString(), RepairData);
+                }
+
                 RepairData.RepairPolicy.RepairAction = RepairActionType.DeleteFiles;
                 bool recurseSubDirectories = false;
                 string path = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue();

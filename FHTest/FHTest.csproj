@@ -52,6 +52,9 @@
         <None Update="PackageRoot\Config\LogicRules\MachineRules.guan">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <None Update="TestApp42.zip">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
         <None Update="testrules_wellformed.guan">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>

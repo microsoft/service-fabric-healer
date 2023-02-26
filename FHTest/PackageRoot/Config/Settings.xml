@@ -10,6 +10,7 @@
 		<Parameter Name="EnableAutoMitigation" Value="true" />
 		<Parameter Name="EnableOperationalTelemetry" Value="false" />
 		<Parameter Name="EnableRollingServiceRestarts" Value="true" />
+		<Parameter Name="EnableLogicRuleTracing" Value="true" />
 		<!-- Folder name for local log output. You can use a full path or just a folder name. -->
 		<Parameter Name="LocalLogPath" Value="fabric_healer_testlogs" />
     

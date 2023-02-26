@@ -1,31 +1,31 @@
 ﻿## Logic rules for scheduling Machine-level repair jobs in the cluster. EntityType fact is always Machine.
-## FH does not conduct (execute) these repairs. It simply schedules them. InfrastructureService is always the Executor for these types of Repair Jobs.
+## FH does not conduct (execute) these repairs. It simply schedules them. InfrastructureService is always the Executor for machine-level Repair Jobs.
 
 ## Applicable Named Arguments for Mitigate. Facts are supplied by FabricObserver, FHProxy or FH itself.
 ## Any argument below with (FO/FHProxy) means that only FO or FHProxy will present the fact.
 ## | Argument Name             | Definition                                                             |
 ## |---------------------------|------------------------------------------------------------------------|
-## | NodeName                  | Name of the node                                                       | 
-## | NodeType                  | Type of node                                                           |  
-## | ErrorCode (FO/FHProxy)    | Supported Error Code emitted by caller (e.g. "FO002")                  | 
-## | MetricName (FO/FHProxy)   | Name of the Metric  (e.g., CpuPercent or MemoryMB, etc.)               |   
-## | MetricValue (FO/FHProxy)  | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)        | 
+## | NodeName                  | Name of the node                                                       |
+## | NodeType                  | Type of node                                                           |
+## | ErrorCode (FO/FHProxy)    | Supported Error Code emitted by caller (e.g. "FO002")                  |
+## | MetricName (FO/FHProxy)   | Name of the Metric  (e.g., CpuPercent or MemoryMB, etc.)               |
+## | MetricValue (FO/FHProxy)  | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)        |
 ## | OS                        | The name of the OS where FabricHealer is running (Linux or Windows)    |
 ## | HealthState               | The HealthState of the target entity: Error or Warning                 |
-## | Source                    | The Source ID of the related SF Health Event                           | 
+## | Source                    | The Source ID of the related SF Health Event                           |
 ## | Property                  | The Property of the related SF Health Event                            |
 
 ## Metric Names, from FO or FHProxy.
-## | Name                           |                                                                                    
+## | Name                           |                                           
 ## |--------------------------------|
-## | ActiveTcpPorts                 |                                         
-## | CpuPercent                     |    
-## | EphemeralPorts                 | 
-## | EphemeralPortsPercent          | 
-## | MemoryMB                       | 
-## | MemoryPercent                  | 
-## | Handles (Linux-only)           | 
-## | HandlesPercent (Linux-only)    | 
+## | ActiveTcpPorts                 |                  
+## | CpuPercent                     |
+## | EphemeralPorts                 |
+## | EphemeralPortsPercent          |
+## | MemoryMB                       |
+## | MemoryPercent                  |
+## | Handles (Linux-only)           |
+## | HandlesPercent (Linux-only)    |
 
 
 ## The logic program below is a repair specification (policy) that does not require facts from FabricObserver (FO) or FHProxy.
@@ -34,8 +34,8 @@
 ## Don't proceed if the target entity is not in Error.
 Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
 
-## Don't proceed is FabricObserver's NodeObserver is not the source of the Error event.
-##Mitigate(Source=?source) :- not(match(?source, "NodeObserver")), !.
+## Don't proceed unless the specified watchdog created the Error health event.
+Mitigate(Source=?source) :- not(match(?source, "EventLogWatchdog")), !.
 
 ## Don't proceed if there are already 2 or more machine repairs currently active in the cluster.
 Mitigate() :- CheckOutstandingRepairs(2), !.
@@ -47,9 +47,15 @@ Mitigate() :- CheckInsideScheduleInterval(00:10:00), !.
 Mitigate() :- CheckInsideNodeProbationPeriod(00:30:00), !.
 
 ## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours.
-Mitigate() :- CheckInsideHealthStateMinDuration(02:00:00), !.
+Mitigate() :- CheckInsideHealthStateMinDuration(00:01:00), !.
 
-## Mitigations (RM repair scheduling logic - InfrastructureService for the target node type will be the repair Executor, not FH).
+## For certain environments, the correct mitigation is to deactivate the target node. The below rule schedules a node deactivation (intent is Pause) repair.
+
+Mitigate(Source=?source, Property=?property) :- match(?source, "EventLogWatchdog"),
+	match(?property, "CriticalMachineFailure"), !,
+	DeactivateFabricNode(ImpactLevel=RemoveData).
+
+## Infra Mitigations (RM repair scheduling logic - InfrastructureService for the target node type will be the repair Executor, not FH).
 ## The logic below demonstrates how to specify a repair escalation path: Reboot -> Reimage -> Heal -> Triage (human intervention required).
 ## ScheduleMachineRepair predicate takes any repair action string. There are a handful that are supported by RepairManager/InfrastructureService, like below.
 

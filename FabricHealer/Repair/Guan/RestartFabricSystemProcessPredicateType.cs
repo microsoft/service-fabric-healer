@@ -34,6 +34,12 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 RepairData.RepairPolicy.RepairAction = RepairActionType.RestartProcess;
+
+                if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
+                {
+                    _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRule(Input.ToString(), RepairData);
+                }
+
                 int count = Input.Arguments.Count;
 
                 for (int i = 0; i < count; i++)

@@ -9,13 +9,11 @@ using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using System.Threading.Tasks;
-using System.Threading;
 
 namespace FabricHealer.Repair.Guan
 {
     public class RestartFabricNodePredicateType : PredicateType
     {
-        private static RepairExecutorData RepairExecutorData;
         private static TelemetryData RepairData;
         private static RestartFabricNodePredicateType Instance;
 
@@ -30,6 +28,13 @@ namespace FabricHealer.Repair.Guan
             protected override async Task<bool> CheckAsync()
             {
                 RepairData.RepairPolicy.RepairAction = RepairActionType.RestartFabricNode;
+                RepairData.RepairPolicy.RepairIdPrefix = RepairConstants.FHTaskIdPrefix;
+
+                if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
+                {
+                    _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRule(Input.ToString(), RepairData);
+                }
+
                 int count = Input.Arguments.Count;
 
                 for (int i = 0; i < count; i++)
@@ -55,59 +60,6 @@ namespace FabricHealer.Repair.Guan
                     }
                 }
 
-                RepairTask repairTask;
-                bool success;
-
-                // This means it's a resumed repair.
-                if (RepairExecutorData != null)
-                {
-                    // Historical info, like what step the healer was in when the node went down, is contained in the
-                    // executordata instance.
-                    repairTask = await RepairTaskEngine.CreateFabricHealerRepairTask(RepairExecutorData, FabricHealerManager.Token);
-                    
-                    if (repairTask == null)
-                    {
-                        return false;
-                    }
-
-                    // MaxExecutionTime impl.
-                    using (CancellationTokenSource tokenSource = new())
-                    {
-                        using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(
-                                                                        tokenSource.Token,
-                                                                        FabricHealerManager.Token))
-                        {
-                            TimeSpan maxExecutionTime = TimeSpan.FromMinutes(60);
-
-                            if (RepairData.RepairPolicy.MaxExecutionTime > TimeSpan.Zero)
-                            {
-                                maxExecutionTime = RepairData.RepairPolicy.MaxExecutionTime;
-                            }
-
-                            tokenSource.CancelAfter(maxExecutionTime);
-                            tokenSource.Token.Register(() =>
-                            {
-                                _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
-                            });
-
-                            // Try to execute repair (FH executor does this work and manages repair state).
-                            success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                    () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
-                                                            repairTask,
-                                                            RepairData,
-                                                            linkedCTS.Token),
-                                                    linkedCTS.Token);
-
-                            if (!success && linkedCTS.IsCancellationRequested)
-                            {
-                                await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
-                            }
-
-                            return success;
-                        }
-                    }
-                }
-            
                 // Block attempts to create node-level repair tasks if one is already running in the cluster.
                 var isNodeRepairAlreadyInProgress =
                     await RepairTaskEngine.IsRepairInProgressAsync(RepairData, FabricHealerManager.Token);
@@ -128,8 +80,8 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                // Try to schedule repair with RM.
-                repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                // Try to schedule repair with RM for Fabric Node Restart (FH will not be the executor).
+                RepairTask repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
                                                 RepairData,
                                                 FabricHealerManager.Token),
@@ -139,52 +91,13 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                using (CancellationTokenSource tokenSource = new())
-                {
-                    using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(
-                                                                    tokenSource.Token,
-                                                                    FabricHealerManager.Token))
-                    {
-                        TimeSpan maxExecutionTime = TimeSpan.FromMinutes(60);
-
-                        if (RepairData.RepairPolicy.MaxExecutionTime > TimeSpan.Zero)
-                        {
-                            maxExecutionTime = RepairData.RepairPolicy.MaxExecutionTime;
-                        }
-
-                        tokenSource.CancelAfter(maxExecutionTime);
-                        tokenSource.Token.Register(() =>
-                        {
-                            _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
-                        });
-
-                        // Try to execute repair (FH executor does this work and manages repair state).
-                        success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                            () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
-                                                    repairTask,
-                                                    RepairData,
-                                                    linkedCTS.Token),
-                                            linkedCTS.Token);
-
-                        if (!success && linkedCTS.IsCancellationRequested)
-                        {
-                            await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
-                        }
-
-                        return success;
-                    }
-                }
+                return true;
             }
         }
 
-        public static RestartFabricNodePredicateType Singleton(
-                        string name,
-                        RepairExecutorData repairExecutorData,
-                        TelemetryData repairData)
+        public static RestartFabricNodePredicateType Singleton(string name, TelemetryData repairData)
         {
-            RepairExecutorData = repairExecutorData;
             RepairData = repairData;
-
             return Instance ??= new RestartFabricNodePredicateType(name);
         }
 

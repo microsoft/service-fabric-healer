@@ -15,6 +15,7 @@ namespace FabricHealer.Repair
     public enum RepairActionType
     {
         Infra,
+        DeactivateNode,
         DeleteFiles,
         RemoveFabricNodeState,
         RemoveReplica,

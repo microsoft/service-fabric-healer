@@ -34,6 +34,7 @@ namespace FabricHealer.Repair
         public const string LocalLogPathParameter = "LocalLogPath";
         public const string AsyncOperationTimeout = "AsyncOperationTimeoutSeconds";
         public const string EnableFabricHealerOperationalTelemetry = "EnableOperationalTelemetry";
+        public const string EnableLogicRuleTracing = "EnableLogicRuleTracing";
 
         // General Repair Settings Parameters.
         public const string EnableAutoMitigation = "EnableAutoMitigation";
@@ -73,6 +74,7 @@ namespace FabricHealer.Repair
         public const string Source = "Source";
 
         // Repair Actions.
+        public const string DeactivateFabricNode = "DeactivateFabricNode";
         public const string DeleteFiles = "DeleteFiles";
         public const string RestartCodePackage = "RestartCodePackage";
         public const string RestartFabricNode = "RestartFabricNode";
@@ -100,6 +102,7 @@ namespace FabricHealer.Repair
         public const string LogInfo = "LogInfo";
         public const string LogWarning = "LogWarning";
         public const string LogError = "LogError";
+        public const string TraceNextRule = "TraceNextRule";
 
         // Metric names.
         public const string ActiveTcpPorts = "ActiveTcpPorts";

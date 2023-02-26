@@ -6,6 +6,7 @@
 using System;
 using System.Diagnostics.Tracing;
 using System.Fabric.Health;
+using System.Fabric.Repair;
 
 namespace FabricHealer.Repair
 {
@@ -120,5 +121,6 @@ namespace FabricHealer.Repair
         {
             get; set;
         }
+        public NodeImpactLevel NodeImpactLevel { get; internal set; }
     }
 }

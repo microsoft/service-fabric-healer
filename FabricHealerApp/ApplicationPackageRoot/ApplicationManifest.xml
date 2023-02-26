@@ -1,10 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.1.17" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.1.18" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- FabricHealerManager Settings  -->
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
     <Parameter Name="EnableETW" DefaultValue="false" />
     <Parameter Name="HealthCheckIntervalInSeconds" DefaultValue="60" />
+    <Parameter Name="EnableLogicRuleTracing" DefaultValue="true" />
     <Parameter Name="EnableTelemetry" DefaultValue="false" />
     <Parameter Name="EnableVerboseLogging" DefaultValue="true" />
     <Parameter Name="OperationalTelemetryEnabled" DefaultValue="true" />
@@ -30,7 +31,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.1.17" />
+    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.1.18" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -44,6 +45,7 @@
             <Parameter Name="EnableOperationalTelemetry" Value="[OperationalTelemetryEnabled]" />
             <Parameter Name="EnableRollingServiceRestarts" Value="[EnableRollingServiceRestarts]" />
             <Parameter Name="LocalLogPath" Value="[LocalLogPath]" />
+            <Parameter Name="EnableLogicRuleTracing" Value="[EnableLogicRuleTracing]" />
           </Section>
           <!-- Repair policies -->
           <Section Name="AppRepairPolicy">

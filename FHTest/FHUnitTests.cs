@@ -47,7 +47,7 @@ namespace FHTest
         private const string FHProxyId = "FabricHealerProxy";
 
         [ClassInitialize]
-        public static void TestClassStartUp(TestContext testContext)
+        public static async Task TestClassStartUp(TestContext testContext)
         {
             if (!IsLocalSFRuntimePresent())
             {
@@ -93,6 +93,8 @@ namespace FHTest
             {
                 TelemetryEnabled = false
             };
+
+            await DeployTestApp42Async();
         }
 
         /* Helpers */
@@ -168,6 +170,116 @@ namespace FHTest
             }
         }
 
+        private static async Task DeployTestApp42Async()
+        {
+            string appName = "fabric:/TestApp42";
+
+            // If fabric:/TestApp42 is already installed, exit.
+            var deployedTestApp =
+                    await fabricClient.QueryManager.GetDeployedApplicationListAsync(
+                            NodeName,
+                            new Uri(appName),
+            TimeSpan.FromSeconds(30),
+                            token);
+
+            if (deployedTestApp?.Count > 0)
+            {
+                return;
+            }
+
+            string appType = "TestApp42Type";
+            string appVersion = "1.0.0";
+
+            // Change this to suit your configuration (so, if you are on Windows and you installed SF on a different drive, for example).
+            string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
+            string packagePathInImageStore = "TestApp42";
+            string packagePathZip = Path.Combine(Environment.CurrentDirectory, "TestApp42.zip");
+            string packagePath = Path.Combine(Environment.CurrentDirectory, "TestApp42", "Release");
+
+            try
+            {
+                // Unzip the compressed HealthMetrics app package.
+                System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "TestApp42", true);
+
+                // Copy the HealthMetrics app package to a location in the image store.
+                fabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+
+                // Provision the HealthMetrics application.          
+                await fabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+
+                // Create HealthMetrics app instance.
+                ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion);
+                await fabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
+
+                // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
+                // You may need to increase this value depending upon your dev machine? You'll find out..
+                await Task.Delay(TimeSpan.FromSeconds(15));
+            }
+            catch (FabricException fe)
+            {
+                if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
+                {
+                    await fabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    await DeployTestApp42Async();
+                }
+                else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
+                {
+                    var appList = await fabricClient.QueryManager.GetApplicationListAsync(new Uri(appName));
+                    if (appList.Count > 0)
+                    {
+                        await fabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    }
+                    await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                    await DeployTestApp42Async();
+                }
+            }
+        }
+
+        private static async Task<bool> EnsureTestServicesExistAsync(string appName)
+        {
+            try
+            {
+                var services = await fabricClient.QueryManager.GetServiceListAsync(new Uri(appName));
+                return services?.Count > 0;
+            }
+            catch (FabricElementNotFoundException)
+            {
+
+            }
+
+            return false;
+        }
+
+        private static async Task RemoveTestApplicationsAsync()
+        {
+            string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
+
+            // TestApp42 \\
+
+            if (await EnsureTestServicesExistAsync("fabric:/TestApp42"))
+            {
+                string appName = "fabric:/TestApp42";
+                string appType = "TestApp42Type";
+                string appVersion = "1.0.0";
+                string serviceName1 = "fabric:/TestApp42/ChildProcessCreator";
+                string packagePathInImageStore = "TestApp42";
+
+                // Clean up the unzipped directory.
+                fabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+
+                // Delete services.
+                var deleteServiceDescription1 = new DeleteServiceDescription(new Uri(serviceName1));
+                await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
+
+                // Delete an application instance from the application type.
+                var deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
+                await fabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+
+                // Un-provision the application type.
+                await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+            }
+        }
+
         [ClassCleanup]
         public static async Task TestClassCleanupAsync()
         {
@@ -176,6 +288,7 @@ namespace FHTest
 
             // Ensure FHProxy cleans up its health reports.
             FabricHealerProxy.Instance.Close();
+            await RemoveTestApplicationsAsync();
         }
 
         /* GuanLogic Tests 
@@ -336,6 +449,7 @@ namespace FHTest
             };
 
             var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "ReplicaRules.guan");
+            FabricHealerManager.CurrentlyExecutingLogicRulesFileName = "ReplicaRules.guan";
             List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
 
             try
@@ -379,6 +493,7 @@ namespace FHTest
 
             var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "SystemServiceRules.guan");
             List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
+            FabricHealerManager.CurrentlyExecutingLogicRulesFileName = "SystemServiceRules.guan";
 
             try
             {
@@ -490,6 +605,7 @@ namespace FHTest
         {
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "MachineRules.guan");
             string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
+            FabricHealerManager.CurrentlyExecutingLogicRulesFileName = "MachineRules.guan";
             List<string> repairRules = FabricHealerManager.ParseRulesFile(rules);
             int escalationCount = 4; // reboot, reimage, heal, triage.
             RepairTaskList repairTasks = null;
@@ -771,7 +887,7 @@ namespace FHTest
         {
             // The service here must be one that is running in your test cluster.
             // TODO: install a local test app as part of tests.
-            ServiceName = "fabric:/BadApp/BadService",
+            ServiceName = "fabric:/TestApp42/ChildProcessCreator",
             NodeName = NodeName,
             // Specifying Source is Required for unit tests.
             // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.

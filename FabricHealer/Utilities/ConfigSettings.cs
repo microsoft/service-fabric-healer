@@ -29,6 +29,11 @@ namespace FabricHealer.Utilities
             private set;
         } = 30;
 
+        public bool EnableLogicRuleTracing
+        {
+            get; private set;
+        }
+
         public bool EnableVerboseLogging
         {
             get;
@@ -197,6 +202,12 @@ namespace FabricHealer.Utilities
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableFabricHealerOperationalTelemetry), out bool fhOpTelemEnabled))
             {
                 OperationalTelemetryEnabled = fhOpTelemEnabled;
+            }
+
+            // Logic rule predicate tracing.
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableLogicRuleTracing), out bool traceRules))
+            {
+                EnableLogicRuleTracing = traceRules;
             }
 
             // Repair Policies

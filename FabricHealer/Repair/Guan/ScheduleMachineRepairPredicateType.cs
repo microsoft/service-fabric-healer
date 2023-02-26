@@ -34,6 +34,13 @@ namespace FabricHealer.Repair.Guan
                     throw new GuanException("You must provide a repair action name for Infrastructure-level repairs as first argument.");
                 }
 
+                RepairData.RepairPolicy.RepairAction = RepairActionType.Infra;
+
+                if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
+                {
+                    _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRule(Input.ToString(), RepairData);
+                }
+
                 // FH does not execute repairs for VM level mitigation. InfrastructureService (IS) does,
                 // so, FH schedules VM repairs via RM and the execution is taken care of by IS (the executor).
                 // Block attempts to create duplicate repair tasks or more than specified concurrent machine-level repairs.

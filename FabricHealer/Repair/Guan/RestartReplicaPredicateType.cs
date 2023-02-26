@@ -28,6 +28,12 @@ namespace FabricHealer.Repair.Guan
             protected override async Task<bool> CheckAsync()
             {
                 RepairData.RepairPolicy.RepairAction = RepairActionType.RestartReplica;
+
+                if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
+                {
+                    _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRule(Input.ToString(), RepairData);
+                }
+
                 int count = Input.Arguments.Count;
 
                 for (int i = 0; i < count; i++)

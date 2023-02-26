@@ -167,8 +167,9 @@ namespace FabricHealer.Repair
 
                     repairTask = await RepairTaskEngine.CreateInfrastructureRepairTaskAsync(repairData, token);
                     break;
-                
+
                 // FH
+                case RepairActionType.DeactivateNode:
                 case RepairActionType.DeleteFiles:
                 case RepairActionType.RestartCodePackage:
                 case RepairActionType.RestartFabricNode:
@@ -184,20 +185,16 @@ namespace FabricHealer.Repair
                     return null;
             }
 
-            bool success = await CreateRepairTaskAsync(
-                                    repairTask,
-                                    repairData,
-                                    token);
-
+            bool success = await CreateClusterRepairTaskAsync(repairTask, repairData, token);
             return success ? repairTask : null;
         }
 
-        private static async Task<bool> CreateRepairTaskAsync(
+        private static async Task<bool> CreateClusterRepairTaskAsync(
                                             RepairTask repairTask,
                                             TelemetryData repairData,
                                             CancellationToken token)
         {
-            if (repairTask == null)
+            if (repairTask == null || repairData?.RepairPolicy == null)
             {
                 return false;
             }
@@ -214,29 +211,45 @@ namespace FabricHealer.Repair
                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                 token);
 
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        $"CreateClusterRepairTaskAsync::{repairData.RepairPolicy.RepairId}",
+                        $"Successfully created repair task {repairTask.TaskId}.",
+                        token,
+                        null,
+                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
                     return true;
+                }
+                else
+                {
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                       LogLevel.Info,
+                       $"CreateClusterRepairTaskAsync::{repairData.RepairPolicy.RepairId}_AlreadyExists",
+                       $"A repair already exists with internal repair Id {repairData.RepairPolicy.RepairId}. Will not schedule another repair.",
+                       token,
+                       null,
+                       FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                    return false;
                 }
             }
             catch (ArgumentException ae)
             {
-                string message = $"Unable to create repairtask:{Environment.NewLine}{ae}";
-
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Warning,
-                        "FabricRepairTasks::TryCreateRepairTaskAsync",
-                        message,
+                        LogLevel.Info,
+                        "CreateClusterRepairTaskAsync",
+                        $"Unable to create repairtask:{Environment.NewLine}{ae}",
                         token,
                         repairData,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
             }
             catch (FabricException fe)
             {
-                string message = $"Unable to create repairtask:{Environment.NewLine}{fe}";
-
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Warning,
-                        "FabricRepairTasks::TryCreateRepairTaskAsync",
-                        message,
+                        LogLevel.Info,
+                        $"CreateClusterRepairTaskAsync::Failure({repairData.RepairPolicy.RepairId})",
+                        $"Unable to create repair task:{Environment.NewLine}{fe}",
                         token,
                         repairData,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
@@ -264,13 +277,13 @@ namespace FabricHealer.Repair
         {
             var allSystemServices =
                 await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                               () => FabricHealerManager.FabricClientSingleton.QueryManager.GetServiceListAsync(
-                                                        new Uri(RepairConstants.SystemAppName),
-                                                        null,
-                                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                        cancellationToken),
+                        () => FabricHealerManager.FabricClientSingleton.QueryManager.GetServiceListAsync(
+                                new Uri(RepairConstants.SystemAppName),
+                                null,
+                                FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                cancellationToken),
 
-                                               cancellationToken);
+                        cancellationToken);
 
             var infraInstances = 
                 allSystemServices.Where(i => i.ServiceTypeName.Equals(RepairConstants.InfrastructureServiceType, StringComparison.InvariantCultureIgnoreCase));

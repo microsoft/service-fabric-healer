@@ -17,7 +17,6 @@ using FabricHealer.Utilities.Telemetry;
 using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
-using System.Fabric.Description;
 
 namespace FabricHealer.Repair
 {
@@ -35,32 +34,6 @@ namespace FabricHealer.Repair
         public static async Task ActivateServiceFabricNodeAsync(string nodeName, CancellationToken cancellationToken)
         {
             await FabricHealerManager.FabricClientSingleton.ClusterManager.ActivateNodeAsync(nodeName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
-        }
-
-        public static async Task<bool> SafeRestartServiceFabricNodeAsync(TelemetryData repairData, RepairTask repairTask, CancellationToken cancellationToken)
-        {
-            if (!await RepairExecutor.SafeRestartFabricNodeAsync(repairData, repairTask, cancellationToken))
-            {
-                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "SafeRestartFabricNodeAsync",
-                        $"Did not restart Fabric node {repairData.NodeName}",
-                        cancellationToken,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-                return false;
-            }
-
-            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                    LogLevel.Info,
-                    "SafeRestartFabricNodeAsync",
-                    $"Successfully restarted Fabric node {repairData.NodeName}",
-                    cancellationToken,
-                    repairData,
-                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-            return true;
         }
 
         public static async Task StartRepairWorkflowAsync(TelemetryData repairData, List<string> repairRules, CancellationToken cancellationToken)
@@ -120,10 +93,10 @@ namespace FabricHealer.Repair
         /// <param name="repairExecutorData">Optional Repair data that is used primarily when some repair is being restarted (after an FH restart, for example)</param>
         /// <returns></returns>
         public static async Task RunGuanQueryAsync(
-                TelemetryData repairData,
-                List<string> repairRules,
-                CancellationToken cancellationToken,
-                RepairExecutorData repairExecutorData = null)
+                                    TelemetryData repairData,
+                                    List<string> repairRules,
+                                    CancellationToken cancellationToken,
+                                    RepairExecutorData repairExecutorData = null)
         {
             if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
             {
@@ -142,14 +115,16 @@ namespace FabricHealer.Repair
             functorTable.Add(LogInfoPredicateType.Singleton(RepairConstants.LogInfo));
             functorTable.Add(LogErrorPredicateType.Singleton(RepairConstants.LogError));
             functorTable.Add(LogWarningPredicateType.Singleton(RepairConstants.LogWarning));
+            functorTable.Add(TraceNextRulePredicateType.Singleton(RepairConstants.TraceNextRule, repairData));
             functorTable.Add(CheckInsideHealthStateMinDurationPredicateType.Singleton(RepairConstants.CheckInsideHealthStateMinDuration, repairData));
             functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, repairData));
             functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairData));
 
             // Add external repair predicates.
+            functorTable.Add(DeactivateFabricNodePredicateType.Singleton(RepairConstants.DeactivateFabricNode, repairData));
             functorTable.Add(DeleteFilesPredicateType.Singleton(RepairConstants.DeleteFiles, repairData));
             functorTable.Add(RestartCodePackagePredicateType.Singleton(RepairConstants.RestartCodePackage, repairData));
-            functorTable.Add(RestartFabricNodePredicateType.Singleton(RepairConstants.RestartFabricNode, repairExecutorData, repairData));
+            functorTable.Add(RestartFabricNodePredicateType.Singleton(RepairConstants.RestartFabricNode, repairData));
             functorTable.Add(RestartFabricSystemProcessPredicateType.Singleton(RepairConstants.RestartFabricSystemProcess, repairData));
             functorTable.Add(RestartReplicaPredicateType.Singleton(RepairConstants.RestartReplica, repairData));
             functorTable.Add(ScheduleMachineRepairPredicateType.Singleton(RepairConstants.ScheduleMachineRepair, repairData));
@@ -514,6 +489,7 @@ namespace FabricHealer.Repair
 
                 // Don't attempt a node-level repair on a node where there is already an active node-level repair.
                 if (repairData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode
+                    || repairData.RepairPolicy.RepairAction == RepairActionType.DeactivateNode
                     && await RepairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(repairData, cancellationToken))
                 {
                     string message = $"Node {repairData.NodeName} already has a node-impactful repair in progress: " +
@@ -831,30 +807,7 @@ namespace FabricHealer.Repair
 
                         break;
                     }
-                    case RepairActionType.RestartFabricNode:
-                    {
-                        var executorData = repairTask.ExecutorData;
 
-                        if (string.IsNullOrWhiteSpace(executorData))
-                        {
-
-                            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                    LogLevel.Info,
-                                    $"RestartFabricNode::{repairData.NodeName}",
-                                    $"Repair {repairTask.TaskId} is missing ExecutorData.",
-                                    cancellationToken,
-                                    repairData,
-                                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-
-                            success = false;
-                        }
-                        else
-                        {
-                            success = await SafeRestartServiceFabricNodeAsync(repairData, repairTask, cancellationToken);
-                        }
-
-                        break;
-                    }
                     default:
                         return false;
                 }

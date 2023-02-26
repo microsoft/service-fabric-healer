@@ -7,11 +7,14 @@ using System;
 using System.Fabric;
 using System.Fabric.Health;
 using System.Fabric.Repair;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricHealer.TelemetryLib;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using Guan.Logic;
 
 namespace FabricHealer.Repair
 {
@@ -48,15 +51,10 @@ namespace FabricHealer.Repair
                 }
             }
 
-            NodeImpactLevel impact = executorData.RepairPolicy.RepairAction switch
-            {
-                RepairActionType.RestartFabricNode => NodeImpactLevel.Restart,
-                RepairActionType.RemoveFabricNodeState => NodeImpactLevel.RemoveData,
-                _ => NodeImpactLevel.None
-            };
-
-            var nodeRepairImpact = new NodeRepairImpactDescription();
-            var impactedNode = new NodeImpact(executorData.RepairPolicy.NodeName, impact);
+            NodeImpactLevel impact =
+                executorData.RepairPolicy.NodeImpactLevel != NodeImpactLevel.Invalid ? executorData.RepairPolicy.NodeImpactLevel : NodeImpactLevel.None;
+            NodeRepairImpactDescription nodeRepairImpact = new();
+            NodeImpact impactedNode = new(executorData.RepairPolicy.NodeName, impact);
             nodeRepairImpact.ImpactedNodes.Add(impactedNode);
             RepairActionType repairAction = executorData.RepairPolicy.RepairAction;
             string repair = repairAction.ToString();
@@ -80,11 +78,18 @@ namespace FabricHealer.Repair
                 doHealthChecks = false;
             }
 
+            string description = $"FabricHealer executing repair {repair} on node {executorData.RepairPolicy.NodeName}";
+
+            if (impact == NodeImpactLevel.Restart || impact == NodeImpactLevel.RemoveData)
+            {
+                description = executorData.RepairPolicy.RepairId;
+            }
+
             var repairTask = new ClusterRepairTask(taskId, repair)
             {
                 Target = new NodeRepairTargetDescription(executorData.RepairPolicy.NodeName),
                 Impact = nodeRepairImpact,
-                Description = $"FabricHealer executing repair {repair} on node {executorData.RepairPolicy.NodeName}",
+                Description = description,
                 State = RepairTaskState.Preparing,
                 Executor = RepairConstants.FabricHealer,
                 ExecutorData = JsonSerializationUtility.TrySerializeObject(executorData, out string exData) ? exData : null,
@@ -457,6 +462,100 @@ namespace FabricHealer.Repair
                 }
 
                 return true;
+            }
+
+            return false;
+        }
+
+        internal static async Task<bool> TryTraceCurrentlyExecutingRule(string predicate, TelemetryData repairData)
+        {
+            string ruleFileName = FabricHealerManager.CurrentlyExecutingLogicRulesFileName, rule = string.Empty;
+            int lineNumber = 0;
+
+            try
+            {
+                string ruleFilePath =
+                    Path.Combine(
+                        FabricHealerManager.ServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config").Path,
+                        "LogicRules",
+                        ruleFileName);
+
+                if (!File.Exists(ruleFilePath))
+                {
+                    FabricHealerManager.RepairLogger.LogWarning($"TryTraceCurrentlyExecutingRule: Specified rule file path does not exist: {ruleFilePath}.");
+                    return false;
+                }
+
+                string[] lines = File.ReadLines(ruleFilePath).ToArray();
+                int length = lines.Length;
+                predicate = predicate.Replace("'", "").Replace("\"", "").Replace(" ", "");
+
+                for (int i = 0; i < length; i++)
+                {
+                    string line = lines[i].Replace("'", "").Replace("\"", "").Replace(" ", "");
+                    
+                    if (line.Contains("##") || string.IsNullOrWhiteSpace(line))
+                    {
+                        continue;
+                    }
+
+                    if (line.Contains(predicate, StringComparison.OrdinalIgnoreCase))
+                    {
+                        lineNumber = i;
+                        line = lines[lineNumber];
+
+                        if (line.StartsWith("Mitigate") && line.EndsWith("."))
+                        {
+
+                        }
+
+                        // final (repair) predicate ends with a . in FH.
+                        if (line.TrimEnd().EndsWith('.'))
+                        {
+                            rule = line.Replace('\t', ' ');
+
+                            // Line is the whole rule.
+                            if (line.Contains(":-"))
+                            {
+                                break;
+                            }
+
+                            for (int j = lineNumber - 1; j < length; j--)
+                            {
+                                if (lines[j].TrimEnd().EndsWith(','))
+                                {
+                                    rule = lines[j].Replace('\t', ' ').Trim() + ' ' + rule;
+                                    lineNumber = j;
+
+                                    if (lines[j].StartsWith("Mitigate"))
+                                    {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+                }
+
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        $"{ruleFileName}#{lineNumber}_{repairData.RepairPolicy.ProcessName ?? repairData.NodeName}",
+                        $"Executing logic rule \'{rule}\'",
+                        FabricHealerManager.Token);
+
+                return true;
+            }
+            catch (Exception e) when (e is ArgumentException || e is IOException || e is SystemException)
+            {
+                string message = $"TraceCurrentlyExecutingRule failure => Unable to read {ruleFileName}: {e.Message}";
+                FabricHealerManager.RepairLogger.LogWarning(message);
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        $"TraceCurrentlyExecutingRule::{ruleFileName}::Failure",
+                        message,
+                        FabricHealerManager.Token);
             }
 
             return false;
