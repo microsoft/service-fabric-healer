@@ -47,7 +47,7 @@ Mitigate() :- CheckInsideScheduleInterval(00:10:00), !.
 Mitigate() :- CheckInsideNodeProbationPeriod(00:30:00), !.
 
 ## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours.
-Mitigate() :- CheckInsideHealthStateMinDuration(00:01:00), !.
+Mitigate() :- CheckInsideHealthStateMinDuration(02:00:00), !.
 
 ## For certain environments, the correct mitigation is to deactivate the target node. The below rule schedules a node deactivation (intent is Pause) repair.
 Mitigate(Source=?source, Property=?property) :- match(?source, "EventLogWatchdog"), match(?property, "CriticalMachineFailure"),

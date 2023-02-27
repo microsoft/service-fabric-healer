@@ -25,6 +25,7 @@ using System.Xml;
 using ServiceFabric.Mocks;
 using static ServiceFabric.Mocks.MockConfigurationPackage;
 using System.Fabric.Description;
+using System.Fabric.Query;
 
 namespace FHTest
 {
@@ -298,21 +299,28 @@ namespace FHTest
         [TestMethod]
         public async Task AllAppRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
+            var partitions = await fabricClient.QueryManager.GetPartitionListAsync(new Uri("fabric:/TestApp42/ChildProcessCreator"));
+            Guid partition = partitions[0].PartitionInformation.Id;
+
             // This will be the data used to create a repair task.
             var repairData = new TelemetryData
             {
-                ApplicationName = "fabric:/test",
+                ApplicationName = "fabric:/TestApp42",
                 EntityType = EntityType.Service,
                 NodeName = NodeName,
                 Code = SupportedErrorCodes.AppErrorMemoryMB,
                 HealthState = HealthState.Warning,
-                ServiceName = "fabric:/test0/service0",
+                PartitionId = partition.ToString(),
+                Source = $"AppObserver({SupportedErrorCodes.AppErrorMemoryMB})",
+                Property = "TestApp42_ChildProcessCreator_MemoryMB",
+                ProcessName = "ChildProcessCreator",
+                ServiceName = "fabric:/TestApp42/ChildProcessCreator",
                 Value = 1024.0
             };
 
             repairData.RepairPolicy = new RepairPolicy
             {
-                RepairId = $"Test42_{SupportedErrorCodes.AppErrorMemoryMB}{NodeName}",
+                RepairId = $"TestApp42_{SupportedErrorCodes.AppErrorMemoryMB}{NodeName}",
                 AppName = repairData.ApplicationName,
                 RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
                 NodeName = repairData.NodeName,
@@ -423,15 +431,27 @@ namespace FHTest
         [TestMethod]
         public async Task AllReplicaRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
+            var partitions = await fabricClient.QueryManager.GetPartitionListAsync(new Uri("fabric:/TestApp42/ChildProcessCreator"));
+            Guid partition = partitions[0].PartitionInformation.Id;
+            var replicas = await fabricClient.QueryManager.GetReplicaListAsync(partition);
+            Replica replica = replicas[0];
+            long replicaId = replica.Id;
+
             // This will be the data used to create a repair task.
             var repairData = new TelemetryData
             {
-                ApplicationName = "fabric:/test",
-                EntityType = EntityType.Partition,
-                PartitionId = Guid.NewGuid().ToString(),
+                ApplicationName = "fabric:/TestApp42",
+                EntityType = EntityType.Service,
                 NodeName = NodeName,
+                Code = SupportedErrorCodes.AppErrorMemoryMB,
                 HealthState = HealthState.Warning,
-                ServiceName = "fabric:/test0/service0"
+                PartitionId = partition.ToString(),
+                ReplicaId = replicaId,
+                Source = $"AppObserver({SupportedErrorCodes.AppErrorMemoryMB})",
+                Property = "TestApp42_ChildProcessCreator_MemoryMB",
+                ProcessName = "ChildProcessCreator",
+                ServiceName = "fabric:/TestApp42/ChildProcessCreator",
+                Value = 1024.0
             };
 
             repairData.RepairPolicy = new RepairPolicy
@@ -515,18 +535,25 @@ namespace FHTest
         {
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed.guan");
             string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
+            FabricHealerManager.CurrentlyExecutingLogicRulesFileName = "testrules_wellformed.guan";
             List<string> repairRules = FabricHealerManager.ParseRulesFile(rules);
+            var partitions = await fabricClient.QueryManager.GetPartitionListAsync(new Uri("fabric:/TestApp42/ChildProcessCreator"));
+            Guid partition = partitions[0].PartitionInformation.Id;
+
+            // This will be the data used to create a repair task.
             var repairData = new TelemetryData
             {
-                ApplicationName = "fabric:/test0",
+                ApplicationName = "fabric:/TestApp42",
+                EntityType = EntityType.Service,
                 NodeName = NodeName,
-                Metric = "Memory",
-                HealthState = HealthState.Warning,
                 Code = SupportedErrorCodes.AppErrorMemoryMB,
-                ServiceName = "fabric:/test0/service0",
-                Value = 42,
-                ReplicaId = default,
-                PartitionId = default
+                HealthState = HealthState.Warning,
+                PartitionId = partition.ToString(),
+                Source = $"AppObserver({SupportedErrorCodes.AppErrorMemoryMB})",
+                Property = "TestApp42_ChildProcessCreator_MemoryMB",
+                ProcessName = "ChildProcessCreator",
+                ServiceName = "fabric:/TestApp42/ChildProcessCreator",
+                Value = 1024.0
             };
 
             repairData.RepairPolicy = new RepairPolicy

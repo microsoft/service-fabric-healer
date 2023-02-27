@@ -536,7 +536,7 @@ namespace FabricHealer.Repair
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        $"{ruleFileName}#{lineNumber}_{repairData.RepairPolicy.ProcessName ?? repairData.NodeName}",
+                        $"{ruleFileName}#{lineNumber + 1}_{repairData.RepairPolicy.ProcessName ?? repairData.NodeName}",
                         $"Executing logic rule \'{rule}\'",
                         FabricHealerManager.Token);
 

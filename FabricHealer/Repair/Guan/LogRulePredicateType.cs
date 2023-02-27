@@ -78,7 +78,7 @@ namespace FabricHealer.Repair.Guan
 
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            $"{ruleFileName}#{lineNumber}_{RepairData.RepairPolicy.ProcessName ?? RepairData.NodeName}",
+                            $"{ruleFileName}#{lineNumber + 1}_{RepairData.RepairPolicy.ProcessName ?? RepairData.NodeName}",
                             $"Executing logic rule \'{rule}\'",
                             FabricHealerManager.Token);
                 }
