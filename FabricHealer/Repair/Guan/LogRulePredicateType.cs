@@ -13,9 +13,9 @@ using System.Threading.Tasks;
 
 namespace FabricHealer.Repair.Guan
 {
-    internal class TraceNextRulePredicateType : PredicateType
+    public class LogRulePredicateType : PredicateType
     {
-        private static TraceNextRulePredicateType Instance;
+        private static LogRulePredicateType Instance;
         private static TelemetryData RepairData;
 
         private class Resolver : BooleanPredicateResolver
@@ -50,10 +50,11 @@ namespace FabricHealer.Repair.Guan
                     {
                         string line = lines[i];
 
-                        if (line.Contains($":- {RepairConstants.TraceNextRule}", StringComparison.OrdinalIgnoreCase))
+                        if (line.Contains($":- {RepairConstants.LogRule}", StringComparison.OrdinalIgnoreCase))
                         {
-                            lineNumber = i + 1;
+                            lineNumber = i;
                             line = lines[lineNumber];
+                            rule = line;
                             
                             while (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("##"))
                             {
@@ -66,13 +67,11 @@ namespace FabricHealer.Repair.Guan
                             {
                                 for (int j = lineNumber; lines[j].TrimEnd().EndsWith(','); j++)
                                 {
-                                    line += " " + lines[j + 1].Replace('\t', ' ').Trim();
+                                    rule += " " + lines[j + 1].Replace('\t', ' ').Trim();
                                     lineNumber = j;
                                 }
-                                
                             }
 
-                            rule = line;
                             break;
                         }
                     }
@@ -85,27 +84,30 @@ namespace FabricHealer.Repair.Guan
                 }
                 catch (Exception e) when (e is ArgumentException || e is IOException || e is SystemException)
                 {
-                    string message = $"TraceNextRule failure => Unable to read {ruleFileName}: {e.Message}";
+#if DEBUG
+                    string message = $"LogRule predicate failure => Unable to read {ruleFileName}: {e.Message}.";
                     FabricHealerManager.RepairLogger.LogWarning(message);
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            $"TraceNextRule::{ruleFileName}::Failure",
+                            $"LogRule::{ruleFileName}::Failure",
                             message,
                             FabricHealerManager.Token);
+
+                    return false;
+# endif
                 }
 
-                // Guarantees the next rule runs. This is critical given TraceNextRule is designed to log the full text of whatever logic rule comes after it in a rule file.
-                return false;
+                return true;
             }
         }
 
-        public static TraceNextRulePredicateType Singleton(string name, TelemetryData repairData)
+        public static LogRulePredicateType Singleton(string name, TelemetryData repairData)
         {
             RepairData = repairData;
-            return Instance ??= new TraceNextRulePredicateType(name);
+            return Instance ??= new LogRulePredicateType(name);
         }
 
-        private TraceNextRulePredicateType(string name) : base(name, true, 0)
+        private LogRulePredicateType(string name) : base(name, true, 0, 0)
         {
 
         }

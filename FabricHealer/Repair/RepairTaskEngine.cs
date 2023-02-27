@@ -11,10 +11,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricHealer.TelemetryLib;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
-using Guan.Logic;
 
 namespace FabricHealer.Repair
 {
@@ -493,8 +491,8 @@ namespace FabricHealer.Repair
                 for (int i = 0; i < length; i++)
                 {
                     string line = lines[i].Replace("'", "").Replace("\"", "").Replace(" ", "");
-                    
-                    if (line.Contains("##") || string.IsNullOrWhiteSpace(line))
+
+                    if (string.IsNullOrWhiteSpace(line) || line.StartsWith("##"))
                     {
                         continue;
                     }
@@ -504,7 +502,7 @@ namespace FabricHealer.Repair
                         lineNumber = i;
                         line = lines[lineNumber];
 
-                        // Then last goal (repair predicate) always ends with a "." in FH logic rules. If not, then that bug surface well before this code runs.
+                        // The last goal (repair predicate) always ends with a "." in FH logic rules. If not, then that bug will surface well before this code runs.
                         if (line.TrimEnd().EndsWith('.'))
                         {
                             rule = line.Replace('\t', ' ');

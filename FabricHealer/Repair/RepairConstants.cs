@@ -102,7 +102,7 @@ namespace FabricHealer.Repair
         public const string LogInfo = "LogInfo";
         public const string LogWarning = "LogWarning";
         public const string LogError = "LogError";
-        public const string TraceNextRule = "TraceNextRule";
+        public const string LogRule = "LogRule";
 
         // Metric names.
         public const string ActiveTcpPorts = "ActiveTcpPorts";

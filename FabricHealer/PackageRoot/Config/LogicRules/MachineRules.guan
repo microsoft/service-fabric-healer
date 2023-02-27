@@ -35,7 +35,7 @@
 Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
 
 ## Don't proceed unless the specified watchdog created the Error health event.
-Mitigate(Source=?source) :- not(match(?source, "EventLogWatchdog")), !.
+##Mitigate(Source=?source) :- not(match(?source, "EventLogWatchdog")), !.
 
 ## Don't proceed if there are already 2 or more machine repairs currently active in the cluster.
 Mitigate() :- CheckOutstandingRepairs(2), !.
@@ -50,9 +50,12 @@ Mitigate() :- CheckInsideNodeProbationPeriod(00:30:00), !.
 Mitigate() :- CheckInsideHealthStateMinDuration(00:01:00), !.
 
 ## For certain environments, the correct mitigation is to deactivate the target node. The below rule schedules a node deactivation (intent is Pause) repair.
+Mitigate(Source=?source, Property=?property) :- match(?source, "EventLogWatchdog"), match(?property, "CriticalMachineFailure"),
+	DeactivateFabricNode(ImpactLevel=RemoveData).
 
-Mitigate(Source=?source, Property=?property) :- match(?source, "EventLogWatchdog"),
-	match(?property, "CriticalMachineFailure"), !,
+## If you employ multiple rules with the same repair predicate (e.g., DeactivateFabricNode(ImpactLevel=RemoveData)) and you enable logic rule tracing globally, 
+## then you must add a LogRule predicate to the other rule(s) that employ the same repair predicate, as below.
+Mitigate(Source=?source, Property=?property) :- LogRule, match(?source, "SomeOtherWatchdog"), match(?property, "SomeOtherFailure"),
 	DeactivateFabricNode(ImpactLevel=RemoveData).
 
 ## Infra Mitigations (RM repair scheduling logic - InfrastructureService for the target node type will be the repair Executor, not FH).

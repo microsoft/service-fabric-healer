@@ -115,7 +115,7 @@ namespace FabricHealer.Repair
             functorTable.Add(LogInfoPredicateType.Singleton(RepairConstants.LogInfo));
             functorTable.Add(LogErrorPredicateType.Singleton(RepairConstants.LogError));
             functorTable.Add(LogWarningPredicateType.Singleton(RepairConstants.LogWarning));
-            functorTable.Add(TraceNextRulePredicateType.Singleton(RepairConstants.TraceNextRule, repairData));
+            functorTable.Add(LogRulePredicateType.Singleton(RepairConstants.LogRule, repairData));
             functorTable.Add(CheckInsideHealthStateMinDurationPredicateType.Singleton(RepairConstants.CheckInsideHealthStateMinDuration, repairData));
             functorTable.Add(GetHealthEventHistoryPredicateType.Singleton(RepairConstants.GetHealthEventHistory, repairData));
             functorTable.Add(GetRepairHistoryPredicateType.Singleton(RepairConstants.GetRepairHistory, repairData));
@@ -131,7 +131,7 @@ namespace FabricHealer.Repair
 
             // Parse rules.
             Module module = Module.Parse("external", repairRules, functorTable);
-
+            
             // Create guan query.
             var queryDispatcher = new GuanQueryDispatcher(module);
 
