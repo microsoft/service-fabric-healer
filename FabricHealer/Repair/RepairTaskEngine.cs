@@ -504,22 +504,19 @@ namespace FabricHealer.Repair
                         lineNumber = i;
                         line = lines[lineNumber];
 
-                        if (line.StartsWith("Mitigate") && line.EndsWith("."))
-                        {
-
-                        }
-
-                        // final (repair) predicate ends with a . in FH.
+                        // Then last goal (repair predicate) always ends with a "." in FH logic rules. If not, then that bug surface well before this code runs.
                         if (line.TrimEnd().EndsWith('.'))
                         {
                             rule = line.Replace('\t', ' ');
 
-                            // Line is the whole rule.
+                            // line contains the whole rule (so, no placement formatting of goals by user).
                             if (line.Contains(":-"))
                             {
                                 break;
                             }
 
+                            // This will get the entire rule starting with the first goal after the last one (in this case, the repair predicate) and then
+                            // backwards through the list until the head of the rule is reached.
                             for (int j = lineNumber - 1; j < length; j--)
                             {
                                 if (lines[j].TrimEnd().EndsWith(','))
@@ -527,7 +524,7 @@ namespace FabricHealer.Repair
                                     rule = lines[j].Replace('\t', ' ').Trim() + ' ' + rule;
                                     lineNumber = j;
 
-                                    if (lines[j].StartsWith("Mitigate"))
+                                    if (lines[j].TrimStart().StartsWith("Mitigate"))
                                     {
                                         break;
                                     }

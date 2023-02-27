@@ -328,6 +328,7 @@ namespace FHTest
             };
 
             var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "AppRules.guan");
+            FabricHealerManager.CurrentlyExecutingLogicRulesFileName = "AppRules.guan";
             List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
 
             try
@@ -366,6 +367,7 @@ namespace FHTest
             };
 
             var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "MachineRules.guan");
+            FabricHealerManager.CurrentlyExecutingLogicRulesFileName = "MachineRules.guan";
             List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
 
             try
@@ -405,6 +407,7 @@ namespace FHTest
             };
 
             var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "DiskRules.guan");
+            FabricHealerManager.CurrentlyExecutingLogicRulesFileName = "DiskRules.guan";
             List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
 
             try
