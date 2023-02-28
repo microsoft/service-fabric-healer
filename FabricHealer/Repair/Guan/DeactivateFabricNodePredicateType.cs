@@ -33,7 +33,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
                 {
-                    _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRule(Input.ToString(), RepairData);
+                    _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRuleAsync(Input.ToString(), RepairData, FabricHealerManager.Token);
                 }
 
                 int count = Input.Arguments.Count;
@@ -68,13 +68,9 @@ namespace FabricHealer.Repair.Guan
                             {
                                 RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.RemoveNode;
                             }
-                            else if (value == "restart")
-                            {
-                                RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.Restart;
-                            }
                             else
                             {
-                                RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.None;
+                                RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.Restart;
                             }
                             
                             break;

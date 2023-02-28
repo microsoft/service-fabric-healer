@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using FabricHealer.TelemetryLib;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using Guan.Logic;
@@ -29,7 +30,7 @@ namespace FabricHealer.Repair.Guan
             protected override async Task<bool> CheckAsync()
             {
                 string ruleFileName = FabricHealerManager.CurrentlyExecutingLogicRulesFileName, rule = string.Empty;
-                int lineNumber = 0;
+                long lineNumber = (long)Input.GetArgument("0").GetObjectValue();
 
                 string ruleFilePath = 
                     Path.Combine(
@@ -45,40 +46,23 @@ namespace FabricHealer.Repair.Guan
                 try
                 {
                     string[] lines = File.ReadLines(ruleFilePath).ToArray();
+                    
+                    // Code file lines start at 1..
+                    string line = lines[lineNumber-1];
+                    rule = line;
 
-                    for (int i = 0; i < lines.Length; i++)
+                    // custom rule formatting support.
+                    if (line.TrimEnd().EndsWith(','))
                     {
-                        string line = lines[i];
-
-                        if (line.Contains($":- {RepairConstants.LogRule}", StringComparison.OrdinalIgnoreCase))
+                        for (long j = lineNumber-1; lines[j].TrimEnd().EndsWith(','); j++)
                         {
-                            lineNumber = i;
-                            line = lines[lineNumber];
-                            rule = line;
-                            
-                            while (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("##"))
-                            {
-                                lineNumber++;
-                                line = lines[lineNumber];
-                            }
-
-                            // custom rule formatting support.
-                            if (line.TrimEnd().EndsWith(','))
-                            {
-                                for (int j = lineNumber; lines[j].TrimEnd().EndsWith(','); j++)
-                                {
-                                    rule += " " + lines[j + 1].Replace('\t', ' ').Trim();
-                                    lineNumber = j;
-                                }
-                            }
-
-                            break;
+                            rule += " " + lines[j + 1].Replace('\t', ' ').Trim();
                         }
                     }
-
+                    
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            $"{ruleFileName}#{lineNumber + 1}_{RepairData.RepairPolicy.ProcessName ?? RepairData.NodeName}",
+                            $"{ruleFileName}#{lineNumber}_{RepairData.RepairPolicy.ProcessName ?? string.Empty}_{RepairData.NodeName}",
                             $"Executing logic rule \'{rule}\'",
                             FabricHealerManager.Token);
                 }
@@ -107,7 +91,7 @@ namespace FabricHealer.Repair.Guan
             return Instance ??= new LogRulePredicateType(name);
         }
 
-        private LogRulePredicateType(string name) : base(name, true, 0, 0)
+        private LogRulePredicateType(string name) : base(name, true, 1, 1)
         {
 
         }

@@ -128,6 +128,57 @@ Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue
 	TimeScopedRestartCodePackage(4, 01:00:00).
 ```  
 
+### Debugging/Auditing Rules
+
+There are two ways to have FabricHealer audit logic rules: 
+
+- Global Repair Predicate tracing - EnableLogicRuleTracing application parameter setting (boolean). If this is enabled, then FabricHealer will trace/log the entire rule
+that is currently executing if it contains a Repair predicate (RestartCodePackage, ScheduleMachineRepair, RestartReplica, etc.). 
+
+- LogRule Helper predicate - you can add LogRule predicate to rules you want FH to trace/log. Any rule that contains this predicate will be logged in its entirety, which is 
+extremely useful for debugging/auditing purposes. LogRule predicate requires a line number argument: e.g., LogRule(42) means log the entire rule that starts on line 42.
+
+**If you set EnableLogicRuleTracing to true and write rules that employ the same repair predicate (and arguments), then you must specify LogRule predicate in each of these rules.** 
+
+This is an example of using LogRule in machine-level repair rules where the end goal (the repair predicate) is exactly the same for each rule. If you also have EnableLogicRuleTracing set
+to true, then no logging will take place for the rule(s) that do not employ a LogRule predicate. You can see below that the first rule does not specify LogRule. In the case where EnableLogicRuleTracing
+is set to true, the first rule will not be traced by FabricHealer.
+
+```
+Mitigate(Source=?source, Property=?property) :- match(?source, "SomeWatchdog"), match(?property, "SomeMachineFailure"),
+	DeactivateFabricNode(ImpactLevel=RemoveData).
+
+Mitigate(Source=?source, Property=?property) :- LogRule(65), match(?source, "SomeWatchdog"), match(?property, "SomeOtherMachineFailure"),
+	DeactivateFabricNode(ImpactLevel=RemoveData).
+
+Mitigate(Source=?source, Property=?property) :- LogRule(71), match(?source, "SomeOtherWatchdog"), match(?property, "AnotherMachineFailureType"),
+	DeactivateFabricNode(ImpactLevel=RemoveData).
+``` 
+
+The correct way to specify rule logging in the rules above is like this: 
+
+```
+Mitigate(Source=?source, Property=?property) :- LogRule(59), match(?source, "SomeWatchdog"), match(?property, "SomeMachineFailure"),
+	DeactivateFabricNode(ImpactLevel=RemoveData).
+
+Mitigate(Source=?source, Property=?property) :- LogRule(65), match(?source, "SomeWatchdog"), match(?property, "SomeOtherMachineFailure"),
+	DeactivateFabricNode(ImpactLevel=RemoveData).
+
+Mitigate(Source=?source, Property=?property) :- LogRule(71), match(?source, "SomeOtherWatchdog"), match(?property, "AnotherMachineFailureType"),
+	DeactivateFabricNode(ImpactLevel=RemoveData).
+```
+
+When Guan is parsing/executing the specfied goals in the rule, it will first call LogRule, as specified in the rules above, which will generate a telemetry event
+that will look like this: 
+
+```
+Executing logic rule 'Mitigate(Source=?source, Property=?property) :- LogRule(59), match(?source, "SomeWatchdog"), match(?property, "SomeMachineFailure"), DeactivateFabricNode(ImpactLevel=RemoveData)' 
+Executing logic rule 'Mitigate(Source=?source, Property=?property) :- LogRule(65), match(?source, "SomeWatchdog"), match(?property, "SomeOtherMachineFailure"), DeactivateFabricNode(ImpactLevel=RemoveData)' 
+Executing logic rule 'Mitigate(Source=?source, Property=?property) :- LogRule(71), match(?source, "SomeOtherWatchdog"), match(?property, "AnotherMachineFailureType"), DeactivateFabricNode(ImpactLevel=RemoveData)' 
+```
+
+This makes it really easy to spot rules that are leading to unintended consequences due to some user error in its specification. If a rule is malformed or not legitimate, then
+that problem will surface to you well before LogRule would run (as a GuanException with the related details in the error output).
 
 Please look through the [existing rules files](/FabricHealer/PackageRoot/Config/LogicRules) for real examples that have been tested. Simply modify the rules to meet your needs (like supplying your target app names, for example, and adjusting the simple logical constraints, if need be). 
 

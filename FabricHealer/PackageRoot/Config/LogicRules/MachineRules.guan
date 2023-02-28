@@ -1,5 +1,9 @@
 ﻿## Logic rules for scheduling Machine-level repair jobs in the cluster. EntityType fact is always Machine.
 ## FH does not conduct (execute) these repairs. It simply schedules them. InfrastructureService is always the Executor for machine-level Repair Jobs.
+## You can use the LogRule predicate to have FabricHealer log the rule when Guan is starting to execute it. This is very useful for debugging rules and also
+## for rule auditing (so, you can emit telemetry/etw that contains the rule that was running). You can also enable the EnableLogicRuleTracing application parameter 
+## in FabricHealer's ApplicationManifest which will log executing rules that contain Repair predicates (the predicates that can lead to some action, like restarting 
+## a node or deactivating a node or..).
 
 ## Applicable Named Arguments for Mitigate. Facts are supplied by FabricObserver, FHProxy or FH itself.
 ## Any argument below with (FO/FHProxy) means that only FO or FHProxy will present the fact.
@@ -47,15 +51,18 @@ Mitigate() :- CheckInsideScheduleInterval(00:10:00), !.
 Mitigate() :- CheckInsideNodeProbationPeriod(00:30:00), !.
 
 ## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours.
-Mitigate() :- CheckInsideHealthStateMinDuration(02:00:00), !.
+Mitigate() :- CheckInsideHealthStateMinDuration(00:01:00), !.
 
-## For certain environments, the correct mitigation is to deactivate the target node. The below rule schedules a node deactivation (intent is Pause) repair.
-Mitigate(Source=?source, Property=?property) :- match(?source, "EventLogWatchdog"), match(?property, "CriticalMachineFailure"),
+## For certain environments, the correct mitigation is to deactivate the target node. The below rule schedules a node deactivation
+## (Here, the node impact level is RemoveData, but you can supply RestartNode or RemoveNode depending on your intention). If you do not specify an ImpactLevel,
+## the default level used will be RestartNode.
+Mitigate(Source=?source, Property=?property) :- LogRule(59), match(?source, "EventLogWatchdog"), match(?property, "CriticalMachineFailure"),
 	DeactivateFabricNode(ImpactLevel=RemoveData).
 
-## If you employ multiple rules with the same repair predicate (e.g., DeactivateFabricNode(ImpactLevel=RemoveData)) and you enable logic rule tracing globally, 
-## then you must add a LogRule predicate to the other rule(s) that employ the same repair predicate, as below.
-Mitigate(Source=?source, Property=?property) :- LogRule, match(?source, "SomeOtherWatchdog"), match(?property, "SomeOtherFailure"),
+## If you employ multiple rules with the same repair predicate (e.g., DeactivateFabricNode(ImpactLevel=RemoveData)) and want FH to log them, 
+## then you must add the LogRule([LineNumber]) predicate to each rule in order for FabricHealer to trace correctly, regardless of EnableLogicRuleTracing setting. 
+## Please see the Debugging/Auditing Rules section in Using.md to learn more.
+Mitigate(Source=?source, Property=?property) :- LogRule(65), match(?source, "SomeOtherWatchdog"), match(?property, "SomeOtherFailure"),
 	DeactivateFabricNode(ImpactLevel=RemoveData).
 
 ## Infra Mitigations (RM repair scheduling logic - InfrastructureService for the target node type will be the repair Executor, not FH).

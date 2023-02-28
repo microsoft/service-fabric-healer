@@ -130,10 +130,10 @@ namespace FabricHealer.Repair
             functorTable.Add(ScheduleMachineRepairPredicateType.Singleton(RepairConstants.ScheduleMachineRepair, repairData));
 
             // Parse rules.
-            Module module = Module.Parse("external", repairRules, functorTable);
-            
+            Module module = Module.Parse("fh_external", repairRules, functorTable);
+
             // Create guan query.
-            var queryDispatcher = new GuanQueryDispatcher(module);
+            GuanQueryDispatcher queryDispatcher = new(module);
 
             /* Bind default arguments to goal (Mitigate). */
 

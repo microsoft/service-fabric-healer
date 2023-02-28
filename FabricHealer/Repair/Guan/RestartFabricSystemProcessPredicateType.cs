@@ -37,7 +37,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
                 {
-                    _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRule(Input.ToString(), RepairData);
+                    _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRuleAsync(Input.ToString(), RepairData, FabricHealerManager.Token);
                 }
 
                 int count = Input.Arguments.Count;

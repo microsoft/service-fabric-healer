@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Health;
 using System.Fabric.Repair;
@@ -465,8 +466,13 @@ namespace FabricHealer.Repair
             return false;
         }
 
-        internal static async Task<bool> TryTraceCurrentlyExecutingRule(string predicate, TelemetryData repairData)
+        internal static async Task<bool> TryTraceCurrentlyExecutingRuleAsync(string predicate, TelemetryData repairData, CancellationToken token)
         {
+            if (string.IsNullOrWhiteSpace(predicate) || token.IsCancellationRequested)
+            {
+                return false;
+            }
+
             string ruleFileName = FabricHealerManager.CurrentlyExecutingLogicRulesFileName, rule = string.Empty;
             int lineNumber = 0;
 
@@ -485,11 +491,46 @@ namespace FabricHealer.Repair
                 }
 
                 string[] lines = File.ReadLines(ruleFilePath).ToArray();
-                int length = lines.Length;
                 predicate = predicate.Replace("'", "").Replace("\"", "").Replace(" ", "");
+
+                // Get all rules that contain the supplied predicate and "LogRule".
+                List<string> flattenedLines = FabricHealerManager.ParseRulesFile(lines);
+                var rulesWithPredicate =
+                    flattenedLines.Where(line => !string.IsNullOrWhiteSpace(line) &&
+                                                 !line.StartsWith("##") &&
+                                                 line.Contains(predicate, StringComparison.OrdinalIgnoreCase)).ToList();
+
+                if (rulesWithPredicate.Count(
+                      lr => lr.Contains(RepairConstants.LogRule, StringComparison.OrdinalIgnoreCase)) == rulesWithPredicate.Count)
+                {
+                    return true;
+                }
+                else if (rulesWithPredicate.Any())
+                {
+                    string message = "Detected LogRule predicate is missing in one or more rules that specify the same end goal (repair predicate and arguments) " +
+                                     "AND EnableLogicRuleTracing is enabled. Please add a LogRule predicate in all rules that specify " +
+                                     "the same repair predicate if you want FabricHealer to trace each of these rules.";
+
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            "TryTraceCurrentlyExecutingRule",
+                            message,
+                            token,
+                            null,
+                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                    return false;
+                }
+
+                int length = lines.Length;
 
                 for (int i = 0; i < length; i++)
                 {
+                    if (token.IsCancellationRequested)
+                    {
+                        return true;
+                    }
+
                     string line = lines[i].Replace("'", "").Replace("\"", "").Replace(" ", "");
 
                     if (string.IsNullOrWhiteSpace(line) || line.StartsWith("##"))
@@ -517,8 +558,19 @@ namespace FabricHealer.Repair
                             // backwards through the list until the head of the rule is reached.
                             for (int j = lineNumber - 1; j < length; j--)
                             {
+                                if (token.IsCancellationRequested)
+                                {
+                                    return true;
+                                }
+
                                 if (lines[j].TrimEnd().EndsWith(','))
                                 {
+                                    // Already logged by LogRule predicate.
+                                    if (lines[j].Contains("LogRule"))
+                                    {
+                                        continue;
+                                    }
+
                                     rule = lines[j].Replace('\t', ' ').Trim() + ' ' + rule;
                                     lineNumber = j;
 
@@ -529,14 +581,13 @@ namespace FabricHealer.Repair
                                 }
                             }
                         }
-
-                        break;
                     }
+                    break;
                 }
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        $"{ruleFileName}#{lineNumber + 1}_{repairData.RepairPolicy.ProcessName ?? repairData.NodeName}",
+                        $"{ruleFileName}#{lineNumber + 1}_{repairData.RepairPolicy.ProcessName ?? string.Empty}_{repairData.NodeName}",
                         $"Executing logic rule \'{rule}\'",
                         FabricHealerManager.Token);
 
