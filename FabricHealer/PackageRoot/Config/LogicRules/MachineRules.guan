@@ -51,19 +51,19 @@ Mitigate() :- CheckInsideScheduleInterval(00:10:00), !.
 Mitigate() :- CheckInsideNodeProbationPeriod(00:30:00), !.
 
 ## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours.
-Mitigate() :- CheckInsideHealthStateMinDuration(00:01:00), !.
+Mitigate() :- CheckInsideHealthStateMinDuration(02:00:00), !.
 
 ## For certain environments, the correct mitigation is to deactivate the target node. The below rule schedules a node deactivation
 ## (Here, the node impact level is RemoveData, but you can supply RestartNode or RemoveNode depending on your intention). If you do not specify an ImpactLevel,
 ## the default level used will be RestartNode.
-Mitigate(Source=?source, Property=?property) :- LogRule(59), match(?source, "EventLogWatchdog"), match(?property, "CriticalMachineFailure"),
-	DeactivateFabricNode(ImpactLevel=RemoveData).
+##Mitigate(Source=?source, Property=?property) :- LogRule(59), match(?source, "EventLogWatchdog"), match(?property, "CriticalMachineFailure"),
+##	DeactivateFabricNode(ImpactLevel=RemoveData).
 
 ## If you employ multiple rules with the same repair predicate (e.g., DeactivateFabricNode(ImpactLevel=RemoveData)) and want FH to log them, 
 ## then you must add the LogRule([LineNumber]) predicate to each rule in order for FabricHealer to trace correctly, regardless of EnableLogicRuleTracing setting. 
 ## Please see the Debugging/Auditing Rules section in Using.md to learn more.
-Mitigate(Source=?source, Property=?property) :- LogRule(65), match(?source, "SomeOtherWatchdog"), match(?property, "SomeOtherFailure"),
-	DeactivateFabricNode(ImpactLevel=RemoveData).
+##Mitigate(Source=?source, Property=?property) :- LogRule(65), match(?source, "SomeOtherWatchdog"), match(?property, "SomeOtherFailure"),
+##	DeactivateFabricNode(ImpactLevel=RemoveData).
 
 ## Infra Mitigations (RM repair scheduling logic - InfrastructureService for the target node type will be the repair Executor, not FH).
 ## The logic below demonstrates how to specify a repair escalation path: Reboot -> Reimage -> Heal -> Triage (human intervention required).

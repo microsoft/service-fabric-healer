@@ -505,7 +505,7 @@ namespace FabricHealer.Repair
                 {
                     return true;
                 }
-                else if (rulesWithPredicate.Any())
+                else if (rulesWithPredicate.Any(lr => lr.Contains(RepairConstants.LogRule, StringComparison.OrdinalIgnoreCase)))
                 {
                     string message = "Detected LogRule predicate is missing in one or more rules that specify the same end goal (repair predicate and arguments) " +
                                      "AND EnableLogicRuleTracing is enabled. Please add a LogRule predicate in all rules that specify " +
@@ -558,19 +558,8 @@ namespace FabricHealer.Repair
                             // backwards through the list until the head of the rule is reached.
                             for (int j = lineNumber - 1; j < length; j--)
                             {
-                                if (token.IsCancellationRequested)
-                                {
-                                    return true;
-                                }
-
                                 if (lines[j].TrimEnd().EndsWith(','))
                                 {
-                                    // Already logged by LogRule predicate.
-                                    if (lines[j].Contains("LogRule"))
-                                    {
-                                        continue;
-                                    }
-
                                     rule = lines[j].Replace('\t', ' ').Trim() + ' ' + rule;
                                     lineNumber = j;
 
@@ -581,8 +570,8 @@ namespace FabricHealer.Repair
                                 }
                             }
                         }
+                        break;
                     }
-                    break;
                 }
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
