@@ -51,7 +51,7 @@ Mitigate :- CheckInsideScheduleInterval(00:10:00), !.
 Mitigate :- CheckInsideNodeProbationPeriod(00:30:00), !.
 
 ## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours.
-Mitigate :- CheckInsideHealthStateMinDuration(00:01:00), !.
+Mitigate :- CheckInsideHealthStateMinDuration(02:00:00), !.
 
 ## For certain environments, the correct mitigation is to deactivate the target node. The below rule schedules a node deactivation
 ## (Here, the node impact level is RemoveData, but you can supply RestartNode or RemoveNode depending on your intention). If you do not specify an ImpactLevel,

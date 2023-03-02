@@ -488,7 +488,11 @@ namespace FHTest
             }
             catch (GuanException ge)
             {
-                throw new AssertFailedException(ge.Message, ge);
+                throw new InternalTestFailureException(ge.Message, ge);
+            }
+            catch (FabricException fe)
+            {
+                throw new InternalTestFailureException(fe.Message, fe);
             }
         }
 
