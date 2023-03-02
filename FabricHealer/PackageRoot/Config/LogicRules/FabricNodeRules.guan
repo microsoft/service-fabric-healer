@@ -1,6 +1,5 @@
 ﻿## Logic rule examples for Service Fabric Node repairs.
-## These repairs are not executed by FabricHealer. FH creates repair tasks with the correct node impact specified and RM takes it from there.
 
-## Restart/Deactivate. Try Restart twice in 8 hour window. Else, deactivate (Pause) the Fabric node.
-Mitigate(HealthState=Error) :- GetRepairHistory(?repairCount, 08:00:00), ?repairCount < 2, !, RestartFabricNode().
-Mitigate(HealthState=Error) :- DeactivateFabricNode().
+## Restart/Deactivate. Try Restarting the node twice in an 8 hour window. Else, deactivate (with node impact = RemoveData) the node.
+Mitigate(HealthState=Error) :- GetRepairHistory(?repairCount, 08:00:00), ?repairCount < 2, !, RestartFabricNode.
+Mitigate(HealthState=Error) :- GetRepairHistory(?repairCount, 08:00:00), ?repairCount < 2, DeactivateFabricNode(RemoveData).

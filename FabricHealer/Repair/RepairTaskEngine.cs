@@ -93,7 +93,7 @@ namespace FabricHealer.Repair
                 Executor = RepairConstants.FabricHealer,
                 ExecutorData = JsonSerializationUtility.TrySerializeObject(executorData, out string exData) ? exData : null,
                 PerformPreparingHealthCheck = doHealthChecks,
-                PerformRestoringHealthCheck = doHealthChecks,
+                PerformRestoringHealthCheck = doHealthChecks
             };
 
             return repairTask;
@@ -492,6 +492,12 @@ namespace FabricHealer.Repair
 
                 string[] lines = File.ReadLines(ruleFilePath).ToArray();
                 predicate = predicate.Replace("'", "").Replace("\"", "").Replace(" ", "");
+                
+                // appending "()" to a predicate is optional. Just remove it and use the name only for string matching.
+                if (predicate.EndsWith("()"))
+                {
+                    predicate = predicate.Remove(predicate.Length - 2);
+                }
 
                 // Get all rules that contain the supplied predicate and "LogRule".
                 List<string> flattenedLines = FabricHealerManager.ParseRulesFile(lines);

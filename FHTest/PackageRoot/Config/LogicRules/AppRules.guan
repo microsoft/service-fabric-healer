@@ -53,7 +53,7 @@
 ## By having this as a top level rule, it means no subsequent rules in this file will run if we are inside the specified run interval.
 ## This is commented out by default. Just uncomment and set the global run interval for app level repairs to suit your needs.
 
-## Mitigate() :- CheckInsideRunInterval(00:30:00), !.
+## Mitigate :- CheckInsideRunInterval(00:30:00), !.
 
 ## Repair Lifetime Management - Specify that a repair can only run until some end date. This gives the dev team time to identify and fix the bug in user code that is causing the problem.
 ## Meanwhile, FabricHealer will keep the offending service green. Remember: Auto-mitigation is not a fix, it's a stop gap. Fix those bugs!
@@ -63,12 +63,12 @@
 ## The rule below reads: If any of the specified (set in Mitigate) app's service processes have put it into Warning due to CPU over-consumption and today's date is later than the supplied end date, emit a message, stop processing rules (!).
 ## You can use LogInfo, LogWarning or LogError predicates to generate a log event that will create a local text log entry, an ETW event, and an SF health report.
 
-Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("12/31/2022"),
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("4/15/2023"),
 	LogInfo("Exceeded specified end date for repair of fabric:/CpuStress CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("12/31/2022"), time()), !.
 
 ## Alternatively, you could enforce repair end dates inline (as a subrule) to any rule, e.g.,
 
-Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- time() < DateTime("12/30/2022"),
+Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- time() < DateTime("4/15/2023"),
 	?MetricValue >= 8500,
 	TimeScopedRestartCodePackage(4, 01:00:00).
 
@@ -127,7 +127,6 @@ Mitigate(AppName="fabric:/MemoryStress", MetricName="MemoryPercent", MetricValue
 ## Memory - Megabytes In Use for Any SF Service Process belonging to the specified SF Applications. 5 repairs within 5 hour window.
 Mitigate(AppName="fabric:/ContainerFoo", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 Mitigate(AppName="fabric:/ContainerFoo2", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
-Mitigate(AppName="fabric:/TestApp42", MetricName="MemoryMB") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Note the constraint on HealthState in the head of the rule below, which only applies to one service, fabric:/Voting/VotingData, in this example (just change the fabric Uri for your target). 
 ## This is important when you have both Warning and Error thresholds specified for some service for some metric in FabricObserver. You would do that 
@@ -193,7 +192,7 @@ TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, ?time)
 ## by the repair executor (FabricHealer).
 
 ## Restart all replicas hosted in the process. If you do not specify a value for MaxExecutionTime argument, the default is 60 minutes.
-TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:10:00, MaxExecutionTime=00:30:00).
+TimeScopedRestartCodePackage :- RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:10:00, MaxExecutionTime=00:30:00).
 
 ## Restart individual replica hosted in the process. If you do not specify a value for MaxExecutionTime argument, the default is 60 minutes.
-TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:05:00, MaxExecutionTime=00:15:00).
+TimeScopedRestartReplica :- RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:05:00, MaxExecutionTime=00:15:00).

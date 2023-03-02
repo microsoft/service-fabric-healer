@@ -28,7 +28,7 @@
 ## First, check if we are inside run interval. If so, then cut (!).
 ## This is commented out by default. Just uncomment and set the global run interval for disk level repairs to suit your needs.
 
-## Mitigate() :- CheckInsideRunInterval(02:00:00), !.
+## Mitigate :- CheckInsideRunInterval(02:00:00), !.
 
 ## DeleteFiles external predicate takes 1 required positional argument (position 0), which is the full path to the directory to be cleaned, and 4 optional named arguments.
 ## Optional (named, position 1 to n in argument list, first arg (0) is reserved for folder path) arguments for DeleteFiles: 

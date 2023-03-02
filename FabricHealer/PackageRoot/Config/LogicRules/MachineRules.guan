@@ -42,28 +42,26 @@ Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
 ##Mitigate(Source=?source) :- not(match(?source, "EventLogWatchdog")), !.
 
 ## Don't proceed if there are already 2 or more machine repairs currently active in the cluster.
-Mitigate() :- CheckOutstandingRepairs(2), !.
+Mitigate :- CheckOutstandingRepairs(2), !.
 
 ## Don't proceed if FH scheduled a machine repair less than 10 minutes ago.
-Mitigate() :- CheckInsideScheduleInterval(00:10:00), !.
+Mitigate :- CheckInsideScheduleInterval(00:10:00), !.
 
 ## Don't proceed if target node is currently inside a post-repair health probation period (post-repair means a Completed repair; target node is still recovering).
-Mitigate() :- CheckInsideNodeProbationPeriod(00:30:00), !.
+Mitigate :- CheckInsideNodeProbationPeriod(00:30:00), !.
 
 ## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours.
-Mitigate() :- CheckInsideHealthStateMinDuration(02:00:00), !.
+Mitigate :- CheckInsideHealthStateMinDuration(00:01:00), !.
 
 ## For certain environments, the correct mitigation is to deactivate the target node. The below rule schedules a node deactivation
 ## (Here, the node impact level is RemoveData, but you can supply RestartNode or RemoveNode depending on your intention). If you do not specify an ImpactLevel,
 ## the default level used will be RestartNode.
-##Mitigate(Source=?source, Property=?property) :- LogRule(59), match(?source, "EventLogWatchdog"), match(?property, "CriticalMachineFailure"),
-##	DeactivateFabricNode(ImpactLevel=RemoveData).
+##Mitigate(Source=?source, Property=?property) :- LogRule(59), match(?source, "EventLogWatchdog"), match(?property, "CriticalMachineFailure"), DeactivateFabricNode(RemoveData).
 
 ## If you employ multiple rules with the same repair predicate (e.g., DeactivateFabricNode(ImpactLevel=RemoveData)) and want FH to log them, 
 ## then you must add the LogRule([LineNumber]) predicate to each rule in order for FabricHealer to trace correctly, regardless of EnableLogicRuleTracing setting. 
 ## Please see the Debugging/Auditing Rules section in Using.md to learn more.
-##Mitigate(Source=?source, Property=?property) :- LogRule(65), match(?source, "SomeOtherWatchdog"), match(?property, "SomeOtherFailure"),
-##	DeactivateFabricNode(ImpactLevel=RemoveData).
+##Mitigate(Source=?source, Property=?property) :- LogRule(64), match(?source, "SomeOtherWatchdog"), match(?property, "SomeOtherFailure"), DeactivateFabricNode(RemoveData).
 
 ## Infra Mitigations (RM repair scheduling logic - InfrastructureService for the target node type will be the repair Executor, not FH).
 ## The logic below demonstrates how to specify a repair escalation path: Reboot -> Reimage -> Heal -> Triage (human intervention required).
@@ -71,13 +69,13 @@ Mitigate() :- CheckInsideHealthStateMinDuration(02:00:00), !.
 
 ## Reboot.
 ## Don't process any other rules if scheduling succeeds OR fails (note the position of ! (cut operator)) and there are less than 1 of these repairs that have completed in the last 8 hours.
-Mitigate() :- GetRepairHistory(?repairCount, 08:00:00, System.Reboot), ?repairCount < 1, !, ScheduleMachineRepair(System.Reboot).
+Mitigate :- GetRepairHistory(?repairCount, 08:00:00, System.Reboot), ?repairCount < 1, !, ScheduleMachineRepair(System.Reboot).
 
 ## ReimageOS escalation. *This is not supported in VMSS-managed clusters*.
-Mitigate() :- GetRepairHistory(?repairCount, 08:00:00, System.ReimageOS), ?repairCount < 1, !, ScheduleMachineRepair(System.ReimageOS).
+Mitigate :- GetRepairHistory(?repairCount, 08:00:00, System.ReimageOS), ?repairCount < 1, !, ScheduleMachineRepair(System.ReimageOS).
 
 ## Azure.Heal escalation.
-Mitigate() :- GetRepairHistory(?repairCount, 08:00:00, System.Azure.Heal), ?repairCount < 1, !, ScheduleMachineRepair(System.Azure.Heal).
+Mitigate :- GetRepairHistory(?repairCount, 08:00:00, System.Azure.Heal), ?repairCount < 1, !, ScheduleMachineRepair(System.Azure.Heal).
 
 ## Triage escalation.
 ## If we end up here, then human intervention is required. LogInfo will generate ETW/Telemetry/Health events containing the message.

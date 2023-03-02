@@ -7,13 +7,13 @@ Mitigate(Property=?property, Source=?source) :- not(?property == InfrastructureE
 
 ## Reboot.
 ## Don't process any other rules if scheduling succeeds OR fails (note the position of ! (cut operator)) and there are less than 1 of these repairs that have completed in the last 8 hours.
-Mitigate() :- GetRepairHistory(?repairCount, 08:00:00, System.Reboot), ?repairCount < 1, !, ScheduleMachineRepair(System.Reboot).
+Mitigate :- GetRepairHistory(?repairCount, 08:00:00, System.Reboot), ?repairCount < 1, !, ScheduleMachineRepair(System.Reboot).
 
 ## ReimageOS escalation. *This is not supported in VMSS-managed clusters*.
-Mitigate() :- GetRepairHistory(?repairCount, 08:00:00, System.ReimageOS), ?repairCount < 1, !, ScheduleMachineRepair(System.ReimageOS).
+Mitigate :- GetRepairHistory(?repairCount, 08:00:00, System.ReimageOS), ?repairCount < 1, !, ScheduleMachineRepair(System.ReimageOS).
 
 ## Azure.Heal escalation.
-Mitigate() :- GetRepairHistory(?repairCount, 08:00:00, System.Azure.Heal), ?repairCount < 1, !, ScheduleMachineRepair(System.Azure.Heal).
+Mitigate :- GetRepairHistory(?repairCount, 08:00:00, System.Azure.Heal), ?repairCount < 1, !, ScheduleMachineRepair(System.Azure.Heal).
 
 ## Triage escalation.
 Mitigate(NodeName=?nodeName) :- LogInfo("0042_{0}: Specified Machine repair escalations have been exhausted for node {0}. Human intervention is required.", ?nodeName), 

@@ -67,5 +67,6 @@ TimeScopedRestartCodePackage(?count, ?time) :- GetRepairHistory(?repairCount, ?t
 TimeScopedRestartReplica(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount >= ?count,
 	LogInfo("Exhausted specified run count, {0}, within specified max repair time window, {1}. Will not attempt RestartReplica repair at this time.", ?count, ?time).
 
-TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:10:00).
-TimeScopedRestartReplica() :- RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:10:00).
+TimeScopedRestartCodePackage :- RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:10:00).
+TimeScopedRestartReplica :- RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:10:00).
+TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount < ?count, RestartFabricNode.

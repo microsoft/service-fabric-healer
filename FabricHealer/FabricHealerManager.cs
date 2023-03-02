@@ -37,7 +37,7 @@ namespace FabricHealer
         public static string CurrentlyExecutingLogicRulesFileName { get; set; }
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.1.18";
+        private const string InternalVersionNumber = "1.1.19";
         private static FabricHealerManager singleton;
         private static FabricClient _fabricClient;
         private bool disposedValue;

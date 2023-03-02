@@ -29,15 +29,13 @@
 ## Note: FO only generates Application (System) level warnings for system services. There will only ever be ApplicationName as "fabric:/System" in the FO health data that FH emits, so this is an optional argument.
 ## This is commented out by default. Just uncomment and set the global run interval for System app level repairs to suit your needs.
 
-## Mitigate() :- CheckInsideRunInterval(00:10:00), !.
+## Mitigate :- CheckInsideRunInterval(00:10:00), !.
 
 
 ## TimeScopedRestartFabricNode is an internal predicate to check for the number of times a system service node restart repair has run to completion within a supplied time window. 
 ## If Completed Repair count is less then supplied value, then run RestartFabricNode mitigation.
 
-TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount < ?count, 
-	RestartFabricNode(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:45:00, MaxExecutionTime=02:00:00).
-
+TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount < ?count, RestartFabricNode(DoHealthChecks=false).
 
 ## TimeScopedRestartFabricSystemProcess is an internal predicate to check for the number of times a System service process restart repair has run to completion within a supplied time window. 
 ## If Completed Repair count is less then supplied value, then run RestartFabricSystemProcess mitigation.
@@ -45,10 +43,8 @@ TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, ?ti
 TimeScopedRestartFabricSystemProcess(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount < ?count, 
 	RestartFabricSystemProcess(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:05:00, MaxExecutionTime=00:10:00).
 	
-
 ## Mitigation rules for multiple metrics and targets. NOTE: Do not restart Fabric or FabricHost processes unless you want to take the Fabric node down. For the latter (restart node),
 ## use TimeScopedRestartFabricNode (or RestartFabricNode predicate directly), which employs a safe Fabric node restart workflow (with deactivation step), not just a process kill.
-
 
 ## CPU Time - Percent
 
@@ -56,7 +52,6 @@ Mitigate(MetricName="CpuPercent", ProcessName=?SysProcName) :- not(?SysProcName 
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
-
 
 ## Memory Use - Megabytes in use
 
@@ -69,7 +64,6 @@ Mitigate(MetricName="MemoryMB", ProcessName=?SysProcName) :- not(?SysProcName ==
 ##	?HealthEventCount >= 3,
 ##	TimeScopedRestartFabricNode(1, 01:00:00).
 
-
 ## Memory Use - Percent in use
 
 Mitigate(MetricName="MemoryPercent", ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
@@ -77,14 +71,12 @@ Mitigate(MetricName="MemoryPercent", ProcessName=?SysProcName) :- not(?SysProcNa
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
-
 ## Ephemeral Ports in Use
 
 Mitigate(MetricName="EphemeralPorts", ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
-
 
 ## Threads
 
@@ -103,7 +95,6 @@ Mitigate(MetricName="FileHandles", ProcessName=?SysProcName) :- match(?SysProcNa
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(15, 01:00:00).
 
-
 ## Open File Handles - Linux-only: Any SF system service besides Fabric or FabricHost.
 ## Restart the offending Fabric system process.
 
@@ -111,7 +102,6 @@ Mitigate(MetricName="FileHandles", OS="Linux", ProcessName=?SysProcName) :- not(
 	GetHealthEventHistory(?HealthEventCount, 00:15:00),
 	?HealthEventCount >= 3,
 	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
-
 
 ## Open File Handles - Linux OS, Fabric process. In these cases, we want a safe (graceful) restart of the Fabric node; not just kill the process, which will restart the node, but not gracefully.
 ## Restart the Fabric node where the offending instance is running.

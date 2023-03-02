@@ -488,8 +488,8 @@ namespace FabricHealer.Repair
                 }
 
                 // Don't attempt a node-level repair on a node where there is already an active node-level repair.
-                if (repairData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode
-                    || repairData.RepairPolicy.RepairAction == RepairActionType.DeactivateNode
+                if ((repairData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode
+                    || repairData.RepairPolicy.RepairAction == RepairActionType.DeactivateNode)
                     && await RepairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(repairData, cancellationToken))
                 {
                     string message = $"Node {repairData.NodeName} already has a node-impactful repair in progress: " +
@@ -807,12 +807,16 @@ namespace FabricHealer.Repair
 
                         break;
                     }
+                    case RepairActionType.RestartFabricNode:
+                    {
+                        success = await RestartFabricNodeAsync(repairData, cancellationToken);
+                        break;
+                    }
 
                     default:
                         return false;
                 }
             
-
                 // What was the target (a node, app, replica, etc..)?
                 string repairTarget = null;
 
@@ -1011,6 +1015,11 @@ namespace FabricHealer.Repair
             return false;
         }
 
+        private static Task<bool> RestartFabricNodeAsync(TelemetryData repairData, CancellationToken cancellationToken)
+        {
+            return RepairExecutor.RestartFabricNodeAsync(repairData, cancellationToken);
+        }
+
         // Support for GetHealthEventHistoryPredicateType, which enables time-scoping logic rules based on health events related to specific SF entities/targets.
         internal static int GetEntityHealthEventCountWithinTimeRange(TelemetryData repairData, TimeSpan timeWindow)
         {
@@ -1151,7 +1160,10 @@ namespace FabricHealer.Repair
 
             while (stopwatch.Elapsed <= maxTimeToWait)
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested)
+                {
+                    return true;
+                }
 
                 if (await GetCurrentAggregatedHealthStateAsync(repairData, token) == HealthState.Ok)
                 {
@@ -1174,99 +1186,99 @@ namespace FabricHealer.Repair
         /// <returns></returns>
         private static async Task<HealthState> GetCurrentAggregatedHealthStateAsync(TelemetryData repairData, CancellationToken token)
         {
-            switch (repairData.EntityType)
+            try
             {
-                case EntityType.Application:
-                
-                    var appHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                             () => FabricHealerManager.FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
-                                                        new Uri(repairData.ApplicationName),
-                                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                        token),
-                                             token);
+                switch (repairData.EntityType)
+                {
+                    case EntityType.Application:
 
-                    bool isTargetAppHealedOnTargetNode = false;
-
-                    // System Service repairs (process restarts)
-                    if (repairData.ApplicationName == RepairConstants.SystemAppName)
-                    {
-                        isTargetAppHealedOnTargetNode = appHealth.HealthEvents.Any(
-                            h => JsonSerializationUtility.TryDeserializeObject(
-                                    h.HealthInformation.Description,
-                                    out TelemetryData repairData)
-                                        && repairData.NodeName == repairData.NodeName
-                                        && repairData.ProcessName == repairData.ProcessName
-                                        && repairData.HealthState == HealthState.Ok);
-                    }
-                    else // Application repairs (code package restarts)
-                    {
-                        isTargetAppHealedOnTargetNode = appHealth.HealthEvents.Any(
-                            h => JsonSerializationUtility.TryDeserializeObject(
-                                    h.HealthInformation.Description,
-                                    out TelemetryData repairData)
-                                        && repairData.NodeName == repairData.NodeName
-                                        && repairData.ApplicationName == repairData.ApplicationName
-                                        && repairData.HealthState == HealthState.Ok);
-                    }
-
-                    return isTargetAppHealedOnTargetNode ? HealthState.Ok : appHealth.AggregatedHealthState;
-                    
-                case EntityType.Service:
-
-                    var serviceHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                () => FabricHealerManager.FabricClientSingleton.HealthManager.GetServiceHealthAsync(
-                                                        new Uri(repairData.ServiceName),
-                                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                        token),
-                                                token);
-
-                    bool isTargetServiceHealedOnTargetNode = serviceHealth.HealthEvents.Any(
-                               h => JsonSerializationUtility.TryDeserializeObject(
-                                       h.HealthInformation.Description,
-                                       out TelemetryData repairData)
-                                           && repairData.NodeName == repairData.NodeName
-                                           && repairData.ServiceName == repairData.ServiceName
-                                           && repairData.HealthState == HealthState.Ok);
-                    return isTargetServiceHealedOnTargetNode ? HealthState.Ok : serviceHealth.AggregatedHealthState;
-
-                case EntityType.Node:
-                case EntityType.Machine:
-                
-                    var nodeHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                () => FabricHealerManager.FabricClientSingleton.HealthManager.GetNodeHealthAsync(
-                                                            repairData.NodeName,
+                        var appHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                 () => FabricHealerManager.FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
+                                                            new Uri(repairData.ApplicationName),
                                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                             token),
-                                                token);
+                                                 token);
 
-                    bool isTargetNodeHealed = nodeHealth.HealthEvents.Any(
-                                                h => JsonSerializationUtility.TryDeserializeObject(
-                                                        h.HealthInformation.Description,
-                                                        out TelemetryData repairData)
-                                                        && repairData.NodeName == repairData.NodeName
-                                                        && repairData.HealthState == HealthState.Ok);
+                        bool isTargetAppHealedOnTargetNode = false;
 
-                    return isTargetNodeHealed ? HealthState.Ok : nodeHealth.AggregatedHealthState;
-                   
-                case EntityType.Replica:
+                        // System Service repairs (process restarts)
+                        if (repairData.ApplicationName == RepairConstants.SystemAppName)
+                        {
+                            isTargetAppHealedOnTargetNode = appHealth.HealthEvents.Any(
+                                h => JsonSerializationUtility.TryDeserializeObject(
+                                        h.HealthInformation.Description,
+                                        out TelemetryData repairData)
+                                            && repairData.NodeName == repairData.NodeName
+                                            && repairData.ProcessName == repairData.ProcessName
+                                            && repairData.HealthState == HealthState.Ok);
+                        }
+                        else // Application repairs (code package restarts)
+                        {
+                            isTargetAppHealedOnTargetNode = appHealth.HealthEvents.Any(
+                                h => JsonSerializationUtility.TryDeserializeObject(
+                                        h.HealthInformation.Description,
+                                        out TelemetryData repairData)
+                                            && repairData.NodeName == repairData.NodeName
+                                            && repairData.ApplicationName == repairData.ApplicationName
+                                            && repairData.HealthState == HealthState.Ok);
+                        }
 
-                    if (!RepairExecutor.TryGetGuid(repairData.PartitionId, out Guid partitionId))
-                    {
-                        return HealthState.Unknown;
-                    }
+                        return isTargetAppHealedOnTargetNode ? HealthState.Ok : appHealth.AggregatedHealthState;
 
-                    // Make sure the Partition where the restarted replica was located is now healthy.
-                    var partitionHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                    () => FabricHealerManager.FabricClientSingleton.HealthManager.GetPartitionHealthAsync(
-                                                                partitionId,
-                                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                                token),
+                    case EntityType.Service:
+
+                        var serviceHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                    () => FabricHealerManager.FabricClientSingleton.HealthManager.GetServiceHealthAsync(
+                                                            new Uri(repairData.ServiceName),
+                                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                            token),
                                                     token);
 
-                    return partitionHealth.AggregatedHealthState;
-                    
-                default:
-                    return HealthState.Unknown;
+                        bool isTargetServiceHealedOnTargetNode = serviceHealth.HealthEvents.Any(
+                                   h => JsonSerializationUtility.TryDeserializeObject(
+                                           h.HealthInformation.Description,
+                                           out TelemetryData repairData)
+                                               && repairData.NodeName == repairData.NodeName
+                                               && repairData.ServiceName == repairData.ServiceName
+                                               && repairData.HealthState == HealthState.Ok);
+                        return isTargetServiceHealedOnTargetNode ? HealthState.Ok : serviceHealth.AggregatedHealthState;
+
+                    case EntityType.Node:
+                    case EntityType.Machine:
+
+                        var nodeHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                () => FabricHealerManager.FabricClientSingleton.HealthManager.GetNodeHealthAsync(
+                                                        repairData.NodeName,
+                                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                        token),
+                                                token);
+
+                        return nodeHealth.AggregatedHealthState;
+
+                    case EntityType.Replica:
+
+                        if (!RepairExecutor.TryGetGuid(repairData.PartitionId, out Guid partitionId))
+                        {
+                            return HealthState.Unknown;
+                        }
+
+                        // Make sure the Partition where the restarted replica was located is now healthy.
+                        var partitionHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                        () => FabricHealerManager.FabricClientSingleton.HealthManager.GetPartitionHealthAsync(
+                                                                    partitionId,
+                                                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                                    token),
+                                                        token);
+
+                        return partitionHealth.AggregatedHealthState;
+
+                    default:
+                        return HealthState.Unknown;
+                }
+            }
+            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
+            {
+                return HealthState.Unknown;
             }
         }
     }

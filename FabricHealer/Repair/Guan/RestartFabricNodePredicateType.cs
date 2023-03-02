@@ -28,36 +28,13 @@ namespace FabricHealer.Repair.Guan
             protected override async Task<bool> CheckAsync()
             {
                 RepairData.RepairPolicy.RepairAction = RepairActionType.RestartFabricNode;
+                RepairData.EntityType = EntityType.Node;
                 RepairData.RepairPolicy.RepairIdPrefix = RepairConstants.FHTaskIdPrefix;
+                RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.Restart;
 
                 if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
                 {
                     _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRuleAsync(Input.ToString(), RepairData, FabricHealerManager.Token);
-                }
-
-                int count = Input.Arguments.Count;
-
-                for (int i = 0; i < count; i++)
-                {
-                    var typeString = Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name;
-
-                    switch (typeString)
-                    {
-                        case "Boolean" when i == 0 && count == 3 || Input.Arguments[i].Name.ToLower() == "dohealthchecks":
-                            RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
-                            break;
-
-                        case "TimeSpan" when i == 1 && count == 3 || Input.Arguments[i].Name.ToLower() == "maxwaittimeforhealthstateok":
-                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
-                            break;
-
-                        case "TimeSpan" when i == 2 && count == 3 || Input.Arguments[i].Name.ToLower() == "maxexecutiontime":
-                            RepairData.RepairPolicy.MaxExecutionTime = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
-                            break;
-
-                        default:
-                            throw new GuanException($"Unsupported argument type for RestartFabricNode: {typeString}");
-                    }
                 }
 
                 // Block attempts to create node-level repair tasks if one is already running in the cluster.
@@ -80,18 +57,26 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                // Try to schedule repair with RM for Fabric Node Restart (FH will not be the executor).
+                // Try to schedule repair with RM for Fabric Node Restart (FH will also be the executor of the repair).
                 RepairTask repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                                RepairData,
-                                                FabricHealerManager.Token),
-                                        FabricHealerManager.Token);
+                                                () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
+                                                        RepairData,
+                                                        FabricHealerManager.Token),
+                                                FabricHealerManager.Token);
                 if (repairTask == null)
                 {
                     return false;
                 }
 
-                return true;
+                // Now execute the repair.
+                bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                        () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
+                                                repairTask,
+                                                RepairData,
+                                                FabricHealerManager.Token),
+                                        FabricHealerManager.Token);
+
+                return success;
             }
         }
 

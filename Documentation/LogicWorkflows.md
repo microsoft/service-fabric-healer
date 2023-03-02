@@ -5,20 +5,18 @@ FabricHealer employs configuration-as-logic by leveraging the expressive power o
 
 Supporting formal logic-based repair workflows gives users more tools and options to express their custom repair workflows. Formal logic gives users the power to express concepts like if/else statements, leverage boolean operators, and even things like recursion! Logic programming allows users to easily and concisely express complex repair workflows that leverage the complete power of a logic programming language. We use GuanLogic for our underlying logic processing, which is a general purpose logic programming API written by Lu Xun (Microsoft) that enables Prolog-like (https://en.wikipedia.org/wiki/Prolog) rule definition and query execution in C#.  
 
-
 While not necessary, reading Chapters 1-10 of the [learnprolognow](http://www.learnprolognow.org/lpnpage.php?pagetype=html&pageid=lpn-htmlch1) online (free) book can be quite useful and is highly recommended if you want to create more advanced rules to suit your more complex needs over time. Note that the documentation here doesn't assume you have any experience with logic programming. This is also the case with respect to using FabricHealer: several rules are already in place and you will simply need to change parts of an existing rule (like supplying your app names, for example) to get up and running very quickly.
 
 **Do I need experience with logic programming?**
 
 No, using logic to express repair workflows is easy! One doesn't need a deep knowledge and understanding of logic programming to write their own repair workflows. However, the more sophisticated/complex you need to be, then the more knowledge you will need to possess. For now, let's start with a very simple example to help inspire your own logic-based repair workflows.
 
-
 ***Problem***: I want to perform a code package restart if FabricObserver emits a memory usage warning for a *specific* application in my cluster (e.g. "fabric:/App1"). 
 
 ***Solution***: We can leverage Guan and its built-in equals operator for checking the name of the application that triggered the warning against the name of the application for which we decided we want to perform a code package restart for. For application level health events, the repair workflow is defined inside the PackageRoot/Config/LogicRules/AppRules.config.txt file. Here is that we would enter:
 
 ```
-Mitigate(AppName="fabric:/App1", MetricName="MemoryPercent") :- RestartCodePackage().
+Mitigate(AppName="fabric:/App1", MetricName="MemoryPercent") :- RestartCodePackage.
 ```
 
 Don't be alarmed if you don't understand how to read that repair action! We will go more in-depth later about the syntax and semantics of Guan. The takeaway is that expressing a Guan repair workflow doesn't require a deep knowledge of Prolog programming to get started. Hopefully this also gives you a general idea about the kinds of repair workflows we can express with GuanLogic.
@@ -37,61 +35,237 @@ Each repair policy has its own corresponding configuration file located in the F
 
 Now let's look at *how* to actually define a Guan logic repair workflow, so that you will have the knowledge necessary to express your own.
 
-## Writing Logic Rules
+### Writing Logic Rules
 
 This [site](https://www.metalevel.at/prolog/concepts) gives a good, fast overview of basic prolog concepts which you may find useful.
 
+The building block for creating Guan logic repair workflows is through the use and composition of **Predicates**. A predicate has a name, and zero or more arguments.
+In FH, there are two different kinds of predicates: **Internal Predicates** and **External Predicates**. Internal predicates are equivalent to standard 
+predicates in Prolog. An internal predicate defines relations between their arguments and other internal predicates.
+External predicates on the other hand are more similar to functions in terms of behaviour. External predicates are usually used to perform
+actions such as checking values, performing calculations, performing repairs, and binding values to variables.
 
-The building block for creating Guan logic repair workflows is through the use and composition of **Predicates**. A predicate has a name, and zero or more arguments. In FH, there are two different kinds of predicates: **Internal Predicates** and **External Predicates**. Internal predicates are equivalent to standard predicates in Prolog. An internal predicate defines relations between their arguments and other internal predicates. External predicates on the other hand are more similar to functions in terms of behaviour. External predicates are usually used to perform actions such as checking values, performing calculations, performing repairs, and binding values to variables.
+### FabricHealer Predicates 
 
 Here is a list of currently implemented **External Predicates**:
 
-**Repair Predicates**
+**Note**: Technically, an external predicate is not a function - though you can think of it as a function as it optionally takes input and does specific things. In reality, an external predicate is a type.
+You can look at how each one of the external predicates below are defined and implemented by looking in FabricHealer/Repair/Guan source folder.
+Given this, you only need to append an "()" at the end of an external predicate if you don't specify any arguments.
+E.g., you don't have to specify ```MyPredicate``` as ```MyPredicate()``` if you don't supply any arguments (or variables to which some value will be bound for use in subgoals). You can if you want. It's really up to you.
 
-```RestartCodePackage()``` 
+**Please read the [Optional Arguments](#Optional-Arguments) section to learn more about how optional argument support works in FabricHealer.**
 
-Attempts to restart the code package for the service that emitted the health event, returns true if successful, else false.  
+**RestartCodePackage** 
 
-```RestartFabricNode()```
+Attempts to restart a service code package (all related facts are already known by FH as these fact were provided by either FO or FHProxy).
 
-Attempts to restart the node of the service that emitted the health event, returns true if successful, else false. Takes an optional Safe parameter: "safe" or "unsafe" which defines whether or not to perform a safe or unsafe node restart. A safe node restart will try to first deactivate the node before restarting, whereas an unsafe node restart will try restarting the node without first trying to deactivate it. 
+Arguments: 
 
-```RestartReplica()``` 
+- DoHealthChecks (Boolean), Optional
+- MaxWaitTimeForHealthStateOk (TimeSpan), Optional
+- MaxExecutionTime (TimeSpan), Optional
+
+Example: 
+
+```Mitigate(MetricName="Threads") :- RestartCodePackage(false, 00:10:00, 00:30:00)..```
+
+**RestartFabricNode**
+
+Restarts a Service Fabric Node. Note that the repair task that is created for this type of repair will have a NodeImpactLevel of Restart, so
+Service Fabric will disable the node before the job is Approved, after which time FabricHealer will execute the repair.
+
+Arguments: none. 
+
+Example: 
+
+```Mitigate(HealthState=Error) :- GetRepairHistory(?repairCount, 08:00:00), ?repairCount < 2, RestartFabricNode.``` 
+
+**DeactivateFabricNode**
+
+Schedules a Service Fabric Repair Job to deactivate a Service Fabric Node. 
+
+Arguments:
+
+- ImpactLevel (string, supported values: Restart, RemoveData, RemoveNode), Optional (default is Restart). 
+
+Example: 
+
+```Mitigate(HealthState=Error) :- GetRepairHistory(?repairCount, 08:00:00), ?repairCount < 2, DeactivateFabricNode(RemoveData).```
+
+**RestartReplica** 
+
+Attempts to restart a service replica (the replica (or instance) id is already known by FH as that fact was provided by either FO or FHProxy). 
+
+Arguments: 
+
+- DoHealthChecks (Boolean), Optional
+- MaxWaitTimeForHealthStateOk (TimeSpan), Optional
+- MaxExecutionTime (TimeSpan), Optional
+
+Example: 
+
+```Mitigate(MetricName="Threads", MetricValue=?value) :- ?value > 500, RestartReplica.``` 
 
 Attempts to restart the replica of the service that emitted the health event, returns true if successful, else false. 
 
-```RestartVM()``` 
+**ScheduleMachineRepair**
 
-Attempts to restart the underlying virtual machine of the service that emitted the health event, returns true if successful, else false. 
+Arguments: 
 
-```RestartFabricSystemProcess()``` 
+- DoHealthChecks (Boolean), Optional
+- RepairAction (String), Required
+
+Attempts to schedule an infrastructure repair for the underlying virtual machine, returns true if successful, else false. 
+
+**RestartFabricSystemProcess**
+
+Arguments: 
+
+- DoHealthChecks (Boolean), Optional
+- MaxWaitTimeForHealthStateOk (TimeSpan), Optional
+- MaxExecutionTime (TimeSpan), Optional
 
 Attempts to restart a system service process that is misbehaving as per the FO health data.  
 
-```DeleteFiles()``` 
+**DeleteFiles** 
+
+Arguments: 
+
+- Path (String, **must always be the first argument**), Required.
+- SortOrder (String, supported values are Ascending, Descending), Optional.
+- MaxFilesToDelete (long), Optional.
+- RecurseSubdirectories (Boolean), Optional.
+- SearchPattern (String), Optional.
 
 Attempts to delete files in a supplied path. You can supply target path, max number of files to remove, sort order (ASC/DESC). 
 
 **Helper Predicates**
 
-```LogInfo(), LogWarning(), LogError()``` 
+**LogInfo, LogWarning, LogError** 
 
 These will emit telemetry/etw/health event at corresponding level (Info, Warning, Error) from a rule and can help with debugging, auditing, upstream action (ETW/Telemetry -> Alerts, for example). 
 
-```GetRepairHistory()``` 
+Arguments: 
+
+- Message (String), Required 
+
+Example (input string is a formatted string with arguments, in this case): 
+
+```LogInfo("0042_{0}: Specified Machine repair escalations have been exhausted for node {0}. Human intervention is required.", ?nodeName)```
+
+Example (simple string, unformatted): 
+
+```LogInfo("This is a message...")```
+
+**GetRepairHistory** 
 
 Gets the number of times a repair has been run with a supplied time window. 
 
-```CheckFolderSize()``` 
+This is an example of a predicate that takes up to 3 arguments, where the first one must be a variable (as it will hold the result, which can then be used in subsequent subgoals within the rule). 
+
+Example: 
+
+```GetRepairHistory(?repairCount, 08:00:00, System.Azure.Heal)```
+
+The above example specifies that a variable named ?repairCount will hold the value of how many times System.Azure.Heal machine repair jobs were completed in 8 hours. For machine repairs, you must specify the action name. For other types of repairs, you do not need to do that. E.g., for
+a service-level repair 
+
+```GetRepairHistory(?repairCount, 02:00:00)``` is all FH needs as it keeps track of the repairs that it executes (where it is the Executor, which is it never is for machine-level repairs).
+
+**CheckFolderSize** 
 
 Checks the size of a specified folder (full path) and returns a boolean value indicating whether the supplied max size (MB or GB) has been reached or exceeded. 
 
-```CheckInsideRunInterval()``` 
+Arguments: 
+
+- FolderPath (string), Required. You do not specify a name, just the value.
+
+**CheckInsideRunInterval** 
 
 Checks if some repair has already run once within the specified time frame (TimeSpan). 
 
+Arguments: 
 
-**Forming a Logic Repair Workflow**
+- [Unnamed], (TimeSpan), Required. (You do not specify a name, just the value) 
+
+**CheckInsideHealthStateMinDuration** 
+
+Checks to see if the entity has been in some HealthState for the specified duration. Facts like EntityType and HealthState are already known to FabricHealer. They are therfore not arguments this predicate supports (it doesn't have to).
+
+Arguments: 
+
+[Unnamed], (TimeSpan), Required. 
+
+Example: 
+
+```
+## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours.
+Mitigate :- CheckInsideHealthStateMinDuration(02:00:00), !.
+``` 
+
+**CheckOutstandingRepairs** 
+
+Checks the number of repairs (repair tasks) currently in flight in the cluster is less than or equal to the supplied argument.
+
+Arguments: 
+
+[Unnamed], (long), Required. 
+
+```
+## Don't proceed if there are already 2 or more entity-specific (implicit fact) repairs currently active in the cluster.
+Mitigate :- CheckOutstandingRepairs(2), !.
+```
+
+**CheckInsideScheduleInterval** 
+
+Checks if the last related (context is the type of repair, which FH already knows) repair was scheduled within the supplied TimeSpan.
+
+Arguments: 
+
+[Unnamed], (TimeSpan), Required. 
+
+Example: 
+
+```
+## Don't proceed if FH scheduled a machine repair less than 10 minutes ago.
+Mitigate :- CheckInsideScheduleInterval(00:10:00), !.
+```
+
+**CheckInsideNodeProbationPeriod** 
+
+This is for machine or node level repairs. It checks if the last related repair was Completed less than the supplied TimeSpan ago. 
+
+Arguments: 
+
+[Unnamed], (TimeSpan), Required. 
+
+Example: 
+
+```
+## Don't proceed if target node is currently inside a post-repair health probation period (post-repair means a Completed repair; target node is still recovering).
+Mitigate :- CheckInsideNodeProbationPeriod(00:30:00), !.
+```
+**LogRule** 
+
+Logs the entire repair rule in which LogRule is specified. 
+
+Arguments:
+
+[Unnamed], (long), Required.
+
+Example: 
+
+```
+Mitigate(Source=?source, Property=?property) :- LogRule(64), match(?source, "SomeOtherWatchdog"),
+    match(?property, "SomeOtherFailure"), DeactivateFabricNode(RemoveData).
+```
+
+The logic rule above begins at line number 64 in the related file (in this case, MachineRules.guan). By specifying LogRule(64), FabricHealer will emit the 
+rule in its entirety as an SF health event (Ok HealthState), ETW event and telemetry event (ApplicationInsights/LogAnalytics). This is very useful for debugging and auditing
+rules.
+
+### Forming a Logic Repair Workflow
 
 Now that we know what predicates are, let's learn how to form a logic repair workflow. 
 
@@ -135,7 +309,7 @@ now the variable ?x is bound to the application name and ?y is bound to the serv
 Here's a simple example that we've seen before:
 
 ```
-Mitigate() :- RestartCodePackage().
+Mitigate :- RestartCodePackage.
 ```
 
 Essentially, what this logic repair workflow (mitigation scenario) is describing that if FO emits a health event Warning/Error related to any application entity and the App repair policy is enabled, then we will execute the repair action. FH will automatically detect that it is a logic workflow, so it will invoke the root rule ```Mitigate()```. Guan determines that the ```Mitigate()``` rule is defined inside the repair action, where it then will try to execute the body of the ```Mitigate()``` rule.
@@ -143,8 +317,8 @@ Essentially, what this logic repair workflow (mitigation scenario) is describing
 Users can define multiple rules (separated by a newline) as part of a repair workflow, here is an example:
 
 ```
-Mitigate() :- RestartCodePackage().
-Mitigate() :- RestartFabricNode().
+Mitigate :- RestartCodePackage.
+Mitigate :- RestartFabricNode.
 ```
 
 This seems confusing as we've defined ```Mitigate()``` twice. Here is the execution flow explained in words: "Look for the *first* ```Mitigate()``` rule (read from top to bottom). The *first* ```Mitigate()``` rule is the one that calls ```RestartCodePackage()``` in its body. So we try to run the first rule. If the first rule fails (i.e. ```RestartCodePackage()``` returns false) then we check to see if there is another rule named  ```Mitigate()```, which there is. The next ```Mitigate()``` rule we find is the one that calls ```RestartFabricNode()``` so we try to run the second rule. 
@@ -154,18 +328,18 @@ This concept of retrying rules is important to understand. Imagine your goal is 
 **Important Syntax Rules**: Each rule must end with a period, a single rule may be split up across multiple lines for readability:
 
 ```
-Mitigate() :- PredicateA(),    <-- The first predicate in the rule must be inline with the Head of the rule like so
-              PredicateB(),
-              PredicateC().
+Mitigate :- Predicate),    <-- The first predicate in the rule must be inline with the Head of the rule like so
+            PredicateB,
+            PredicateC.
 ```
 
 The following would be invalid:
 
 ```
-Mitigate() :- 
-              PredicateA(),
-              PredicateB(),
-              PredicateC().
+Mitigate :- 
+            PredicateA,
+            PredicateB,
+            PredicateC.
 ```
 
 **Modelling Boolean Operators**
@@ -174,7 +348,7 @@ Let's look at how we can create AND/OR/NOT statements in Guan logic repair workf
 
 **NOT**
 ```
-Mitigate() :- not((condition A)), (true branch B).
+Mitigate :- not((condition A)), (true branch B).
 Can be read as: if (!A) then goto B
 ```
 
@@ -183,7 +357,7 @@ NOT behaviour is achieved by wrapping any predicate inside ```not()``` which is 
 
 **AND**
 ```
-Mitigate() :- (condition A), (condition B), (true branch C).
+Mitigate :- (condition A), (condition B), (true branch C).
 Can be read as: if (A and B) then goto C
 ```
 
@@ -191,8 +365,8 @@ AND behavior is achieved by separating predicates with commas, similar to progra
 
 **OR**
 ```
-Mitigate() :- (condition A), (true branch C).
-Mitigate() :- (condition B), (true branch C).
+Mitigate :- (condition A), (true branch C).
+Mitigate :- (condition B), (true branch C).
 Can be read as: if (A or B) then goto C
 ```
 
@@ -203,8 +377,8 @@ OR behaviour is achieved by separating predicates by rule. Here is the execution
 So far we've only looked at creating rules that are invoked from the root ```Mitigate()``` query, but users can also create their own rules like so:
 
 ```
-MyInternalPredicate() :- RestartCodePackage().
-Mitigate() :- MyInternalPredicate().
+MyInternalPredicate :- RestartCodePackage.
+Mitigate :- MyInternalPredicate.
 ```
 
 Here we've defined an internal predicate named ```MyInternalPredicate()``` and we can see that it is invoked in the body of the ```Mitigate()``` rule. In order to fulfill the ```Mitigate()``` rule, we will need to fulfill the ```MyInternalPredicate()``` predicate since it is part of the body of the ```Mitigate()``` rule. This repair workflow is identical in behaviour to one that directly calls ```RestartCodePackage()``` inside the body of ```Mitigate()```.
@@ -221,31 +395,17 @@ IntervalForRepairTarget(AppName="fabric:/CpuStress", RunInterval=00:15:00).
 IntervalForRepairTarget(AppName="fabric:/ContainerFoo2", RunInterval=00:15:00).
 IntervalForRepairTarget(MetricName="ActiveTcpPorts", RunInterval=00:15:00).
 
-Mitigate() :- IntervalForRepairTarget(?target, ?runinterval), CheckInsideRunInterval(?runinterval), !.
+Mitigate :- IntervalForRepairTarget(?target, ?runinterval), CheckInsideRunInterval(?runinterval), !.
 ```
 
 IMPORTANT: the state machine holding the data that the CheckInsideRunInterval predicate compares your specified RunInterval TimeSpan value against is our friendly neighborhood RepairManagerService(RM), a stateful Service Fabric System Service that orchestrates repairs
 and manages repair state. ***FH requires the presence of RM in order to function***.
 
-### A note on named arguments in sub-rules
-
-In Guan, a named argument is used to express an argument that is optional. It is also useful to add names that describe the meaning of what the argument represents. However, be careful here. Named arguments are not positional arguments. In fact, they are optional and should
-be treated as such in predicate implementations. ***In a nutshell, do not name required (positional) arguments in rules***.
-If you write your own external predicates, then please keep this in mind: required arguments are positional, named arguments are not. Let's take a quick trip to a small and important piece of an external predicate implementation for RestartCodePackage. 
-
-```C#
-        private RestartCodePackagePredicateType(string name)
-                 : base(name, true, 0)
-        {
-
-        }
-```
-
 The base type for all predicates in Guan is PredicateType. It's constructor takes a required string pararmeter (the name of the predicate as it is used in a rule) and optional parameters of public visibility (bool) and minimum/maximum positional arguments. Note that for RestartCodePackagePredicateType the min 
 positional argument is set to 0, which means there are no required arguments. That said, look how it is called as the definition of an internal predicate, TimeScopedRestartCodePackage in the App rules file:
 
 ```
-TimeScopedRestartCodePackage() :- RestartCodePackage(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).
+TimeScopedRestartCodePackage :- RestartCodePackage(DoHealthChecks=true, MaxWaitTimeForHealthStateOk=00:10:00).
 ```
 This means that the RestartCodePackage predicate takes two optinal args (see RestartCodePackagePredicateType.cs to see how handling optional arguments is implemented) and, again, 0 required arguments. This is important to remember as you build rules for existing predicates and when you write your own.
 
@@ -274,7 +434,7 @@ Mitigate(AppName="fabric:/System", MetricName="EphemeralPorts", MetricValue=?Met
 	TimeScopedRestartFabricNode(5, 01:00:00).
 ```
 
-**Filtering parameters from Mitigate()**
+**Filtering constraints in the head of rule**
 
 If you wish to do a single test for equality such as ```?AppName == "fabric:/App1``` you don't actually need to write this in the body of your rules, instead you can specify these values inside Mitigate() like so:
 
@@ -283,7 +443,7 @@ If you wish to do a single test for equality such as ```?AppName == "fabric:/App
 Mitigate(AppName="fabric:/App1") :- ...
 ```
 
-What that means, is that the rule will only execute when the AppName is "fabric:/App1". This is equivalent to the following:
+The above specifies that subgoals will only execute if the AppName fact is "fabric:/App1". This is equivalent to the following:
 
 ```
 Mitigate(AppName=?appName) :- ?appName == "fabric:/App1", ...
@@ -303,3 +463,36 @@ Or, you are only interested in any AppName that is not fabric:/App1 or fabric:/A
 ```
 Mitigate(AppName=?appName) :- not(?appName == "fabric:/App1" || ?appName == "fabric:/App42"), ...
 ```
+
+### Optional Arguments
+
+FabricHealer's Guan predicate implementations support optional arguments and they can be specified in any order, as long they are also named. 
+
+E.g., 
+
+```Mitigate(AppName="fabric:/FooBar", MetricName="MemoryMB") :- RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:05:00, MaxExecutionTime=00:15:00).```
+
+The above rule will execute the subgoal when the AppName fact is "fabric:/FooBar" and the MetricName is "MemoryMB" (both facts would only come from FabricObserver or FHProxy). Let's just look at this piece: 
+```RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:05:00, MaxExecutionTime=00:15:00)``` 
+
+Note the arguments. It could also be written as
+
+```RestartReplica(false, 00:05:00, 00:15:00)``` 
+
+However, if you just wanted to supply either the health checks boolean or wait timespan or execution timespan argument, then you would have to also employ the relevant name:
+
+```RestartReplica(MaxWaitTimeForHealthStateOk=00:05:00)``` 
+
+Or 
+
+```RestartReplica(MaxExecutionTime=00:15:00)``` 
+
+Or 
+
+```RestartReplica(DoHealthChecks=false)```  
+
+Or 
+
+``` RestartReplica(DoHealthChecks=false, MaxExecutionTime=00:15:00)``` 
+
+Hopefully, you can see the pattern here: You can employ any combination of predicate arguments in FabricHealer's Guan predicates (not the case in Guan's system predicates, however), but **they must each be named if you do not specifcy all of them**. 

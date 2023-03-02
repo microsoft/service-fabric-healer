@@ -21,6 +21,10 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using Newtonsoft.Json;
 using System.Fabric.Description;
+using FabricHealer.TelemetryLib;
+using System.Fabric.Repair;
+using System.Numerics;
+using Octokit;
 
 namespace FabricHealer.Repair
 {
@@ -767,6 +771,168 @@ namespace FabricHealer.Repair
             catch (Exception e) when (e is FabricException || e is TimeoutException)
             {
 
+            }
+        }
+
+        /// <summary>
+        /// Restarts a Service Fabric Node.
+        /// </summary>
+        /// <param name="repairData">Repair configuration</param>
+        /// <param name="cancellationToken">Task cancellation token</param>
+        /// <returns>true if successful, false otherwise</returns>
+        public static async Task<bool> RestartFabricNodeAsync(TelemetryData repairData, CancellationToken cancellationToken)
+        {
+            // If FH is installed on multiple nodes and this node is the target, then another FH instance should restart the node.
+            if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+            {
+                if (repairData.NodeName.Equals(FabricHealerManager.ServiceContext.NodeContext.NodeName, StringComparison.OrdinalIgnoreCase))
+                { 
+                    return false;
+                }
+            }
+
+            NodeList nodeList =
+                await FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(
+                        repairData.NodeName,
+                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                        cancellationToken);
+
+            if (!nodeList.Any(n => n.NodeName == repairData.NodeName))
+            {
+                string info = $"Fabric node {repairData.NodeName} does not exist.";
+
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        "RestartFabricNodeAsync::MissingNode",
+                        info,
+                        cancellationToken,
+                        repairData,
+                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+            }
+
+            BigInteger nodeInstanceId = nodeList[0].NodeInstanceId;
+            Stopwatch stopwatch = new();
+            TimeSpan maxWaitTimeout = TimeSpan.FromMinutes(MaxWaitTimeMinutesForNodeOperation);
+            string actionMessage = $"Attempting to restart Fabric node {repairData.NodeName} with InstanceId {nodeInstanceId}.";
+            
+            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                    LogLevel.Info,
+                    $"AttemptingNodeRestart::{repairData.NodeName}",
+                    actionMessage,
+                    cancellationToken,
+                    repairData,
+                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+            try
+            {
+                RestartNodeResult result =
+                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                            () =>
+                                FabricHealerManager.FabricClientSingleton.FaultManager.RestartNodeAsync(
+                                    repairData.NodeName,
+                                    nodeInstanceId,
+                                    false,
+                                    CompletionMode.Verify,
+                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                    cancellationToken),
+                                cancellationToken);
+
+                if (result == null)
+                {
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            $"RestartFabricNodeAsync::Failure_{repairData.NodeName}",
+                            $"Failed to restart Fabric node {repairData.NodeName}. FaultManager did not complete the operation successfully.",
+                            cancellationToken,
+                            repairData,
+                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                }
+
+                stopwatch.Start();
+
+                Node targetNode;
+
+                // Wait for Disabled/OK states.
+                while (stopwatch.Elapsed <= maxWaitTimeout)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return true;
+                    }
+
+                    nodeList =
+                        await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                () =>
+                                FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(
+                                    repairData.NodeName,
+                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                    cancellationToken),
+                                cancellationToken);
+
+                    targetNode = nodeList[0];
+
+                    // Node is ready to be enabled.
+                    if (targetNode.NodeStatus == NodeStatus.Disabled && targetNode.HealthState == HealthState.Ok)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(1000, cancellationToken);
+                }
+
+                stopwatch.Stop();
+                stopwatch.Reset();
+
+                // Enable the node. 
+                await FabricHealerManager.FabricClientSingleton.ClusterManager.ActivateNodeAsync(
+                        repairData.NodeName, 
+                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                        cancellationToken);
+
+                await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
+
+                nodeList =
+                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                            () =>
+                                FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(
+                                    repairData.NodeName,
+                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                    cancellationToken),
+                                cancellationToken);
+
+                targetNode = nodeList[0];
+
+                // Make sure activation request went through.
+                if (targetNode.NodeStatus == NodeStatus.Disabled && targetNode.HealthState == HealthState.Ok)
+                {
+                    await FabricHealerManager.FabricClientSingleton.ClusterManager.ActivateNodeAsync(
+                            repairData.NodeName,
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            cancellationToken);
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
+                UpdateRepairHistory(repairData);
+                return true;
+            }
+            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            {
+#if DEBUG
+                string err = $"Handled Exception restarting Fabric node {repairData.NodeName}, NodeInstanceId {nodeInstanceId}:{e.GetType().Name}";
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        "RestartFabricNodeAsync::HandledException",
+                        err,
+                        cancellationToken,
+                        repairData,
+                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                FabricHealerManager.RepairLogger.LogInfo(err);
+#endif
+                FabricHealerManager.RepairHistory.FailedRepairs++;
+                return false;
+            }
+            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            {
+                return true;
             }
         }
 

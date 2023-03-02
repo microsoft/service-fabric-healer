@@ -36,48 +36,19 @@ namespace FabricHealer.Repair.Guan
                     _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRuleAsync(Input.ToString(), RepairData, FabricHealerManager.Token);
                 }
 
-                int count = Input.Arguments.Count;
-
-                for (int i = 0; i < count; i++)
+                string value = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue().ToLower();
+                            
+                if (value == "removedata")
                 {
-                    var typeString = Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name;
-
-                    switch (typeString)
-                    {
-                        case "Boolean" when i == 0 && count == 4 || Input.Arguments[i].Name.ToLower() == "dohealthchecks":
-                            RepairData.RepairPolicy.DoHealthChecks = (bool)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
-                            break;
-
-                        case "TimeSpan" when i == 1 && count == 4 || Input.Arguments[i].Name.ToLower() == "maxwaittimeforhealthstateok":
-                            RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
-                            break;
-
-                        case "TimeSpan" when i == 2 && count == 4 || Input.Arguments[i].Name.ToLower() == "maxexecutiontime":
-                            RepairData.RepairPolicy.MaxExecutionTime = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
-                            break;
-
-                        case "String" when i == 3 && count == 4 || Input.Arguments[i].Name.ToLower() == "impactlevel":
-                            
-                            string value = Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue().ToLower();
-                            
-                            if (value == "removedata")
-                            {
-                                RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.RemoveData;
-                            }
-                            else if (value == "removenode")
-                            {
-                                RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.RemoveNode;
-                            }
-                            else
-                            {
-                                RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.Restart;
-                            }
-                            
-                            break;
-
-                        default:
-                            throw new GuanException($"Unsupported argument type for RestartFabricNode: {typeString}");
-                    }
+                    RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.RemoveData;
+                }
+                else if (value == "removenode")
+                {
+                    RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.RemoveNode;
+                }
+                else
+                {
+                    RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.Restart;
                 }
 
                 var isNodeRepairAlreadyInProgress =
@@ -121,7 +92,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private DeactivateFabricNodePredicateType(string name)
-                    : base(name, true, 0)
+                    : base(name, true, 1)
         {
 
         }

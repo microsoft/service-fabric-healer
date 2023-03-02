@@ -429,6 +429,70 @@ namespace FHTest
         }
 
         [TestMethod]
+        public async Task AllFabricNodeRules_EnsureWellFormedRules_QueryInitialized_Successful()
+        {
+            // This will be the data used to create a repair task.
+            var repairData = new TelemetryData
+            {
+                EntityType = EntityType.Node,
+                NodeName = NodeName,
+                HealthState = HealthState.Error
+            };
+
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_FabricNodeRepair_{NodeName}",
+                RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
+                NodeName = repairData.NodeName,
+                HealthState = repairData.HealthState
+            };
+
+            var executorData = new RepairExecutorData
+            {
+                RepairPolicy = repairData.RepairPolicy
+            };
+
+            var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "FabricNodeRules.guan");
+            FabricHealerManager.CurrentlyExecutingLogicRulesFileName = "FabricNodeRules.guan";
+            List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
+
+            try
+            {
+                TimeSpan maxTestTime = TimeSpan.FromSeconds(30);
+
+                // don't block here.
+                _ = TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
+
+                var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
+                                            RepairConstants.FHTaskIdPrefix, RepairTaskStateFilter.Active, null);
+
+                Stopwatch timer = Stopwatch.StartNew();
+
+                while (timer.Elapsed < maxTestTime)
+                {
+                    repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
+                                            RepairConstants.FHTaskIdPrefix, RepairTaskStateFilter.Active, null);
+
+                    if (!repairTasks.Any(r => r.Action == "RestartFabricNode"))
+                    {
+                        await Task.Delay(1000);
+                        continue;
+                    }
+
+                    await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First(r => r.Action == "RestartFabricNode"));
+                    return;
+                }
+
+                throw new InternalTestFailureException("FabricNode repair task did not get created with max test time of 30s.");
+                
+            }
+            catch (GuanException ge)
+            {
+                throw new AssertFailedException(ge.Message, ge);
+            }
+        }
+
+        [TestMethod]
         public async Task AllReplicaRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
             var partitions = await fabricClient.QueryManager.GetPartitionListAsync(new Uri("fabric:/TestApp42/ChildProcessCreator"));
