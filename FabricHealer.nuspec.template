@@ -4,8 +4,14 @@
     <id>%PACKAGE_ID%</id>
     <version>1.1.20</version>
     <releaseNotes>
-This release requires Service Fabric runtime version 9 and higher and at least Service Fabric SDK version 6.0.1017. There are several changes and improvements in this 
-release including a new machine repair model, updated logic rules, bug fixes, and many code improvements.
+- FabricHealer now ships only as a .NET 6 application and requires SF runtime versions 9 and higher.
+- New machine repair implementation.
+- New repair and helper Guan predicates.
+- Updated Guan logic rules.
+- Simple yet effective debugging support (rule logging) for Guan logic rules.
+- Bug fixes.
+- Several code improvements and enhancements.
+- Updated documentation and samples.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
