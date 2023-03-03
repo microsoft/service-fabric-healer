@@ -37,7 +37,7 @@ namespace FabricHealer
         public static string CurrentlyExecutingLogicRulesFileName { get; set; }
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "1.1.19";
+        private const string InternalVersionNumber = "1.1.20";
         private static FabricHealerManager singleton;
         private static FabricClient _fabricClient;
         private bool disposedValue;
@@ -1225,7 +1225,7 @@ namespace FabricHealer
                 {
                     continue;
                 }
-                else if (InstanceCount > 1)
+                else if (InstanceCount == -1 || InstanceCount > 1)
                 {
                     // Randomly wait to decrease chances of simultaneous ownership among FH instances.
                     await RandomWaitAsync();
@@ -1256,14 +1256,19 @@ namespace FabricHealer
                                                 RepairConstants.FHTaskIdPrefix,
                                                 Token);
 
-                    if (fhRepairTasks.Count > 0)
+                    if (fhRepairTasks != null && fhRepairTasks?.Count > 0)
                     {
                         foreach (var repair in fhRepairTasks)
                         {
                             var executorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
+                            
+                            if (executorData == null)
+                            {
+                                continue;
+                            }
 
-                            if (executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartFabricNode &&
-                                executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartProcess)
+                            if (executorData.RepairPolicy?.RepairAction != RepairActionType.RestartFabricNode &&
+                                executorData.RepairPolicy?.RepairAction != RepairActionType.RestartProcess)
                             {
                                 continue;
                             }
@@ -1347,17 +1352,21 @@ namespace FabricHealer
                     repairId = $"{repairData.NodeName}_{serviceProcessName}_{repairData.Metric?.Replace(" ", string.Empty)}";
 
                     // All FH repairs have serialized instances of RepairExecutorData set as the value for a RepairTask's ExecutorData property.
-                    if (currentFHRepairs?.Count > 0)
+                    if (currentFHRepairs != null && currentFHRepairs?.Count > 0)
                     {
                         // This prevents starting creating a new repair if another service running on a different node needs to be restarted, for example.
                         // Think of this as a UD Walk across nodes of service instances in need of repair.
+                        RepairLogger.LogInfo($"In Rolling service restart section.. ConfigSettings == null: {ConfigSettings == null}");
                         if (ConfigSettings.EnableRollingServiceRestarts
                             && !isOneNodeCluster
-                            && currentFHRepairs.Any(r => JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
-                                                      && execData?.RepairPolicy.ServiceName?.ToLower() == repairData.ServiceName.ToLower()))
+                            && currentFHRepairs.Any(r => !string.IsNullOrWhiteSpace(r.ExecutorData)
+                                                      && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
+                                                      && execData?.RepairPolicy?.ServiceName?.ToLower() == repairData.ServiceName.ToLower()))
                         {
-                            var repair = currentFHRepairs.FirstOrDefault(r => JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
-                                                                           && execData.RepairPolicy.ServiceName.ToLower() == repairData.ServiceName.ToLower());
+                            var repair =
+                                currentFHRepairs.FirstOrDefault(r => !string.IsNullOrWhiteSpace(r.ExecutorData)
+                                                                  && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
+                                                                  && execData?.RepairPolicy?.ServiceName?.ToLower() == repairData.ServiceName.ToLower());
 
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
@@ -1370,11 +1379,13 @@ namespace FabricHealer
                         }
                         // For the case where a service repair is still not Completed (e.g., the repair status is Restoring, which would happen after the repair executor has completed
                         // its work, but RM is performing post safety checks (safety checks can be enabled/disabled in logic rules).
-                        else if (currentFHRepairs.Any(r => JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
+                        else if (currentFHRepairs.Any(r => !string.IsNullOrWhiteSpace(r.ExecutorData)
+                                                        && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
                                                         && execData?.RepairPolicy?.RepairId == repairId))
                         {
-                            var repair = currentFHRepairs.FirstOrDefault(r => JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
-                                                                           && execData.RepairPolicy.RepairId == repairId);
+                            var repair = currentFHRepairs.FirstOrDefault(r => !string.IsNullOrWhiteSpace(r.ExecutorData)
+                                                                           && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
+                                                                           && execData?.RepairPolicy?.RepairId == repairId);
 
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                     LogLevel.Info,
@@ -2290,19 +2301,21 @@ namespace FabricHealer
 
         public static async Task TryClearExistingHealthReportsAsync()
         {
+            var healthReporter = new FabricHealthReporter(RepairLogger);
+            var healthReport = new HealthReport
+            {
+                HealthMessage = "Clearing existing health reports as FabricHealer is stopping or updating.",
+                NodeName = ServiceContext.NodeContext.NodeName,
+                State = HealthState.Ok,
+                HealthReportTimeToLive = TimeSpan.FromMinutes(5),
+            };
+
+            // FH.
             try
             {
-                var healthReporter = new FabricHealthReporter(RepairLogger);
-                var healthReport = new HealthReport
-                {
-                    HealthMessage = "Clearing existing health reports as FabricHealer is stopping or updating.",
-                    NodeName = ServiceContext.NodeContext.NodeName,
-                    State = HealthState.Ok,
-                    HealthReportTimeToLive = TimeSpan.FromMinutes(5),
-                };
-
                 var appName = new Uri(RepairConstants.FabricHealerAppName);
-                var appHealth = await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(appName);
+                var appHealth =
+                    await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(appName, ConfigSettings.AsyncTimeout, Token);
                 var FHAppEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains($"{RepairConstants.FabricHealer}."));
 
                 foreach (HealthEvent evt in FHAppEvents)
@@ -2315,8 +2328,17 @@ namespace FabricHealer
                     healthReporter.ReportHealthToServiceFabric(healthReport);
                     Thread.Sleep(50);
                 }
+            }
+            catch (Exception e) when (e is ArgumentException || e is FabricException || e is TimeoutException)
+            {
 
-                var nodeHealth = await FabricClientSingleton.HealthManager.GetNodeHealthAsync(ServiceContext.NodeContext.NodeName);
+            }
+
+            // Node.
+            try
+            { 
+                var nodeHealth =
+                    await FabricClientSingleton.HealthManager.GetNodeHealthAsync(ServiceContext.NodeContext.NodeName, ConfigSettings.AsyncTimeout, Token);
                 var FHNodeEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(RepairConstants.FabricHealer));
 
                 foreach (HealthEvent evt in FHNodeEvents)
