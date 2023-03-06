@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using Newtonsoft.Json;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
 namespace FabricHealer.Utilities

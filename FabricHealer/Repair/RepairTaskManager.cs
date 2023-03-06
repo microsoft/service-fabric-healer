@@ -1205,22 +1205,19 @@ namespace FabricHealer.Repair
                         if (repairData.ApplicationName == RepairConstants.SystemAppName)
                         {
                             isTargetAppHealedOnTargetNode = appHealth.HealthEvents.Any(
-                                h => JsonSerializationUtility.TryDeserializeObject(
-                                        h.HealthInformation.Description,
-                                        out TelemetryData repairData)
-                                            && repairData.NodeName == repairData.NodeName
-                                            && repairData.ProcessName == repairData.ProcessName
-                                            && repairData.HealthState == HealthState.Ok);
+                                h => JsonSerializationUtility.TryDeserializeObject(h.HealthInformation.Description, out TelemetryData desc)
+                                  && desc.NodeName == repairData.NodeName
+                                  && desc.ProcessName == repairData.ProcessName
+                                  && desc.HealthState == HealthState.Ok);
                         }
                         else // Application repairs (code package restarts)
                         {
-                            isTargetAppHealedOnTargetNode = appHealth.HealthEvents.Any(
-                                h => JsonSerializationUtility.TryDeserializeObject(
-                                        h.HealthInformation.Description,
-                                        out TelemetryData repairData)
-                                            && repairData.NodeName == repairData.NodeName
-                                            && repairData.ApplicationName == repairData.ApplicationName
-                                            && repairData.HealthState == HealthState.Ok);
+                            isTargetAppHealedOnTargetNode =
+                                appHealth.HealthEvents.Any(
+                                    h => JsonSerializationUtility.TryDeserializeObject(h.HealthInformation.Description, out TelemetryData desc)
+                                      && desc.NodeName == repairData.NodeName
+                                      && desc.ApplicationName == repairData.ApplicationName
+                                      && desc.HealthState == HealthState.Ok);
                         }
 
                         return isTargetAppHealedOnTargetNode ? HealthState.Ok : appHealth.AggregatedHealthState;
@@ -1234,13 +1231,13 @@ namespace FabricHealer.Repair
                                                             token),
                                                     token);
 
-                        bool isTargetServiceHealedOnTargetNode = serviceHealth.HealthEvents.Any(
-                                   h => JsonSerializationUtility.TryDeserializeObject(
-                                           h.HealthInformation.Description,
-                                           out TelemetryData repairData)
-                                               && repairData.NodeName == repairData.NodeName
-                                               && repairData.ServiceName == repairData.ServiceName
-                                               && repairData.HealthState == HealthState.Ok);
+                        bool isTargetServiceHealedOnTargetNode =
+                                serviceHealth.HealthEvents.Any(
+                                   h => JsonSerializationUtility.TryDeserializeObject(h.HealthInformation.Description, out TelemetryData desc)
+                                     && desc.NodeName == repairData.NodeName
+                                     && desc.ServiceName == repairData.ServiceName
+                                     && desc.HealthState == HealthState.Ok);
+
                         return isTargetServiceHealedOnTargetNode ? HealthState.Ok : serviceHealth.AggregatedHealthState;
 
                     case EntityType.Node:

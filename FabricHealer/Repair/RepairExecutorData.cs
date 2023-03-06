@@ -14,12 +14,6 @@ namespace FabricHealer.Repair
     public class RepairExecutorData
     {
         [DataMember]
-        public FabricNodeRepairStep LatestRepairStep
-        {
-            get; set;
-        } = FabricNodeRepairStep.Scheduled;
-
-        [DataMember]
         public RepairPolicy RepairPolicy
         {
             get; set;

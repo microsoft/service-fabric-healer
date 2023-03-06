@@ -102,7 +102,7 @@ namespace FabricHealer.Repair
         /// <summary>
         /// This function returns the list of currently processing FH repair tasks.
         /// </summary>
-        /// <returns>List of repair tasks in Preparing, Approved, Executing or Restoring state</returns>
+        /// <returns>List of repair tasks in Active repair state.</returns>
         public static async Task<RepairTaskList> GetFHRepairTasksCurrentlyProcessingAsync(
                                                   string taskIdPrefix,
                                                   CancellationToken cancellationToken,
@@ -110,13 +110,10 @@ namespace FabricHealer.Repair
         {
             var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                                         taskIdPrefix,
-                                        RepairTaskStateFilter.Active |
-                                        RepairTaskStateFilter.Approved |
-                                        RepairTaskStateFilter.Executing,
+                                        RepairTaskStateFilter.Active,
                                         executor,
                                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                                         cancellationToken);
-
             return repairTasks;
         }
 
