@@ -456,7 +456,7 @@ namespace FabricHealer.Repair
             {
                 if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
                 {
-                    await FabricHealerManager.RandomWaitAsync();
+                    await FabricHealerManager.RandomWaitAsync(cancellationToken);
                 }
 
                 if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
@@ -537,7 +537,7 @@ namespace FabricHealer.Repair
             {
                 if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
                 {
-                    await FabricHealerManager.RandomWaitAsync();
+                    await FabricHealerManager.RandomWaitAsync(cancellationToken);
                 }
 
                 if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
@@ -1165,7 +1165,7 @@ namespace FabricHealer.Repair
                     return true;
                 }
 
-                if (await GetCurrentAggregatedHealthStateAsync(repairData, token) == HealthState.Ok)
+                if (await GetCurrentEntityHealthStateAsync(repairData, token) == HealthState.Ok)
                 {
                     stopwatch.Stop();
                     return true;
@@ -1179,12 +1179,12 @@ namespace FabricHealer.Repair
         }
 
         /// <summary>
-        /// Determines aggregated health state for repair target in supplied repair configuration.
+        /// Determines current health state for repair target entity in supplied repair configuration.
         /// </summary>
         /// <param name="repairData">repairData instance.</param>
         /// <param name="token">CancellationToken instance.</param>
-        /// <returns></returns>
-        private static async Task<HealthState> GetCurrentAggregatedHealthStateAsync(TelemetryData repairData, CancellationToken token)
+        /// <returns>HealthState enum reflecting current health state of target entity.</returns>
+        private static async Task<HealthState> GetCurrentEntityHealthStateAsync(TelemetryData repairData, CancellationToken token)
         {
             try
             {
@@ -1208,7 +1208,7 @@ namespace FabricHealer.Repair
                                 h => JsonSerializationUtility.TryDeserializeObject(h.HealthInformation.Description, out TelemetryData desc)
                                   && desc.NodeName == repairData.NodeName
                                   && desc.ProcessName == repairData.ProcessName
-                                  && desc.HealthState == HealthState.Ok);
+                                  && h.HealthInformation.HealthState == HealthState.Ok);
                         }
                         else // Application repairs (code package restarts)
                         {
@@ -1217,7 +1217,7 @@ namespace FabricHealer.Repair
                                     h => JsonSerializationUtility.TryDeserializeObject(h.HealthInformation.Description, out TelemetryData desc)
                                       && desc.NodeName == repairData.NodeName
                                       && desc.ApplicationName == repairData.ApplicationName
-                                      && desc.HealthState == HealthState.Ok);
+                                      && h.HealthInformation.HealthState == HealthState.Ok);
                         }
 
                         return isTargetAppHealedOnTargetNode ? HealthState.Ok : appHealth.AggregatedHealthState;
@@ -1236,7 +1236,7 @@ namespace FabricHealer.Repair
                                    h => JsonSerializationUtility.TryDeserializeObject(h.HealthInformation.Description, out TelemetryData desc)
                                      && desc.NodeName == repairData.NodeName
                                      && desc.ServiceName == repairData.ServiceName
-                                     && desc.HealthState == HealthState.Ok);
+                                     && h.HealthInformation.HealthState == HealthState.Ok);
 
                         return isTargetServiceHealedOnTargetNode ? HealthState.Ok : serviceHealth.AggregatedHealthState;
 

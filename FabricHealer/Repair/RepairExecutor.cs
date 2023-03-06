@@ -21,10 +21,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using Newtonsoft.Json;
 using System.Fabric.Description;
-using FabricHealer.TelemetryLib;
-using System.Fabric.Repair;
 using System.Numerics;
-using Octokit;
 
 namespace FabricHealer.Repair
 {

@@ -748,7 +748,10 @@ namespace FabricHealer
                     {
                         foreach (var app in clusterHealth.ApplicationHealthStates)
                         {
-                            Token.ThrowIfCancellationRequested();
+                            if (Token.IsCancellationRequested)
+                            {
+                                return;
+                            }
 
                             try
                             {
@@ -772,7 +775,17 @@ namespace FabricHealer
                                         foreach (var service in appHealth.ServiceHealthStates.Where(
                                                     s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
                                         {
+                                            if (Token.IsCancellationRequested)
+                                            {
+                                                return;
+                                            }
+
                                             await ProcessServiceHealthAsync(service);
+
+                                            if ((InstanceCount == -1 || InstanceCount > 1) && ConfigSettings.EnableRollingServiceRestarts)
+                                            {
+                                                await RandomWaitAsync();
+                                            }
                                         }
                                     }
                                     else // FO/FHProxy Non-System Application HealthReport.
@@ -1374,7 +1387,7 @@ namespace FabricHealer
                                     Token,
                                     null);
 
-                            return;
+                            continue;
                         }
                         else if (currentFHRepairs.Any(
                                     r => !string.IsNullOrWhiteSpace(r.ExecutorData)
@@ -1395,7 +1408,7 @@ namespace FabricHealer
                                     null,
                                     ConfigSettings.EnableVerboseLogging);
 
-                            return;
+                            continue;
                         }
                     }
                 }
@@ -2248,12 +2261,12 @@ namespace FabricHealer
             return repairRules;
         }
 
-        internal static async Task RandomWaitAsync()
+        internal static async Task RandomWaitAsync(CancellationToken token = default)
         {
             var random = new Random();
             int waitTimeMS = random.Next(random.Next(500, NodeCount * 500), 1000 * NodeCount);
 
-            await Task.Delay(waitTimeMS, Token);
+            await Task.Delay(waitTimeMS, token == default ? Token : token);
         }
 
         // https://stackoverflow.com/questions/25678690/how-can-i-check-github-releases-in-c

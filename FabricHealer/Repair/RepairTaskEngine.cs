@@ -40,13 +40,45 @@ namespace FabricHealer.Repair
                 return null;
             }
 
-            var repairs = await GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, token);
-
-            if (repairs?.Count > 0)
+            if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
             {
-                if (repairs.Any(r => r.ExecutorData.Contains(executorData.RepairPolicy.RepairId)))
+                await FabricHealerManager.RandomWaitAsync(token);
+            }
+
+            var currentFHRepairs = await GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, token);
+
+            if (currentFHRepairs?.Count > 0)
+            {
+                if (currentFHRepairs.Any(r => r.ExecutorData.Contains(executorData.RepairPolicy.RepairId)))
                 {
                     return null;
+                }
+
+                if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                {
+                    if (FabricHealerManager.ConfigSettings.EnableRollingServiceRestarts
+                        && !await FabricHealerManager.IsOneNodeClusterAsync()
+                        && currentFHRepairs.Any(
+                            r => !string.IsNullOrWhiteSpace(r.ExecutorData)
+                              && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
+                              && execData?.RepairPolicy?.ServiceName?.ToLower() == executorData.RepairPolicy.ServiceName.ToLower()))
+                    {
+                        var rep =
+                            currentFHRepairs.First(
+                                r => !string.IsNullOrWhiteSpace(r.ExecutorData)
+                                  && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
+                                  && execData?.RepairPolicy?.ServiceName?.ToLower() == executorData.RepairPolicy.ServiceName.ToLower());
+
+                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                $"RollingRepairInProgress_{executorData.RepairPolicy.ProcessName}_{rep.Target}",
+                                $"There is currently a rolling repair in progress for service {executorData.RepairPolicy.ServiceName}. " +
+                                $"Current node: {rep.Target}. Repair State: {rep.State})",
+                                token,
+                                null);
+
+                        return null;
+                    }
                 }
             }
 
