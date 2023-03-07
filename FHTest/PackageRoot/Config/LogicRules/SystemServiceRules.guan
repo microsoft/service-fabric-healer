@@ -41,7 +41,7 @@ TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, ?ti
 ## If Completed Repair count is less then supplied value, then run RestartFabricSystemProcess mitigation.
 
 TimeScopedRestartFabricSystemProcess(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount < ?count, 
-	RestartFabricSystemProcess(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:05:00, MaxExecutionTime=00:10:00).
+	RestartFabricSystemProcess(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:00:05, MaxExecutionTime=00:10:00).
 	
 ## Mitigation rules for multiple metrics and targets. NOTE: Do not restart Fabric or FabricHost processes unless you want to take the Fabric node down. For the latter (restart node),
 ## use TimeScopedRestartFabricNode (or RestartFabricNode predicate directly), which employs a safe Fabric node restart workflow (with deactivation step), not just a process kill.

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Query;
 using System.Fabric.Repair;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -175,6 +176,40 @@ namespace FabricHealer.Repair
                 case RepairActionType.RestartFabricNode:
                 case RepairActionType.RestartProcess:
                 case RepairActionType.RestartReplica:
+
+                    // Rolling Service Restarts.
+                    if (repairAction == RepairActionType.RestartCodePackage || repairAction == RepairActionType.RestartReplica)
+                    {
+                        if ((FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                             && FabricHealerManager.ConfigSettings.EnableRollingServiceRestarts)
+                        {
+                            await FabricHealerManager.RandomWaitAsync(token);
+                            var repairs = await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, token);
+                            
+                            if (repairs?.Count > 0)
+                            {
+                                foreach (var repair in repairs)
+                                {
+                                    if (string.IsNullOrWhiteSpace(repair.ExecutorData))
+                                    {
+                                        continue;
+                                    }
+
+                                    if (!JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData execData))
+                                    {
+                                        continue;
+                                    }
+
+                                    if (execData.RepairPolicy != null
+                                        && !string.IsNullOrWhiteSpace(execData.RepairPolicy.ServiceName)
+                                        && execData.RepairPolicy.ServiceName.Equals(repairData.ServiceName, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        return null;
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     repairTask = await RepairTaskEngine.CreateFabricHealerRepairTask(executorData, token);
                     break;

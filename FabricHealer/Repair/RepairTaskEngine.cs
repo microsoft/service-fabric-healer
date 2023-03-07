@@ -12,8 +12,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricHealer.TelemetryLib;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using Newtonsoft.Json.Linq;
 
 namespace FabricHealer.Repair
 {
@@ -45,51 +47,48 @@ namespace FabricHealer.Repair
                 await FabricHealerManager.RandomWaitAsync(token);
             }
 
-            var currentFHRepairs = await GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, token);
-
-            if (currentFHRepairs?.Count > 0)
-            {
-                if (currentFHRepairs.Any(r => r.ExecutorData.Contains(executorData.RepairPolicy.RepairId)))
+           // Rolling Service Restarts.
+           if (executorData.RepairPolicy.RepairAction == RepairActionType.RestartCodePackage
+               || executorData.RepairPolicy.RepairAction == RepairActionType.RestartReplica)
+           {
+                if ((FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                     && FabricHealerManager.ConfigSettings.EnableRollingServiceRestarts)
                 {
-                    return null;
-                }
+                    var currentFHRepairs = await GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, token);
 
-                if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
-                {
-                    if (FabricHealerManager.ConfigSettings.EnableRollingServiceRestarts
-                        && !await FabricHealerManager.IsOneNodeClusterAsync()
-                        && currentFHRepairs.Any(
-                            r => !string.IsNullOrWhiteSpace(r.ExecutorData)
-                              && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
-                              && execData?.RepairPolicy?.ServiceName?.ToLower() == executorData.RepairPolicy.ServiceName.ToLower()))
+                    if (currentFHRepairs != null && currentFHRepairs.Count > 0)
                     {
-                        var rep =
-                            currentFHRepairs.First(
-                                r => !string.IsNullOrWhiteSpace(r.ExecutorData)
-                                  && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
-                                  && execData?.RepairPolicy?.ServiceName?.ToLower() == executorData.RepairPolicy.ServiceName.ToLower());
+                        foreach (var repair in currentFHRepairs)
+                        {
+                            if (string.IsNullOrWhiteSpace(repair.ExecutorData))
+                            {
+                                continue;
+                            }
 
-                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                LogLevel.Info,
-                                $"RollingRepairInProgress_{executorData.RepairPolicy.ProcessName}_{rep.Target}",
-                                $"There is currently a rolling repair in progress for service {executorData.RepairPolicy.ServiceName}. " +
-                                $"Current node: {rep.Target}. Repair State: {rep.State})",
-                                token,
-                                null);
+                            if (!JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData repairExecData))
+                            {
+                                continue;
+                            }
 
-                        return null;
+                            if (repairExecData.RepairPolicy != null
+                                && !string.IsNullOrWhiteSpace(repairExecData.RepairPolicy.ServiceName)
+                                && repairExecData.RepairPolicy.ServiceName.Equals(executorData.RepairPolicy.ServiceName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                return null;
+                            }
+                        }
                     }
                 }
             }
-
+        
             NodeImpactLevel impact =
                 executorData.RepairPolicy.NodeImpactLevel != NodeImpactLevel.Invalid ? executorData.RepairPolicy.NodeImpactLevel : NodeImpactLevel.None;
             NodeRepairImpactDescription nodeRepairImpact = new();
             NodeImpact impactedNode = new(executorData.RepairPolicy.NodeName, impact);
             nodeRepairImpact.ImpactedNodes.Add(impactedNode);
             RepairActionType repairAction = executorData.RepairPolicy.RepairAction;
-            string repair = repairAction.ToString();
-            string taskId = $"{RepairConstants.FHTaskIdPrefix}/{Guid.NewGuid()}/{repair}/{executorData.RepairPolicy.NodeName}";
+            string action = repairAction.ToString();
+            string taskId = $"{RepairConstants.FHTaskIdPrefix}/{Guid.NewGuid()}/{action}/{executorData.RepairPolicy.NodeName}";
             bool doHealthChecks = impact != NodeImpactLevel.None;
 
             // Health checks for app level repairs.
@@ -109,14 +108,14 @@ namespace FabricHealer.Repair
                 doHealthChecks = false;
             }
 
-            string description = $"FabricHealer executing repair {repair} on node {executorData.RepairPolicy.NodeName}";
+            string description = $"FabricHealer executing repair {action} on node {executorData.RepairPolicy.NodeName}";
 
             if (impact == NodeImpactLevel.Restart || impact == NodeImpactLevel.RemoveData)
             {
                 description = executorData.RepairPolicy.RepairId;
             }
 
-            var repairTask = new ClusterRepairTask(taskId, repair)
+            var repairTask = new ClusterRepairTask(taskId, action)
             {
                 Target = new NodeRepairTargetDescription(executorData.RepairPolicy.NodeName),
                 Impact = nodeRepairImpact,
@@ -533,7 +532,7 @@ namespace FabricHealer.Repair
                 var rulesWithPredicate =
                     flattenedLines.Where(line => !string.IsNullOrWhiteSpace(line) &&
                                                  !line.StartsWith("##") &&
-                                                 line.Contains(predicate, StringComparison.OrdinalIgnoreCase)).ToList();
+                                                 line.Replace("'", "").Replace("\"", "").Replace(" ", "").Contains(predicate, StringComparison.OrdinalIgnoreCase)).ToList();
 
                 if (rulesWithPredicate.Count(
                       lr => lr.Contains(RepairConstants.LogRule, StringComparison.OrdinalIgnoreCase)) == rulesWithPredicate.Count)

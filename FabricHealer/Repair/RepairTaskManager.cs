@@ -904,49 +904,49 @@ namespace FabricHealer.Repair
                 if (success)
                 {
                     string target = Enum.GetName(typeof(EntityType), repairData.EntityType);
-                    TimeSpan maxWaitForHealthStateOk = TimeSpan.FromMinutes(30);
+                    TimeSpan probationDuration = TimeSpan.FromMinutes(5);
 
                     switch (repairData.EntityType)
                     {
                         case EntityType.Application when repairData.ApplicationName != RepairConstants.SystemAppName:
                         case EntityType.Replica:
-                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                            probationDuration = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
                                 ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                                : TimeSpan.FromMinutes(10);
+                                : TimeSpan.FromMinutes(1);
                             break;
 
                         case EntityType.Application when repairData.ApplicationName == RepairConstants.SystemAppName && repairData.RepairPolicy.RepairAction == RepairActionType.RestartProcess:
-                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                            probationDuration = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                               : TimeSpan.FromMinutes(5);
+                               : TimeSpan.FromMinutes(1);
                             break;
 
                         case EntityType.Application when repairData.ApplicationName == RepairConstants.SystemAppName && repairData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode:
-                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
-                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                                : TimeSpan.FromMinutes(30);
-                            break;
-
-                        case EntityType.Service:
-                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
-                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                                : TimeSpan.FromMinutes(10);
-                            break;
-
-                        case EntityType.Node:
-                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
-                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
-                                : TimeSpan.FromMinutes(30);
-                            break;
-
-                        case EntityType.Partition:
-                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                            probationDuration = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
                                 ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
                                 : TimeSpan.FromMinutes(15);
                             break;
 
+                        case EntityType.Service:
+                            probationDuration = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
+                                : TimeSpan.FromMinutes(1);
+                            break;
+
+                        case EntityType.Node:
+                            probationDuration = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
+                                : TimeSpan.FromMinutes(15);
+                            break;
+
+                        case EntityType.Partition:
+                            probationDuration = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
+                                : TimeSpan.FromMinutes(1);
+                            break;
+
                         case EntityType.Disk:
-                            maxWaitForHealthStateOk = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
+                            probationDuration = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
                                 ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
                                 : TimeSpan.FromSeconds(5);
                             break;
@@ -955,8 +955,8 @@ namespace FabricHealer.Repair
                             throw new ArgumentException("Unsupported repair target type.");
                     }
 
-                    // Check healthstate of repair target to see if the repair worked.
-                    bool isHealthy = await IsRepairTargetHealthyAfterCompletedRepair(repairData, maxWaitForHealthStateOk, cancellationToken);
+                    // Check healthstate of repair target to see if the repair worked: The target has been healthy for the specified probation duration.
+                    bool isHealthy = await IsRepairTargetHealthyAfterProbation(repairData, probationDuration, cancellationToken);
 
                     if (isHealthy)
                     {
@@ -1142,14 +1142,13 @@ namespace FabricHealer.Repair
         }
 
         /// <summary>
-        /// This function checks to see if the target of a repair is healthy after the repair task completed. 
-        /// This will signal the result via telemetry and as a health event.
+        /// This function checks to see if the target of a repair has been healthy for the specified probation duration after a repair completes. 
         /// </summary>
         /// <param name="repairData">repairData instance.</param>
-        /// <param name="maxTimeToWait">Amount of time to wait for target entity to become healthy after repair operation.</param>
+        /// <param name="probationPeriod">Amount of time to wait in health state probation.</param>
         /// <param name="token">CancellationToken instance.</param>
-        /// <returns>Boolean representing whether the repair target is healthy after a completed repair operation.</returns>
-        private static async Task<bool> IsRepairTargetHealthyAfterCompletedRepair(TelemetryData repairData, TimeSpan maxTimeToWait, CancellationToken token)
+        /// <returns>Boolean representing whether the repair target is healthy after a completed repair operation within specified probationary duration.</returns>
+        private static async Task<bool> IsRepairTargetHealthyAfterProbation(TelemetryData repairData, TimeSpan probationPeriod, CancellationToken token)
         {
             if (repairData == null)
             {
@@ -1158,24 +1157,30 @@ namespace FabricHealer.Repair
 
             var stopwatch = Stopwatch.StartNew();
 
-            while (stopwatch.Elapsed <= maxTimeToWait)
+            try
             {
-                if (token.IsCancellationRequested)
+                // Wait.
+                while (stopwatch.Elapsed <= probationPeriod)
                 {
-                    return true;
-                }
+                    if (token.IsCancellationRequested)
+                    {
+                        // When the specified token is canceled, it could be either that the user-specified max execution time has been reached or 
+                        // the RunAsync token has been canceled by the SF runtime. Either way, time to go.
+                        return false;
+                    }
 
-                if (await GetCurrentEntityHealthStateAsync(repairData, token) == HealthState.Ok)
-                {
-                    stopwatch.Stop();
-                    return true;
+                    await Task.Delay(TimeSpan.FromSeconds(5), token);
                 }
-
-                await Task.Delay(TimeSpan.FromSeconds(5), token);
+            }
+            catch (TaskCanceledException) // token canceled during Task.Delay.
+            {
+                return false;
             }
 
             stopwatch.Stop();
-            return false;
+
+            // Ensure target is healthy after the specified wait duration.
+            return await GetCurrentEntityHealthStateAsync(repairData, token) == HealthState.Ok;
         }
 
         /// <summary>

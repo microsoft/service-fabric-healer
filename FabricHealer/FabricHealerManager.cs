@@ -22,6 +22,7 @@ using Octokit;
 using System.Fabric.Description;
 using System.Runtime.InteropServices;
 using static FabricHealer.Repair.RepairTaskManager;
+using Newtonsoft.Json.Linq;
 
 namespace FabricHealer
 {
@@ -780,12 +781,12 @@ namespace FabricHealer
                                                 return;
                                             }
 
-                                            await ProcessServiceHealthAsync(service);
-
                                             if ((InstanceCount == -1 || InstanceCount > 1) && ConfigSettings.EnableRollingServiceRestarts)
                                             {
                                                 await RandomWaitAsync();
                                             }
+
+                                            await ProcessServiceHealthAsync(service);
                                         }
                                     }
                                     else // FO/FHProxy Non-System Application HealthReport.
@@ -1275,7 +1276,7 @@ namespace FabricHealer
                         foreach (var repair in fhRepairTasks)
                         {
                             var executorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
-                            
+
                             if (executorData == null)
                             {
                                 continue;
@@ -1364,51 +1365,47 @@ namespace FabricHealer
                     // This is the way each FH repair is ID'd. This data is stored in the related Repair Task's ExecutorData property when FH is executor.
                     repairId = $"{repairData.NodeName}_{serviceProcessName}_{repairData.Metric?.Replace(" ", string.Empty)}";
 
-                    if (currentFHRepairs != null && currentFHRepairs?.Count > 0)
+                    if (currentFHRepairs != null && currentFHRepairs.Count > 0)
                     {
-                        if (ConfigSettings.EnableRollingServiceRestarts
-                            && !isOneNodeCluster
-                            && currentFHRepairs.Any(
-                                r => !string.IsNullOrWhiteSpace(r.ExecutorData)
-                                  && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
-                                  && execData?.RepairPolicy?.ServiceName?.ToLower() == repairData.ServiceName.ToLower()))
+                        foreach (var repair in currentFHRepairs)
                         {
-                            var repair =
-                                currentFHRepairs.First(
-                                    r => !string.IsNullOrWhiteSpace(r.ExecutorData)
-                                      && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
-                                      && execData?.RepairPolicy?.ServiceName?.ToLower() == repairData.ServiceName.ToLower());
+                            if (!JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData execData))
+                            {
+                                continue;
+                            }
 
-                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                    LogLevel.Info,
-                                    $"RollingRepairInProgress_{serviceProcessName}_{repair.Target}",
-                                    $"There is currently a rolling repair in progress for service {repairData.ServiceName}. " +
-                                    $"Current node: {repair.Target}. Repair State: {repair.State})",
-                                    Token,
-                                    null);
+                            if (execData.RepairPolicy != null)
+                            {
+                                if (ConfigSettings.EnableRollingServiceRestarts 
+                                    && !string.IsNullOrWhiteSpace(execData.RepairPolicy.ServiceName)
+                                    && execData.RepairPolicy.ServiceName.Equals(repairData.ServiceName, StringComparison.OrdinalIgnoreCase))
+                                {
 
-                            continue;
-                        }
-                        else if (currentFHRepairs.Any(
-                                    r => !string.IsNullOrWhiteSpace(r.ExecutorData)
-                                      && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
-                                      && execData?.RepairPolicy?.RepairId == repairId))
-                        {
-                            var repair = currentFHRepairs.First(
-                                            r => !string.IsNullOrWhiteSpace(r.ExecutorData)
-                                              && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData execData)
-                                              && execData?.RepairPolicy?.RepairId == repairId);
+                                    await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                                LogLevel.Info,
+                                                $"RollingRepairInProgress_{serviceProcessName}_{repair.Target}",
+                                                $"There is currently a rolling repair in progress for service {repairData.ServiceName}. " +
+                                                $"Target node: {repairData.NodeName}. Current node: {repair.Target}. Repair State: {repair.State}.",
+                                                Token,
+                                                null);
+                                    return;
+                                }
 
-                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                    LogLevel.Info,
-                                    $"RepairAlreadyInProgress_{serviceProcessName}_{repairData.NodeName}",
-                                    $"There is currently a repair in progress for service {repairData.ServiceName} on node " +
-                                    $"{repairData.NodeName}. Repair State: {repair.State}.",
-                                    Token,
-                                    null,
-                                    ConfigSettings.EnableVerboseLogging);
+                                if (!string.IsNullOrWhiteSpace(execData.RepairPolicy.RepairId)
+                                    && execData.RepairPolicy.RepairId.Equals(repairId, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                            LogLevel.Info,
+                                            $"RepairAlreadyInProgress_{serviceProcessName}_{repairData.NodeName}",
+                                            $"There is currently a repair in progress for service {repairData.ServiceName} on node " +
+                                            $"{repairData.NodeName}. Repair State: {repair.State}.",
+                                            Token,
+                                            null,
+                                            ConfigSettings.EnableVerboseLogging);
 
-                            continue;
+                                    return;
+                                }
+                            }
                         }
                     }
                 }

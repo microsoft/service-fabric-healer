@@ -26,10 +26,10 @@ Mitigate :- GetRepairHistory(?repairCount, 01:00:00), _mitigate(?repairCount).
 ## This means that these predicates either succeed (pass true back) or fail (pass false back) as the result of their execution. So, if one fails, then the next rule will be run, etc.
 
 ## Try this.
-_mitigate(?count) :- ?count < 400, RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:15:00, MaxExecutionTime=00:10:00).
+_mitigate(?count) :- ?count < 400, RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:00:05, MaxExecutionTime=00:10:00).
 
 ## Else, try this.
-_mitigate(?count) :- ?count < 4, RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:15:00, MaxExecutionTime=00:30:00).
+_mitigate(?count) :- ?count < 4, RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:00:05, MaxExecutionTime=00:30:00).
 
 ## Else, try this.
-_mitigate(?count) :- ?count < 2, RestartFabricNode(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:45:00, MaxExecutionTime=02:00:00).
+_mitigate(?count) :- ?count < 2, RestartFabricNode(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=0000:05, MaxExecutionTime=02:00:00).

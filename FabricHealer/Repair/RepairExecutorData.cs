@@ -13,6 +13,9 @@ namespace FabricHealer.Repair
     [DataContract]
     public class RepairExecutorData
     {
+        /// <summary>
+        /// Holds relevant repair state and policy information.
+        /// </summary>
         [DataMember]
         public RepairPolicy RepairPolicy
         {

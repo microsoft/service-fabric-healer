@@ -66,6 +66,9 @@ Arguments:
 - MaxWaitTimeForHealthStateOk (TimeSpan), Optional
 - MaxExecutionTime (TimeSpan), Optional
 
+Note: MaxWaitTimeForHealthStateOk is a blocking setting. That is, FH will wait for the specified amount of time before deciding if the repair succeeded or not. This means that if the target's HealthState is not Ok after a repair completes, after the specified wait time, then the repair
+is considered to be unsuccessful. Think of this setting as a blocking Ok HealthState "probationary" check that blocks for the amount of time you specify.
+
 Example: 
 
 ```Mitigate(MetricName="Threads") :- RestartCodePackage(false, 00:10:00, 00:30:00)..```

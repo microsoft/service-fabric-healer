@@ -531,7 +531,8 @@ namespace FHTest
                 Code = repairData.Code,
                 HealthState = repairData.HealthState,
                 ProcessName = repairData.ProcessName,
-                ServiceName = repairData.ServiceName
+                ServiceName = repairData.ServiceName,
+                MaxTimePostRepairHealthCheck = TimeSpan.FromSeconds(1)
             };
 
             var executorData = new RepairExecutorData
@@ -574,7 +575,8 @@ namespace FHTest
                 Code = repairData.Code,
                 HealthState = repairData.HealthState,
                 ProcessName = repairData.ProcessName,
-                ServiceName = repairData.ServiceName
+                ServiceName = repairData.ServiceName,
+                MaxTimePostRepairHealthCheck = TimeSpan.FromSeconds(1)
             };
 
             var executorData = new RepairExecutorData
@@ -633,7 +635,8 @@ namespace FHTest
                 Code = repairData.Code,
                 HealthState = repairData.HealthState,
                 ProcessName = repairData.ProcessName,
-                ServiceName = repairData.ServiceName
+                ServiceName = repairData.ServiceName,
+                MaxTimePostRepairHealthCheck = TimeSpan.FromSeconds(1)
             };
 
             var executorData = new RepairExecutorData
@@ -723,7 +726,8 @@ namespace FHTest
                 {
                     RepairIdPrefix = RepairConstants.InfraTaskIdPrefix,
                     NodeName = repairData.NodeName,
-                    HealthState = repairData.HealthState
+                    HealthState = repairData.HealthState,
+                    MaxTimePostRepairHealthCheck = TimeSpan.FromSeconds(1)
                 };
 
                 var executorData = new RepairExecutorData
@@ -884,7 +888,8 @@ namespace FHTest
                 Code = repairData.Code,
                 HealthState = repairData.HealthState,
                 ProcessName = repairData.ProcessName,
-                ServiceName = repairData.ServiceName
+                ServiceName = repairData.ServiceName,
+                MaxTimePostRepairHealthCheck = TimeSpan.FromSeconds(1)
             };
 
             var executorData = new RepairExecutorData
