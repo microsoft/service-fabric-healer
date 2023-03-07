@@ -22,7 +22,6 @@ using Octokit;
 using System.Fabric.Description;
 using System.Runtime.InteropServices;
 using static FabricHealer.Repair.RepairTaskManager;
-using Newtonsoft.Json.Linq;
 
 namespace FabricHealer
 {

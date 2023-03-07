@@ -6,7 +6,6 @@
 using FabricHealer.Utilities.Telemetry;
 using FabricHealer.Utilities;
 using Guan.Logic;
-using System;
 using System.Fabric.Repair;
 using System.Threading.Tasks;
 

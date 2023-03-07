@@ -12,10 +12,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricHealer.TelemetryLib;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
-using Newtonsoft.Json.Linq;
 
 namespace FabricHealer.Repair
 {
@@ -527,13 +525,14 @@ namespace FabricHealer.Repair
                     predicate = predicate.Remove(predicate.Length - 2);
                 }
 
-                // Get all rules that contain the supplied predicate and "LogRule".
+                // Get all rules that contain the supplied predicate.
                 List<string> flattenedLines = FabricHealerManager.ParseRulesFile(lines);
                 var rulesWithPredicate =
                     flattenedLines.Where(line => !string.IsNullOrWhiteSpace(line) &&
                                                  !line.StartsWith("##") &&
                                                  line.Replace("'", "").Replace("\"", "").Replace(" ", "").Contains(predicate, StringComparison.OrdinalIgnoreCase)).ToList();
 
+                // LogRule specified?
                 if (rulesWithPredicate.Count(
                       lr => lr.Contains(RepairConstants.LogRule, StringComparison.OrdinalIgnoreCase)) == rulesWithPredicate.Count)
                 {
