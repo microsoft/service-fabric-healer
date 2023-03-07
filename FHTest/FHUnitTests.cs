@@ -31,7 +31,6 @@ namespace FHTest
 {
     /// <summary>
     /// NOTE: Run these tests on your machine with a local SF dev cluster running.
-    /// TODO: More code coverage.
     /// </summary>
 
     [TestClass]
