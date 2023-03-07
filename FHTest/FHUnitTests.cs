@@ -47,7 +47,9 @@ namespace FHTest
         private const string FHProxyId = "FabricHealerProxy";
 
         [ClassInitialize]
+#pragma warning disable IDE0060 // Remove unused parameter
         public static async Task TestClassStartUp(TestContext testContext)
+#pragma warning restore IDE0060 // Remove unused parameter
         {
             if (!IsLocalSFRuntimePresent())
             {
