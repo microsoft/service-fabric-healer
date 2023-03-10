@@ -37,7 +37,7 @@ namespace FHTest
     public class FHUnitTests
     {
         private static readonly Uri TestServiceName = new("fabric:/app/service");
-        private static readonly FabricClient fabricClient = new();
+        private static readonly FabricClient fabricClient = FabricHealerManager.FabricClientSingleton;
         private static ICodePackageActivationContext CodePackageContext = null;
         private static StatelessServiceContext TestServiceContext = null;
         private static readonly CancellationToken token = new();
@@ -95,6 +95,29 @@ namespace FHTest
             {
                 TelemetryEnabled = false
             };
+
+            var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync();
+
+            foreach (var repairTask in repairs)
+            {
+                try
+                {
+                    if (repairTask.State == RepairTaskState.Completed)
+                    {
+                        await fabricClient.RepairManager.DeleteRepairTaskAsync(repairTask.TaskId, repairTask.Version);
+                    }
+                    else
+                    {
+                        await FabricRepairTasks.CancelRepairTaskAsync(repairTask, token);
+                    }
+
+                    await Task.Delay(1000);
+                }
+                catch
+                {
+
+                }
+            }
 
             await DeployTestApp42Async();
         }
@@ -285,12 +308,46 @@ namespace FHTest
         [ClassCleanup]
         public static async Task TestClassCleanupAsync()
         {
-            await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync(isClosing: true);
-            await FabricHealerManager.TryClearExistingHealthReportsAsync();
-
             // Ensure FHProxy cleans up its health reports.
             FabricHealerProxy.Instance.Close();
             await RemoveTestApplicationsAsync();
+            
+            // Clean up all test repair tasks.
+            var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync();
+
+            foreach (var repairTask in repairs)
+            {
+                try
+                {
+                    // Don't delete repairs unrelated to FabricHealer.
+                    if (!repairTask.TaskId.StartsWith("FH"))
+                    {
+                        continue;
+                    }
+
+                    if (repairTask.State == RepairTaskState.Completed)
+                    {
+                        await fabricClient.RepairManager.DeleteRepairTaskAsync(
+                                repairTask.TaskId,
+                                repairTask.Version,
+                                TimeSpan.FromMinutes(2),
+                                token);
+                    }
+                    else
+                    {
+                        await FabricRepairTasks.CancelRepairTaskAsync(repairTask, token);
+                    }
+
+                    await Task.Delay(1000);
+                }
+                catch
+                {
+
+                }
+            }
+
+            await FabricHealerManager.TryClearExistingHealthReportsAsync();
+            fabricClient.Dispose();
         }
 
         /* GuanLogic Tests 
@@ -480,7 +537,7 @@ namespace FHTest
                         continue;
                     }
 
-                    await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First(r => r.Action == "RestartFabricNode"));
+                    await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First(r => r.Action == "RestartFabricNode"), token);
                     return;
                 }
 
@@ -705,7 +762,8 @@ namespace FHTest
         [TestMethod]
         public async Task Ensure_MachineRepair_ErrorDetected_RepairJobCreated_AllEscalations()
         {
-            string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "MachineRules.guan");
+            string testRulesFilePath = 
+                Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "MachineRules.guan");
             string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
             FabricHealerManager.CurrentlyExecutingLogicRulesFileName = "MachineRules.guan";
             List<string> repairRules = FabricHealerManager.ParseRulesFile(rules);
@@ -717,8 +775,10 @@ namespace FHTest
                 var repairData = new TelemetryData
                 {
                     EntityType = EntityType.Machine,
-                    Source = "TestMachineWatchdog", // When FH runs, this value comes from a health event (HealthInformation.SourceId).
-                    Property = "InfrastructureError42", // When FH runs, this value comes from a health event (HealthInformation.Property).
+                    // In practice, this fact comes from an SF HealthEvent (HealthInformation.SourceId).
+                    Source = "TestMachineWatchdog",
+                    // In practice, this fact comes from an SF HealthEvent (HealthInformation.Property).
+                    Property = "InfrastructureError42",
                     HealthState = HealthState.Error,
                     NodeName = NodeName
                 };
@@ -735,59 +795,46 @@ namespace FHTest
                 {
                     RepairPolicy = repairData.RepairPolicy
                 };
+                
+                await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
 
-                try
-                {
-                    await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
-                }
-                catch (GuanException ge)
-                {
-                    throw new AssertFailedException(ge.Message, ge);
-                }
-
+                // Allow time for repair job creation.
                 await Task.Delay(5000, token);
+
                 repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
                                         RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Active, null);
 
                 Assert.IsTrue(repairTasks.Any());
-
-                await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First());
+                await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First(), token);
             }
 
             // Verify that all the specified escalations ran. \\
 
-            try
+            // Allow time for repair job cancellation.
+            await Task.Delay(5000, token);
+
+            repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
+                                    RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Completed, null);
+                
+            Assert.IsTrue(repairTasks.Any());
+
+            var testRepairTasks = repairTasks.Where(
+                    r => r.TaskId.StartsWith(RepairConstants.InfraTaskIdPrefix, StringComparison.OrdinalIgnoreCase) 
+                        && r.ResultStatus == RepairTaskResult.Cancelled);
+
+            Assert.IsTrue(testRepairTasks.Any());
+           
+            testRepairTasks =
+                    repairTasks.Where(
+                    r => DateTime.UtcNow.Subtract(r.CompletedTimestamp.Value) < TimeSpan.FromMinutes(2)
+                        && RepairTaskEngine.MatchSubstring(RepairTaskEngine.NodeRepairActionSubstrings, r.Action));
+
+            Assert.IsTrue(testRepairTasks.Count() == escalationCount);
+
+            // Clean up.
+            foreach (RepairTask repair in testRepairTasks)
             {
-                await Task.Delay(5000, token);
-
-                repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                        RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Completed, null);
-                var testRepairTasks = repairTasks.Where(r => r.ResultStatus == RepairTaskResult.Cancelled);
-
-                Assert.IsTrue(testRepairTasks.Any());
-            }
-            catch (FabricException fe)
-            {
-                throw new AssertFailedException(fe.Message, fe);
-            }
-
-            try
-            {
-                var testRepairTasks =
-                    repairTasks.Where(r => DateTime.UtcNow.Subtract(r.CompletedTimestamp.Value) < TimeSpan.FromSeconds(60) &&
-                                           RepairTaskEngine.MatchSubstring(RepairTaskEngine.NodeRepairActionSubstrings, r.Action));
-
-                Assert.IsTrue(testRepairTasks.Count() == escalationCount);
-
-                // Clean up.
-                foreach (RepairTask repair in testRepairTasks)
-                {
-                    await fabricClient.RepairManager.DeleteRepairTaskAsync(repair.TaskId, repair.Version);
-                }
-            }
-            catch (FabricException)
-            {
-                throw;
+                await fabricClient.RepairManager.DeleteRepairTaskAsync(repair.TaskId, repair.Version);
             }
         }
 
@@ -803,64 +850,51 @@ namespace FHTest
             for (int i = 0; i < escalationCount; i++)
             {
                 await FabricHealerProxy.Instance.RepairEntityAsync(WatchDogMachineRepairFacts, token);
+                await FabricHealerManager.MonitorHealthEventsAsync();
 
-                try
-                {
-                    await FabricHealerManager.MonitorHealthEventsAsync();
-                }
-                catch (Exception e)
-                {
-                    throw new AssertFailedException(e.Message, e);
-                }
-
+                // Allow time for repair job creation.
                 await Task.Delay(5000, token);
+
                 repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                        RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Active, null);
+                                      RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Active, null);
 
                 Assert.IsTrue(repairTasks.Any());
 
-                await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First());
+                await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First(), token);
             }
 
             // Verify that all the specified escalations ran. \\
 
-            try
+            // Allow time for repair job cancellation.
+            await Task.Delay(5000, token);
+
+            repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
+                                    RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Completed, null);
+                
+            Assert.IsTrue(repairTasks.Any());
+
+            var testRepairTasks = repairTasks.Where(
+                    r => r.TaskId.StartsWith(RepairConstants.InfraTaskIdPrefix, StringComparison.OrdinalIgnoreCase)
+                    && r.ResultStatus == RepairTaskResult.Cancelled);
+                
+            Assert.IsTrue(testRepairTasks.Any());
+            
+            testRepairTasks =
+                repairTasks.Where(
+                    r => DateTime.UtcNow.Subtract(r.CompletedTimestamp.Value) < TimeSpan.FromMinutes(2) 
+                        && RepairTaskEngine.MatchSubstring(RepairTaskEngine.NodeRepairActionSubstrings, r.Action));
+
+            Assert.IsTrue(testRepairTasks.Count() == escalationCount);
+
+            // Clean up.
+            foreach (RepairTask repair in testRepairTasks)
             {
-                await Task.Delay(5000, token);
-
-                repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                        RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Completed, null);
-                var testRepairTasks = repairTasks.Where(r => r.ResultStatus == RepairTaskResult.Cancelled);
-
-                Assert.IsTrue(testRepairTasks.Any());
-            }
-            catch (FabricException fe)
-            {
-                throw new AssertFailedException(fe.Message, fe);
-            }
-
-            try
-            {
-                var testRepairTasks =
-                    repairTasks.Where(r => DateTime.UtcNow.Subtract(r.CompletedTimestamp.Value) < TimeSpan.FromSeconds(60) &&
-                                           RepairTaskEngine.MatchSubstring(RepairTaskEngine.NodeRepairActionSubstrings, r.Action));
-
-                Assert.IsTrue(testRepairTasks.Count() == escalationCount);
-
-                // Clean up.
-                foreach (RepairTask repair in testRepairTasks)
-                {
-                    await fabricClient.RepairManager.DeleteRepairTaskAsync(repair.TaskId, repair.Version);
-                }
-            }
-            catch (FabricException)
-            {
-                throw;
+                await fabricClient.RepairManager.DeleteRepairTaskAsync(repair.TaskId, repair.Version);
             }
         }
 
         [TestMethod]
-        public async Task Test_MaxExecutionTime_Cancels_Repair()
+        public async Task MaxExecutionTime_Canceled_Repair()
         {
             string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed_maxexecution.guan");
             string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
@@ -878,17 +912,17 @@ namespace FHTest
                 PartitionId = default
             };
 
-            string repairId = $"Test42_{SupportedErrorCodes.AppErrorTooManyThreads}_{Guid.NewGuid()}";
+            TimeSpan maxExecutionTime = TimeSpan.FromSeconds(2);
             repairData.RepairPolicy = new RepairPolicy
             {
-                RepairId = repairId,
                 AppName = repairData.ApplicationName,
                 RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
-                MaxExecutionTime = TimeSpan.FromSeconds(2),
+                MaxExecutionTime = maxExecutionTime,
                 NodeName = repairData.NodeName,
                 Code = repairData.Code,
                 HealthState = repairData.HealthState,
                 ProcessName = repairData.ProcessName,
+                RepairId = "_Node_0_test0_service0_ThreadCount",
                 ServiceName = repairData.ServiceName,
                 MaxTimePostRepairHealthCheck = TimeSpan.FromSeconds(1)
             };
@@ -900,33 +934,42 @@ namespace FHTest
 
             try
             {
-                await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
+                // Don't block.
+                _ = TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
             }
-            catch (GuanException ge)
+            catch (GuanException)
             {
-                throw new AssertFailedException(ge.Message, ge);
+                throw;
             }
 
             // Verify that the repair task was Cancelled within max execution time.
-            try
-            {
-                await Task.Delay(TimeSpan.FromSeconds(7));
+            RepairTaskList repairTasks = null;
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            bool isCanceledWithinMaxExecWindow = false;
 
-                var repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
-                                            RepairConstants.FHTaskIdPrefix, RepairTaskStateFilter.Completed, null);
-                var testRepairTasks =
-                    repairTasks.OrderByDescending(r => r.CreatedTimestamp)
-                               .Where(r => r.ExecutorData != null && JsonSerializationUtility.TryDeserializeObject(r.ExecutorData, out RepairExecutorData exData)
-                                        && exData.RepairPolicy.RepairId.Equals(repairId)
-                                        && r.ResultStatus == RepairTaskResult.Cancelled
-                                        && r.CompletedTimestamp.Value.Subtract(r.ExecutingTimestamp.Value) <= exData.RepairPolicy.MaxExecutionTime);
-
-                Assert.IsTrue(testRepairTasks != null && testRepairTasks.Any());
-            }
-            catch (FabricException fe)
+            while (stopwatch.Elapsed < TimeSpan.FromSeconds(15))
             {
-                throw new AssertFailedException(fe.Message, fe);
+                repairTasks =
+                   await fabricClient.RepairManager.GetRepairTaskListAsync();
+                
+                Assert.IsNotNull(repairTasks);
+
+                if (repairTasks.Any(
+                        r => !string.IsNullOrWhiteSpace(r.ExecutorData) 
+                          && JsonSerializationUtility.TrySerializeObject(executorData, out string exdata) 
+                          && r.ExecutorData.Equals(exdata)
+                          && r.State == RepairTaskState.Completed
+                          && r.ResultStatus == RepairTaskResult.Cancelled
+                          && r.CompletedTimestamp.Value.Subtract(r.ExecutingTimestamp.Value) <= maxExecutionTime))
+                {
+                    isCanceledWithinMaxExecWindow = true;
+                    break;
+                }
+
+                await Task.Delay(1000, token);
             }
+
+            Assert.IsTrue(isCanceledWithinMaxExecWindow);
         }
 
         /* private Helpers */

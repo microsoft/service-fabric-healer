@@ -33,7 +33,7 @@ namespace FabricHealer.Repair
         /// <param name="executorData"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        public static async Task<RepairTask> CreateFabricHealerRepairTask(RepairExecutorData executorData, CancellationToken token)
+        public static async Task<RepairTask> CreateFabricHealerRepairTaskAsync(RepairExecutorData executorData, CancellationToken token)
         {
             if (executorData == null)
             {
@@ -137,13 +137,20 @@ namespace FabricHealer.Repair
                                                   CancellationToken cancellationToken,
                                                   string executor = null)
         {
-            var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                                        taskIdPrefix,
-                                        RepairTaskStateFilter.Active,
-                                        executor,
-                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                        cancellationToken);
-            return repairTasks;
+            try
+            {
+                var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                                            taskIdPrefix,
+                                            RepairTaskStateFilter.Active,
+                                            executor,
+                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                            cancellationToken);
+                return repairTasks;
+            }
+            catch (Exception e) when (e is FabricException || e is TaskCanceledException)
+            {
+                return null;
+            }
         }
 
         /// <summary>
@@ -232,7 +239,7 @@ namespace FabricHealer.Repair
                         return true;
                     }
                 }
-                // InfrastructureService is executor. The related Repair Task's Description field is always the custom (internal) FH Repair ID.
+                // InfrastructureService is executor. The related Repair Task's Description field is always the custom (public) FH Repair ID.
                 else
                 {
                     if (!string.IsNullOrWhiteSpace(repairData.RepairPolicy.InfrastructureRepairName) &&
@@ -447,6 +454,7 @@ namespace FabricHealer.Repair
             return false;
         }
 
+        // TOTHINK..
         internal static async Task<bool> CheckForActiveStartFHRepairJob(CancellationToken token)
         {
             RepairTaskList repairTasksInProgress =
@@ -461,6 +469,13 @@ namespace FabricHealer.Repair
             {
                 foreach (RepairTask repair in repairTasksInProgress)
                 {
+                    // Cancel stop repair(s).
+                    if (repair.Action == RepairConstants.FabricHealerStopAction)
+                    {
+                        await FabricRepairTasks.CancelRepairTaskAsync(repair, token);
+                        continue;
+                    }
+
                     // This means FH should resume scheduling/executing repairs.
                     if (repair.Action == RepairConstants.FabricHealerStartAction)
                     {

@@ -40,8 +40,20 @@ namespace FabricHealer.Repair
         /// <param name="repairTask"><see cref="RepairTask"/> to be cancelled</param>
         /// <returns></returns>
         /// <exception cref="FabricException">Throws FabricException if it can't complete the task.</exception>
-        public static async Task CancelRepairTaskAsync(RepairTask repairTask)
+        public static async Task CancelRepairTaskAsync(RepairTask repairTask, CancellationToken token)
         {
+            if (JsonSerializationUtility.TryDeserializeObject(repairTask.ExecutorData, out RepairExecutorData execData))
+            {
+                var repairs = 
+                    await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
+                            execData.RepairPolicy.RepairIdPrefix, token);
+
+                if (repairs != null && repairs.Count > 0)
+                {
+                    repairTask = repairs[0];
+                }
+            }
+
             switch (repairTask.State)
             {
                 case RepairTaskState.Restoring:
@@ -210,7 +222,7 @@ namespace FabricHealer.Repair
                         }
                     }
 
-                    repairTask = await RepairTaskEngine.CreateFabricHealerRepairTask(executorData, token);
+                    repairTask = await RepairTaskEngine.CreateFabricHealerRepairTaskAsync(executorData, token);
                     break;
 
                 default:

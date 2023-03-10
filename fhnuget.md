@@ -1,4 +1,4 @@
-## FabricHealer 1.1.20
+## FabricHealer 1.2.0
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
 
 FabricHealer (FH) is a .NET 6 Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric

@@ -1,10 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.1.20" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.2.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- FabricHealerManager Settings  -->
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
     <Parameter Name="EnableETW" DefaultValue="false" />
     <Parameter Name="HealthCheckIntervalInSeconds" DefaultValue="60" />
+    <!-- If set to true, then FH will emit log events containing the full text of the logic rule with the currently executing external repair predicate.
+         This is extremely useful for both debugging and auditing repair rules. -->
     <Parameter Name="EnableLogicRuleTracing" DefaultValue="true" />
     <Parameter Name="EnableTelemetry" DefaultValue="false" />
     <Parameter Name="EnableVerboseLogging" DefaultValue="true" />
@@ -16,7 +18,8 @@
     <Parameter Name="EnableFabricNodeRepair" DefaultValue="false" />
     <Parameter Name="EnableMachineRepair" DefaultValue="false" />
     <Parameter Name="EnableReplicaRepair" DefaultValue="false" />
-    <!-- This means FH will apply some mitigation (restarts) to all instances of a target service on a node-by-node basis only (rolling). -->
+    <!-- This means FH will apply some mitigation (restarts) to all instances of a target service on a node-by-node basis only (rolling).
+         This only makes sense when you deploy FH to multiple nodes. -->
     <Parameter Name="EnableRollingServiceRestarts" DefaultValue="true" />
     <Parameter Name="EnableSystemServiceRepair" DefaultValue="false" />
     <!-- Logic rule files -->
@@ -31,7 +34,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.1.20" />
+    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.2.0" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

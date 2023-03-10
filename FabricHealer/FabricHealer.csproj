@@ -12,8 +12,8 @@
          <RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 	<Product>FabricHealer</Product>
-	<Version>1.1.20</Version>
-    <FileVersion>1.1.20</FileVersion>
+	<Version>1.2.0</Version>
+    <FileVersion>1.2.0</FileVersion>
     <StartupObject>FabricHealer.Program</StartupObject>
     <Platforms>x64</Platforms>
   </PropertyGroup>
