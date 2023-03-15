@@ -56,7 +56,21 @@ namespace FabricHealer.Repair
             }
             catch (Exception e) when (e is ArgumentException || e is FabricException || e is TimeoutException)
             {
-                Logger.LogError($"Exception getting UDs for application upgrade in progress for {appName.OriginalString}:{Environment.NewLine}{e.Message}");
+                Logger.LogWarning($"Handled Exception getting UDs for application upgrade in progress for " +
+                                  $"{appName.OriginalString}:{Environment.NewLine}{e.Message}");
+                return null;
+            }
+            catch (Exception e) // This call should not crash FO. Log the error, fix the bug, if any.
+            {
+                Logger.LogError($"Unhandled Exception getting UDs for application upgrade in progress for " +
+                $"{appName.OriginalString}:{e.Message}");
+
+                if (e is OutOfMemoryException)
+                {
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                }
+
                 return null;
             }
         }
@@ -88,6 +102,19 @@ namespace FabricHealer.Repair
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException)
             {
+                Logger.LogWarning($"Handled Exception in GetCurrentUDWhereFabricUpgradeInProgressAsync: {e.Message}");
+                return null;
+            }
+            catch (Exception e) // This call should not crash FO. Log the error, fix the bug, if any.
+            {
+                Logger.LogError($"Unhandled Exception in GetCurrentUDWhereFabricUpgradeInProgressAsync: {e.Message}");
+                
+                if (e is OutOfMemoryException)
+                {
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                }
+
                 return null;
             }
         }
@@ -99,58 +126,78 @@ namespace FabricHealer.Repair
         /// <returns>true if tenant update is in progress, false otherwise</returns>
         internal static async Task<bool> IsAzureJobInProgressAsync(string nodeName, CancellationToken token)
         {
-            var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                                        RepairConstants.AzureTaskIdPrefix,
-                                        RepairTaskStateFilter.Active,
-                                        null,
-                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                        token);
-
-            bool isAzureTenantRepairInProgress = repairTasks?.Count > 0;
-
-            if (!isAzureTenantRepairInProgress)
+            try
             {
+                var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
+                                            RepairConstants.AzureTaskIdPrefix,
+                                            RepairTaskStateFilter.Active,
+                                            null,
+                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                            token);
+
+                bool isAzureTenantRepairInProgress = repairTasks?.Count > 0;
+
+                if (!isAzureTenantRepairInProgress)
+                {
+                    return false;
+                }
+
+                foreach (var repair in repairTasks)
+                {
+                    // Job state is at least Approved.
+                    if (repair.Impact is NodeRepairImpactDescription impact)
+                    {
+                        if (!impact.ImpactedNodes.Any(n => n.NodeName == nodeName))
+                        {
+                            continue;
+                        }
+
+                        string message = $"Azure Platform or Tenant Update in progress for {nodeName}. Will not attempt repairs at this time.";
+
+                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                $"AzurePlatformOrTenantUpdateInProgress_{nodeName}",
+                                message,
+                                token);
+
+                        return true;
+                    }
+                    // Job state is Created/Claimed if we get here (there is no Impact established yet).
+                    else if (repair.Target is NodeRepairTargetDescription target)
+                    {
+                        if (!target.Nodes.Any(n => n == nodeName))
+                        {
+                            continue;
+                        }
+
+                        string message = $"Azure Platform or Tenant Update in progress for {nodeName}. Will not attempt repairs at this time.";
+
+                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                $"AzurePlatformOrTenantUpdateInProgress_{nodeName}",
+                                message,
+                                token);
+
+                        return true;
+                    }
+                }
+            }
+            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            {
+                Logger.LogWarning($"Handled Exception in IsAzureJobInProgressAsync: {e.Message}");
                 return false;
             }
-
-            foreach (var repair in repairTasks)
+            catch (Exception e) // This call should not crash FO. Log the error, fix the bug, if any.
             {
-                // Job state is at least Approved.
-                if (repair.Impact is NodeRepairImpactDescription impact)
+                Logger.LogError($"Unhandled Exception in IsAzureJobInProgressAsync: {e.Message}");
+
+                if (e is OutOfMemoryException)
                 {
-                    if (!impact.ImpactedNodes.Any(n => n.NodeName == nodeName))
-                    {
-                        continue;
-                    }
-
-                    string message = $"Azure Platform or Tenant Update in progress for {nodeName}. Will not attempt repairs at this time.";
-
-                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            $"AzurePlatformOrTenantUpdateInProgress_{nodeName}",
-                            message,
-                            token);
-
-                    return true;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
-                // Job state is Created/Claimed if we get here (there is no Impact established yet).
-                else if (repair.Target is NodeRepairTargetDescription target)
-                {
-                    if (!target.Nodes.Any(n => n == nodeName))
-                    {
-                        continue;
-                    }
 
-                    string message = $"Azure Platform or Tenant Update in progress for {nodeName}. Will not attempt repairs at this time.";
-
-                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                            $"AzurePlatformOrTenantUpdateInProgress_{nodeName}",
-                            message,
-                            token);
-
-                    return true;
-                }
+                return false;
             }
 
             return false;

@@ -45,10 +45,10 @@ namespace FabricHealer.Repair
                 await FabricHealerManager.RandomWaitAsync(token);
             }
 
-           // Rolling Service Restarts.
-           if (executorData.RepairPolicy.RepairAction == RepairActionType.RestartCodePackage
+            // Rolling Service Restarts.
+            if (executorData.RepairPolicy.RepairAction == RepairActionType.RestartCodePackage
                || executorData.RepairPolicy.RepairAction == RepairActionType.RestartReplica)
-           {
+            {
                 if ((FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
                      && FabricHealerManager.ConfigSettings.EnableRollingServiceRestarts)
                 {

@@ -90,14 +90,41 @@ namespace FabricHealer.Repair.Guan
                              _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
                         });
 
-                        // Try to execute repair (FH executor does this work and manages repair state).
-                        bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                        bool success = false;
+
+                        try
+                        {
+                            success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                 () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
                                                         repairTask,
                                                         RepairData,
                                                         linkedCTS.Token),
                                                 linkedCTS.Token);
-                        
+                        }
+                        catch (Exception e)
+                        {
+                            if (e is OutOfMemoryException)
+                            {
+                                // Terminate now.
+                                Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                            }
+
+                            if (e is not TaskCanceledException && e is not OperationCanceledException)
+                            {
+                                string message = $"Failed to execute {RepairData.RepairPolicy.RepairAction} for repair {RepairData.RepairPolicy.RepairId}: {e.Message}";
+#if DEBUG
+                                message += $"{Environment.NewLine}{e}";
+#endif
+                                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                        LogLevel.Info,
+                                        "RestartCodePackagePredicateType::HandledException",
+                                        message,
+                                        FabricHealerManager.Token);
+                            }
+
+                            success = false;
+                        }
+
                         // Best effort FH repair job cleanup retry.
                         if (!success && linkedCTS.IsCancellationRequested)
                         {

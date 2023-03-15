@@ -233,6 +233,12 @@ namespace FabricHealer.Utilities.Telemetry
             {
                 // An Exception during telemetry data submission should never take down CO process. Log it. Don't throw it. Fix it.
                 logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync: {e.Message}");
+
+                if (e is OutOfMemoryException)
+                {
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                }
             }
 
             if (retries < MaxRetries)

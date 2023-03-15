@@ -94,7 +94,7 @@ namespace FabricHealer.Repair
                     }
                     catch (InvalidOperationException)
                     {
-                        //..
+                        // RM throws IOE if state is already Completed or in some state that is not supported for state transition. Ignore.
                     }
                     break;
 
@@ -141,8 +141,14 @@ namespace FabricHealer.Repair
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "FabricRepairTasks.CompleteCustomActionRepairJobAsync",
-                        $"Failed to Complete Repair Job {repairTask.TaskId} with unhandled exception:{Environment.NewLine}{e}",
+                        $"Failed to Complete Repair Job {repairTask.TaskId} with unhandled exception:{Environment.NewLine}{e.Message}",
                         token);
+
+                if (e is OutOfMemoryException)
+                {
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                }
 
                 throw;
             }

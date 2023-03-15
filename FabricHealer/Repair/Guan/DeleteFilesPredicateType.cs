@@ -10,6 +10,7 @@ using FabricHealer.Utilities.Telemetry;
 using System.Threading.Tasks;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Fabric;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -134,20 +135,46 @@ namespace FabricHealer.Repair.Guan
                                                   RepairData,
                                                   FabricHealerManager.Token),
                                            FabricHealerManager.Token);
-
                 if (repairTask == null)
                 {
                     return false;
                 }
 
+                bool success = false;
+
                 // Try to execute repair (FH executor does this work and manages repair state through RM, as always).
-                bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                try
+                {
+                     success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
                                                 repairTask,
                                                 RepairData,
                                                 FabricHealerManager.Token),
-                                         FabricHealerManager.Token);
-                return success;
+                                            FabricHealerManager.Token);
+                }
+                catch (Exception e)
+                {
+                    if (e is OutOfMemoryException)
+                    {
+                        // Terminate now.
+                        Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                    }
+
+                    if (e is not TaskCanceledException && e is not OperationCanceledException)
+                    {
+                        string message = $"Failed to execute {RepairData.RepairPolicy.RepairAction} for repair {RepairData.RepairPolicy.RepairId}: {e.Message}";
+#if DEBUG
+                        message += $"{Environment.NewLine}{e}";
+#endif
+                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                "DeleteFilesPredicateType::HandledException",
+                                message,
+                                FabricHealerManager.Token);
+                    }
+                }
+
+                return false;
             }
         }
 

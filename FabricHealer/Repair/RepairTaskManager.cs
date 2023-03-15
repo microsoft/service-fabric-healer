@@ -392,7 +392,7 @@ namespace FabricHealer.Repair
             string actionMessage =
                $"Attempting to restart Service Fabric system process {repairData.ProcessName}.";
 
-           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
                     "RepairExecutor.RestartSystemServiceProcessAsync::Start",
                     actionMessage,
@@ -409,7 +409,7 @@ namespace FabricHealer.Repair
 
             string statusSuccess = $"Successfully restarted Service Fabric system service process {repairData.ProcessName} on node {repairData.NodeName}.";
 
-           await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
                     "RepairExecutor.RestartSystemServiceProcessAsync::Success",
                     statusSuccess,

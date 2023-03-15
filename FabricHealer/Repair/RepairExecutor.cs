@@ -368,6 +368,12 @@ namespace FabricHealer.Repair
             {
                 FabricHealerManager.RepairHistory.FailedRepairs++;
 
+                if (e is OutOfMemoryException)
+                {
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                }
+
                 string err =
                    $"Unhandled Exception in RestartSystemServiceProcessAsync: Unable to restart process {repairData.ProcessName} " +
                    $"on node {repairData.NodeName}.{Environment.NewLine}" +

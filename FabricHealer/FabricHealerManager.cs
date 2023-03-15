@@ -350,10 +350,14 @@ namespace FabricHealer
                                 }
                             }
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             // Telemetry is non-critical and should not take down FH.
-                            // TelemetryLib will log exception details to file in top level FH log folder.
+                            if (ex is OutOfMemoryException)
+                            {
+                                // Terminate now.
+                                Environment.FailFast(string.Format("Out of Memory: {0}", ex.Message));
+                            }
                         }
                     }
 
@@ -428,9 +432,15 @@ namespace FabricHealer
                         string filepath = Path.Combine(RepairLogger.LogFolderBasePath, $"fh_critical_error_telemetry.log");
                         _ = telemetryEvents.EmitFabricHealerCriticalErrorEvent(fhData, filepath);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // Telemetry is non-critical and should not take down FH.
+                        RepairLogger.LogError($"Unable to send operational telemetry: {ex.Message}");
+
+                        if (ex is OutOfMemoryException)
+                        {
+                            Environment.FailFast(string.Format("Out of Memory: {0}", ex.Message));
+                        }
                     }
                 }
 
@@ -834,6 +844,12 @@ namespace FabricHealer
                         null);
 
                 RepairLogger.LogError($"Unhandled exception in MonitorHealthEventsAsync:{Environment.NewLine}{e}");
+
+                if (e is OutOfMemoryException)
+                {
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                }
 
                 // Fix the bug(s).
                 throw;
@@ -1517,7 +1533,7 @@ namespace FabricHealer
                     nodeHealth.HealthEvents.Where(
                         s => s.HealthInformation.HealthState == HealthState.Warning || s.HealthInformation.HealthState == HealthState.Error);
 
-                // Ensure a node in Error is not in error due to being down as part of a cluster upgrade or infra update in its UD.
+                // Ensure a node in Error is not in Error due to being Down as part of a cluster upgrade or infra update in its UD.
                 if (node.AggregatedHealthState == HealthState.Error && nodeStatus == NodeStatus.Down)
                 {
                     // Cluster Upgrade in target node's UD?
@@ -1526,12 +1542,12 @@ namespace FabricHealer
                     if (!string.IsNullOrWhiteSpace(udInClusterUpgrade) && udInClusterUpgrade == nodeUD)
                     {
                         string telemetryDescription =
-                            $"Cluster is currently upgrading in UD \"{udInClusterUpgrade}\", which is the UD for node {node.NodeName}, which is down. " +
-                            "Will not schedule another machine repair at this time.";
+                            $"Cluster is currently upgrading in UD \"{udInClusterUpgrade}\", which is the UD for node {node.NodeName}. " +
+                            "Will not schedule a machine repair at this time.";
 
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
-                                $"{node.NodeName}_Down_ClusterUpgrade({nodeUD})",
+                                $"{node.NodeName}_Down_ClusterUpgrade",
                                 telemetryDescription,
                                 Token,
                                 null);
@@ -1543,11 +1559,11 @@ namespace FabricHealer
                     if (await UpgradeChecker.IsAzureJobInProgressAsync(node.NodeName, Token))
                     {
                         string telemetryDescription =
-                            $"{node.NodeName} is down due to Infra repair job (UD = {nodeUD}). Will not schedule another machine repair at this time.";
+                            $"{node.NodeName} is down due to an Azure Infra repair job (UD = {nodeUD}). Will not schedule a machine repair at this time.";
 
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
-                                $"{node.NodeName}_Down_AzureJobUpdate",
+                                $"{node.NodeName}_Down_AzureInfra",
                                 telemetryDescription,
                                 Token,
                                 null,

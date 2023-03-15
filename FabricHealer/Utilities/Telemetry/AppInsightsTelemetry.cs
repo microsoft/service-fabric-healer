@@ -137,7 +137,14 @@ namespace FabricHealer.Utilities.Telemetry
             }
             catch (Exception e)
             {
-                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
+                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e.Message}");
+
+                if (e is OutOfMemoryException)
+                {
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                }
+
                 throw;
             }
 

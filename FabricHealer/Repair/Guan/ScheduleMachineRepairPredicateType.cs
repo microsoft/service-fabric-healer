@@ -95,12 +95,41 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                // Attempt to schedule an Infrastructure Repair Job (where IS is the executor).
-                bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                bool success = false;
+
+                try
+                {
+                    // Attempt to schedule an Infrastructure Repair Job (where IS is the executor).
+                    success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                         () => RepairTaskManager.ScheduleInfrastructureRepairTask(
                                                 RepairData,
                                                 FabricHealerManager.Token),
                                         FabricHealerManager.Token);
+                }
+                catch (Exception e)
+                {
+                    if (e is OutOfMemoryException)
+                    {
+                        // Terminate now.
+                        Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                    }
+
+                    if (e is not TaskCanceledException && e is not OperationCanceledException)
+                    {
+                        string message = $"Failed to schedule repair {RepairData.RepairPolicy.RepairId}::{RepairData.RepairPolicy.InfrastructureRepairName}: {e.Message}";
+#if DEBUG
+                        message += $"{Environment.NewLine}{e}";
+#endif
+                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                "RestartReplicaPredicateType::HandledException",
+                                message,
+                                FabricHealerManager.Token);
+                    }
+
+                    success = false;
+                }
+
                 return success;
             }
         }
