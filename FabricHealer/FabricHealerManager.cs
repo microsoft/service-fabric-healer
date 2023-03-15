@@ -22,6 +22,7 @@ using Octokit;
 using System.Fabric.Description;
 using System.Runtime.InteropServices;
 using static FabricHealer.Repair.RepairTaskManager;
+using Newtonsoft.Json.Linq;
 
 namespace FabricHealer
 {
@@ -34,6 +35,7 @@ namespace FabricHealer
         private static FabricHealerManager fhSingleton;
         private static FabricClient fabricClient;
         private bool disposedValue;
+        private bool detectedStopJob;
         private readonly Uri systemAppUri = new(RepairConstants.SystemAppName);
         private readonly Uri repairManagerServiceUri = new(RepairConstants.RepairManagerAppName);
         private readonly FabricHealthReporter healthReporter;
@@ -326,7 +328,49 @@ namespace FabricHealer
                     // E.g., Stop-ServiceFabricRepairTask -TaskId FabricClient/9baa4d57-45ae-4540-ba45-697b75066424
                     if (!await RepairTaskEngine.CheckForActiveStopFHRepairJob(Token))
                     {
+                        // Existing FabricHealer.Stop repair job was cancelled.
+                        if (detectedStopJob)
+                        {
+                            detectedStopJob = false;
+                            string message = $"FabricHealer.Stop repair task has been canceled. FabricHealer will start processing again.";
+
+                            // Using the same Source/Property string values as the related FabricHealer.Stop service healh report
+                            // will overwrite the existing Warning health report with a new one with HealthState.Ok (LogLevel.Info).
+                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                RepairConstants.FabricHealer,
+                                message,
+                                Token,
+                                null,
+                                ConfigSettings.EnableVerboseLogging,
+                                TimeSpan.FromMinutes(1),
+                                "FH::Operational::Stop",
+                                EntityType.Service);
+                        }
+
                         await MonitorHealthEventsAsync();
+                    }
+                    else
+                    {
+                        // Don't send this information each time the loop runs. Send it only once.
+                        if (!detectedStopJob)
+                        {
+                            string message = $"Detected active FabricHealer.Stop repair task. FabricHealer will stop processing until this repair task is canceled.";
+                            
+                            // This will put FabricHealer service entity into Warning state, so you don't forget about this.
+                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                    LogLevel.Warning,
+                                    RepairConstants.FabricHealer,
+                                    message,
+                                    Token,
+                                    null,
+                                    ConfigSettings.EnableVerboseLogging,
+                                    TimeSpan.MaxValue,
+                                    "FH::Operational::Stop",
+                                    EntityType.Service);
+
+                            detectedStopJob = true;
+                        }
                     }
 
                     // Identity-agnostic public operational telemetry sent to Service Fabric team (only) for use in

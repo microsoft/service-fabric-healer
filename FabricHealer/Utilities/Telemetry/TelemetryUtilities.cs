@@ -65,9 +65,12 @@ namespace FabricHealer.Utilities.Telemetry
         {
             bool isTelemetryDataEvent = string.IsNullOrWhiteSpace(description) && telemetryData != null;
 
-            if (!string.IsNullOrWhiteSpace(source) && source != RepairConstants.FabricHealer)
+            if (!string.IsNullOrWhiteSpace(source))
             {
-                source = source.Insert(0, $"{RepairConstants.FabricHealer}.");
+                if (!source.Contains(RepairConstants.FabricHealer, StringComparison.OrdinalIgnoreCase))
+                {
+                    source = source.Insert(0, $"{RepairConstants.FabricHealer}.");
+                }
             }
             else
             {
@@ -88,6 +91,7 @@ namespace FabricHealer.Utilities.Telemetry
                 var healthReport = new HealthReport
                 {
                     AppName = entityType == EntityType.Application ? new Uri($"fabric:/{RepairConstants.FabricHealer}") : null,
+                    ServiceName = entityType == EntityType.Service ? FabricHealerManager.ServiceContext.ServiceName : null,
                     Code = telemetryData?.RepairPolicy?.RepairId,
                     HealthMessage = description,
                     NodeName = serviceContext.NodeContext.NodeName,

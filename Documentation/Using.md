@@ -217,6 +217,29 @@ $applicationParameterMap.Add("HealthCheckIntervalInSeconds","90")
 # health for this type of "upgrade" (no code is being updated, process is not going to go down).
 Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationTypeVersion $appVersion -ApplicationParameter $applicationParameterMap -UnmonitoredAuto
 
-```
+``` 
+
+### Stopping FabricHealer processing with a Repair Job 
+
+You can stop FabricHealer from doing any work by creating a custom repair task (CustomAction = FabricHealer.Stop).
+You can then re-enable FabricHealer by canceling said repair task. Note that that this does not stop the FabricHealer service process. 
+It just prevents FabricHealer from doing any work. FabricHealer service entity will go into Warning so that you don't forget about this.
+Warning health state has no real impact on the service nor the cluster.
+
+Example (you only need to specify a single node name): 
+
+To stop FabricHealer processing: 
+
+``` PowerShell
+Start-ServiceFabricRepairTask -NodeNames _Node_0 -CustomAction FabricHealer.Stop
+``` 
+
+To restart FabricHealer processing, Stop the repair task, specifying the TaskId for the FabricHealer.Stop repair task you created above: 
+
+``` PowerShell
+# the specified TaskId below is just an example of what the default TaskId pattern will look like (FabricClient/[guid])
+Stop-ServiceFabricRepairTask -TaskId FabricClient/b58c07ae-82fb-4c45-9486-0a1400f34a46
+``` 
+
 
 
