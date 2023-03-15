@@ -3,7 +3,10 @@
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
     <version>1.0.2</version>
-	<releaseNotes></releaseNotes>
+	<releaseNotes>
+	- FabricHealerProxy now ships as a .NET 6 library and requires SF runtime versions 9 and higher.
+	- Code improvements
+	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
