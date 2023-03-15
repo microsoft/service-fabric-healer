@@ -182,4 +182,41 @@ that problem will surface to you well before LogRule would run (as a GuanExcepti
 
 Please look through the [existing rules files](/FabricHealer/PackageRoot/Config/LogicRules) for real examples that have been tested. Simply modify the rules to meet your needs (like supplying your target app names, for example, and adjusting the simple logical constraints, if need be). 
 
+### Application Parameter-Only Application Upgrades 
+
+Most of the important settings employed by FabricHealer our housed in ApplicationManifest.xml as Application Parameters. You can change these settings without redeploying FabricHealer by conducting parameter-only, versionless application upgrades. 
+
+For example: 
+
+``` PowerShell
+
+$appName = "fabric:/FabricHealer"
+$appVersion = "1.2.0"
+
+$myApplication = Get-ServiceFabricApplication -ApplicationName $appName
+$appParamCollection = $myApplication.ApplicationParameters
+
+# Fill the map with *existing* app parameter settings.
+$applicationParameterMap = @{}
+
+foreach ($pair in $appParamCollection)
+{
+    $applicationParameterMap.Add($pair.Name, $pair.Value);
+}
+
+# If replacing *existing* app parameter(s), remove them  from the list of current params first.
+if ($applicationParameterMap.ContainsKey("HealthCheckIntervalInSeconds"))
+{
+    $applicationParameterMap.Remove("HealthCheckIntervalInSeconds");
+}
+
+# Add the updated target app parameter(s) to the collection.
+$applicationParameterMap.Add("HealthCheckIntervalInSeconds","90")
+
+# UnmonitoredAuto is fine here. FH manages these settings changes internally and there is no impact on service 
+# health for this type of "upgrade" (no code is being updated, process is not going to go down).
+Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationTypeVersion $appVersion -ApplicationParameter $applicationParameterMap -UnmonitoredAuto
+
+```
+
 
