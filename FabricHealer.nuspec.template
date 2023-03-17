@@ -11,7 +11,7 @@
 - Simple yet effective debugging support (rule logging) for Guan logic rules.
 - Bug fixes.
 - Several code improvements and enhancements.
-- Updated documentation and samples.
+- Updated documentation and samples. Please read through it!
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

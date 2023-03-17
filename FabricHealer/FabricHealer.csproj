@@ -3,6 +3,7 @@
 	<RootNamespace>FabricHealer</RootNamespace>
 	<AssemblyName>FabricHealer</AssemblyName>
 	<TargetFramework>net6.0</TargetFramework>
+	<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
 	<Nullable>disable</Nullable>
 	<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
     <OutputType>Exe</OutputType>
