@@ -6,9 +6,9 @@ $Configuration="Release"
 try {
     Push-Location $scriptPath
 
-    Remove-Item $scriptPath\FabricHealerProxy\bin\release\netstandard2.0\ -Recurse -Force -EA SilentlyContinue
+    Remove-Item $scriptPath\FabricHealerProxy\bin\release\net6.0\ -Recurse -Force -EA SilentlyContinue
 
-    dotnet publish $scriptPath\FabricHealerProxy\FabricHealerProxy.csproj -o bin\release\netstandard2.0 -c $Configuration
+    dotnet publish $scriptPath\FabricHealerProxy\FabricHealerProxy.csproj -o bin\release\net6.0 -c $Configuration
 }
 finally {
     Pop-Location

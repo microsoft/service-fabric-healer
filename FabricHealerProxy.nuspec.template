@@ -20,10 +20,11 @@
     </contentFiles>
     <dependencies>
 		<group targetFramework="net6.0">
+			<dependency id="Newtonsoft.Json" version="13.0.3" />
 			<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
+			<dependency id="NLog" version="5.1.2" />
+			<dependency id="Polly" version="7.2.3" />
 		</group>
-		<dependency id="Newtonsoft.Json" version="13.0.2" />
-		<dependency id="Polly" version="7.2.3" />
     </dependencies>
     <projectUrl>https://github.com/microsoft/service-fabric-healer/tree/main/FabricHealerProxy</projectUrl>
     <tags>FabricHealerProxy service-fabric net6 csharp</tags>

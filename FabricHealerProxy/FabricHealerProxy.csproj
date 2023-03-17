@@ -2,13 +2,13 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
 	<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
-    <Platforms>x64</Platforms>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
-		<PackageReference Include="NLog" Version="5.1.1" />
+		<PackageReference Include="NLog" Version="5.1.2" />
 		<PackageReference Include="Polly" Version="7.2.3" />
 	</ItemGroup>
 </Project>

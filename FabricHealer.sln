@@ -25,8 +25,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Documentation\OperationalTelemetry.md = Documentation\OperationalTelemetry.md
 		README.md = README.md
 		Documentation\Deployment\service-fabric-healer.json = Documentation\Deployment\service-fabric-healer.json
-		Documentation\Using.md = Documentation\Using.md
 		Documentation\Deployment\service-fabric-healer.v1.2.0.parameters.json = Documentation\Deployment\service-fabric-healer.v1.2.0.parameters.json
+		Documentation\Using.md = Documentation\Using.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FHTest", "FHTest\FHTest.csproj", "{8D9712BF-C026-4A36-B6D1-6345137D3B6F}"
@@ -49,16 +49,16 @@ Global
 		{9A19103F-16F7-4668-BE54-9A1E7A4F7556}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9A19103F-16F7-4668-BE54-9A1E7A4F7556}.Debug|x64.ActiveCfg = Debug|x64
 		{9A19103F-16F7-4668-BE54-9A1E7A4F7556}.Debug|x64.Build.0 = Debug|x64
-		{9A19103F-16F7-4668-BE54-9A1E7A4F7556}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9A19103F-16F7-4668-BE54-9A1E7A4F7556}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9A19103F-16F7-4668-BE54-9A1E7A4F7556}.Release|Any CPU.ActiveCfg = Release|x64
+		{9A19103F-16F7-4668-BE54-9A1E7A4F7556}.Release|Any CPU.Build.0 = Release|x64
 		{9A19103F-16F7-4668-BE54-9A1E7A4F7556}.Release|x64.ActiveCfg = Release|x64
 		{9A19103F-16F7-4668-BE54-9A1E7A4F7556}.Release|x64.Build.0 = Release|x64
 		{8D9712BF-C026-4A36-B6D1-6345137D3B6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8D9712BF-C026-4A36-B6D1-6345137D3B6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8D9712BF-C026-4A36-B6D1-6345137D3B6F}.Debug|x64.ActiveCfg = Debug|x64
 		{8D9712BF-C026-4A36-B6D1-6345137D3B6F}.Debug|x64.Build.0 = Debug|x64
-		{8D9712BF-C026-4A36-B6D1-6345137D3B6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8D9712BF-C026-4A36-B6D1-6345137D3B6F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D9712BF-C026-4A36-B6D1-6345137D3B6F}.Release|Any CPU.ActiveCfg = Release|x64
+		{8D9712BF-C026-4A36-B6D1-6345137D3B6F}.Release|Any CPU.Build.0 = Release|x64
 		{8D9712BF-C026-4A36-B6D1-6345137D3B6F}.Release|x64.ActiveCfg = Release|x64
 		{8D9712BF-C026-4A36-B6D1-6345137D3B6F}.Release|x64.Build.0 = Release|x64
 		{A977C8E0-2183-4845-95EA-7F3C3E795310}.Debug|Any CPU.ActiveCfg = Debug|x64
@@ -77,18 +77,18 @@ Global
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Debug|x64.ActiveCfg = Debug|x64
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Debug|x64.Build.0 = Debug|x64
-		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|Any CPU.ActiveCfg = Release|x64
+		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|Any CPU.Build.0 = Release|x64
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|x64.ActiveCfg = Release|x64
 		{7BC6991F-C840-413E-B1CD-4025947CF5FA}.Release|x64.Build.0 = Release|x64
 		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Debug|Any CPU.ActiveCfg = Debug|x64
 		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Debug|Any CPU.Build.0 = Debug|x64
 		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Debug|x64.ActiveCfg = Debug|x64
 		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Debug|x64.Build.0 = Debug|x64
-		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|Any CPU.ActiveCfg = Release|x64
-		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|Any CPU.Build.0 = Release|x64
-		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|x64.ActiveCfg = Release|x64
-		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|x64.Build.0 = Release|x64
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|x64.ActiveCfg = Release|Any CPU
+		{FB6B2E0E-2243-4447-BA56-7D91CB0D2127}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
