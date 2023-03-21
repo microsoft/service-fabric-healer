@@ -208,7 +208,7 @@ namespace FabricHealer.Utilities
 
             if (eventData is TelemetryData telemData)
             {
-                if (telemData.HealthState == HealthState.Error || telemData.HealthState == HealthState.Warning)
+                if (telemData.HealthState is HealthState.Error or HealthState.Warning)
                 {
                     keywords = ServiceEventSource.Keywords.ErrorOrWarning;
                 }
@@ -239,7 +239,7 @@ namespace FabricHealer.Utilities
                     
                     return true;
                 }
-                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
                 {
                 }
            
@@ -262,7 +262,7 @@ namespace FabricHealer.Utilities
             {
                 files = Directory.GetFiles(folderPath, searchPattern, SearchOption.AllDirectories);
             }
-            catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+            catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
             {
                 return;
             }
@@ -276,7 +276,7 @@ namespace FabricHealer.Utilities
                         Retry.Do(() => File.Delete(file), TimeSpan.FromSeconds(1), CancellationToken.None);
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is AggregateException)
+                catch (Exception e) when (e is ArgumentException or AggregateException)
                 {
                     LogWarning($"Unable to delete file {file}:{Environment.NewLine}{e.Message}");
                 }

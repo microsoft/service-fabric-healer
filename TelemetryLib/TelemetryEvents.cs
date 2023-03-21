@@ -265,7 +265,7 @@ namespace FabricHealer.TelemetryLib
                 result = Sb.ToString();
                 return true;
             }
-            catch (Exception e) when (e is ArgumentException || e is EncoderFallbackException || e is FormatException || e is ObjectDisposedException)
+            catch (Exception e) when (e is ArgumentException or EncoderFallbackException or FormatException or ObjectDisposedException)
             {
                 result = null;
                 return false;

@@ -65,7 +65,7 @@ namespace FabricHealer.Repair.Guan
                             $"Executing logic rule \'{rule}\'",
                             FabricHealerManager.Token);
                 }
-                catch (Exception e) when (e is ArgumentException || e is IOException || e is SystemException)
+                catch (Exception e) when (e is ArgumentException or IOException or SystemException)
                 {
 #if DEBUG
                     string message = $"LogRule predicate failure => Unable to read {ruleFileName}: {e.Message}.";

@@ -215,7 +215,7 @@ namespace FabricHealer.Utilities.Telemetry
             {
                 using HttpResponseMessage response = await httpClient.SendAsync(message, token);
 
-                if (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.Accepted)
+                if (response.StatusCode is HttpStatusCode.OK or HttpStatusCode.Accepted)
                 {
                     retries = 0;
                     return;
@@ -225,7 +225,7 @@ namespace FabricHealer.Utilities.Telemetry
                     $"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}" +
                     $"{response.StatusCode}: {response.ReasonPhrase}");
             }
-            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
             {
                 return;
             }

@@ -1214,7 +1214,7 @@ namespace FHTest
                     Assert.IsTrue(generatedWarningService);
                     Assert.IsTrue(sdata != null);
                 }
-                else if (repair.EntityType == FabricHealer.EntityType.Disk || repair.EntityType == FabricHealer.EntityType.Machine || repair.EntityType == FabricHealer.EntityType.Node)
+                else if (repair.EntityType is FabricHealer.EntityType.Disk or FabricHealer.EntityType.Machine or FabricHealer.EntityType.Node)
                 {
                     var (generatedWarningNode, ndata) = await IsEntityInWarningStateAsync(null, null, NodeName);
                     Assert.IsTrue(generatedWarningNode);

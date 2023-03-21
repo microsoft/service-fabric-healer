@@ -40,14 +40,14 @@ namespace FabricHealer.Repair
                 return null;
             }
 
-            if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+            if (FabricHealerManager.InstanceCount is (-1) or > 1)
             {
                 await FabricHealerManager.RandomWaitAsync(token);
             }
 
             // Rolling Service Restarts.
-            if (executorData.RepairPolicy.RepairAction == RepairActionType.RestartCodePackage
-               || executorData.RepairPolicy.RepairAction == RepairActionType.RestartReplica)
+            if (executorData.RepairPolicy.RepairAction is RepairActionType.RestartCodePackage
+               or RepairActionType.RestartReplica)
             {
                 if ((FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
                      && FabricHealerManager.ConfigSettings.EnableRollingServiceRestarts)
@@ -108,7 +108,7 @@ namespace FabricHealer.Repair
 
             string description = $"FabricHealer executing repair {action} on node {executorData.RepairPolicy.NodeName}";
 
-            if (impact == NodeImpactLevel.Restart || impact == NodeImpactLevel.RemoveData)
+            if (impact is NodeImpactLevel.Restart or NodeImpactLevel.RemoveData)
             {
                 description = executorData.RepairPolicy.RepairId;
             }
@@ -147,7 +147,7 @@ namespace FabricHealer.Repair
                                             cancellationToken);
                 return repairTasks;
             }
-            catch (Exception e) when (e is FabricException || e is TaskCanceledException)
+            catch (Exception e) when (e is FabricException or TaskCanceledException)
             {
                 return null;
             }
@@ -200,7 +200,7 @@ namespace FabricHealer.Repair
                 return false;
             }
 
-            if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+            if (FabricHealerManager.InstanceCount is (-1) or > 1)
             {
                 await FabricHealerManager.RandomWaitAsync();
             }
@@ -273,7 +273,7 @@ namespace FabricHealer.Repair
         {
             try
             {
-                if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                if (FabricHealerManager.InstanceCount is (-1) or > 1)
                 {
                     await FabricHealerManager.RandomWaitAsync();
                 }
@@ -329,7 +329,7 @@ namespace FabricHealer.Repair
                     }
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is ArgumentException or FabricException or TaskCanceledException or TimeoutException)
             {
 #if DEBUG
                 // This is not interesting. Means a one of FH's token source's was canceled in an expected way.
@@ -345,7 +345,7 @@ namespace FabricHealer.Repair
 
         public static async Task<int> GetAllOutstandingFHRepairsCountAsync(string taskIdPrefix, CancellationToken token)
         {
-            if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+            if (FabricHealerManager.InstanceCount is (-1) or > 1)
             {
                 await FabricHealerManager.RandomWaitAsync();
             }
@@ -406,9 +406,9 @@ namespace FabricHealer.Repair
                     if (repair.Impact is NodeRepairImpactDescription impact)
                     {
                         if (impact.ImpactedNodes.Any(
-                                n => n.ImpactLevel == NodeImpactLevel.Restart ||
-                                     n.ImpactLevel == NodeImpactLevel.RemoveData ||
-                                     n.ImpactLevel == NodeImpactLevel.RemoveNode))
+                                n => n.ImpactLevel is NodeImpactLevel.Restart or
+                                     NodeImpactLevel.RemoveData or
+                                     NodeImpactLevel.RemoveNode))
                         {
                             count++;
                         }
@@ -630,7 +630,7 @@ namespace FabricHealer.Repair
 
                 return true;
             }
-            catch (Exception e) when (e is ArgumentException || e is IOException || e is SystemException)
+            catch (Exception e) when (e is ArgumentException or IOException or SystemException)
             {
                 string message = $"TraceCurrentlyExecutingRule failure => Unable to read {ruleFileName}: {e.Message}";
                 FabricHealerManager.RepairLogger.LogWarning(message);

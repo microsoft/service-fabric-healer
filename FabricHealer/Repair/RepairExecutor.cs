@@ -153,7 +153,7 @@ namespace FabricHealer.Repair
 
                 return restartCodePackageResult;
             }
-            catch (Exception e) when (e is FabricException || e is InvalidOperationException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or InvalidOperationException or TimeoutException)
             {              
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
@@ -273,7 +273,7 @@ namespace FabricHealer.Repair
                 UpdateRepairHistory(repairData);
                 ClearEntityHealthWarnings(repairData); 
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TimeoutException)
             {
                 string err =
                     $"Unable to restart stateful replica {repairData.ReplicaId} " +
@@ -345,7 +345,7 @@ namespace FabricHealer.Repair
                 // Clear Warning from FO. If in fact the issue has not been solved, then FO will generate a new health report for the target and the game will be played again.
                 ClearEntityHealthWarnings(repairData);
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException  || e is NotSupportedException || e is Win32Exception)
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or NotSupportedException or Win32Exception)
             {
                 FabricHealerManager.RepairHistory.FailedRepairs++;
 
@@ -505,7 +505,7 @@ namespace FabricHealer.Repair
                 UpdateRepairHistory(repairData);
                 ClearEntityHealthWarnings(repairData);
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException || e is OperationCanceledException)
+            catch (Exception e) when (e is FabricException or TimeoutException or OperationCanceledException)
             {
                 FabricHealerManager.RepairHistory.FailedRepairs++;
 
@@ -613,7 +613,7 @@ namespace FabricHealer.Repair
                         File.Delete(file);
                         deletedFiles++;
                     }
-                    catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                    catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
                     {
                         await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
@@ -698,7 +698,7 @@ namespace FabricHealer.Repair
 
                 return machineName;
             }
-            catch (Exception e) when (e is ArgumentException|| e is SocketException|| e is OperationCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is ArgumentException or SocketException or OperationCanceledException or TimeoutException)
             {
                 FabricHealerManager.RepairLogger.LogWarning(
                     $"Unable to determine machine host name from Fabric node name {nodeName}:{Environment.NewLine}{e}");
@@ -771,7 +771,7 @@ namespace FabricHealer.Repair
                         break;
                 }
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TimeoutException)
             {
 
             }
@@ -786,7 +786,7 @@ namespace FabricHealer.Repair
         public static async Task<bool> RestartFabricNodeAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
             // If FH is installed on multiple nodes and this node is the target, then another FH instance should restart the node.
-            if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+            if (FabricHealerManager.InstanceCount is (-1) or > 1)
             {
                 if (repairData.NodeName.Equals(FabricHealerManager.ServiceContext.NodeContext.NodeName, StringComparison.OrdinalIgnoreCase))
                 { 
@@ -917,7 +917,7 @@ namespace FabricHealer.Repair
                 UpdateRepairHistory(repairData);
                 return true;
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TimeoutException)
             {
 #if DEBUG
                 string err = $"Handled Exception restarting Fabric node {repairData.NodeName}, NodeInstanceId {nodeInstanceId}:{e.GetType().Name}";
@@ -933,7 +933,7 @@ namespace FabricHealer.Repair
                 FabricHealerManager.RepairHistory.FailedRepairs++;
                 return false;
             }
-            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
             {
                 return true;
             }

@@ -160,7 +160,7 @@ namespace FabricHealer.Repair.Guan
                         Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                     }
 
-                    if (e is not TaskCanceledException && e is not OperationCanceledException)
+                    if (e is not TaskCanceledException and not OperationCanceledException)
                     {
                         string message = $"Failed to execute {RepairData.RepairPolicy.RepairAction} for repair {RepairData.RepairPolicy.RepairId}: {e.Message}";
 #if DEBUG
@@ -209,7 +209,7 @@ namespace FabricHealer.Repair.Guan
                     return true;
                 }
             }
-            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
 
             }

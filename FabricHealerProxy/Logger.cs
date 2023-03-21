@@ -173,7 +173,7 @@ namespace FabricHealer
                     
                     return true;
                 }
-                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
                 {
                 }
            

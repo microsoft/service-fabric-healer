@@ -169,7 +169,7 @@ namespace FabricHealer.Repair
         // Machine-level repairs.
         public static async Task<bool> ScheduleInfrastructureRepairTask(TelemetryData repairData, CancellationToken cancellationToken)
         {
-            if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+            if (FabricHealerManager.InstanceCount is (-1) or > 1)
             {
                 await FabricHealerManager.RandomWaitAsync();
             }
@@ -427,7 +427,7 @@ namespace FabricHealer.Repair
                 var nodes = await FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(nodeName, FabricHealerManager.ConfigSettings.AsyncTimeout, cancellationToken);
                 return nodes.Count > 0 ? nodes[0] : null;
             }
-            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
             {
                 FabricHealerManager.RepairLogger.LogError($"Error getting node {nodeName}:{Environment.NewLine}{e}");
                 return null;
@@ -444,7 +444,7 @@ namespace FabricHealer.Repair
         {
             try
             {
-                if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                if (FabricHealerManager.InstanceCount is (-1) or > 1)
                 {
                     await FabricHealerManager.RandomWaitAsync(cancellationToken);
                 }
@@ -525,7 +525,7 @@ namespace FabricHealer.Repair
             
             try
             {
-                if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                if (FabricHealerManager.InstanceCount is (-1) or > 1)
                 {
                     await FabricHealerManager.RandomWaitAsync(cancellationToken);
                 }
@@ -984,10 +984,10 @@ namespace FabricHealer.Repair
                     return isHealthy;
                 }
             }
-            catch (Exception e) when (e is ArgumentException ||
-                                      e is FabricException ||
-                                      e is OperationCanceledException ||
-                                      e is TaskCanceledException)
+            catch (Exception e) when (e is ArgumentException or
+                                      FabricException or
+                                      OperationCanceledException or
+                                      TaskCanceledException)
             {
 #if DEBUG
                 FabricHealerManager.RepairLogger.LogWarning($"Handled ExecuteFabricHealerRepairTaskAsync Failure:{Environment.NewLine}{e}");
@@ -1123,7 +1123,7 @@ namespace FabricHealer.Repair
                 return DateTime.UtcNow.Subtract(orderedEvents.First().SourceUtcTimestamp);
             }
             catch (Exception e) when (
-                    e is ArgumentException || e is FabricException || e is InvalidOperationException || e is TaskCanceledException || e is TimeoutException)
+                    e is ArgumentException or FabricException or InvalidOperationException or TaskCanceledException or TimeoutException)
             {
                 string message = $"Unable to get {repairData.HealthState} health state duration for {repairData.EntityType}: {e.Message}";
                 FabricHealerManager.RepairLogger.LogWarning(message);
@@ -1269,7 +1269,7 @@ namespace FabricHealer.Repair
                         return HealthState.Unknown;
                 }
             }
-            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or OperationCanceledException or TaskCanceledException or TimeoutException)
             {
                 return HealthState.Unknown;
             }

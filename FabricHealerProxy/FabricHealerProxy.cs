@@ -81,7 +81,7 @@ namespace FabricHealer
                             return _fabricClient;
                         }
                     }
-                    catch (Exception e) when (e is ObjectDisposedException || e is InvalidComObjectException)
+                    catch (Exception e) when (e is ObjectDisposedException or InvalidComObjectException)
                     {
                         lock (_lock)
                         {
@@ -347,7 +347,7 @@ namespace FabricHealer
 
                             if (depReplica is DeployedStatefulServiceReplica depStatefulReplica)
                             {
-                                if (depStatefulReplica.ReplicaRole == ReplicaRole.Primary || depStatefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary)
+                                if (depStatefulReplica.ReplicaRole is ReplicaRole.Primary or ReplicaRole.ActiveSecondary)
                                 {
                                     replicaId = depStatefulReplica.ReplicaId;
                                 }
@@ -401,7 +401,7 @@ namespace FabricHealer
                     repairDataLifetime = _defaultHealthReportTtl;
                 }
 
-                if (repairData.EntityType == EntityType.Application || repairData.EntityType == EntityType.Service)
+                if (repairData.EntityType is EntityType.Application or EntityType.Service)
                 {
                     if (string.IsNullOrWhiteSpace(repairData.Description))
                     {
@@ -441,7 +441,7 @@ namespace FabricHealer
                 _logger.LogWarning(msg);
                 throw new ServiceNotFoundException(msg);
             }
-            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
             {
                 return;
             }
@@ -469,7 +469,7 @@ namespace FabricHealer
                         --i;
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is IndexOutOfRangeException)
+                catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException)
                 {
 
                 }
@@ -757,7 +757,7 @@ namespace FabricHealer
                     _ = _repairDataHistory.TryRemove(_repairDataHistory.ElementAt(i).Key, out _);
                     --i;
                 }
-                catch (Exception e) when (e is ArgumentException || e is IndexOutOfRangeException)
+                catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException)
                 {
 
                 }

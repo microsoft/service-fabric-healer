@@ -122,7 +122,7 @@ namespace FabricHealer.Repair
                                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                                 token);
             }
-            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is OperationCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TaskCanceledException or OperationCanceledException or TimeoutException)
             {
                 return false;
             }
@@ -195,7 +195,7 @@ namespace FabricHealer.Repair
                 case RepairActionType.RestartReplica:
 
                     // Rolling Service Restarts.
-                    if (repairAction == RepairActionType.RestartCodePackage || repairAction == RepairActionType.RestartReplica)
+                    if (repairAction is RepairActionType.RestartCodePackage or RepairActionType.RestartReplica)
                     {
                         if ((FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
                              && FabricHealerManager.ConfigSettings.EnableRollingServiceRestarts)

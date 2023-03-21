@@ -70,7 +70,7 @@ namespace FabricHealer.Repair.Guan
                     }
                 }
 
-                if (FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                if (FabricHealerManager.InstanceCount is (-1) or > 1)
                 {
                     await FabricHealerManager.RandomWaitAsync();
                 }
@@ -114,7 +114,7 @@ namespace FabricHealer.Repair.Guan
                         Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                     }
 
-                    if (e is not TaskCanceledException && e is not OperationCanceledException)
+                    if (e is not TaskCanceledException and not OperationCanceledException)
                     {
                         string message = $"Failed to schedule repair {RepairData.RepairPolicy.RepairId}::{RepairData.RepairPolicy.InfrastructureRepairName}: {e.Message}";
 #if DEBUG

@@ -44,9 +44,9 @@ namespace FabricHealer.Repair
                     return null;
                 }
 
-                if (upgradeProgress.UpgradeState != ApplicationUpgradeState.RollingBackInProgress &&
-                    upgradeProgress.UpgradeState != ApplicationUpgradeState.RollingForwardInProgress &&
-                    upgradeProgress.UpgradeState != ApplicationUpgradeState.RollingForwardPending)
+                if (upgradeProgress.UpgradeState is not ApplicationUpgradeState.RollingBackInProgress and
+                    not ApplicationUpgradeState.RollingForwardInProgress and
+                    not ApplicationUpgradeState.RollingForwardPending)
                 {
                     return null;
                 }
@@ -54,7 +54,7 @@ namespace FabricHealer.Repair
                 currentUpgradeDomainInProgress = upgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName;
                 return currentUpgradeDomainInProgress;
             }
-            catch (Exception e) when (e is ArgumentException || e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
             {
                 Logger.LogWarning($"Handled Exception getting UDs for application upgrade in progress for " +
                                   $"{appName.OriginalString}:{Environment.NewLine}{e.Message}");
@@ -100,7 +100,7 @@ namespace FabricHealer.Repair
 
                 return fabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName;
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TimeoutException)
             {
                 Logger.LogWarning($"Handled Exception in GetCurrentUDWhereFabricUpgradeInProgressAsync: {e.Message}");
                 return null;
@@ -182,7 +182,7 @@ namespace FabricHealer.Repair
                     }
                 }
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TimeoutException)
             {
                 Logger.LogWarning($"Handled Exception in IsAzureJobInProgressAsync: {e.Message}");
                 return false;

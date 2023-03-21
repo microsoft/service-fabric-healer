@@ -315,7 +315,7 @@ namespace FabricHealer.Utilities
 
                 return parameter.Value;
             }
-            catch (Exception e) when (e is KeyNotFoundException || e is FabricElementNotFoundException)
+            catch (Exception e) when (e is KeyNotFoundException or FabricElementNotFoundException)
             {
 
             }

@@ -97,7 +97,7 @@ namespace FabricHealer.TelemetryLib
                     }
                 }
             }
-            catch (Exception ex) when (ex is FabricException || ex is TimeoutException)
+            catch (Exception ex) when (ex is FabricException or TimeoutException)
             {
 
             }
@@ -200,7 +200,7 @@ namespace FabricHealer.TelemetryLib
                 return (string)Registry.GetValue(tenantIdKeyName, TenantIdValueName, null);
 #pragma warning restore CA1416 // Validate platform compatibility
             }
-            catch (Exception e) when (e is ArgumentException || e is FormatException || e is IOException || e is System.Security.SecurityException)
+            catch (Exception e) when (e is ArgumentException or FormatException or IOException or System.Security.SecurityException)
             {
                 return null;
             }

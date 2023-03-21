@@ -31,7 +31,7 @@ namespace FabricHealer
         private DateTime LastVersionCheckDateTime { get; set; }
         private DateTime LastTelemetrySendDate { get; set; }
         // Folks often use their own version numbers. This is for public diagnostic telemetry.
-        private const string InternalVersionNumber = "1.2.0";
+        private const string InternalVersionNumber = "1.2.1";
         private static FabricHealerManager fhSingleton;
         private static FabricClient fabricClient;
         private bool disposedValue;
@@ -89,7 +89,7 @@ namespace FabricHealer
                             return fabricClient;
                         }
                     }
-                    catch (Exception e) when (e is ObjectDisposedException || e is InvalidComObjectException)
+                    catch (Exception e) when (e is ObjectDisposedException or InvalidComObjectException)
                     {
                         lock (lockObj)
                         {
@@ -158,7 +158,7 @@ namespace FabricHealer
 
                 return nodes != null && nodes.Count == 1;
             }
-            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
             {
                 RepairLogger.LogWarning($"IsOneNodeClusterAsync failure: {e.Message}");
 
@@ -227,7 +227,7 @@ namespace FabricHealer
 
                 return (serviceDesc as StatelessServiceDescription).InstanceCount;
             }
-            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
             {
                 RepairLogger.LogWarning($"GetServiceInstanceCountAsync failure: {e.Message}");
 
@@ -277,7 +277,7 @@ namespace FabricHealer
 
                 return setting;
             }
-            catch (Exception e) when (e is ArgumentException || e is KeyNotFoundException)
+            catch (Exception e) when (e is ArgumentException or KeyNotFoundException)
             {
 
             }
@@ -432,7 +432,7 @@ namespace FabricHealer
                     await TryClearExistingHealthReportsAsync();
                 }
             }
-            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or OperationCanceledException or TaskCanceledException or TimeoutException)
             {
                 // This check is necessary to prevent cancelling outstanding repair tasks if 
                 // one of the handled exceptions originated from another operation unrelated to
@@ -563,7 +563,7 @@ namespace FabricHealer
                     }
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is FabricException || e is InvalidOperationException || e is TimeoutException)
+            catch (Exception e) when (e is ArgumentException or FabricException or InvalidOperationException or TimeoutException)
             {
 #if DEBUG
                 RepairLogger.LogWarning($"TryCleanUpOrphanedFabricHealerRepairJobs Failure:{Environment.NewLine}{e}");
@@ -662,7 +662,7 @@ namespace FabricHealer
                     RepairLogger.LogInfo("Exiting CancelOrResumeAllRunningFHRepairsAsync: Completed.");
                 }
             }
-            catch (Exception e) when (e is FabricException || e is OperationCanceledException || e is TaskCanceledException)
+            catch (Exception e) when (e is FabricException or OperationCanceledException or TaskCanceledException)
             {
                 if (e is FabricException)
                 {
@@ -741,7 +741,7 @@ namespace FabricHealer
                     return;
                 }
 
-                if (InstanceCount == -1 || InstanceCount > 1)
+                if (InstanceCount is (-1) or > 1)
                 {
                     await RandomWaitAsync();
                 }
@@ -768,7 +768,7 @@ namespace FabricHealer
                         return;
                     }
                 }
-                catch (Exception e) when (e is FabricException || e is TimeoutException)
+                catch (Exception e) when (e is FabricException or TimeoutException)
                 {
 #if DEBUG
                     await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -790,7 +790,7 @@ namespace FabricHealer
                         {
                             await ProcessNodeHealthAsync(clusterHealth.NodeHealthStates);
                         }
-                        catch (Exception e) when (e is FabricException || e is TimeoutException)
+                        catch (Exception e) when (e is FabricException or TimeoutException)
                         {
 #if DEBUG
                             await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -833,10 +833,10 @@ namespace FabricHealer
 
                                     if (appHealth.ServiceHealthStates != null && appHealth.ServiceHealthStates.Count > 0 &&
                                         appHealth.ServiceHealthStates.Any(
-                                            s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
+                                            s => s.AggregatedHealthState is HealthState.Error or HealthState.Warning))
                                     {
                                         foreach (var service in appHealth.ServiceHealthStates.Where(
-                                                    s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
+                                                    s => s.AggregatedHealthState is HealthState.Error or HealthState.Warning))
                                         {
                                             if (Token.IsCancellationRequested)
                                             {
@@ -857,7 +857,7 @@ namespace FabricHealer
                                     }
                                 }
                             }
-                            catch (Exception e) when (e is FabricException || e is TimeoutException)
+                            catch (Exception e) when (e is FabricException or TimeoutException)
                             {
 #if DEBUG
                                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -873,12 +873,12 @@ namespace FabricHealer
                     }
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
             {
                 // Don't crash..
                 RepairLogger.LogWarning($"{e.Message}");
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Error,
@@ -930,9 +930,9 @@ namespace FabricHealer
                 {
                     var appUpgradeStatus = await FabricClientSingleton.ApplicationManager.GetApplicationUpgradeProgressAsync(appName);
 
-                    if (appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingBackInProgress
-                        || appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingForwardInProgress
-                        || appUpgradeStatus.UpgradeState == ApplicationUpgradeState.RollingForwardPending)
+                    if (appUpgradeStatus.UpgradeState is ApplicationUpgradeState.RollingBackInProgress
+                        or ApplicationUpgradeState.RollingForwardInProgress
+                        or ApplicationUpgradeState.RollingForwardPending)
                     {
                         var udInAppUpgrade = await UpgradeChecker.GetUDWhereApplicationUpgradeInProgressAsync(appName, Token);
                         string udText = string.Empty;
@@ -962,8 +962,8 @@ namespace FabricHealer
             }
 
             var healthEvents = appHealth.HealthEvents.Where(
-                                s => s.HealthInformation.HealthState == HealthState.Warning
-                                || s.HealthInformation.HealthState == HealthState.Error);
+                                s => s.HealthInformation.HealthState is HealthState.Warning
+                                or HealthState.Error);
 
             foreach (var evt in healthEvents)
             {
@@ -1021,8 +1021,8 @@ namespace FabricHealer
                         {
                             var executorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
-                            if (executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartFabricNode &&
-                                executorData?.RepairPolicy?.RepairAction != RepairActionType.RestartProcess)
+                            if (executorData?.RepairPolicy?.RepairAction is not RepairActionType.RestartFabricNode and
+                                not RepairActionType.RestartProcess)
                             {
                                 continue;
                             }
@@ -1242,9 +1242,9 @@ namespace FabricHealer
                     ApplicationUpgradeProgress appUpgradeProgress =
                         await FabricClientSingleton.ApplicationManager.GetApplicationUpgradeProgressAsync(appName, ConfigSettings.AsyncTimeout, Token);
 
-                    if (appUpgradeProgress.UpgradeState == ApplicationUpgradeState.RollingBackInProgress
-                        || appUpgradeProgress.UpgradeState == ApplicationUpgradeState.RollingForwardInProgress
-                        || appUpgradeProgress.UpgradeState == ApplicationUpgradeState.RollingForwardPending)
+                    if (appUpgradeProgress.UpgradeState is ApplicationUpgradeState.RollingBackInProgress
+                        or ApplicationUpgradeState.RollingForwardInProgress
+                        or ApplicationUpgradeState.RollingForwardPending)
                     {
                         string udInAppUpgrade = await UpgradeChecker.GetUDWhereApplicationUpgradeInProgressAsync(serviceName, Token);
                         string udText = string.Empty;
@@ -1274,13 +1274,13 @@ namespace FabricHealer
             }
 
             var healthEvents = serviceHealth.HealthEvents.Where(
-                e => e.HealthInformation.HealthState == HealthState.Warning || e.HealthInformation.HealthState == HealthState.Error);
+                e => e.HealthInformation.HealthState is HealthState.Warning or HealthState.Error);
 
             // Replica repair. This only makes sense if a partition is in Error or Warning state (and Replica repair is still experimental for FH).
             if (ConfigSettings.EnableReplicaRepair)
             {
                 var partitionHealthStates = serviceHealth.PartitionHealthStates.Where(
-                    p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error);
+                    p => p.AggregatedHealthState is HealthState.Warning or HealthState.Error);
 
                 if (partitionHealthStates.Any())
                 {
@@ -1325,7 +1325,7 @@ namespace FabricHealer
                     repairData.ApplicationName = appName.OriginalString;
                 }
 
-                if (InstanceCount == -1 || InstanceCount > 1)
+                if (InstanceCount is (-1) or > 1)
                 {
                     // Randomly wait to decrease chances of simultaneous ownership among FH instances.
                     await RandomWaitAsync();
@@ -1374,8 +1374,8 @@ namespace FabricHealer
                                 continue;
                             }
 
-                            if (executorData.RepairPolicy?.RepairAction != RepairActionType.RestartFabricNode &&
-                                executorData.RepairPolicy?.RepairAction != RepairActionType.RestartProcess)
+                            if (executorData.RepairPolicy?.RepairAction is not RepairActionType.RestartFabricNode and
+                                not RepairActionType.RestartProcess)
                             {
                                 continue;
                             }
@@ -1575,7 +1575,7 @@ namespace FabricHealer
                 var nodeHealth = await FabricClientSingleton.HealthManager.GetNodeHealthAsync(node.NodeName, ConfigSettings.AsyncTimeout, Token);
                 var nodeHealthEvents =
                     nodeHealth.HealthEvents.Where(
-                        s => s.HealthInformation.HealthState == HealthState.Warning || s.HealthInformation.HealthState == HealthState.Error);
+                        s => s.HealthInformation.HealthState is HealthState.Warning or HealthState.Error);
 
                 // Ensure a node in Error is not in Error due to being Down as part of a cluster upgrade or infra update in its UD.
                 if (node.AggregatedHealthState == HealthState.Error && nodeStatus == NodeStatus.Down)
@@ -1622,7 +1622,7 @@ namespace FabricHealer
                     Token.ThrowIfCancellationRequested();
 
                     // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-                    if (InstanceCount == -1 || InstanceCount > 1)
+                    if (InstanceCount is (-1) or > 1)
                     {
                         await RandomWaitAsync();
                     }
@@ -1819,7 +1819,7 @@ namespace FabricHealer
 
         private static async Task ProcessFabricNodeHealthAsync(HealthEvent healthEvent, TelemetryData repairData)
         {
-            if (InstanceCount == -1 || InstanceCount > 1)
+            if (InstanceCount is (-1) or > 1)
             {
                 await RandomWaitAsync();
             }
@@ -1911,7 +1911,7 @@ namespace FabricHealer
         private static async Task ProcessReplicaHealthAsync(ServiceHealth serviceHealth)
         {
             // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
-            if (InstanceCount == -1 || InstanceCount > 1)
+            if (InstanceCount is (-1) or > 1)
             {
                 await RandomWaitAsync();
             }
@@ -1932,7 +1932,7 @@ namespace FabricHealer
 
             List<HealthEvent> healthEvents = new();
             var partitionHealthStates = serviceHealth.PartitionHealthStates.Where(
-                p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error);
+                p => p.AggregatedHealthState is HealthState.Warning or HealthState.Error);
 
             foreach (var partitionHealthState in partitionHealthStates)
             {
@@ -1940,7 +1940,7 @@ namespace FabricHealer
                     await FabricClientSingleton.HealthManager.GetPartitionHealthAsync(partitionHealthState.PartitionId, ConfigSettings.AsyncTimeout, Token);
 
                 List<ReplicaHealthState> replicaHealthStates = partitionHealth.ReplicaHealthStates.Where(
-                    p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error).ToList();
+                    p => p.AggregatedHealthState is HealthState.Warning or HealthState.Error).ToList();
 
                 if (replicaHealthStates != null && replicaHealthStates.Count > 0)
                 {
@@ -1956,7 +1956,7 @@ namespace FabricHealer
                         if (replicaHealth != null)
                         {
                             healthEvents = replicaHealth.HealthEvents.Where(
-                                h => h.HealthInformation.HealthState == HealthState.Warning || h.HealthInformation.HealthState == HealthState.Error).ToList();
+                                h => h.HealthInformation.HealthState is HealthState.Warning or HealthState.Error).ToList();
 
                             foreach (HealthEvent healthEvent in healthEvents)
                             {
@@ -2261,7 +2261,7 @@ namespace FabricHealer
                 List<string> repairRules = ParseRulesFile(rules);
                 return repairRules;
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is IOException)
+            catch (Exception ex) when (ex is ArgumentException or IOException)
             {
                 return null;
             }
@@ -2432,7 +2432,7 @@ namespace FabricHealer
                     Thread.Sleep(50);
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
             {
 
             }
@@ -2454,7 +2454,7 @@ namespace FabricHealer
                     Thread.Sleep(50);
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
             {
 
             }
@@ -2467,7 +2467,7 @@ namespace FabricHealer
                 var config = ServiceFabricConfiguration.Instance;
                 return config.FabricVersion;
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 RepairLogger.LogWarning($"GetServiceFabricRuntimeVersion failure:{Environment.NewLine}{e}");
             }

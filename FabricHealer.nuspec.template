@@ -2,16 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.2.0</version>
+    <version>1.2.1</version>
     <releaseNotes>
-- FabricHealer now ships only as a .NET 6 application and requires SF runtime versions 9 and higher.
-- New machine repair implementation.
-- New repair and helper Guan predicates.
-- Updated Guan logic rules.
-- Simple yet effective debugging support (rule logging) for Guan logic rules.
-- Bug fixes.
-- Several code improvements and enhancements.
-- Updated documentation and samples. Please read through it!
+
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
