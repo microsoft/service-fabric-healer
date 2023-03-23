@@ -39,7 +39,7 @@
 Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
 
 ## Don't proceed unless the specified watchdog created the Error health event.
-##Mitigate(Source=?source) :- not(match(?source, "EventLogWatchdog")), !.
+##Mitigate(Source=?source) :- notmatch(?source, "EventLogWatchdog"), !.
 
 ## Don't proceed if there are already 2 or more machine repairs currently active in the cluster.
 Mitigate :- CheckOutstandingRepairs(2), !.

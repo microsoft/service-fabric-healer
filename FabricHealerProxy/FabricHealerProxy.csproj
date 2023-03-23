@@ -3,7 +3,7 @@
     <TargetFramework>net6.0</TargetFramework>
 	<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <PlatformTarget>x64</PlatformTarget>
+	<Platforms>x64</Platforms>
   </PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
