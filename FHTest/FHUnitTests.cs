@@ -756,7 +756,7 @@ namespace FHTest
         // Ensure that all machine repair escalations (repair actions) are scheduled.
         // The test logic program used here includes the following rule to also test FH scheduling behavior when a
         // watchdog service creates an SF health event with specific source and/or property facts:
-        // Mitigate(Property=?property, Source=?source) :- not(?property == InfrastructureError42 || ?source == TestMachineWatchdog), !.
+        // Mitigate(Property=?property, Source=?source) :- notmatch(?source, "TestMachineWatchdog") && notmatch(?property, "WER 55"), !.
         // You can use either Source or Property as a constraint in the logic rule. The TelemetryData instance (repairData) in this function specifies both,
         // but the logic rule requires that only one of the facts be present. If neither are present, then stop processing rules (ending with a ! (cut)).
         [TestMethod]
@@ -776,9 +776,9 @@ namespace FHTest
                 {
                     EntityType = EntityType.Machine,
                     // In practice, this fact comes from an SF HealthEvent (HealthInformation.SourceId).
-                    Source = "TestMachineWatchdog",
+                    Source = "EventLogWatchdog007",
                     // In practice, this fact comes from an SF HealthEvent (HealthInformation.Property).
-                    Property = "InfrastructureError42",
+                    Property = "EventLogError WER 55",
                     HealthState = HealthState.Error,
                     NodeName = NodeName
                 };
@@ -1105,8 +1105,8 @@ namespace FHTest
             HealthState = HealthState.Error,
             NodeName = NodeName,
             EntityType = FabricHealer.EntityType.Machine,
-            Property = "InfrastructureError42",
-            Source = "MyMachineWatchdog"
+            Property = "EventLogError WER 55",
+            Source = "EventLogWatchdog007"
         };
 
         // For use in the IEnumerable<RepairFacts> RepairEntityAsync overload.

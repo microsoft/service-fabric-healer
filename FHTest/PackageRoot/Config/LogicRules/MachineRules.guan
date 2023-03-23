@@ -2,8 +2,18 @@
 ## Don't proceed if the target entity is not in Error.
 Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
 
-## Don't proceed if the Source of the health event is not FabricHealer.TestMachineWatchdog or event Property InfrastructureError42.
-Mitigate(Property=?property, Source=?source) :- not(?property == InfrastructureError42 || ?source == TestMachineWatchdog), !.
+## Don't proceed if the Source string (id) of the health event does not contain "EventLogWatchdog" substring.
+## notmatch is a system predicate that, like match, looks for the specified substring in the specified source string. notmatch returns true
+## if the substring is not present in the source string.
+Mitigate(Source=?source) :- notmatch(?source, "EventLogWatchdog"), !.
+
+## Look for specific health event Property substring and do something else. Do not proceed to escalation infra repairs, regardless of success or failure.
+Mitigate(Property=?property) :- match(?property, "WER 42"), !, DeactivateFabricNode(Restart).
+
+## Don't proceed to infra escalations if the health event property does not contain "WER 55".
+Mitigate(Property=?property) :- notmatch(?property, "WER 55"), !.
+
+## Infra repair escalations.
 
 ## Reboot.
 ## Don't process any other rules if scheduling succeeds OR fails (note the position of ! (cut operator)) and there are less than 1 of these repairs that have completed in the last 8 hours.
