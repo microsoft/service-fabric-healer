@@ -67,7 +67,7 @@
         "typeName": "[variables('applicationTypeNameFabricHealer')]",
         "typeVersion": "[parameters('applicationTypeVersionFabricHealer')]",
         "parameters": {
-          "MonitorLoopSleepSeconds": "15"
+          "HealthCheckIntervalInSeconds": "15"
         },
         "upgradePolicy": {
           "upgradeReplicaSetCheckTimeout": "01:00:00.0",
