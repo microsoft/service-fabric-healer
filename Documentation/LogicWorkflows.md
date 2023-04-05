@@ -13,7 +13,7 @@ No, using logic to express repair workflows is easy! One doesn't need a deep kno
 
 ***Problem***: I want to perform a code package restart if FabricObserver emits a memory usage warning for a *specific* application in my cluster (e.g. "fabric:/App1"). 
 
-***Solution***: We can leverage Guan and its built-in equals operator for checking the name of the application that triggered the warning against the name of the application for which we decided we want to perform a code package restart for. For application level health events, the repair workflow is defined inside the PackageRoot/Config/LogicRules/AppRules.config.txt file. Here is that we would enter:
+***Solution***: We can leverage Guan and its built-in equals operator for checking the name of the application that triggered the warning against the name of the application for which we decided we want to perform a code package restart for. For application level health events, the repair workflow is defined inside the PackageRoot/Config/LogicRules/AppRules.guan file. Here is that we would enter:
 
 ```
 Mitigate(AppName="fabric:/App1", MetricName="MemoryPercent") :- RestartCodePackage.
