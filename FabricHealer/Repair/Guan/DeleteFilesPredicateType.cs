@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Fabric;
+using System.Fabric.Query;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -115,6 +116,7 @@ namespace FabricHealer.Repair.Guan
                 // DiskRepairPolicy
                 var diskRepairPolicy = new DiskRepairPolicy
                 {
+                    Code = RepairData.Code,
                     FolderPath = path,
                     NodeName = RepairData.NodeName,
                     MaxNumberOfFilesToDelete = maxFilesToDelete,

@@ -447,14 +447,62 @@ namespace FHTest
         }
 
         [TestMethod]
-        public async Task AllDiskRules_EnsureWellFormedRules_QueryInitialized_Successful()
+        public async Task AllDiskRules_FolderSizeMB_Warning_EnsureWellFormedRules_QueryInitialized_Successful()
         {
             // This will be the data used to create a repair task.
             var repairData = new TelemetryData
             {
                 EntityType = EntityType.Disk,
                 NodeName = NodeName,
-                HealthState = HealthState.Warning
+                Metric = SupportedMetricNames.FolderSizeMB,
+                Code = SupportedErrorCodes.NodeWarningFolderSizeMB,
+                HealthState = HealthState.Warning,
+                Source = $"DiskObserver({SupportedErrorCodes.NodeWarningFolderSizeMB})",
+                Property = $"{NodeName}_{SupportedMetricNames.FolderSizeMB.Replace(" ", string.Empty)}"
+            };
+
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_DiskRepair{NodeName}",
+                AppName = repairData.ApplicationName,
+                RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
+                NodeName = repairData.NodeName,
+                Code = repairData.Code,
+                HealthState = repairData.HealthState,
+            };
+
+            var executorData = new RepairExecutorData
+            {
+                RepairPolicy = repairData.RepairPolicy
+            };
+
+            var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "DiskRules.guan");
+            FabricHealerManager.CurrentlyExecutingLogicRulesFileName = "DiskRules.guan";
+            List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
+
+            try
+            {
+                await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
+            }
+            catch (GuanException ge)
+            {
+                throw new AssertFailedException(ge.Message, ge);
+            }
+        }
+
+        [TestMethod]
+        public async Task AllDiskRules_DiskSpacePercent_Warning_EnsureWellFormedRules_QueryInitialized_Successful()
+        {
+            // This will be the data used to create a repair task.
+            var repairData = new TelemetryData
+            {
+                EntityType = EntityType.Disk,
+                NodeName = NodeName,
+                Metric = SupportedMetricNames.DiskSpaceUsagePercentage,
+                Code = SupportedErrorCodes.NodeWarningDiskSpacePercent,
+                HealthState = HealthState.Warning,
+                Source = $"DiskObserver({SupportedErrorCodes.NodeWarningDiskSpacePercent})",
+                Property = $"{NodeName}_{SupportedMetricNames.DiskSpaceUsagePercentage.Replace(" ", string.Empty)}"
             };
 
             repairData.RepairPolicy = new RepairPolicy
