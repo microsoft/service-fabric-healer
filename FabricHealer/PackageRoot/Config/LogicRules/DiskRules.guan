@@ -51,10 +51,10 @@
 ## Iterate over a list of folders with a system predicate, member (defined and implemented in Guan) and an internal predicate, 
 ## config (an internal predicate needs no backing impl, it only exists in this logic). This is useful if all folder targets share enough
 ## of the same argument values (less rules to write..).
-Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, 08:00:00), 
+Mitigate(MetricName=?MetricName) :- match(?MetricName, "FolderSizeMB"), GetRepairHistory(?repairCount, 08:00:00), 
 	?repairCount < 4,
-	member(config(?X,?Y), [config("D:\SvcFab\Log\Traces", 50), config("E:\fabric_observer_logs", 1), config("E:\temp", 10)]), 
-	CheckFolderSize(?X, MaxFolderSizeGB=?Y),
+	member(config(?X,?Y), [config("D:\SvcFab\Log\Traces", 50), config("C:\fabric_observer_logs", 10), config("E:\temp", 10)]), 
+	CheckFolderSize(?X, MaxFolderSizeMB=?Y),
 	DeleteFiles(?X, SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true).
 
 ## Single rule for one directory with all optional args supplied, including a search pattern for target file name matching ("SFBDMiniport_traces*"). 

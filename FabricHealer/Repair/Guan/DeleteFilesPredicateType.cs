@@ -116,6 +116,7 @@ namespace FabricHealer.Repair.Guan
                 var diskRepairPolicy = new DiskRepairPolicy
                 {
                     FolderPath = path,
+                    NodeName = RepairData.NodeName,
                     MaxNumberOfFilesToDelete = maxFilesToDelete,
                     FileAgeSortOrder = direction,
                     RecurseSubdirectories = recurseSubDirectories,
