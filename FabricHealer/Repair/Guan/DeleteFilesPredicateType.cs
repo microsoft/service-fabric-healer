@@ -10,8 +10,6 @@ using FabricHealer.Utilities.Telemetry;
 using System.Threading.Tasks;
 using System.IO;
 using System.Text.RegularExpressions;
-using System.Fabric;
-using System.Fabric.Query;
 
 namespace FabricHealer.Repair.Guan
 {

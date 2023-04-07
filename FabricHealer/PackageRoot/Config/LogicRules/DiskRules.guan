@@ -52,7 +52,7 @@
 ## config (an internal predicate needs no backing impl, it only exists in this logic). This is useful if all folder targets share enough
 ## of the same argument values (less rules to write..).
 Mitigate(MetricName=?MetricName) :- match(?MetricName, "FolderSizeMB"), GetRepairHistory(?repairCount, 08:00:00), 
-	?repairCount < 4,
+	?repairCount < 8,
 	member(config(?X,?Y), [config("D:\SvcFab\Log\Traces", 50), config("C:\fabric_observer_logs", 10), config("E:\temp", 10)]), 
 	CheckFolderSize(?X, MaxFolderSizeMB=?Y),
 	DeleteFiles(?X, SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true).
