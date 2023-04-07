@@ -1248,6 +1248,26 @@ namespace FabricHealer.Repair
 
                         return nodeHealth.AggregatedHealthState;
 
+                    case EntityType.Disk:
+
+                        var diskHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                () => FabricHealerManager.FabricClientSingleton.HealthManager.GetNodeHealthAsync(
+                                                        repairData.NodeName,
+                                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                                        token),
+                                                token);
+
+                        bool isTargetTargetNodeHealthy =
+                               diskHealth.HealthEvents.Any(
+                                  h => JsonSerializationUtility.TryDeserializeObject(h.HealthInformation.Description, out TelemetryData desc)
+                                    && desc.NodeName == repairData.NodeName
+                                    && SupportedErrorCodes.GetCodeNameFromErrorCode(desc.Code) != null
+                                    && (SupportedErrorCodes.GetCodeNameFromErrorCode(desc.Code).Contains("Disk")
+                                        || SupportedErrorCodes.GetCodeNameFromErrorCode(desc.Code).Contains("Folder"))
+                                    && h.HealthInformation.HealthState == HealthState.Ok);
+
+                        return isTargetTargetNodeHealthy ? HealthState.Ok : diskHealth.AggregatedHealthState;
+
                     case EntityType.Replica:
 
                         if (!RepairExecutor.TryGetGuid(repairData.PartitionId, out Guid partitionId))
