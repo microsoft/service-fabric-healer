@@ -29,7 +29,7 @@ namespace FabricHealer.Utilities
         {
             if (healthReport == null)
             {
-                _logger.LogInfo("ReportHealthToServiceFabric: healthReport is null.");
+                _logger?.LogInfo("ReportHealthToServiceFabric: healthReport is null.");
                 return;
             }
 
@@ -60,11 +60,11 @@ namespace FabricHealer.Utilities
             {
                 if (healthReport.State == HealthState.Ok)
                 {
-                    _logger.LogInfo(healthReport.HealthMessage);
+                    _logger?.LogInfo(healthReport.HealthMessage);
                 }
                 else
                 {
-                    _logger.LogWarning(healthReport.HealthMessage);
+                    _logger?.LogWarning(healthReport.HealthMessage);
                 }
             }
 

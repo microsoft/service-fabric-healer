@@ -50,7 +50,6 @@ namespace FabricHealer
         internal static long InstanceCount { get; private set; }
         internal static bool IsOneNodeCluster { get; private set; }
         internal static StatelessServiceContext ServiceContext { get; private set; }
-        
         public static Logger RepairLogger { get; private set; }
 
         // CancellationToken from FabricHealer.RunAsync.
@@ -2407,7 +2406,7 @@ namespace FabricHealer
             var healthReporter = new FabricHealthReporter(RepairLogger);
             var healthReport = new HealthReport
             {
-                HealthMessage = "Clearing existing health reports as FabricHealer is stopping or updating.",
+                HealthMessage = "Clearing existing health reports as FabricHealer is starting, stopping or updating.",
                 NodeName = ServiceContext.NodeContext.NodeName,
                 State = HealthState.Ok,
                 HealthReportTimeToLive = TimeSpan.FromMinutes(5),
@@ -2418,8 +2417,8 @@ namespace FabricHealer
             {
                 var appName = new Uri(RepairConstants.FabricHealerAppName);
                 var appHealth =
-                    await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(appName, ConfigSettings.AsyncTimeout, Token);
-                var FHAppEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains($"{RepairConstants.FabricHealer}."));
+                    await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(appName, ConfigSettings.AsyncTimeout, CancellationToken.None);
+                var FHAppEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(RepairConstants.FabricHealer));
 
                 foreach (HealthEvent evt in FHAppEvents)
                 {
@@ -2427,6 +2426,7 @@ namespace FabricHealer
                     healthReport.Property = evt.HealthInformation.Property;
                     healthReport.SourceId = evt.HealthInformation.SourceId;
                     healthReport.EntityType = EntityType.Application;
+                    healthReport.NodeName = ServiceContext.NodeContext.NodeName;
 
                     healthReporter.ReportHealthToServiceFabric(healthReport);
                     Thread.Sleep(50);
@@ -2441,7 +2441,7 @@ namespace FabricHealer
             try
             { 
                 var nodeHealth =
-                    await FabricClientSingleton.HealthManager.GetNodeHealthAsync(ServiceContext.NodeContext.NodeName, ConfigSettings.AsyncTimeout, Token);
+                    await FabricClientSingleton.HealthManager.GetNodeHealthAsync(ServiceContext.NodeContext.NodeName, ConfigSettings.AsyncTimeout, CancellationToken.None);
                 var FHNodeEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(RepairConstants.FabricHealer));
 
                 foreach (HealthEvent evt in FHNodeEvents)
@@ -2449,6 +2449,7 @@ namespace FabricHealer
                     healthReport.Property = evt.HealthInformation.Property;
                     healthReport.SourceId = evt.HealthInformation.SourceId;
                     healthReport.EntityType = EntityType.Node;
+                    healthReport.NodeName = ServiceContext.NodeContext.NodeName;
 
                     healthReporter.ReportHealthToServiceFabric(healthReport);
                     Thread.Sleep(50);

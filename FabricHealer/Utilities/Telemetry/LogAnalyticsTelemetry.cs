@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -16,14 +17,13 @@ using FabricHealer.Interfaces;
 using FabricHealer.Repair;
 using FabricHealer.TelemetryLib;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace FabricHealer.Utilities.Telemetry
 {
     public class LogAnalyticsTelemetry : ITelemetryProvider
     {
-        private const int MaxRetries = 5;
         private readonly Logger logger;
-        private int retries;
 
         private string WorkspaceId 
         { 
@@ -44,6 +44,8 @@ namespace FabricHealer.Utilities.Telemetry
         { 
             get;
         }
+
+        private string TargetUri => $"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}";
 
         public LogAnalyticsTelemetry(
                 string workspaceId,
@@ -187,76 +189,58 @@ namespace FabricHealer.Utilities.Telemetry
         /// Sends telemetry data to Azure LogAnalytics via REST.
         /// </summary>
         /// <param name="payload">Json string containing telemetry data.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>A completed task or task containing exception info.</returns>
-        private async Task SendTelemetryAsync(string payload, CancellationToken token)
+        private async Task SendTelemetryAsync(string payload, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrEmpty(WorkspaceId) || string.IsNullOrWhiteSpace(Key))
+            if (string.IsNullOrWhiteSpace(payload) || cancellationToken.IsCancellationRequested)
             {
                 return;
             }
-
-            var requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
-            string date = DateTime.UtcNow.ToString("r");
-            string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
-            byte[] content = Encoding.UTF8.GetBytes(payload);
-            var httpClient = new HttpClient();
-            var message = new HttpRequestMessage
-            {
-                Content = new ByteArrayContent(content),
-                Method = HttpMethod.Post,
-                RequestUri = requestUri,
-            };
-            httpClient.DefaultRequestHeaders.Add("ContentType", "application/json");
-            httpClient.DefaultRequestHeaders.Add("Log-Type", LogType);
-            httpClient.DefaultRequestHeaders.Add("x-ms-date", date);
-            httpClient.DefaultRequestHeaders.Add("Authorization", signature);
 
             try
             {
-                using HttpResponseMessage response = await httpClient.SendAsync(message, token);
+                string date = DateTime.UtcNow.ToString("r");
+                string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
+                byte[] content = Encoding.UTF8.GetBytes(payload);
+                using HttpClient httpClient = new();
+                using HttpRequestMessage request = new(HttpMethod.Post, TargetUri);
+                request.Headers.Authorization = AuthenticationHeaderValue.Parse(signature);
+                request.Content = new ByteArrayContent(content);
+                request.Content.Headers.Add("Content-Type", "application/json");
+                request.Content.Headers.Add("Log-Type", LogType);
+                request.Content.Headers.Add("x-ms-date", date);
+                using var response = await httpClient.SendAsync(request, cancellationToken);
 
-                if (response.StatusCode is HttpStatusCode.OK or HttpStatusCode.Accepted)
+                if (response != null && (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.Accepted))
                 {
-                    retries = 0;
                     return;
                 }
 
-                logger.LogWarning(
-                    $"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}" +
-                    $"{response.StatusCode}: {response.ReasonPhrase}");
+                if (response != null)
+                {
+                    logger.LogWarning(
+                        $"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{response.StatusCode}: {response.ReasonPhrase}");
+                }
             }
-            catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
+            catch (Exception e) when (e is HttpRequestException or InvalidOperationException)
             {
-                return;
+                logger.LogInfo($"Exception sending telemetry to LogAnalytics service:{Environment.NewLine}{e.Message}");
             }
             catch (Exception e)
             {
-                // An Exception during telemetry data submission should never take down CO process. Log it. Don't throw it. Fix it.
-                logger.LogWarning($"Handled Exception in LogAnalyticsTelemetry.SendTelemetryAsync: {e.Message}");
-
+                // Do not take down FO with a telemetry fault. Log it. Warning level will always log.
+                // This means there is either a bug in this code or something else that needs your attention.
+#if DEBUG
+                logger.LogWarning($"Exception sending telemetry to LogAnalytics service:{Environment.NewLine}{e}");
+#else
+                logger.LogWarning($"Exception sending telemetry to LogAnalytics service: {e.Message}");
+#endif
                 if (e is OutOfMemoryException)
                 {
                     // Terminate now.
                     Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
-            }
-
-            if (retries < MaxRetries)
-            {
-                if (token.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                retries++;
-                await Task.Delay(1000, token);
-                await SendTelemetryAsync(payload, token);
-            }
-            else
-            {
-                // Exhausted retries. Reset counter.
-                logger.LogWarning($"Exhausted request retries in LogAnalyticsTelemetry.SendTelemetryAsync: {MaxRetries}. See logs for error details.");
-                retries = 0;
             }
         }
 

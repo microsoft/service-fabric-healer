@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
 using System.Fabric;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,6 +34,22 @@ namespace FabricHealer
 
             // Blocks until cancellationToken cancellation.
             await healerManager.StartAsync();
+        }
+
+        // FH Replica instance deleted.
+        protected override void OnAbort()
+        {
+            try
+            {
+                FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync(true).Wait(TimeSpan.FromSeconds(30));
+                FabricHealerManager.TryClearExistingHealthReportsAsync().Wait(TimeSpan.FromSeconds(30));
+            }
+            catch (Exception e) when (e is ArgumentException or AggregateException or FabricException or ObjectDisposedException)
+            {
+
+            }
+
+            base.OnAbort();
         }
     }
 }
