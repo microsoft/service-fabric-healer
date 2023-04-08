@@ -20,7 +20,7 @@ Update-ServiceFabricNodeConfiguration -ClusterManifestPath C:\SFDevCluster\Data\
 ```
 The cluster will be rebuilt and the RepairManager service will be added to the System services. Then, you can experiment with FH locally in the way that it will work on an actual cluster in the cloud.  
 
-### Scenarios 
+### Scenarios - Service Repair
 
 
 ***Problem***: I want to perform a code package restart if FabricObserver emits a memory usage warning (as a percentage of total memory) for any user application (not SF system apps) in my cluster.
@@ -127,6 +127,67 @@ Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue
 	?MetricValue >= 8500,
 	TimeScopedRestartCodePackage(4, 01:00:00).
 ```  
+
+
+### Scenarios - Disk Repair (Note: Requires related facts from FabricObserer service)
+
+**FabricHealer needs to be deployed to each node in the cluster for this type of mitigation to work and only facts provided by FabricObserver service are supported today**. 
+
+
+***Problem***: I want to delete files in multiple directories when a Disk Warning is supplied by FabricObserver
+
+***Solution***: 
+
+If FabricObserver generates a Warning related to disk space usage (which, of course, you configured in FO), then try and delete files
+in the following set of directory paths (note that using member predicate in a rule enables iteration through a collection):
+
+```
+Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, 08:00:00), 
+	?repairCount < 5,
+	member(config(?X,?Y), [config("D:\SvcFab\Log\Traces", 50), config("C:\fabric_observer_logs", 10), config("E:\temp", 10)]), 
+	CheckFolderSize(?X, MaxFolderSizeGB=?Y),
+	DeleteFiles(?X, SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true).
+```
+
+Note that in the above rule, the value you specify for the ?Y variable in config(?X,?Y) is GB size unit (MaxFolderSizeGB). You could instead choose to use MaxFolderSizeMB, which
+means ?Y values are MB size unit.
+
+
+***Problem***: I want to delete files in multiple directories when a Disk Warning is supplied by FabricObserver related to FO's Folder Size monitoring feature
+(DiskObserver's DiskObserverEnableFolderSizeMonitoring setting and related settings (which employ MB thresholds only, so employ MaxFolderSizeMB in logic rule for ?Y value size unit). 
+
+
+***Solution***: 
+
+```
+Mitigate(MetricName=?MetricName) :- match(?MetricName, "FolderSizeMB"), GetRepairHistory(?repairCount, 08:00:00), 
+	?repairCount < 8,
+	member(config(?X,?Y), [config("D:\SvcFab\Log\Traces", 4096), config("C:\fabric_observer_logs", 500), config("E:\temp", 1024)]), 
+	CheckFolderSize(?X, MaxFolderSizeMB=?Y),
+	DeleteFiles(?X, SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true).
+```
+
+If you want to just specify a single directory, then you could do something like this: 
+
+```
+## Constrain on folder size Error or Warning code (facts from FabricObserver).
+Mitigate(ErrorCode=?ErrorCode) :- ?ErrorCode == "FO042" || ?ErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),
+	?repairCount < 4,
+	CheckFolderSize("C:\fabric_observer_logs", MaxFolderSizeMB=250),
+	DeleteFiles("C:\fabric_observer_logs", SortOrder=Ascending, MaxFilesToDelete=5, RecurseSubdirectories=true).
+```
+
+If you want to constrain on specific file types within a directory, then you could do something like this (only delete files with .dmp extension, for example): 
+
+```
+## Constrain on folder size Error or Warning code (facts from FabricObserver).
+Mitigate(ErrorCode=?ErrorCode) :- ?ErrorCode == "FO042" || ?ErrorCode == "FO043", GetRepairHistory(?repairCount, 08:00:00),
+	?repairCount < 4,
+	CheckFolderSize("C:\fabric_observer_logs", MaxFolderSizeMB=250),
+	DeleteFiles("C:\fabric_observer_logs", SortOrder=Ascending, MaxFilesToDelete=5, RecurseSubdirectories=true, SearchPattern="*.dmp").
+```
+
+
 
 ### Debugging/Auditing Rules
 
