@@ -4,7 +4,8 @@
     <id>%PACKAGE_ID%</id>
     <version>1.2.1</version>
     <releaseNotes>
-
+- Bug Fix: https://github.com/microsoft/service-fabric-healer/issues/148: Disk Repair is not working. 
+- Bug Fix: https://github.com/microsoft/service-fabric-healer/issues/146: LogAnalytics SendAsync always fails with server response Forbidden.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
