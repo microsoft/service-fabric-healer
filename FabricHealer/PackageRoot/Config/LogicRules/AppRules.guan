@@ -167,7 +167,7 @@ Mitigate(AppName="fabric:/MyApp42", MetricName="EphemeralPortsPercent", MetricVa
 Mitigate(AppName=?AppName, MetricName="Threads", MetricValue=?MetricValue) :- ?AppName != "fabric:/FabricObserver", ?MetricValue >= 400, TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Threads - Any app service. 5 repairs within 5 hour window. This means if FO warns on Thread count, then heal. There are no conditional checks (on MetricValue) to take place.
-Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(1000, 05:00:00).
+Mitigate(MetricName="Threads") :- TimeScopedRestartCodePackage(5, 05:00:00).
 
 ## Generic rule for restarting any service in Warning or Error. This means any service that is in Error or Warning state and
 ## also specified in the serialized TelemetryData instance that forms the Description of the related Service level Health Event will be restarted.
