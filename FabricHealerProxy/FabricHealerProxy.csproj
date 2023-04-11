@@ -8,7 +8,7 @@
 	<ItemGroup>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
-		<PackageReference Include="NLog" Version="5.1.2" />
+		<PackageReference Include="NLog" Version="5.1.3" />
 		<PackageReference Include="Polly" Version="7.2.3" />
 	</ItemGroup>
 </Project>
