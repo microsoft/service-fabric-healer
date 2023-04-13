@@ -288,21 +288,6 @@ A query is simply a way to invoke a rule (function).
 
 By default, for logic-based repair workflows, FH will execute a query which calls a rule named ```Mitigate()```. Think of ```Mitigate()``` as the root for executing the repair workflow, similar to the Main() function in most programming languages. By default, ```Mitigate()``` passes arguments that can be passed to predicates used in the repair workflow.
 
-| Argument Name             | Definition                                                                                   |
-|---------------------------|----------------------------------------------------------------------------------------------|
-| AppName                   | Name of the SF application, format is "fabric:/SomeApp" (Quotes are required)                |
-| ServiceName               | Name of the SF service, format is "fabric:/SomeApp/SomeService" (Quotes are required)        |
-| NodeName                  | Name of the node                                                                             | 
-| NodeType                  | Type of node                                                                                 |  
-| ObserverName              | Name of Observer that generated the event (if the data comes from FabricObserver service)    |
-| PartitionId               | Id of the partition                                                                          |
-| ReplicaOrInstanceId       | Id of the replica or instance                                                                |
-| ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                        | 
-| MetricName                | Name of the metric (e.g., CpuPercent or MemoryMB, etc.)                                      |   
-| MetricValue               | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)                              | 
-| OS                        | The name of the OS from which the data was collected (Linux or Windows)                      |
-| HealthState               | The HealthState of the target entity: Error or Warning                                       |
-
 For example if you wanted to use AppName and ServiceName in your repair workflow you would specify them like so:
 ```
 Mitigate(AppName=?x, ServiceName=?y) :- ..., ?x == "fabric:/App1", ...
@@ -499,3 +484,154 @@ Or
 ``` RestartReplica(DoHealthChecks=false, MaxExecutionTime=00:15:00)``` 
 
 Hopefully, you can see the pattern here: You can employ any combination of predicate arguments in FabricHealer's Guan predicates (not the case in Guan's system predicates, however), but **they must each be named if you do not specifcy all of them**. 
+
+
+### Facts available to you in the head (Mitigate) of any rule you employ.
+
+#### Application/Service logic rules 
+**App/Service repair requires facts from FabricObserver or FHProxy. FH can be deployed to a single or multiple nodes.** 
+
+#### Applicable Named Arguments present in Mitigate. Corresponding data is supplied by FabricObserver or FHProxy, renamed for brevity by FH. 
+| Argument Name             | Definition                                                                                   |
+|---------------------------|----------------------------------------------------------------------------------------------|
+| AppName                   | Name of the SF application, format is "fabric:/SomeApp" (Quotes are required)                |
+| ServiceName               | Name of the SF service, format is "fabric:/SomeApp/SomeService" (Quotes are required)        |
+| ServiceKind               | The state kind of SF service: Stateful or Stateless                                          |
+| NodeName                  | Name of the node                                                                             | 
+| NodeType                  | Type of node                                                                                 |  
+| ObserverName              | Name of Observer that generated the event (if the data comes from FabricObserver service)    |
+| PartitionId               | Id of the partition                                                                          |
+| ReplicaOrInstanceId       | Id of the replica or instance                                                                |
+| ReplicaRole               | Role of replica: Primary or ActiveSecondary. Or None (e.g., Stateless replica)               |
+| ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                        | 
+| MetricName                | Name of the metric (e.g., CpuPercent or MemoryMB, etc.)                                      |   
+| MetricValue               | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)                              | 
+| OS                        | The name of the OS from which the data was collected (Linux or Windows)                      |
+| ProcessName               | The name of the service process                                                              |
+| ProcessStartTime          | The time (UTC) the process was created on the machine                                        |
+| HealthState               | The HealthState of the target entity: Error or Warning                                       |
+| Source                    | The Source ID of the related SF Health Event                                                 |
+| Property                  | The Property of the related SF Health Event                                                  |
+ 
+#### Application-related Metric Names.
+| Name                      |                                                                               
+|---------------------------| 
+| ActiveTcpPorts            |                                        
+| CpuPercent                |    
+| EphemeralPorts            | 
+| EphemeralPortsPercent     | 
+| EndpointUnreachable*      |   
+| MemoryMB                  | 
+| MemoryPercent             | 
+| Handles                   | 
+| HandlesPercent            | 
+| Threads                   | 
+
+#### Currently supported repair predicates for Application service level repair.
+| Name                      | Definition                                                                               
+|---------------------------|---------------------------------------------------------------------------------------------------------------|
+| RestartCodePackage        | Safely ends the code package process, which restarts all of the user service replicas hosted in that process. |
+| RestartReplica            | Restarts the offending stateful/stateless service replica without safety checks.   
+
+
+#### Disk logic rules  
+**Disk repair requires facts from FabricObserver or FHProxy. FH must be present on the node where disk operations are to be done.**
+
+#### Applicable Named Arguments present in Mitigate. Facts are supplied by FabricObserver, FHProxy or FH itself.
+| Argument Name             | Definition                                                             |
+|---------------------------|------------------------------------------------------------------------|
+| NodeName                  | Name of the node                                                       |
+| NodeType                  | Type of node                                                           |
+| ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                  |
+| MetricName                | Name of the Metric  (e.g., CpuPercent or MemoryMB, etc.)               |
+| MetricValue               | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)        |
+| OS                        | The name of the OS where FabricHealer is running (Linux or Windows)    |
+| HealthState               | The HealthState of the target entity: Error or Warning                 |
+| Source                    | The Source ID of the related SF Health Event                           |
+| Property                  | The Property of the related SF Health Event                            |
+
+#### Disk-related Metric Names.
+| Name                      |                                                                                 
+|---------------------------|
+| DiskSpacePercent          |                                       
+| DiskSpaceMB               |  
+| FolderSizeMB              |
+
+#### Currently supported repair predicates for use in Disk repair rules.
+| Name                      | Definition                                                                               
+|---------------------------|----------------------------------------------------------------------------|
+| DeleteFiles               | Deletes files in a specified directory (full path) with optional arguments.|
+
+
+#### System service logic rules 
+**System service repair requires facts from FabricObserver or FHProxy. FH must be present on the node where process operations are to be done.**
+
+#### Applicable Named Arguments for Mitigate. Corresponding data is supplied by FabricObserver, Renamed for brevity by FH.
+| Argument Name             | Definition                                                                                                   |
+|---------------------------|--------------------------------------------------------------------------------------------------------------|
+| AppName                   | Name of the SF System Application entity. This is always "fabric:/System"                                    |
+| NodeName                  | Name of the node                                                                                             | 
+| NodeType                  | Type of node                                                                                                 |  
+| ErrorCode                 | Supported Error Code emitted by caller (e.g. "FO002")                                                        | 
+| MetricName                | Name of the Metric (e.g., CpuPercent or MemoryMB, etc.)                                                      |   
+| MetricValue               | Corresponding Metric value (e.g. "85" indicating 85% CPU usage)                                              | 
+| ProcessName               | The name of a Fabric system service process supplied in TelemetryData instance                               | 
+| ProcessStartTime          | The time (UTC) the process was created on the machine                                                        |
+| OS                        | The name of the OS from which the data was collected (Linux or Windows)                                      |
+| HealthState               | The HealthState of the target entity: Error or Warning                                                       |
+| Source                    | The Source ID of the related SF Health Event                                                                 |
+| Property                  | The Property of the related SF Health Event                                                                  |
+
+#### System Service-related Metric Names.
+| Name                      |                                                                                    
+|---------------------------|
+| ActiveTcpPorts            |                                         
+| CpuPercent                |    
+| EphemeralPorts            |     
+| MemoryMB                  | 
+| FileHandles               | 
+| FileHandlesPercent        | 
+| Threads                   |
+
+#### Currently supported repair predicates for System Service level repair.
+| Name                       | Definition                                                                      |       
+|----------------------------|---------------------------------------------------------------------------------|
+| RestartFabricSystemProcess | Restarts the offending stateful/stateless service replica without safety checks.|
+| RestartFabricNode          | Restarts the target Fabric Node.                                                |
+
+
+#### Machine logic rules
+**Machine repair does not require facts from FabricObserver or FHProxy. FH can be deployed to a single or multiple nodes. All VM level repairs are executed by InfrastructureService, not FabricHealer. FabricHealer only schedules machine repairs.**
+
+##### Applicable Named Arguments for Mitigate. Facts are supplied by FabricObserver, FHProxy or FH itself.
+Any argument below with (FO/FHProxy) means that *only* FabricObsever or FHProxy will present the fact. Else, FH will provide them.
+
+| Argument Name             | Definition                                                             |
+|---------------------------|------------------------------------------------------------------------|
+| NodeName                  | Name of the node                                                       |
+| NodeType                  | Type of node                                                           |
+| ErrorCode (FO/FHProxy)    | Supported Error Code emitted by caller (e.g. "FO002")                  |
+| MetricName (FO/FHProxy)   | Name of the Metric  (e.g., CpuPercent or MemoryMB, etc.)               |
+| MetricValue (FO/FHProxy)  | Corresponding Metric Value (e.g. "85" indicating 85% CPU usage)        |
+| OS                        | The name of the OS where FabricHealer is running (Linux or Windows)    |
+| HealthState               | The HealthState of the target entity: Error or Warning                 |
+| Source                    | The Source ID of the related SF Health Event                           |
+| Property                  | The Property of the related SF Health Event                            |
+
+#### Metric Names, from FO or FHProxy.
+| Name                           |                                           
+|--------------------------------|
+| ActiveTcpPorts                 |                  
+| CpuPercent                     |
+| EphemeralPorts                 |
+| EphemeralPortsPercent          |
+| MemoryMB                       |
+| MemoryPercent                  |
+| Handles (Linux-only)           |
+| HandlesPercent (Linux-only)    |
+
+#### Currently supported repair predicates for Machine (VM) level repair.
+| Name                       | Definition                                                                      |       
+|----------------------------|---------------------------------------------------------------------------------|
+| ScheduleMachineRepair      | Schedules an infrastructure repair task, requires a supported Repair Action     |
+| DeactivateFabricNode       | Deactivates a target Fabric node, with optional specified ImpactLevel           |

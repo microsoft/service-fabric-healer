@@ -1,5 +1,4 @@
-﻿
-Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, 08:00:00), 
+﻿Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), LogRule(1), GetRepairHistory(?repairCount, 08:00:00), 
 	?repairCount < 4,
 	member(config(?X,?Y), [config("C:\SFDevCluster\Log\Traces", 5), config("C:\fabric_observer_logs", 5), config("C:\SFDevCluster\Log\QueryTraces", 5)]), 
 	CheckFolderSize(?X, MaxFolderSizeMB=?Y),
@@ -7,5 +6,5 @@ Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), GetRepairHi
 
 Mitigate(ErrorCode=FO043) :- GetRepairHistory(?repairCount, 08:00:00),
 	?repairCount < 4,
-	CheckFolderSize("C:\SFDevCluster\Log\Traces", MaxFolderSizeMB=5),
-	DeleteFiles("C:\SFDevCluster\Log\Traces", SortOrder=Ascending, MaxFilesToDelete=5, RecurseSubdirectories=false).
+	CheckFolderSize("C:\SFDevCluster\Log\QueryTraces", MaxFolderSizeMB=5),
+	DeleteFiles("C:\SFDevCluster\Log\QueryTraces", SortOrder=Ascending, MaxFilesToDelete=5, RecurseSubdirectories=false).

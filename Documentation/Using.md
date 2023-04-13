@@ -189,12 +189,12 @@ Mitigate(ErrorCode=?ErrorCode) :- ?ErrorCode == "FO042" || ?ErrorCode == "FO043"
 
 
 
-### Debugging/Auditing Rules
+### Debugging/Auditing Rules 
 
 There are two ways to have FabricHealer audit logic rules: 
 
 - Global Repair Predicate tracing - EnableLogicRuleTracing application parameter setting (boolean). If this is enabled, then FabricHealer will trace/log the entire rule
-that is currently executing if it contains a Repair predicate (RestartCodePackage, ScheduleMachineRepair, RestartReplica, etc.). 
+that is currently executing if it contains a Repair predicate (RestartCodePackage, ScheduleMachineRepair, RestartReplica, DeleteFiles, etc.).
 
 - LogRule Helper predicate - you can add LogRule predicate to rules you want FH to trace/log. Any rule that contains this predicate will be logged in its entirety, which is 
 extremely useful for debugging/auditing purposes. LogRule predicate requires a line number argument: e.g., LogRule(42) means log the entire rule that starts on line 42.
@@ -252,7 +252,7 @@ For example:
 ``` PowerShell
 
 $appName = "fabric:/FabricHealer"
-$appVersion = "1.2.1"
+$appVersion = "1.2.2"
 
 $myApplication = Get-ServiceFabricApplication -ApplicationName $appName
 $appParamCollection = $myApplication.ApplicationParameters

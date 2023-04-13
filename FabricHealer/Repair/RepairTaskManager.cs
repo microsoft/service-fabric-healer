@@ -906,6 +906,7 @@ namespace FabricHealer.Repair
                             break;
 
                         case EntityType.Application when repairData.ApplicationName == RepairConstants.SystemAppName && repairData.RepairPolicy.RepairAction == RepairActionType.RestartProcess:
+                        case EntityType.Process when repairData.ApplicationName == RepairConstants.SystemAppName && repairData.RepairPolicy.RepairAction == RepairActionType.RestartProcess:
                             probationDuration = repairData.RepairPolicy.MaxTimePostRepairHealthCheck > TimeSpan.Zero
                                ? repairData.RepairPolicy.MaxTimePostRepairHealthCheck
                                : TimeSpan.FromMinutes(1);
@@ -984,10 +985,7 @@ namespace FabricHealer.Repair
                     return isHealthy;
                 }
             }
-            catch (Exception e) when (e is ArgumentException or
-                                      FabricException or
-                                      OperationCanceledException or
-                                      TaskCanceledException)
+            catch (Exception e) when (e is ArgumentException or FabricException or OperationCanceledException or TaskCanceledException)
             {
 #if DEBUG
                 FabricHealerManager.RepairLogger.LogWarning($"Handled ExecuteFabricHealerRepairTaskAsync Failure:{Environment.NewLine}{e}");

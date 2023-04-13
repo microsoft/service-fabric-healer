@@ -13,8 +13,8 @@
          <RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 	<Product>FabricHealer</Product>
-	<Version>1.2.1</Version>
-    <FileVersion>1.2.1</FileVersion>
+	<Version>1.2.2</Version>
+    <FileVersion>1.2.2</FileVersion>
     <StartupObject>FabricHealer.Program</StartupObject>
     <Platforms>x64</Platforms>
   </PropertyGroup>
@@ -27,25 +27,5 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Update="PackageRoot\Config\LogicRules\AppRules.guan">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\LogicRules\DiskRules.guan">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\LogicRules\FabricNodeRules.guan">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\LogicRules\ReplicaRules.guan">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\LogicRules\SystemServiceRules.guan">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\LogicRules\MachineRules.guan">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 </Project>
