@@ -120,7 +120,7 @@ namespace FabricHealer.Repair
                 if (restartCodePackageResult != null)
                 {
                     UpdateRepairHistory(repairData);
-                    ClearEntityHealthWarnings(repairData);
+                    //ClearEntityHealthWarnings(repairData);
 
                     actionMessage =
                         "Successfully restarted deployed code package for service " +
@@ -271,7 +271,7 @@ namespace FabricHealer.Repair
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                 UpdateRepairHistory(repairData);
-                ClearEntityHealthWarnings(repairData); 
+                //ClearEntityHealthWarnings(repairData); 
             }
             catch (Exception e) when (e is FabricException or TimeoutException)
             {
@@ -343,7 +343,7 @@ namespace FabricHealer.Repair
                 UpdateRepairHistory(repairData);
 
                 // Clear Warning from FO. If in fact the issue has not been solved, then FO will generate a new health report for the target and the game will be played again.
-                ClearEntityHealthWarnings(repairData);
+                //ClearEntityHealthWarnings(repairData);
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or NotSupportedException or Win32Exception)
             {
@@ -503,7 +503,7 @@ namespace FabricHealer.Repair
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                 UpdateRepairHistory(repairData);
-                ClearEntityHealthWarnings(repairData);
+                //ClearEntityHealthWarnings(repairData);
             }
             catch (Exception e) when (e is FabricException or TimeoutException or OperationCanceledException)
             {
@@ -540,7 +540,7 @@ namespace FabricHealer.Repair
                     "DeleteFiles::Start",
                     actionMessage,
                     cancellationToken,
-                    repairData,
+                    null,
                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
             string targetFolderPath = (repairData.RepairPolicy as DiskRepairPolicy).FolderPath;
@@ -552,7 +552,7 @@ namespace FabricHealer.Repair
                         "DeleteFiles::DirectoryDoesNotExist",
                         $"The specified directory, {targetFolderPath}, does not exist.",
                         cancellationToken,
-                        repairData,
+                        null,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                 return false;
@@ -593,7 +593,7 @@ namespace FabricHealer.Repair
                             "DeleteFiles::NoFilesMatchSearchPattern",
                             $"No files match specified search pattern, {searchPattern}, in {targetFolderPath}. Nothing to do here.",
                             cancellationToken,
-                            repairData,
+                            null,
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                     return false;
@@ -620,7 +620,7 @@ namespace FabricHealer.Repair
                                 "DeleteFiles::HandledException",
                                 $"Unable to delete {file}: {e.Message}",
                                 cancellationToken,
-                                repairData,
+                                null,
                                 FabricHealerManager.ConfigSettings.EnableVerboseLogging);
                     }
                 }
@@ -634,7 +634,7 @@ namespace FabricHealer.Repair
                             "DeleteFiles::IncompleteOperation",
                             $"Unable to delete specified number of files ({maxFiles}).",
                             cancellationToken,
-                            repairData,
+                            null,
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
                     
                     return false;
@@ -649,7 +649,7 @@ namespace FabricHealer.Repair
                             "DeleteFiles::IncompleteOperation",
                             "Unable to delete all files.",
                             cancellationToken,
-                            repairData,
+                            null,
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
 
@@ -661,13 +661,13 @@ namespace FabricHealer.Repair
                         "DeleteFiles::Success",
                         $"Successfully deleted {(maxFiles > 0 ? "up to " + maxFiles : "all")} files in {targetFolderPath}",
                         cancellationToken,
-                        repairData,
+                        null,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                 UpdateRepairHistory(repairData);
             }
 
-            ClearEntityHealthWarnings(repairData);
+            //ClearEntityHealthWarnings(repairData);
             return true;
         }
 
@@ -715,10 +715,10 @@ namespace FabricHealer.Repair
         {
             try
             {
-                repairData.Description = $"{repairData.RepairPolicy.RepairAction} has completed successfully.";
+                string message = $"FabricHealer: {repairData.RepairPolicy.RepairAction} has completed successfully.";
                 var healthInformation = new HealthInformation(repairData.Source, repairData.Property, HealthState.Ok)
                 {
-                    Description = JsonConvert.SerializeObject(repairData),
+                    Description = message,
                     TimeToLive = TimeSpan.FromMinutes(5),
                     RemoveWhenExpired = true
                 };

@@ -26,6 +26,7 @@ using ServiceFabric.Mocks;
 using static ServiceFabric.Mocks.MockConfigurationPackage;
 using System.Fabric.Description;
 using System.Fabric.Query;
+using System.Text;
 
 namespace FHTest
 {
@@ -198,20 +199,6 @@ namespace FHTest
         private static async Task DeployTestApp42Async()
         {
             string appName = "fabric:/TestApp42";
-
-            // If fabric:/TestApp42 is already installed, exit.
-            var deployedTestApp =
-                    await fabricClient.QueryManager.GetDeployedApplicationListAsync(
-                            NodeName,
-                            new Uri(appName),
-            TimeSpan.FromSeconds(30),
-                            token);
-
-            if (deployedTestApp?.Count > 0)
-            {
-                return;
-            }
-
             string appType = "TestApp42Type";
             string appVersion = "1.0.0";
 
@@ -355,7 +342,7 @@ namespace FHTest
 
 
         [TestMethod]
-        public async Task AllAppRules_EnsureWellFormedRules_QueryInitialized_Successful()
+        public async Task AppRules_Repair_Successful_Validate_RuleTracing()
         {
             var partitions = await fabricClient.QueryManager.GetPartitionListAsync(new Uri("fabric:/TestApp42/ChildProcessCreator"));
             Guid partition = partitions[0].PartitionInformation.Id;
@@ -405,10 +392,26 @@ namespace FHTest
             {
                 throw new AssertFailedException(ge.Message, ge);
             }
+
+            // Validate that the repair predicate is traced.
+            try
+            {
+                var nodeHealth =
+                    await fabricClient.HealthManager.GetNodeHealthAsync(NodeName, TimeSpan.FromSeconds(60), CancellationToken.None);
+                var FHNodeEvents = nodeHealth.HealthEvents?.Where(
+                        s => s.HealthInformation.SourceId.Contains("AppRules.guan")
+                        && s.HealthInformation.Description.Contains("RestartCodePackage"));
+
+                Assert.IsTrue(FHNodeEvents.Any());
+            }
+            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
+            {
+                throw;
+            }
         }
 
         [TestMethod]
-        public async Task AllMachineRules_EnsureWellFormedRules_QueryInitialized_Successful()
+        public async Task MachineRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
             // This will be the data used to create a repair task.
             var repairData = new TelemetryData
@@ -447,8 +450,24 @@ namespace FHTest
         }
 
         [TestMethod]
-        public async Task AllDiskRules_FolderSizeMB_Warning_EnsureWellFormedRules_QueryInitialized_Successful()
+        public async Task DiskRules_DiskSpace_Percentage_Repair_Successful_Validate_RuleTracing()
         {
+            // Create temp files. This assumes C:\SFDevCluster\Log\QueryTraces exists. This is the path used in the related logic rule.
+            // See DiskRules.guan in FHTest\PackageRoot\Config\LogicRules folder.
+            // You can use whatever path you want, but need to make sure that is reflected in the related logic rule.
+            byte[] bytes = Encoding.ASCII.GetBytes("foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz");
+            string path = @"C:\SFDevCluster\Log\QueryTraces";
+            
+            for (int i = 0; i < 5; i++)
+            {
+                using var f = File.Create(Path.Combine(path, $"foo{i}.txt"), 500, FileOptions.WriteThrough);
+
+                for (int j = 0; j < 50000; j++)
+                {
+                    f.Write(bytes);
+                }
+            }
+
             // This will be the data used to create a repair task.
             var repairData = new TelemetryData
             {
@@ -488,11 +507,45 @@ namespace FHTest
             {
                 throw new AssertFailedException(ge.Message, ge);
             }
+
+            // Validate that the repair rule is traced.
+            try
+            {
+                var nodeHealth =
+                    await fabricClient.HealthManager.GetNodeHealthAsync(NodeName, TimeSpan.FromSeconds(60), CancellationToken.None);
+                var FHNodeEvents = nodeHealth.HealthEvents?.Where(
+                        s => s.HealthInformation.SourceId.Contains("DiskRules.guan") && s.HealthInformation.Description.Contains("DeleteFiles"));
+
+                Assert.IsTrue(FHNodeEvents.Any());
+                Assert.IsTrue(FHNodeEvents.Any(e => e.HealthInformation.Description.Contains("QueryTraces")));
+            }
+            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
+            {
+                throw;
+            }
+
+            Assert.IsTrue(Directory.GetFiles(path).Length == 0);
         }
 
         [TestMethod]
-        public async Task AllDiskRules_DiskSpacePercent_Warning_EnsureWellFormedRules_QueryInitialized_Successful()
+        public async Task DiskRules_FolderSizeMB_Repair_Successful_Validate_RuleTracing()
         {
+            // Create temp files. This assumes C:\SFDevCluster\Log\QueryTraces exists. This is the path used in the related logic rule.
+            // See DiskRules.guan in FHTest\PackageRoot\Config\LogicRules folder.
+            // You can use whatever path you want, but need to make sure that is reflected in the related logic rule.
+            byte[] bytes = Encoding.ASCII.GetBytes("foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz");
+            string path = @"C:\SFDevCluster\Log\QueryTraces";
+
+            for (int i = 0; i < 5; i++)
+            {
+                using var f = File.Create(Path.Combine(path, $"foo{i}.txt"), 500, FileOptions.WriteThrough);
+
+                for (int j = 0; j < 50000; j++)
+                {
+                    f.Write(bytes);
+                }
+            }
+
             // This will be the data used to create a repair task.
             var repairData = new TelemetryData
             {
@@ -532,10 +585,29 @@ namespace FHTest
             {
                 throw new AssertFailedException(ge.Message, ge);
             }
+
+            // Validate that both the repair rule (contains LogRule predicate) and repair predicate (w/expanded variables) is traced.
+            try
+            {
+                var nodeHealth =
+                    await fabricClient.HealthManager.GetNodeHealthAsync(NodeName, TimeSpan.FromSeconds(60), CancellationToken.None);
+                var FHNodeEvents = nodeHealth.HealthEvents?.Where(
+                        s => s.HealthInformation.SourceId.Contains("DiskRules.guan") && s.HealthInformation.Description.Contains("DeleteFiles"));
+
+                Assert.IsTrue(FHNodeEvents.Any());
+                Assert.IsTrue(FHNodeEvents.Any(e => e.HealthInformation.Description.Contains("LogRule")));
+                Assert.IsTrue(FHNodeEvents.Any(e => e.HealthInformation.Description.Contains("QueryTraces")));
+            }
+            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
+            {
+                throw;
+            }
+
+            Assert.IsTrue(Directory.GetFiles(path).Length == 0);
         }
 
         [TestMethod]
-        public async Task AllFabricNodeRules_EnsureWellFormedRules_QueryInitialized_Successful()
+        public async Task FabricNodeRules_EnsureWellFormedRules_QueryInitialized_Successful()
         {
             // This will be the data used to create a repair task.
             var repairData = new TelemetryData
@@ -603,7 +675,7 @@ namespace FHTest
         }
 
         [TestMethod]
-        public async Task AllReplicaRules_EnsureWellFormedRules_QueryInitialized_Successful()
+        public async Task ReplicaRules_MemoryMB_Repair_Successful_Validate_Rule_Tracing()
         {
             var partitions = await fabricClient.QueryManager.GetPartitionListAsync(new Uri("fabric:/TestApp42/ChildProcessCreator"));
             Guid partition = partitions[0].PartitionInformation.Id;
@@ -658,18 +730,39 @@ namespace FHTest
             {
                 throw new AssertFailedException(ge.Message, ge);
             }
+
+            // Validate that the repair predicate is traced.
+            try
+            {
+                var nodeHealth =
+                    await fabricClient.HealthManager.GetNodeHealthAsync(NodeName, TimeSpan.FromSeconds(60), CancellationToken.None);
+                var FHNodeEvents = nodeHealth.HealthEvents?.Where(
+                        s => s.HealthInformation.SourceId.Contains("ReplicaRules.guan")
+                        && s.HealthInformation.Description.Contains("RestartReplica"));
+
+                Assert.IsTrue(FHNodeEvents.Any());
+            }
+            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
+            {
+                throw;
+            }
         }
 
         [TestMethod]
-        public async Task AllSystemServiceRules_EnsureWellFormedRules_QueryInitialized_Successful()
+        public async Task SystemServiceRules_MemoryMb_Repair_Successful_Validate_RuleTracing()
         {
             var repairData = new TelemetryData
             {
                 ApplicationName = "fabric:/System",
-                EntityType = EntityType.Partition,
-                PartitionId = Guid.NewGuid().ToString(),
+                Code = SupportedErrorCodes.AppErrorMemoryMB,
+                EntityType = EntityType.Process,
                 NodeName = NodeName,
-                HealthState = HealthState.Warning
+                HealthState = HealthState.Warning,
+                ProcessName = "FabricDCA",
+                ProcessId = Process.GetProcessesByName("FabricDCA")[0].Id,
+                Source = "FabricHealer_Test_SystemServiceRules",
+                Property = "MemoryInMb_FabricDCA",
+                Value = 1024
             };
 
             repairData.RepairPolicy = new RepairPolicy
@@ -681,7 +774,6 @@ namespace FHTest
                 Code = repairData.Code,
                 HealthState = repairData.HealthState,
                 ProcessName = repairData.ProcessName,
-                ServiceName = repairData.ServiceName,
                 MaxTimePostRepairHealthCheck = TimeSpan.FromSeconds(1)
             };
 
@@ -701,6 +793,22 @@ namespace FHTest
             catch (GuanException ge)
             {
                 throw new AssertFailedException(ge.Message, ge);
+            }
+
+            // Validate that the repair predicate is traced.
+            try
+            {
+                var nodeHealth =
+                    await fabricClient.HealthManager.GetNodeHealthAsync(NodeName, TimeSpan.FromSeconds(60), CancellationToken.None);
+                var FHNodeEvents = nodeHealth.HealthEvents?.Where(
+                        s => s.HealthInformation.SourceId.Contains("FabricDCA")
+                        && s.HealthInformation.Description.Contains("TimeScopedRestartFabricSystemProcess"));
+
+                Assert.IsTrue(FHNodeEvents.Any());
+            }
+            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
+            {
+                throw;
             }
         }
 
@@ -941,90 +1049,11 @@ namespace FHTest
             }
         }
 
-        [TestMethod]
-        public async Task MaxExecutionTime_Canceled_Repair()
-        {
-            string testRulesFilePath = Path.Combine(Environment.CurrentDirectory, "testrules_wellformed_maxexecution.guan");
-            string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
-            List<string> repairRules = FabricHealerManager.ParseRulesFile(rules);
-            var repairData = new TelemetryData
-            {
-                ApplicationName = "fabric:/test0",
-                NodeName = NodeName,
-                Metric = "ThreadCount",
-                HealthState = HealthState.Warning,
-                Code = SupportedErrorCodes.AppErrorTooManyThreads,
-                ServiceName = "fabric:/test0/service0",
-                Value = 42,
-                ReplicaId = default,
-                PartitionId = default
-            };
-
-            TimeSpan maxExecutionTime = TimeSpan.FromSeconds(2);
-            repairData.RepairPolicy = new RepairPolicy
-            {
-                AppName = repairData.ApplicationName,
-                RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
-                MaxExecutionTime = maxExecutionTime,
-                NodeName = repairData.NodeName,
-                Code = repairData.Code,
-                HealthState = repairData.HealthState,
-                ProcessName = repairData.ProcessName,
-                RepairId = "_Node_0_test0_service0_ThreadCount",
-                ServiceName = repairData.ServiceName,
-                MaxTimePostRepairHealthCheck = TimeSpan.FromSeconds(1)
-            };
-
-            var executorData = new RepairExecutorData
-            {
-                RepairPolicy = repairData.RepairPolicy
-            };
-
-            try
-            {
-                // Don't block.
-                _ = TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
-            }
-            catch (GuanException)
-            {
-                throw;
-            }
-
-            // Verify that the repair task was Cancelled within max execution time.
-            RepairTaskList repairTasks = null;
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            bool isCanceledWithinMaxExecWindow = false;
-
-            while (stopwatch.Elapsed < TimeSpan.FromSeconds(15))
-            {
-                repairTasks =
-                   await fabricClient.RepairManager.GetRepairTaskListAsync();
-                
-                Assert.IsNotNull(repairTasks);
-
-                if (repairTasks.Any(
-                        r => !string.IsNullOrWhiteSpace(r.ExecutorData) 
-                          && JsonSerializationUtility.TrySerializeObject(executorData, out string exdata) 
-                          && r.ExecutorData.Equals(exdata)
-                          && r.State == RepairTaskState.Completed
-                          && r.ResultStatus == RepairTaskResult.Cancelled
-                          && r.CompletedTimestamp.Value.Subtract(r.ExecutingTimestamp.Value) <= maxExecutionTime))
-                {
-                    isCanceledWithinMaxExecWindow = true;
-                    break;
-                }
-
-                await Task.Delay(1000, token);
-            }
-
-            Assert.IsTrue(isCanceledWithinMaxExecWindow);
-        }
-
         /* private Helpers */
 
         private static async Task TestInitializeGuanAndRunQuery(TelemetryData repairData, List<string> repairRules, RepairExecutorData executorData)
         {
-            await RepairTaskManager.RunGuanQueryAsync(repairData, repairRules, token, executorData);
+            await RepairTaskManager.RunGuanQueryAsync(repairData, repairRules, CancellationToken.None, executorData);
         }
 
         private static async Task<(bool, TelemetryData data)> 

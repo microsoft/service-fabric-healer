@@ -532,6 +532,12 @@ namespace FabricHealer.Repair
                 }
 
                 string[] lines = File.ReadLines(ruleFilePath).ToArray();
+
+                if (lines.Length == 0)
+                {
+                    return false;
+                }
+
                 predicate = predicate.Replace("'", "").Replace("\"", "").Replace(" ", "");
                 
                 // appending "()" to a predicate is optional. Just remove it and use the name only for string matching.
@@ -542,10 +548,28 @@ namespace FabricHealer.Repair
 
                 // Get all rules that contain the supplied predicate.
                 List<string> flattenedLines = FabricHealerManager.ParseRulesFile(lines);
+
+                if (flattenedLines.Count == 0)
+                {
+                    return false;
+                }
+
                 var rulesWithPredicate =
                     flattenedLines.Where(line => !string.IsNullOrWhiteSpace(line) &&
                                                  !line.StartsWith("##") &&
                                                  line.Replace("'", "").Replace("\"", "").Replace(" ", "").Contains(predicate, StringComparison.OrdinalIgnoreCase)).ToList();
+
+                // This will be the case for complex rules that employ member predicate, for example, like in DiskRules.guan.
+                if (!rulesWithPredicate.Any()) 
+                {
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        $"{ruleFileName}_{repairData?.RepairPolicy?.ProcessName ?? string.Empty}_{repairData?.NodeName}",
+                        $"Executing repair predicate \'{predicate}\'",
+                        FabricHealerManager.Token);
+
+                    return true;
+                }
 
                 // LogRule specified?
                 if (rulesWithPredicate.Count(
@@ -611,7 +635,7 @@ namespace FabricHealer.Repair
                                     rule = lines[j].Replace('\t', ' ').Trim() + ' ' + rule;
                                     lineNumber = j;
 
-                                    if (lines[j].TrimStart().StartsWith("Mitigate"))
+                                    if (lines[j].TrimStart().StartsWith("Mitigate") || lines[j].Contains(":-"))
                                     {
                                         break;
                                     }
@@ -624,7 +648,7 @@ namespace FabricHealer.Repair
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        $"{ruleFileName}#{lineNumber + 1}_{repairData.RepairPolicy.ProcessName ?? string.Empty}_{repairData.NodeName}",
+                        $"{ruleFileName}#{lineNumber + 1}_{repairData?.RepairPolicy?.ProcessName ?? string.Empty}_{repairData?.NodeName}",
                         $"Executing logic rule \'{rule}\'",
                         FabricHealerManager.Token);
 
