@@ -119,37 +119,37 @@ namespace FabricHealer.Utilities
         public bool EnableAppRepair
         {
             get;
-            private set;
+            set;
         }
 
         public bool EnableDiskRepair
         {
             get;
-            private set;
+            set;
         }
 
         public bool EnableFabricNodeRepair
         {
             get;
-            private set;
+            set;
         }
 
         public bool EnableReplicaRepair
         {
             get;
-            private set;
+            set;
         }
 
         public bool EnableSystemAppRepair
         {
             get;
-            private set;
+            set;
         }
 
         public bool EnableMachineRepair
         {
             get;
-            private set;
+            set;
         }
 
         public ConfigSettings(StatelessServiceContext context)
