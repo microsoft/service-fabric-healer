@@ -22,7 +22,6 @@ using Octokit;
 using System.Fabric.Description;
 using System.Runtime.InteropServices;
 using static FabricHealer.Repair.RepairTaskManager;
-using Newtonsoft.Json.Linq;
 
 namespace FabricHealer
 {
@@ -30,6 +29,7 @@ namespace FabricHealer
     {
         private DateTime LastVersionCheckDateTime { get; set; }
         private DateTime LastTelemetrySendDate { get; set; }
+        
         // Folks often use their own version numbers. This is for public diagnostic telemetry.
         private const string InternalVersionNumber = "1.2.2";
         private static FabricHealerManager fhSingleton;
@@ -50,6 +50,7 @@ namespace FabricHealer
         internal static long InstanceCount { get; private set; }
         internal static bool IsOneNodeCluster { get; private set; }
         internal static StatelessServiceContext ServiceContext { get; private set; }
+        
         public static Logger RepairLogger { get; private set; }
 
         // CancellationToken from FabricHealer.RunAsync.
@@ -115,124 +116,6 @@ namespace FabricHealer
         public static FabricHealerManager Instance(StatelessServiceContext context, CancellationToken token)
         {
             return fhSingleton ??= new FabricHealerManager(context ?? throw new ArgumentException("ServiceContext can't be null..", nameof(context)), token);
-        }
-
-        private FabricHealerManager(StatelessServiceContext context, CancellationToken token)
-        {
-            ServiceContext = context;
-            Token = token;
-            ServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
-            ConfigSettings = new ConfigSettings(context);
-            TelemetryUtilities = new TelemetryUtilities(context);
-            RepairLogger = new Logger(RepairConstants.FabricHealer, ConfigSettings.LocalLogPathParameter)
-            {
-                EnableVerboseLogging = ConfigSettings.EnableVerboseLogging,
-                EnableETWLogging = ConfigSettings.EtwEnabled
-            };
-            RepairHistory = new RepairData();
-            healthReporter = new FabricHealthReporter(RepairLogger);
-            sfRuntimeVersion = GetServiceFabricRuntimeVersion();
-            fabricClient = new FabricClient();
-
-            // Must be synchronous here. The async impls employ retry logic and handle exceptions.
-            InstanceCount = GetServiceInstanceCountAsync().Result;
-            IsOneNodeCluster = IsOneNodeClusterAsync().Result;
-        }
-
-        private static async Task<bool> IsOneNodeClusterAsync()
-        {
-            try
-            {
-                var nodeQueryDesc = new NodeQueryDescription
-                {
-                    MaxResults = 3,
-                };
-
-                NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => FabricClientSingleton.QueryManager.GetNodePagedListAsync(
-                                                nodeQueryDesc,
-                                                ConfigSettings.AsyncTimeout,
-                                                Token),
-                                         Token);
-
-                return nodes != null && nodes.Count == 1;
-            }
-            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
-            {
-                RepairLogger.LogWarning($"IsOneNodeClusterAsync failure: {e.Message}");
-
-                // Don't know the answer, so false.
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Checks if repair manager is enabled in the cluster or not
-        /// </summary>
-        /// <param name="serviceNameFabricUri"></param>
-        /// <param name="cancellationToken">cancellation token to stop the async operation</param>
-        /// <returns>true if repair manager application is present in cluster, otherwise false</returns>
-        private async Task<bool> InitializeAsync()
-        {
-            string okMessage = $"{repairManagerServiceUri} is deployed.";
-            bool isRmDeployed = true;
-            var healthReport = new HealthReport
-            {
-                NodeName = ServiceContext.NodeContext.NodeName,
-                AppName = new Uri(RepairConstants.FabricHealerAppName),
-                EntityType = EntityType.Application,
-                HealthMessage = okMessage,
-                State = HealthState.Ok,
-                Property = "RequirementCheck::RMDeployed",
-                HealthReportTimeToLive = TimeSpan.FromDays(1),
-                SourceId = RepairConstants.FabricHealer,
-            };
-            ServiceList serviceList = await FabricClientSingleton.QueryManager.GetServiceListAsync(
-                                              systemAppUri,
-                                              repairManagerServiceUri,
-                                              ConfigSettings.AsyncTimeout,
-                                              Token);
-
-            if ((serviceList?.Count ?? 0) == 0)
-            {
-                string warnMessage =
-                    $"{repairManagerServiceUri} could not be found, " +
-                    $"FabricHealer Service requires {repairManagerServiceUri} system service to be deployed in the cluster. " +
-                    "Consider adding a RepairManager section in your cluster manifest.";
-
-                healthReport.HealthMessage = warnMessage;
-                healthReport.State = HealthState.Warning;
-                healthReport.Code = SupportedErrorCodes.Ok;
-                healthReport.HealthReportTimeToLive = TimeSpan.MaxValue;
-                healthReport.SourceId = "CheckRepairManagerDeploymentStatusAsync";
-                isRmDeployed = false;
-            }
-
-            healthReporter.ReportHealthToServiceFabric(healthReport);
-            return isRmDeployed;
-        }
-
-        private static async Task<long> GetServiceInstanceCountAsync()
-        {
-            try
-            {
-                ServiceDescription serviceDesc =
-                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                            () => FabricClientSingleton.ServiceManager.GetServiceDescriptionAsync( 
-                                    ServiceContext.ServiceName,
-                                    ConfigSettings.AsyncTimeout,
-                                    Token), 
-                            Token);
-
-                return (serviceDesc as StatelessServiceDescription).InstanceCount;
-            }
-            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
-            {
-                RepairLogger.LogWarning($"GetServiceInstanceCountAsync failure: {e.Message}");
-
-                // Don't know the answer and it can't be 0 (this code is running).
-                return 1;
-            }
         }
 
         /// <summary>
@@ -347,7 +230,7 @@ namespace FabricHealer
                                 EntityType.Service);
                         }
 
-                        await MonitorHealthEventsAsync();
+                        await ProcessHealthEventsAsync();
                     }
                     else
                     {
@@ -570,137 +453,11 @@ namespace FabricHealer
             }
         }
 
-        private static void ResetInternalDataCounters()
-        {
-            RepairHistory.Repairs.Clear();
-            RepairHistory.FailedRepairs = 0;
-            RepairHistory.SuccessfulRepairs = 0;
-            RepairHistory.RepairCount = 0;
-            RepairHistory.EnabledRepairCount = 0;
-        }
-
-        private FabricHealerOperationalEventData GetFabricHealerInternalTelemetryData()
-        {
-            FabricHealerOperationalEventData opsTelemData = null;
-
-            try
-            {
-                RepairHistory.EnabledRepairCount = GetEnabledRepairRuleCount();
-
-                opsTelemData = new FabricHealerOperationalEventData
-                {
-                    UpTime = DateTime.UtcNow.Subtract(UtcStartDateTime).ToString(),
-                    Version = InternalVersionNumber,
-                    RepairData = RepairHistory,
-                    SFRuntimeVersion = sfRuntimeVersion
-                };
-            }
-            catch
-            {
-
-            }
-
-            return opsTelemData;
-        }
-
         /// <summary>
-        /// Cancels all FabricHealer repair tasks currently in flight.
+        /// Processes Service Fabric health events. This is the entry point to SF entity repair.
         /// </summary>
-        /// <returns>A Task.</returns>
-        private static async Task CancelAbandonedFHRepairsAsync()
-        {
-            try
-            {
-                var currentFHRepairTasksInProgress =
-                        await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                () => RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                                        RepairConstants.FHTaskIdPrefix,
-                                        Token,
-                                        RepairConstants.FabricHealer),
-                                Token);
-
-                if (currentFHRepairTasksInProgress.Count == 0)
-                {
-                    return;
-                }
-
-                foreach (var repair in currentFHRepairTasksInProgress)
-                {
-                    if (repair.State == RepairTaskState.Restoring)
-                    {
-                        continue;
-                    }
-
-                    // Grab the executor data from existing repair.
-                    var executorData = repair.ExecutorData;
-
-                    if (string.IsNullOrWhiteSpace(executorData))
-                    {
-                        continue;
-                    }
-
-                    if (!JsonSerializationUtility.TryDeserializeObject(
-                            executorData,
-                            out RepairExecutorData repairExecutorData,
-                            treatMissingMembersAsError: true))
-                    {
-                        continue;
-                    }
-
-                    // Don't do anything if the orphaned repair was for a different node than this one:
-                    if (InstanceCount == -1 && repairExecutorData.RepairPolicy.NodeName != ServiceContext.NodeContext.NodeName)
-                    {
-                        continue;
-                    }
-
-                    if (repair.State != RepairTaskState.Completed)
-                    {
-                        await FabricRepairTasks.CancelRepairTaskAsync(repair, Token);
-                    }
-
-                    RepairLogger.LogInfo("Exiting CancelOrResumeAllRunningFHRepairsAsync: Completed.");
-                }
-            }
-            catch (Exception e) when (e is FabricException or OperationCanceledException or TaskCanceledException)
-            {
-                if (e is FabricException)
-                {
-                    RepairLogger.LogWarning($"Could not cancel FH repair tasks. Failed with:{Environment.NewLine}{e}");
-                }
-
-                await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "CancelOrResumeAllRunningFHRepairsAsync",
-                        $"Could not cancel abandoned FH repair tasks. Failed with:{Environment.NewLine}{e}",
-                        Token,
-                        null,
-                        ConfigSettings.EnableVerboseLogging);
-
-            }
-        }
-
-        private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
-        {
-            await TryClearExistingHealthReportsAsync();
-            ConfigSettings.UpdateConfigSettings(e.NewPackage.Settings);
-        }
-
-        /* Potential TODOs. This list should grow and external predicates should be written to support related workflow composition in logic rule file(s).
-
-            Symptom                                                 Mitigation 
-            ------------------------------------------------------  ---------------------------------------------------
-            Expired Certificate [TP Scenario]	                    Modify the cluster manifest AEPCC to true (we already have an automation script for this scenario)
-            Node crash due to lease issue 	                        Restart the neighboring VM
-            Node Crash due to slow network issue	                Restart the VM
-            System Service in quorum loss	                        Repair the partition/Restart the VM
-            Node stuck in disabling state due to MR [safety check]	Address safety issue through automation
-            [MR Scenario] Node in down state: MR unable 
-            to send the Remove-ServiceFabricNodeState in time	    Remove-ServiceFabricNodeState
-            Unused container fill the disk space	                Call docker prune cmd 
-            Primary replica for system service in IB state forever	Restart the primary replica 
-        */
-
-        public static async Task MonitorHealthEventsAsync()
+        /// <returns>Task</returns>
+        public static async Task ProcessHealthEventsAsync()
         {
             try
             {
@@ -755,7 +512,7 @@ namespace FabricHealer
                     {
                         string telemetryDescription = $"Cluster is currently upgrading in UD \"{udInClusterUpgrade}\". " +
                                                       $"Will not schedule or execute repairs at this time.";
-                        
+
                         await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
                                 "MonitorHealthEventsAsync::ClusterUpgradeDetected",
@@ -900,6 +657,372 @@ namespace FabricHealer
                 throw;
             }
         }
+
+        public void Dispose()
+        {
+            Dispose(true);
+        }
+
+        public static List<string> ParseRulesFile(string[] rules)
+        {
+            var repairRules = new List<string>();
+            int ptr1 = 0, ptr2 = 0;
+            rules = rules.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
+
+            while (ptr1 < rules.Length && ptr2 < rules.Length)
+            {
+                // Single line comments removal.
+                if (rules[ptr2].TrimStart().StartsWith("##"))
+                {
+                    ptr1++;
+                    ptr2++;
+                    continue;
+                }
+
+                if (rules[ptr2].TrimEnd().EndsWith("."))
+                {
+                    if (ptr1 == ptr2)
+                    {
+                        repairRules.Add(rules[ptr2].TrimEnd().Remove(rules[ptr2].Length - 1, 1));
+                    }
+                    else
+                    {
+                        string rule = rules[ptr1].Trim();
+
+                        for (int i = ptr1 + 1; i <= ptr2; i++)
+                        {
+                            rule = rule + ' ' + rules[i].Replace('\t', ' ').Trim();
+                        }
+
+                        repairRules.Add(rule.Remove(rule.Length - 1, 1));
+                    }
+                    ptr2++;
+                    ptr1 = ptr2;
+                }
+                else
+                {
+                    ptr2++;
+                }
+            }
+
+            return repairRules;
+        }
+
+        public static async Task TryClearExistingHealthReportsAsync()
+        {
+            var healthReporter = new FabricHealthReporter(RepairLogger);
+            var healthReport = new HealthReport
+            {
+                HealthMessage = "Clearing existing health reports as FabricHealer is starting, stopping or updating.",
+                NodeName = ServiceContext.NodeContext.NodeName,
+                State = HealthState.Ok,
+                HealthReportTimeToLive = TimeSpan.FromMinutes(5),
+            };
+
+            // FH.
+            try
+            {
+                var appName = new Uri(RepairConstants.FabricHealerAppName);
+                var appHealth =
+                    await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(appName, ConfigSettings.AsyncTimeout, CancellationToken.None);
+                var FHAppEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(RepairConstants.FabricHealer));
+
+                foreach (HealthEvent evt in FHAppEvents)
+                {
+                    healthReport.AppName = appName;
+                    healthReport.Property = evt.HealthInformation.Property;
+                    healthReport.SourceId = evt.HealthInformation.SourceId;
+                    healthReport.EntityType = EntityType.Application;
+                    healthReport.NodeName = ServiceContext.NodeContext.NodeName;
+
+                    healthReporter.ReportHealthToServiceFabric(healthReport);
+                    Thread.Sleep(50);
+                }
+            }
+            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
+            {
+
+            }
+
+            // Node.
+            try
+            {
+                var nodeHealth =
+                    await FabricClientSingleton.HealthManager.GetNodeHealthAsync(ServiceContext.NodeContext.NodeName, ConfigSettings.AsyncTimeout, CancellationToken.None);
+                var FHNodeEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(RepairConstants.FabricHealer));
+
+                foreach (HealthEvent evt in FHNodeEvents)
+                {
+                    healthReport.Property = evt.HealthInformation.Property;
+                    healthReport.SourceId = evt.HealthInformation.SourceId;
+                    healthReport.EntityType = EntityType.Node;
+                    healthReport.NodeName = ServiceContext.NodeContext.NodeName;
+
+                    healthReporter.ReportHealthToServiceFabric(healthReport);
+                    Thread.Sleep(50);
+                }
+            }
+            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
+            {
+
+            }
+        }
+
+        internal static async Task RandomWaitAsync(CancellationToken token = default)
+        {
+            var random = new Random();
+            int waitTimeMS = random.Next(random.Next(500, NodeCount * 500), 1000 * NodeCount);
+
+            await Task.Delay(waitTimeMS, token == default ? Token : token);
+        }
+
+        private FabricHealerManager(StatelessServiceContext context, CancellationToken token)
+        {
+            ServiceContext = context;
+            Token = token;
+            ServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
+            ConfigSettings = new ConfigSettings(context);
+            TelemetryUtilities = new TelemetryUtilities(context);
+            RepairLogger = new Logger(RepairConstants.FabricHealer, ConfigSettings.LocalLogPathParameter)
+            {
+                EnableVerboseLogging = ConfigSettings.EnableVerboseLogging,
+                EnableETWLogging = ConfigSettings.EtwEnabled
+            };
+            RepairHistory = new RepairData();
+            healthReporter = new FabricHealthReporter(RepairLogger);
+            sfRuntimeVersion = GetServiceFabricRuntimeVersion();
+            fabricClient = new FabricClient();
+
+            // Must be synchronous here. The async impls employ retry logic and handle exceptions.
+            InstanceCount = GetServiceInstanceCountAsync().Result;
+            IsOneNodeCluster = IsOneNodeClusterAsync().Result;
+        }
+
+        /// <summary>
+        /// Checks if repair manager is enabled in the cluster or not
+        /// </summary>
+        /// <param name="serviceNameFabricUri"></param>
+        /// <param name="cancellationToken">cancellation token to stop the async operation</param>
+        /// <returns>true if repair manager application is present in cluster, otherwise false</returns>
+        private async Task<bool> InitializeAsync()
+        {
+            string okMessage = $"{repairManagerServiceUri} is deployed.";
+            bool isRmDeployed = true;
+            var healthReport = new HealthReport
+            {
+                NodeName = ServiceContext.NodeContext.NodeName,
+                AppName = new Uri(RepairConstants.FabricHealerAppName),
+                EntityType = EntityType.Application,
+                HealthMessage = okMessage,
+                State = HealthState.Ok,
+                Property = "RequirementCheck::RMDeployed",
+                HealthReportTimeToLive = TimeSpan.FromDays(1),
+                SourceId = RepairConstants.FabricHealer,
+            };
+            ServiceList serviceList = await FabricClientSingleton.QueryManager.GetServiceListAsync(
+                                              systemAppUri,
+                                              repairManagerServiceUri,
+                                              ConfigSettings.AsyncTimeout,
+                                              Token);
+
+            if ((serviceList?.Count ?? 0) == 0)
+            {
+                string warnMessage =
+                    $"{repairManagerServiceUri} could not be found, " +
+                    $"FabricHealer Service requires {repairManagerServiceUri} system service to be deployed in the cluster. " +
+                    "Consider adding a RepairManager section in your cluster manifest.";
+
+                healthReport.HealthMessage = warnMessage;
+                healthReport.State = HealthState.Warning;
+                healthReport.Code = SupportedErrorCodes.Ok;
+                healthReport.HealthReportTimeToLive = TimeSpan.MaxValue;
+                healthReport.SourceId = "CheckRepairManagerDeploymentStatusAsync";
+                isRmDeployed = false;
+            }
+
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+            return isRmDeployed;
+        }
+
+        private static async Task<long> GetServiceInstanceCountAsync()
+        {
+            try
+            {
+                ServiceDescription serviceDesc =
+                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                            () => FabricClientSingleton.ServiceManager.GetServiceDescriptionAsync(
+                                    ServiceContext.ServiceName,
+                                    ConfigSettings.AsyncTimeout,
+                                    Token),
+                            Token);
+
+                return (serviceDesc as StatelessServiceDescription).InstanceCount;
+            }
+            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
+            {
+                RepairLogger.LogWarning($"GetServiceInstanceCountAsync failure: {e.Message}");
+
+                // Don't know the answer and it can't be 0 (this code is running).
+                return 1;
+            }
+        }
+
+        private static async Task<bool> IsOneNodeClusterAsync()
+        {
+            try
+            {
+                var nodeQueryDesc = new NodeQueryDescription
+                {
+                    MaxResults = 3,
+                };
+
+                NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                        () => FabricClientSingleton.QueryManager.GetNodePagedListAsync(
+                                                nodeQueryDesc,
+                                                ConfigSettings.AsyncTimeout,
+                                                Token),
+                                         Token);
+
+                return nodes != null && nodes.Count == 1;
+            }
+            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
+            {
+                RepairLogger.LogWarning($"IsOneNodeClusterAsync failure: {e.Message}");
+
+                // Don't know the answer, so false.
+                return false;
+            }
+        }
+
+        private static void ResetInternalDataCounters()
+        {
+            RepairHistory.Repairs.Clear();
+            RepairHistory.FailedRepairs = 0;
+            RepairHistory.SuccessfulRepairs = 0;
+            RepairHistory.RepairCount = 0;
+            RepairHistory.EnabledRepairCount = 0;
+        }
+
+        private FabricHealerOperationalEventData GetFabricHealerInternalTelemetryData()
+        {
+            FabricHealerOperationalEventData opsTelemData = null;
+
+            try
+            {
+                RepairHistory.EnabledRepairCount = GetEnabledRepairRuleCount();
+
+                opsTelemData = new FabricHealerOperationalEventData
+                {
+                    UpTime = DateTime.UtcNow.Subtract(UtcStartDateTime).ToString(),
+                    Version = InternalVersionNumber,
+                    RepairData = RepairHistory,
+                    SFRuntimeVersion = sfRuntimeVersion
+                };
+            }
+            catch
+            {
+
+            }
+
+            return opsTelemData;
+        }
+
+        /// <summary>
+        /// Cancels all FabricHealer repair tasks currently in flight.
+        /// </summary>
+        /// <returns>A Task.</returns>
+        private static async Task CancelAbandonedFHRepairsAsync()
+        {
+            try
+            {
+                var currentFHRepairTasksInProgress =
+                        await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                () => RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
+                                        RepairConstants.FHTaskIdPrefix,
+                                        Token,
+                                        RepairConstants.FabricHealer),
+                                Token);
+
+                if (currentFHRepairTasksInProgress.Count == 0)
+                {
+                    return;
+                }
+
+                foreach (var repair in currentFHRepairTasksInProgress)
+                {
+                    if (repair.State == RepairTaskState.Restoring)
+                    {
+                        continue;
+                    }
+
+                    // Grab the executor data from existing repair.
+                    var executorData = repair.ExecutorData;
+
+                    if (string.IsNullOrWhiteSpace(executorData))
+                    {
+                        continue;
+                    }
+
+                    if (!JsonSerializationUtility.TryDeserializeObject(
+                            executorData,
+                            out RepairExecutorData repairExecutorData,
+                            treatMissingMembersAsError: true))
+                    {
+                        continue;
+                    }
+
+                    // Don't do anything if the orphaned repair was for a different node than this one:
+                    if (InstanceCount == -1 && repairExecutorData.RepairPolicy.NodeName != ServiceContext.NodeContext.NodeName)
+                    {
+                        continue;
+                    }
+
+                    if (repair.State != RepairTaskState.Completed)
+                    {
+                        await FabricRepairTasks.CancelRepairTaskAsync(repair, Token);
+                    }
+
+                    RepairLogger.LogInfo("Exiting CancelOrResumeAllRunningFHRepairsAsync: Completed.");
+                }
+            }
+            catch (Exception e) when (e is FabricException or OperationCanceledException or TaskCanceledException)
+            {
+                if (e is FabricException)
+                {
+                    RepairLogger.LogWarning($"Could not cancel FH repair tasks. Failed with:{Environment.NewLine}{e}");
+                }
+
+                await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        "CancelOrResumeAllRunningFHRepairsAsync",
+                        $"Could not cancel abandoned FH repair tasks. Failed with:{Environment.NewLine}{e}",
+                        Token,
+                        null,
+                        ConfigSettings.EnableVerboseLogging);
+
+            }
+        }
+
+        private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
+        {
+            await TryClearExistingHealthReportsAsync();
+            ConfigSettings.UpdateConfigSettings(e.NewPackage.Settings);
+        }
+
+        /* Potential TODOs. This list should grow and external predicates should be written to support related workflow composition in logic rule file(s).
+
+            Symptom                                                 Mitigation 
+            ------------------------------------------------------  ---------------------------------------------------
+            Expired Certificate [TP Scenario]	                    Modify the cluster manifest AEPCC to true (we already have an automation script for this scenario)
+            Node crash due to lease issue 	                        Restart the neighboring VM
+            Node Crash due to slow network issue	                Restart the VM
+            System Service in quorum loss	                        Repair the partition/Restart the VM
+            Node stuck in disabling state due to MR [safety check]	Address safety issue through automation
+            [MR Scenario] Node in down state: MR unable 
+            to send the Remove-ServiceFabricNodeState in time	    Remove-ServiceFabricNodeState
+            Unused container fill the disk space	                Call docker prune cmd 
+            Primary replica for system service in IB state forever	Restart the primary replica 
+        */
 
         private static async Task ProcessApplicationHealthAsync(ApplicationHealthState appHealthState)
         {
@@ -2225,64 +2348,6 @@ namespace FabricHealer
             disposedValue = true;
         }
 
-        public void Dispose()
-        {
-            Dispose(true);
-        }
-
-        public static List<string> ParseRulesFile(string[] rules)
-        {
-            var repairRules = new List<string>();
-            int ptr1 = 0, ptr2 = 0;
-            rules = rules.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
-
-            while (ptr1 < rules.Length && ptr2 < rules.Length)
-            {
-                // Single line comments removal.
-                if (rules[ptr2].TrimStart().StartsWith("##"))
-                {
-                    ptr1++;
-                    ptr2++;
-                    continue;
-                }
-
-                if (rules[ptr2].TrimEnd().EndsWith("."))
-                {
-                    if (ptr1 == ptr2)
-                    {
-                        repairRules.Add(rules[ptr2].TrimEnd().Remove(rules[ptr2].Length - 1, 1));
-                    }
-                    else
-                    {
-                        string rule = rules[ptr1].Trim();
-
-                        for (int i = ptr1 + 1; i <= ptr2; i++)
-                        {
-                            rule = rule + ' ' + rules[i].Replace('\t', ' ').Trim();
-                        }
-
-                        repairRules.Add(rule.Remove(rule.Length - 1, 1));
-                    }
-                    ptr2++;
-                    ptr1 = ptr2;
-                }
-                else
-                {
-                    ptr2++;
-                }
-            }
-
-            return repairRules;
-        }
-
-        internal static async Task RandomWaitAsync(CancellationToken token = default)
-        {
-            var random = new Random();
-            int waitTimeMS = random.Next(random.Next(500, NodeCount * 500), 1000 * NodeCount);
-
-            await Task.Delay(waitTimeMS, token == default ? Token : token);
-        }
-
         // https://stackoverflow.com/questions/25678690/how-can-i-check-github-releases-in-c
         private static async Task CheckGithubForNewVersionAsync()
         {
@@ -2321,66 +2386,6 @@ namespace FabricHealer
             {
                 // Don't take down FO due to error in version check.
                 RepairLogger.LogWarning($"Failure in CheckGithubForNewVersionAsync:{Environment.NewLine}{e}");
-            }
-        }
-
-        public static async Task TryClearExistingHealthReportsAsync()
-        {
-            var healthReporter = new FabricHealthReporter(RepairLogger);
-            var healthReport = new HealthReport
-            {
-                HealthMessage = "Clearing existing health reports as FabricHealer is starting, stopping or updating.",
-                NodeName = ServiceContext.NodeContext.NodeName,
-                State = HealthState.Ok,
-                HealthReportTimeToLive = TimeSpan.FromMinutes(5),
-            };
-
-            // FH.
-            try
-            {
-                var appName = new Uri(RepairConstants.FabricHealerAppName);
-                var appHealth =
-                    await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(appName, ConfigSettings.AsyncTimeout, CancellationToken.None);
-                var FHAppEvents = appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(RepairConstants.FabricHealer));
-
-                foreach (HealthEvent evt in FHAppEvents)
-                {
-                    healthReport.AppName = appName;
-                    healthReport.Property = evt.HealthInformation.Property;
-                    healthReport.SourceId = evt.HealthInformation.SourceId;
-                    healthReport.EntityType = EntityType.Application;
-                    healthReport.NodeName = ServiceContext.NodeContext.NodeName;
-
-                    healthReporter.ReportHealthToServiceFabric(healthReport);
-                    Thread.Sleep(50);
-                }
-            }
-            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
-            {
-
-            }
-
-            // Node.
-            try
-            { 
-                var nodeHealth =
-                    await FabricClientSingleton.HealthManager.GetNodeHealthAsync(ServiceContext.NodeContext.NodeName, ConfigSettings.AsyncTimeout, CancellationToken.None);
-                var FHNodeEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(RepairConstants.FabricHealer));
-
-                foreach (HealthEvent evt in FHNodeEvents)
-                {
-                    healthReport.Property = evt.HealthInformation.Property;
-                    healthReport.SourceId = evt.HealthInformation.SourceId;
-                    healthReport.EntityType = EntityType.Node;
-                    healthReport.NodeName = ServiceContext.NodeContext.NodeName;
-
-                    healthReporter.ReportHealthToServiceFabric(healthReport);
-                    Thread.Sleep(50);
-                }
-            }
-            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
-            {
-
             }
         }
 
