@@ -1334,6 +1334,7 @@ namespace FHTest
             // Clean up existing FH health reports..
             await FabricHealerManager.TryClearExistingHealthReportsAsync();
 
+            FabricHealerManager.ConfigSettings.EnableSystemAppRepair = true;
             FabricHealerManager.ConfigSettings.EnableAppRepair = false;
 
             var partitions =
@@ -1401,6 +1402,8 @@ namespace FHTest
             // Clean up existing FH health reports..
             await FabricHealerManager.TryClearExistingHealthReportsAsync();
 
+            FabricHealerManager.ConfigSettings.EnableMachineRepair = true;
+            FabricHealerManager.ConfigSettings.EnableFabricNodeRepair = true;
             FabricHealerManager.ConfigSettings.EnableDiskRepair = false;
 
             // This will be the data used to create a repair task.
@@ -1458,6 +1461,7 @@ namespace FHTest
             // Clean up existing FH health reports..
             await FabricHealerManager.TryClearExistingHealthReportsAsync();
 
+            FabricHealerManager.ConfigSettings.EnableDiskRepair = true;
             FabricHealerManager.ConfigSettings.EnableMachineRepair = false;
 
             // This will be the data used to create a repair task.
@@ -1515,6 +1519,8 @@ namespace FHTest
             // Clean up existing FH health reports..
             await FabricHealerManager.TryClearExistingHealthReportsAsync();
 
+            FabricHealerManager.ConfigSettings.EnableDiskRepair = true;
+            FabricHealerManager.ConfigSettings.EnableMachineRepair = true;
             FabricHealerManager.ConfigSettings.EnableFabricNodeRepair = false;
 
             // This will be the data used to create a repair task.
@@ -1569,7 +1575,8 @@ namespace FHTest
         {
             // Clean up existing FH health reports..
             await FabricHealerManager.TryClearExistingHealthReportsAsync();
-
+            
+            FabricHealerManager.ConfigSettings.EnableAppRepair = true;
             FabricHealerManager.ConfigSettings.EnableReplicaRepair = false;
 
             var partitions =
@@ -1643,6 +1650,7 @@ namespace FHTest
             // Clean up existing FH health reports..
             await FabricHealerManager.TryClearExistingHealthReportsAsync();
 
+            FabricHealerManager.ConfigSettings.EnableAppRepair = true;
             FabricHealerManager.ConfigSettings.EnableSystemAppRepair = false;
 
             // This will be the data used to create a repair task.
