@@ -454,7 +454,7 @@ namespace FHTest
         {
             // Create temp files. This assumes C:\SFDevCluster\Log\QueryTraces exists. This is the path used in the related logic rule.
             // See DiskRules.guan in FHTest\PackageRoot\Config\LogicRules folder.
-            // You can use whatever path you want, but need to make sure that is reflected in the related logic rule.
+            // You can use whatever path you want, but you need to make sure that is also specified in the related test logic rule.
             byte[] bytes = Encoding.ASCII.GetBytes("foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz");
             string path = @"C:\SFDevCluster\Log\QueryTraces";
             
@@ -532,7 +532,7 @@ namespace FHTest
         {
             // Create temp files. This assumes C:\SFDevCluster\Log\QueryTraces exists. This is the path used in the related logic rule.
             // See DiskRules.guan in FHTest\PackageRoot\Config\LogicRules folder.
-            // You can use whatever path you want, but need to make sure that is reflected in the related logic rule.
+            // You can use whatever path you want, but you need to make sure that is also specified in the related test logic rule.
             byte[] bytes = Encoding.ASCII.GetBytes("foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz");
             string path = @"C:\SFDevCluster\Log\QueryTraces";
 
