@@ -27,6 +27,7 @@ using static ServiceFabric.Mocks.MockConfigurationPackage;
 using System.Fabric.Description;
 using System.Fabric.Query;
 using System.Text;
+using System.Collections.Concurrent;
 
 namespace FHTest
 {
@@ -229,7 +230,7 @@ namespace FHTest
             }
             catch (FabricException fe)
             {
-                if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
+               /* if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
                 {
                     await fabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     await DeployTestApp42Async();
@@ -242,8 +243,8 @@ namespace FHTest
                         await fabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     }
                     await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
-                    await DeployTestApp42Async();
-                }
+                    await DeployTestApp42Async(); 
+                }*/
             }
         }
 
@@ -297,8 +298,8 @@ namespace FHTest
         {
             // Ensure FHProxy cleans up its health reports.
             FabricHealerProxy.Instance.Close();
-            await RemoveTestApplicationsAsync();
-            
+            //await RemoveTestApplicationsAsync();
+
             // Clean up all test repair tasks.
             var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync();
 
@@ -457,7 +458,7 @@ namespace FHTest
             // You can use whatever path you want, but you need to make sure that is also specified in the related test logic rule.
             byte[] bytes = Encoding.ASCII.GetBytes("foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz");
             string path = @"C:\SFDevCluster\Log\QueryTraces";
-            
+
             for (int i = 0; i < 5; i++)
             {
                 using var f = File.Create(Path.Combine(path, $"foo{i}.txt"), 500, FileOptions.WriteThrough);
@@ -662,7 +663,7 @@ namespace FHTest
                 }
 
                 throw new InternalTestFailureException("FabricNode repair task did not get created with max test time of 30s.");
-                
+
             }
             catch (GuanException ge)
             {
@@ -918,7 +919,7 @@ namespace FHTest
         [TestMethod]
         public async Task Ensure_MachineRepair_ErrorDetected_RepairJobCreated_AllEscalations()
         {
-            string testRulesFilePath = 
+            string testRulesFilePath =
                 Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "MachineRules.guan");
             string[] rules = await File.ReadAllLinesAsync(testRulesFilePath, token);
             FabricHealerManager.CurrentlyExecutingLogicRulesFileName = "MachineRules.guan";
@@ -951,7 +952,7 @@ namespace FHTest
                 {
                     RepairPolicy = repairData.RepairPolicy
                 };
-                
+
                 await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
 
                 // Allow time for repair job creation.
@@ -971,15 +972,15 @@ namespace FHTest
 
             repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
                                     RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Completed, null);
-                
+
             Assert.IsTrue(repairTasks.Any());
 
             var testRepairTasks = repairTasks.Where(
-                    r => r.TaskId.StartsWith(RepairConstants.InfraTaskIdPrefix, StringComparison.OrdinalIgnoreCase) 
+                    r => r.TaskId.StartsWith(RepairConstants.InfraTaskIdPrefix, StringComparison.OrdinalIgnoreCase)
                         && r.ResultStatus == RepairTaskResult.Cancelled);
 
             Assert.IsTrue(testRepairTasks.Any());
-           
+
             testRepairTasks =
                     repairTasks.Where(
                     r => DateTime.UtcNow.Subtract(r.CompletedTimestamp.Value) < TimeSpan.FromMinutes(2)
@@ -1026,18 +1027,18 @@ namespace FHTest
 
             repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
                                     RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Completed, null);
-                
+
             Assert.IsTrue(repairTasks.Any());
 
             var testRepairTasks = repairTasks.Where(
                     r => r.TaskId.StartsWith(RepairConstants.InfraTaskIdPrefix, StringComparison.OrdinalIgnoreCase)
                     && r.ResultStatus == RepairTaskResult.Cancelled);
-                
+
             Assert.IsTrue(testRepairTasks.Any());
-            
+
             testRepairTasks =
                 repairTasks.Where(
-                    r => DateTime.UtcNow.Subtract(r.CompletedTimestamp.Value) < TimeSpan.FromMinutes(2) 
+                    r => DateTime.UtcNow.Subtract(r.CompletedTimestamp.Value) < TimeSpan.FromMinutes(2)
                         && RepairTaskEngine.MatchSubstring(RepairTaskEngine.NodeRepairActionSubstrings, r.Action));
 
             Assert.IsTrue(testRepairTasks.Count() == escalationCount);
@@ -1056,7 +1057,7 @@ namespace FHTest
             await RepairTaskManager.RunGuanQueryAsync(repairData, repairRules, CancellationToken.None, executorData);
         }
 
-        private static async Task<(bool, TelemetryData data)> 
+        private static async Task<(bool, TelemetryData data)>
             IsEntityInWarningStateAsync(string appName = null, string serviceName = null, string nodeName = null)
         {
             EntityHealth healthData = null;
@@ -1251,7 +1252,7 @@ namespace FHTest
         [TestMethod]
         public async Task FHProxy_NonExistent_ServiceTarget_Generates_ServiceNotFoundException()
         {
-            await Assert.ThrowsExceptionAsync<ServiceNotFoundException>(async () => 
+            await Assert.ThrowsExceptionAsync<ServiceNotFoundException>(async () =>
             {
                 await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsNonExistingServiceTarget, token);
             });
@@ -1266,9 +1267,9 @@ namespace FHTest
                 // No need for Source here as an invalid node will be detected before the Source value matters.
             };
 
-            await Assert.ThrowsExceptionAsync<NodeNotFoundException>(async () => 
-            { 
-                await FabricHealerProxy.Instance.RepairEntityAsync(repairFacts, token); 
+            await Assert.ThrowsExceptionAsync<NodeNotFoundException>(async () =>
+            {
+                await FabricHealerProxy.Instance.RepairEntityAsync(repairFacts, token);
             });
         }
 
@@ -1320,6 +1321,380 @@ namespace FHTest
 
             Assert.IsTrue(RepairExecutor.TryGetGuid(nullableGuid, out _));
             Assert.IsTrue(RepairExecutor.TryGetGuid(guidString, out _));
+        }
+
+        // Policy enablement tests. These validate that when a policy is disabled, no processing will take place when
+        // related entities are detected be in Error or Warning health states.
+        // Note: All repair policies are enabled in FHTest's Setting.xml, which is part of the ServiceContext creation used,
+        // by all tests.
+
+        [TestMethod]
+        public async Task Validate_app_repair_disabled_no_processing_warning_state()
+        {
+            // Clean up existing FH health reports..
+            await FabricHealerManager.TryClearExistingHealthReportsAsync();
+
+            FabricHealerManager.ConfigSettings.EnableAppRepair = false;
+
+            var partitions =
+                await fabricClient.QueryManager.GetPartitionListAsync(new Uri("fabric:/TestApp42/ChildProcessCreator"));
+            Guid partition = partitions[0].PartitionInformation.Id;
+
+            // This will be the data used to create a repair task.
+            var repairData = new TelemetryData
+            {
+                ApplicationName = "fabric:/TestApp42",
+                EntityType = EntityType.Service,
+                NodeName = NodeName,
+                Code = SupportedErrorCodes.AppWarningKvsLvidsPercentUsed,
+                HealthState = HealthState.Warning,
+                ObserverName = "AppObserver",
+                PartitionId = partition.ToString(),
+                Source = $"AppObserver({SupportedErrorCodes.AppWarningKvsLvidsPercentUsed})",
+                Property = "TestApp42_ChildProcessCreator_Lvids",
+                ProcessName = "ChildProcessCreator",
+                ServiceName = "fabric:/TestApp42/ChildProcessCreator",
+                Value = 90.42
+            };
+
+            Assert.IsTrue(JsonSerializationUtility.TrySerializeObject(repairData, out string data));
+
+            FabricHealer.Utilities.HealthReport healthReport = new()
+            {
+                AppName = new Uri("fabric:/TestApp42"),
+                ServiceName = new Uri("fabric:/TestApp42/ChildProcessCreator"),
+                NodeName = NodeName,
+                State = repairData.HealthState,
+                SourceId = repairData.Source,
+                Property = repairData.Property,
+                EntityType = repairData.EntityType,
+                HealthMessage = data,
+                Observer = repairData.ObserverName,
+                Code = repairData.Code,
+                HealthReportTimeToLive = TimeSpan.FromSeconds(90),
+            };
+
+            FabricHealthReporter healthReporter = new(new Logger("FHTest"));
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+
+            await FabricHealerManager.ProcessHealthEventsAsync();
+
+            // Check to make sure that FH did not process the related health event. \\
+
+            var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(NodeName);
+            Assert.IsNotNull(nodeHealth);
+            var nodeHealthEvents =
+                nodeHealth.HealthEvents.Where(
+                    h => h.HealthInformation.Description.Contains(SupportedErrorCodes.AppWarningKvsLvidsPercentUsed)
+                    && h.HealthInformation.SourceId.StartsWith(RepairConstants.FabricHealer));
+
+            Assert.IsFalse(nodeHealthEvents.Any());
+
+            // Cleanup.
+            healthReport.State = HealthState.Ok;
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+        }
+
+        [TestMethod]
+        public async Task Validate_disk_repair_disabled_no_processing_warning_state()
+        {
+            // Clean up existing FH health reports..
+            await FabricHealerManager.TryClearExistingHealthReportsAsync();
+
+            FabricHealerManager.ConfigSettings.EnableDiskRepair = false;
+
+            // This will be the data used to create a repair task.
+            var repairData = new TelemetryData
+            {
+                EntityType = EntityType.Disk,
+                NodeName = NodeName,
+                Code = SupportedErrorCodes.NodeWarningDiskAverageQueueLength,
+                HealthState = HealthState.Warning,
+                ObserverName = "DiskObserver",
+                Source = $"DiskObserver({SupportedErrorCodes.NodeWarningDiskAverageQueueLength})",
+                Property = "C:",
+                Value = 1024.0
+            };
+
+            Assert.IsTrue(JsonSerializationUtility.TrySerializeObject(repairData, out string data));
+
+            FabricHealer.Utilities.HealthReport healthReport = new()
+            {
+                NodeName = NodeName,
+                State = repairData.HealthState,
+                SourceId = repairData.Source,
+                Property = repairData.Property,
+                EntityType = repairData.EntityType,
+                HealthMessage = data,
+                Observer = repairData.ObserverName,
+                Code = repairData.Code,
+                HealthReportTimeToLive = TimeSpan.FromSeconds(90),
+            };
+
+            FabricHealthReporter healthReporter = new(new Logger("FHTest"));
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+
+            await FabricHealerManager.ProcessHealthEventsAsync();
+
+            // Check to make sure that FH did not process the related health event. \\
+
+            var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(NodeName);
+            Assert.IsNotNull(nodeHealth);
+            var nodeHealthEvents =
+                nodeHealth.HealthEvents.Where(
+                    h => h.HealthInformation.Description.Contains(SupportedErrorCodes.NodeWarningDiskAverageQueueLength)
+                      && h.HealthInformation.SourceId.StartsWith(RepairConstants.FabricHealer));
+            
+            Assert.IsFalse(nodeHealthEvents.Any());
+
+            // Cleanup.
+            healthReport.State = HealthState.Ok;
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+        }
+
+        [TestMethod]
+        public async Task Validate_machine_repair_disabled_no_processing_warning_state()
+        {
+            // Clean up existing FH health reports..
+            await FabricHealerManager.TryClearExistingHealthReportsAsync();
+
+            FabricHealerManager.ConfigSettings.EnableMachineRepair = false;
+
+            // This will be the data used to create a repair task.
+            var repairData = new TelemetryData
+            {
+                EntityType = EntityType.Machine,
+                NodeName = NodeName,
+                Code = SupportedErrorCodes.NodeWarningMemoryPercent,
+                HealthState = HealthState.Warning,
+                ObserverName = "NodeObserver",
+                Source = $"NodeObserver({SupportedErrorCodes.NodeWarningMemoryPercent})",
+                Value = 90.42
+            };
+
+            Assert.IsTrue(JsonSerializationUtility.TrySerializeObject(repairData, out string data));
+
+            FabricHealer.Utilities.HealthReport healthReport = new()
+            {
+                NodeName = NodeName,
+                State = repairData.HealthState,
+                SourceId = repairData.Source,
+                Property = repairData.Property,
+                EntityType = repairData.EntityType,
+                HealthMessage = data,
+                Observer = repairData.ObserverName,
+                Code = repairData.Code,
+                HealthReportTimeToLive = TimeSpan.FromSeconds(90),
+            };
+
+            FabricHealthReporter healthReporter = new(new Logger("FHTest"));
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+
+            await FabricHealerManager.ProcessHealthEventsAsync();
+
+            // Check to make sure that FH did not process the related health event. \\
+
+            var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(NodeName);
+            Assert.IsNotNull(nodeHealth);
+            var nodeHealthEvents =
+                nodeHealth.HealthEvents.Where(
+                    h => h.HealthInformation.Description.Contains(SupportedErrorCodes.NodeWarningMemoryPercent)
+                      && h.HealthInformation.SourceId.StartsWith(RepairConstants.FabricHealer));
+            
+            Assert.IsFalse(nodeHealthEvents.Any());
+
+            // Cleanup.
+            healthReport.State = HealthState.Ok;
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+            
+        }
+
+        [TestMethod]
+        public async Task Validate_node_repair_disabled_no_processing_warning_state()
+        {
+            // Clean up existing FH health reports..
+            await FabricHealerManager.TryClearExistingHealthReportsAsync();
+
+            FabricHealerManager.ConfigSettings.EnableFabricNodeRepair = false;
+
+            // This will be the data used to create a repair task.
+            var repairData = new TelemetryData
+            {
+                EntityType = EntityType.Node,
+                NodeName = NodeName,
+                HealthState = HealthState.Error,
+                ObserverName = "NodeObserver",
+                Source = "NodeObserver",
+                Property = $"{NodeName} is in Error...",
+                Value = 0
+            };
+
+            Assert.IsTrue(JsonSerializationUtility.TrySerializeObject(repairData, out string data));
+
+            FabricHealer.Utilities.HealthReport healthReport = new()
+            {
+                NodeName = NodeName,
+                State = repairData.HealthState,
+                SourceId = repairData.Source,
+                Property = repairData.Property,
+                EntityType = repairData.EntityType,
+                HealthMessage = data,
+                Observer = repairData.ObserverName,
+                HealthReportTimeToLive = TimeSpan.FromSeconds(90),
+            };
+
+            FabricHealthReporter healthReporter = new(new Logger("FHTest"));
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+
+            await FabricHealerManager.ProcessHealthEventsAsync();
+
+            // Check to make sure that FH did not process the related health event. \\
+
+            var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(NodeName);
+            Assert.IsNotNull(nodeHealth);
+            var nodeHealthEvents =
+                nodeHealth.HealthEvents.Where(
+                    h => h.HealthInformation.Description.Contains($"{NodeName} is in Error...")
+                      && h.HealthInformation.SourceId.StartsWith(RepairConstants.FabricHealer));
+            
+            Assert.IsFalse(nodeHealthEvents.Any());
+
+            // Cleanup.
+            healthReport.State = HealthState.Ok;
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+        }
+
+        [TestMethod]
+        public async Task Validate_replica_repair_disabled_no_processing_warning_state()
+        {
+            // Clean up existing FH health reports..
+            await FabricHealerManager.TryClearExistingHealthReportsAsync();
+
+            FabricHealerManager.ConfigSettings.EnableReplicaRepair = false;
+
+            var partitions =
+                await fabricClient.QueryManager.GetPartitionListAsync(new Uri("fabric:/TestApp42/ChildProcessCreator"));
+            Guid partition = partitions[0].PartitionInformation.Id;
+
+            var replicaList = await fabricClient.QueryManager.GetReplicaListAsync(partitionId: partition);
+            long replicaId = replicaList[0].Id;
+
+            // This will be the data used to create a repair task.
+            var repairData = new TelemetryData
+            {
+                ApplicationName = "fabric:/TestApp42",
+                EntityType = EntityType.Partition,
+                NodeName = NodeName,
+                Code = SupportedErrorCodes.AppWarningKvsLvidsPercentUsed,
+                Description = "Partition is unhealthy",
+                HealthState = HealthState.Warning,
+                ObserverName = "AppObserver",
+                PartitionId = partition.ToString(),
+                Source = $"AppObserver({SupportedErrorCodes.AppWarningKvsLvidsPercentUsed})",
+                Property = "TestApp42_ChildProcessCreator_MemoryMB",
+                ReplicaId = replicaId,
+                ProcessName = "ChildProcessCreator",
+                ServiceName = "fabric:/TestApp42/ChildProcessCreator",
+                Value = 1024.0
+            };
+
+            Assert.IsTrue(JsonSerializationUtility.TrySerializeObject(repairData, out string data));
+
+            FabricHealer.Utilities.HealthReport healthReport = new()
+            {
+                AppName = new Uri("fabric:/TestApp42"),
+                ServiceName = new Uri("fabric:/TestApp42/ChildProcessCreator"),
+                NodeName = NodeName,
+                PartitionId = Guid.Parse(repairData.PartitionId),
+                State = repairData.HealthState,
+                SourceId = repairData.Source,
+                Property = repairData.Property,
+                EntityType = repairData.EntityType,
+                HealthMessage = data,
+                Observer = repairData.ObserverName,
+                Code = repairData.Code,
+                HealthReportTimeToLive = TimeSpan.FromSeconds(90),
+            };
+
+            FabricHealthReporter healthReporter = new(new Logger("FHTest"));
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+
+            await FabricHealerManager.ProcessHealthEventsAsync();
+
+            // Check to make sure that FH did not process the related health event. \\
+
+            var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(NodeName);
+            Assert.IsNotNull(nodeHealth);
+            var nodeHealthEvents =
+                nodeHealth.HealthEvents.Where(
+                    h => h.HealthInformation.Description.Contains(SupportedErrorCodes.AppWarningKvsLvidsPercentUsed)
+                      && h.HealthInformation.SourceId.StartsWith(RepairConstants.FabricHealer));
+
+            Assert.IsFalse(nodeHealthEvents.Any());
+
+            // Cleanup.
+            healthReport.State = HealthState.Ok;
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+        }
+
+        [TestMethod]
+        public async Task Validate_system_app_repair_disabled_no_processing_warning_state()
+        {
+            // Clean up existing FH health reports..
+            await FabricHealerManager.TryClearExistingHealthReportsAsync();
+
+            FabricHealerManager.ConfigSettings.EnableSystemAppRepair = false;
+
+            // This will be the data used to create a repair task.
+            var repairData = new TelemetryData
+            {
+                ApplicationName = "fabric:/System",
+                EntityType = EntityType.Application,
+                NodeName = NodeName,
+                Code = SupportedErrorCodes.AppErrorTooManyOpenHandles,
+                HealthState = HealthState.Warning,
+                ObserverName = "FabricSystemObserver",
+                Source = $"AppObserver({SupportedErrorCodes.AppErrorTooManyOpenHandles})",
+                Property = "FabricDCA_Handles",
+                ProcessName = "FabricDCA",
+                Value = 10024.0
+            };
+
+            Assert.IsTrue(JsonSerializationUtility.TrySerializeObject(repairData, out string data));
+
+            FabricHealer.Utilities.HealthReport healthReport = new()
+            {
+                AppName = new Uri("fabric:/System"),
+                NodeName = NodeName,
+                State = repairData.HealthState,
+                SourceId = repairData.Source,
+                Property = repairData.Property,
+                EntityType = repairData.EntityType,
+                HealthMessage = data,
+                Observer = repairData.ObserverName,
+                Code = repairData.Code,
+                HealthReportTimeToLive = TimeSpan.FromSeconds(90),
+            };
+
+            FabricHealthReporter healthReporter = new(new Logger("FHTest"));
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+
+            await FabricHealerManager.ProcessHealthEventsAsync();
+
+            // Check to make sure that FH did not process the related health event. \\
+
+            var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(NodeName);
+            Assert.IsNotNull(nodeHealth);
+            var nodeHealthEvents =
+                nodeHealth.HealthEvents.Where(
+                    h => h.HealthInformation.Description.Contains(SupportedErrorCodes.AppErrorTooManyOpenHandles)
+                      && h.HealthInformation.SourceId.StartsWith(RepairConstants.FabricHealer));
+
+            Assert.IsFalse(nodeHealthEvents.Any());
+
+            // Cleanup.
+            healthReport.State = HealthState.Ok;
+            healthReporter.ReportHealthToServiceFabric(healthReport);
         }
     }
 }
