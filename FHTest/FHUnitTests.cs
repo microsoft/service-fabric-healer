@@ -1006,7 +1006,7 @@ namespace FHTest
             for (int i = 0; i < escalationCount; i++)
             {
                 await FabricHealerProxy.Instance.RepairEntityAsync(WatchDogMachineRepairFacts, token);
-                await FabricHealerManager.MonitorHealthEventsAsync();
+                await FabricHealerManager.ProcessHealthEventsAsync();
 
                 // Allow time for repair job creation.
                 await Task.Delay(5000, token);

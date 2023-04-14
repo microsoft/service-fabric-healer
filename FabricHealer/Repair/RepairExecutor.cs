@@ -19,7 +19,6 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
-using Newtonsoft.Json;
 using System.Fabric.Description;
 using System.Numerics;
 

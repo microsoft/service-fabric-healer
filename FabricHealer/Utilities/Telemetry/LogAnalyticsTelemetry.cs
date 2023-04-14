@@ -17,7 +17,6 @@ using FabricHealer.Interfaces;
 using FabricHealer.Repair;
 using FabricHealer.TelemetryLib;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace FabricHealer.Utilities.Telemetry
 {
