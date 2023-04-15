@@ -27,7 +27,6 @@ using static ServiceFabric.Mocks.MockConfigurationPackage;
 using System.Fabric.Description;
 using System.Fabric.Query;
 using System.Text;
-using System.Collections.Concurrent;
 
 namespace FHTest
 {
@@ -1462,6 +1461,7 @@ namespace FHTest
             await FabricHealerManager.TryClearExistingHealthReportsAsync();
 
             FabricHealerManager.ConfigSettings.EnableDiskRepair = true;
+            FabricHealerManager.ConfigSettings.EnableFabricNodeRepair = true;
             FabricHealerManager.ConfigSettings.EnableMachineRepair = false;
 
             // This will be the data used to create a repair task.
