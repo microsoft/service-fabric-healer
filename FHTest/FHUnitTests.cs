@@ -222,14 +222,12 @@ namespace FHTest
                 // Create HealthMetrics app instance.
                 ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion);
                 await fabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
-
-                // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
-                // You may need to increase this value depending upon your dev machine? You'll find out..
-                await Task.Delay(TimeSpan.FromSeconds(15));
+                TimeSpan maxAppInstallWaitTime = TimeSpan.FromSeconds(15);
+                await Task.Delay(maxAppInstallWaitTime);
             }
             catch (FabricException fe)
             {
-               /* if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
+                if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
                 {
                     await fabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     await DeployTestApp42Async();
@@ -237,13 +235,15 @@ namespace FHTest
                 else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
                 {
                     var appList = await fabricClient.QueryManager.GetApplicationListAsync(new Uri(appName));
+                    
                     if (appList.Count > 0)
                     {
                         await fabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     }
+
                     await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
                     await DeployTestApp42Async(); 
-                }*/
+                }
             }
         }
 
@@ -297,7 +297,7 @@ namespace FHTest
         {
             // Ensure FHProxy cleans up its health reports.
             FabricHealerProxy.Instance.Close();
-            //await RemoveTestApplicationsAsync();
+            await RemoveTestApplicationsAsync();
 
             // Clean up all test repair tasks.
             var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync();
