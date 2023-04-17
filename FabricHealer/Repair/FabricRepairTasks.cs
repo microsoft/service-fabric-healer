@@ -147,7 +147,7 @@ namespace FabricHealer.Repair
                 if (e is OutOfMemoryException)
                 {
                     // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                    Environment.FailFast($"FH hit OOM:{Environment.NewLine}{Environment.StackTrace}");
                 }
 
                 throw;
@@ -547,7 +547,8 @@ namespace FabricHealer.Repair
                 // Non-Machine repairs (FH is executor, custom repair ExecutorData supplied by FH.)
                 if (repair.Executor == RepairConstants.FabricHealer)
                 {
-                    var fhExecutorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
+                    var fhExecutorData =
+                        JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
                     if (fhExecutorData == null || fhExecutorData.RepairPolicy == null)
                     {
@@ -558,14 +559,9 @@ namespace FabricHealer.Repair
                     {
                         continue;
                     }
-
-                    if (DateTime.UtcNow.Subtract(repair.CreatedTimestamp.Value) <= timeWindow)
-                    {
-                        count++;
-                    }
                 }
-                // Machine/other source repairs.
-                else if (DateTime.UtcNow.Subtract(repair.CreatedTimestamp.Value) <= timeWindow)
+                
+                if (DateTime.UtcNow.Subtract(repair.CreatedTimestamp.Value) <= timeWindow)
                 {
                     count++;
                 }

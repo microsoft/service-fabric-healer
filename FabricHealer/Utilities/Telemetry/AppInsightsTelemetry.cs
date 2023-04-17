@@ -142,7 +142,7 @@ namespace FabricHealer.Utilities.Telemetry
                 if (e is OutOfMemoryException)
                 {
                     // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                    Environment.FailFast($"FH hit OOM:{Environment.NewLine}{Environment.StackTrace}");
                 }
 
                 throw;

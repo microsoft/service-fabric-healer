@@ -4,8 +4,10 @@
     <id>%PACKAGE_ID%</id>
     <version>1.2.2</version>
     <releaseNotes>
-- Bug Fix: https://github.com/microsoft/service-fabric-healer/issues/148: Disk Repair is not working. 
-- Bug Fix: https://github.com/microsoft/service-fabric-healer/issues/146: LogAnalytics SendAsync always fails with server response Forbidden.
+- Bug Fix: https://github.com/microsoft/service-fabric-healer/issues/150: Rules are processed when related policies are disabled (Machine, SystemService).
+- Bug Fix: Rule tracing is inconsistent for more complex rules.
+- Bug Fix: SystemService rules are not being traced.
+- Code improvements, more tests.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
