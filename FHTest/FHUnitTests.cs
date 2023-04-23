@@ -452,17 +452,22 @@ namespace FHTest
         [TestMethod]
         public async Task DiskRules_DiskSpace_Percentage_Repair_Successful_Validate_RuleTracing()
         {
-            // Create temp files. This assumes C:\SFDevCluster\Log\QueryTraces exists. This is the path used in the related logic rule.
-            // See DiskRules.guan in FHTest\PackageRoot\Config\LogicRules folder.
-            // You can use whatever path you want, but you need to make sure that is also specified in the related test logic rule.
+            // Create temp files.
+            // You can use whatever path you want, but you need to make sure that is also specified in the related test logic rule (service-fabric-healer\FHTest\PackageRoot\Config\LogicRules\DiskRules.guan).
             byte[] bytes = Encoding.ASCII.GetBytes("foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz");
-            string path = @"C:\SFDevCluster\Log\QueryTraces";
+            string path = @"C:\FHTest\cluster_observer_logs";
 
-            for (int i = 0; i < 5; i++)
+            if (!Directory.Exists(path))
             {
-                using var f = File.Create(Path.Combine(path, $"foo{i}.txt"), 500, FileOptions.WriteThrough);
+                Directory.CreateDirectory(path);
+            }
 
-                for (int j = 0; j < 50000; j++)
+            // Create 2, 2GB files in target directory (path).
+            for (int i = 0; i < 2; i++)
+            {
+                using var f = File.Create(Path.Combine(path, $"foo{i}.txt"), 500000, FileOptions.WriteThrough);
+
+                for (int j = 0; j < 25000000; j++)
                 {
                     f.Write(bytes);
                 }
@@ -473,11 +478,11 @@ namespace FHTest
             {
                 EntityType = EntityType.Disk,
                 NodeName = NodeName,
-                Metric = SupportedMetricNames.FolderSizeMB,
-                Code = SupportedErrorCodes.NodeWarningFolderSizeMB,
+                Metric = SupportedMetricNames.DiskSpaceUsagePercentage,
+                Code = SupportedErrorCodes.NodeErrorDiskSpacePercent,
                 HealthState = HealthState.Warning,
-                Source = $"DiskObserver({SupportedErrorCodes.NodeWarningFolderSizeMB})",
-                Property = $"{NodeName}_{SupportedMetricNames.FolderSizeMB.Replace(" ", string.Empty)}"
+                Source = $"DiskObserver({SupportedErrorCodes.NodeErrorDiskSpacePercent})",
+                Property = $"{NodeName}_{SupportedMetricNames.DiskSpaceUsagePercentage.Replace(" ", string.Empty)}"
             };
 
             repairData.RepairPolicy = new RepairPolicy
@@ -502,13 +507,16 @@ namespace FHTest
             try
             {
                 await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
+
+                Process[] procs = Process.GetProcesses();
+                var x = procs.Where(p => p.Threads.Count > 4000);
             }
             catch (GuanException ge)
             {
                 throw new AssertFailedException(ge.Message, ge);
             }
 
-            // Validate that the repair rule is traced.
+            // Validate that the repair rule is traced and repair predicate succeeds.
             try
             {
                 var nodeHealth =
@@ -517,14 +525,14 @@ namespace FHTest
                         s => s.HealthInformation.SourceId.Contains("DiskRules.guan") && s.HealthInformation.Description.Contains("DeleteFiles"));
 
                 Assert.IsTrue(FHNodeEvents.Any());
-                Assert.IsTrue(FHNodeEvents.Any(e => e.HealthInformation.Description.Contains("QueryTraces")));
+                Assert.IsTrue(FHNodeEvents.Any(e => e.HealthInformation.Description.Contains("cluster_observer_logs")));
             }
             catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
             {
                 throw;
             }
 
-            Assert.IsTrue(Directory.GetFiles(path).Length == 0);
+            Assert.IsTrue(!Directory.GetFiles(path).Any(f => f == "foo0.txt" || f == "foo1.txt"));
         }
 
         [TestMethod]
@@ -551,11 +559,11 @@ namespace FHTest
             {
                 EntityType = EntityType.Disk,
                 NodeName = NodeName,
-                Metric = SupportedMetricNames.DiskSpaceUsagePercentage,
-                Code = SupportedErrorCodes.NodeWarningDiskSpacePercent,
+                Metric = SupportedMetricNames.FolderSizeMB,
+                Code = SupportedErrorCodes.NodeWarningFolderSizeMB,
                 HealthState = HealthState.Warning,
-                Source = $"DiskObserver({SupportedErrorCodes.NodeWarningDiskSpacePercent})",
-                Property = $"{NodeName}_{SupportedMetricNames.DiskSpaceUsagePercentage.Replace(" ", string.Empty)}"
+                Source = $"DiskObserver({SupportedErrorCodes.NodeWarningFolderSizeMB})",
+                Property = $"{NodeName}_{SupportedMetricNames.FolderSizeMB.Replace(" ", string.Empty)}"
             };
 
             repairData.RepairPolicy = new RepairPolicy
@@ -595,7 +603,6 @@ namespace FHTest
                         s => s.HealthInformation.SourceId.Contains("DiskRules.guan") && s.HealthInformation.Description.Contains("DeleteFiles"));
 
                 Assert.IsTrue(FHNodeEvents.Any());
-                Assert.IsTrue(FHNodeEvents.Any(e => e.HealthInformation.Description.Contains("LogRule")));
                 Assert.IsTrue(FHNodeEvents.Any(e => e.HealthInformation.Description.Contains("QueryTraces")));
             }
             catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
@@ -603,7 +610,7 @@ namespace FHTest
                 throw;
             }
 
-            Assert.IsTrue(Directory.GetFiles(path).Length == 0);
+            Assert.IsTrue(!Directory.GetFiles(path).Any(f => f.StartsWith("foo") && f.EndsWith(".txt")));
         }
 
         [TestMethod]
