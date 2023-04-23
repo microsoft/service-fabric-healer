@@ -455,7 +455,7 @@ namespace FHTest
             // Create temp files.
             // You can use whatever path you want, but you need to make sure that is also specified in the related test logic rule (service-fabric-healer\FHTest\PackageRoot\Config\LogicRules\DiskRules.guan).
             byte[] bytes = Encoding.ASCII.GetBytes("foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz");
-            string path = @"C:\cluster_observer_logs";
+            string path = @"C:\FHTest\cluster_observer_logs";
 
             if (!Directory.Exists(path))
             {
@@ -478,7 +478,7 @@ namespace FHTest
             {
                 EntityType = EntityType.Disk,
                 NodeName = NodeName,
-                Metric = SupportedMetricNames.FolderSizeMB,
+                Metric = SupportedMetricNames.DiskSpaceUsagePercentage,
                 Code = SupportedErrorCodes.NodeErrorDiskSpacePercent,
                 HealthState = HealthState.Warning,
                 Source = $"DiskObserver({SupportedErrorCodes.NodeErrorDiskSpacePercent})",
@@ -507,6 +507,9 @@ namespace FHTest
             try
             {
                 await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
+
+                Process[] procs = Process.GetProcesses();
+                var x = procs.Where(p => p.Threads.Count > 4000);
             }
             catch (GuanException ge)
             {
