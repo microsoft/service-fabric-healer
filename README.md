@@ -13,7 +13,7 @@ Repair workflow starts when FabricHealer detects supported error or warning heal
 Note that you can use FabricHealer if you don't also employ FabricObserver or FabricHealerProxy. For [machine-level repairs](https://github.com/microsoft/service-fabric-healer/blob/develop/FabricHealer/PackageRoot/Config/LogicRules/MachineRules.guan) you do not need either of these if you want to automatically schedule machine repair jobs based on node health states alone (like, Error state, specifically). For all other repairs, you must install FabricHealerProxy into a .NET Service Fabric project to leverage the power of FabricHealer if you do not deploy FabricObserver. 
 
 ```
-FabricObserver and FabricHealer work great together.
+FabricObserver and FabricHealer work great together. *Note: This version supports FabricObserver 3.2.3 and higher.*
 ```
 
 FabricHealer is implemented as a stateless singleton service that runs on one or all nodes in a Linux or Windows Service Fabric cluster. For Disk and Fabric system service repairs, you must run FabricHealer on all nodes.
@@ -72,7 +72,7 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH121 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH1110 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
@@ -93,11 +93,6 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -App
 ```  
 
 ## Using FabricHealer  
-
-```
-FabricHealer is a service specifically designed to auto-mitigate Service Fabric service issues that are generally 
-the result of bugs in user code.
-```  
 
 Let's say you have a service that is using too much memory or too many ephemeral ports, as defined in both FabricObserver (which generates the Warning(s)) and in your related logic rule (this is optional since you can decide that if FabricObserver warns, then FabricHealer should mitigate without testing the related metric value that led to the Warning by FabricObserver, which, of course, you configured. It's up to you.). You would use FabricHealer to keep the problem in check while your developers figure out the root cause and fix the bug(s) that lead to resource usage over-consumption. FabricHealer is really just a temporary solution to problems, not a fix. This is how you should think about auto-mitigation, generally. FabricHealer aims to keep your cluster green while you fix your bugs. With it's configuration-as-logic support, you can easily specify that some repair for some service should only be attempted for n weeks or months, while your dev team fixes the underlying issues with the problematic service. FabricHealer should be thought of as a "disappearing task force" in that it can provide stability during times of instability, then "go away" when bugs are fixed. 
 
