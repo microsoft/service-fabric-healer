@@ -30,25 +30,29 @@ namespace FabricHealer.Repair.Guan
                 RepairData.RepairPolicy.RepairIdPrefix = RepairConstants.InfraTaskIdPrefix;
                 RepairData.RepairPolicy.InfrastructureRepairName = "DeactivateNode";
                 RepairData.RepairPolicy.RepairId = $"DeactivateNode::{RepairData.NodeName}";
+                RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.Restart;
 
                 if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
                 {
                     _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRuleAsync(Input.ToString(), RepairData, FabricHealerManager.Token);
                 }
 
-                string value = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue().ToLower();
-                            
-                if (value == "removedata")
+                if (Input.Arguments.Count > 0)
                 {
-                    RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.RemoveData;
-                }
-                else if (value == "removenode")
-                {
-                    RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.RemoveNode;
-                }
-                else
-                {
-                    RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.Restart;
+                    string value = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue().ToLower();
+
+                    if (value == "removedata")
+                    {
+                        RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.RemoveData;
+                    }
+                    else if (value == "removenode")
+                    {
+                        RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.RemoveNode;
+                    }
+                    else
+                    {
+                        RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.Restart;
+                    }
                 }
 
                 var isNodeRepairAlreadyInProgress =
@@ -92,7 +96,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private DeactivateFabricNodePredicateType(string name)
-                    : base(name, true, 1)
+                    : base(name, true, 0)
         {
 
         }
