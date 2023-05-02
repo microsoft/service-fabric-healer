@@ -424,7 +424,6 @@ namespace FHTest
             repairData.RepairPolicy = new RepairPolicy
             {
                 RepairId = $"Test42_MachineRepair{NodeName}",
-                AppName = repairData.ApplicationName,
                 RepairIdPrefix = RepairConstants.InfraTaskIdPrefix,
                 NodeName = repairData.NodeName,
                 HealthState = repairData.HealthState
@@ -443,10 +442,44 @@ namespace FHTest
             {
                 await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
             }
-            catch (GuanException ge)
+            catch (GuanException)
             {
-                throw new AssertFailedException(ge.Message, ge);
+                throw;
             }
+
+            // Based on repair rules in MachineRules.guan file used for this test, a repair should NOT be scheduled based on the above facts.
+            var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync(RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Active, null);
+            Assert.IsFalse(repairs.Any());
+
+            repairData = new TelemetryData
+            {
+                EntityType = EntityType.Machine,
+                NodeName = NodeName,
+                HealthState = HealthState.Error,
+                Source = "Foo",
+                Property = "Bar"
+            };
+
+            repairData.RepairPolicy = new RepairPolicy
+            {
+                RepairId = $"Test42_MachineRepair{NodeName}_Scope",
+                RepairIdPrefix = RepairConstants.InfraTaskIdPrefix,
+                NodeName = repairData.NodeName,
+                HealthState = repairData.HealthState
+            };
+
+            executorData.RepairPolicy = repairData.RepairPolicy;
+
+            try
+            {
+                await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
+            }
+            catch (GuanException)
+            {
+                throw;
+            }
+
+            Assert.IsFalse(repairs.Any());
         }
 
         [TestMethod]

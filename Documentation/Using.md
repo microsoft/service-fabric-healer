@@ -252,7 +252,7 @@ For example:
 ``` PowerShell
 
 $appName = "fabric:/FabricHealer"
-$appVersion = "1.2.2"
+$appVersion = "1.2.3"
 
 $myApplication = Get-ServiceFabricApplication -ApplicationName $appName
 $appParamCollection = $myApplication.ApplicationParameters

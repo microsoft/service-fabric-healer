@@ -27,7 +27,8 @@ namespace FabricHealer.Repair.Guan
             protected override async Task<bool> CheckAsync()
             {
                 RepairData.RepairPolicy.RepairAction = RepairActionType.DeactivateNode;
-                RepairData.RepairPolicy.RepairIdPrefix = RepairConstants.FHTaskIdPrefix;
+                RepairData.RepairPolicy.RepairIdPrefix = RepairConstants.InfraTaskIdPrefix;
+                RepairData.RepairPolicy.InfrastructureRepairName = "DeactivateNode";
                 RepairData.RepairPolicy.RepairId = $"DeactivateNode::{RepairData.NodeName}";
 
                 if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
@@ -51,7 +52,7 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 var isNodeRepairAlreadyInProgress =
-                    await RepairTaskEngine.IsRepairInProgressAsync(RepairData, FabricHealerManager.Token);
+                    await RepairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(RepairData, FabricHealerManager.Token);
 
                 if (isNodeRepairAlreadyInProgress)
                 {
@@ -60,7 +61,7 @@ namespace FabricHealer.Repair.Guan
 
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
-                            $"DeactivateFabricNode::{RepairData.RepairPolicy.RepairId}",
+                            RepairData.RepairPolicy.RepairId,
                             message,
                             FabricHealerManager.Token,
                             RepairData,
