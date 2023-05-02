@@ -34,7 +34,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.2.2" />
+    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.2.3" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
