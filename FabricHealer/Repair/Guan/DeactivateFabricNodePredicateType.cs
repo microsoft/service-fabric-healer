@@ -8,6 +8,7 @@ using FabricHealer.Utilities;
 using Guan.Logic;
 using System.Fabric.Repair;
 using System.Threading.Tasks;
+using System;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -28,8 +29,8 @@ namespace FabricHealer.Repair.Guan
             {
                 RepairData.RepairPolicy.RepairAction = RepairActionType.DeactivateNode;
                 RepairData.RepairPolicy.RepairIdPrefix = RepairConstants.InfraTaskIdPrefix;
-                RepairData.RepairPolicy.InfrastructureRepairName = "DeactivateNode";
-                RepairData.RepairPolicy.RepairId = $"DeactivateNode::{RepairData.NodeName}";
+                RepairData.RepairPolicy.InfrastructureRepairName = RepairConstants.DeactivateFabricNode;
+                RepairData.RepairPolicy.RepairId = $"{RepairConstants.DeactivateFabricNode}::{RepairData.NodeName}";
                 RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.Restart;
 
                 if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
@@ -61,7 +62,7 @@ namespace FabricHealer.Repair.Guan
                 if (isNodeRepairAlreadyInProgress)
                 {
                     string message =
-                    $"A repair for Fabric node {RepairData.NodeName} is already in progress in the cluster.";
+                        $"A repair for Fabric node {RepairData.NodeName} is already in progress in the cluster.";
 
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                             LogLevel.Info,
