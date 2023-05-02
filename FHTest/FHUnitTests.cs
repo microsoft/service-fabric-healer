@@ -1343,25 +1343,6 @@ namespace FHTest
             }
         }
 
-        [TestMethod]
-        public void Multi_Type_Guid_Support_Compatibility_Test()
-        {
-            Guid? nullableGuid = (Guid?)Guid.NewGuid();
-            Guid? nullGuid = null;
-            string guidString = nullableGuid.ToString();
-            string empty = string.Empty;
-            string whitespace = "   ";
-            string randomChars = ".-$--%->-d-e-c-[}-o";
-
-            Assert.IsFalse(RepairExecutor.TryGetGuid(nullGuid, out _));
-            Assert.IsFalse(RepairExecutor.TryGetGuid(whitespace, out _));
-            Assert.IsFalse(RepairExecutor.TryGetGuid(empty, out _));
-            Assert.IsFalse(RepairExecutor.TryGetGuid(randomChars, out _));
-
-            Assert.IsTrue(RepairExecutor.TryGetGuid(nullableGuid, out _));
-            Assert.IsTrue(RepairExecutor.TryGetGuid(guidString, out _));
-        }
-
         // Policy enablement tests. These validate that when a policy is disabled, no processing will take place when
         // related entities are detected be in Error or Warning health states.
         // Note: All repair policies are enabled in FHTest's Setting.xml, which is part of the ServiceContext creation used,

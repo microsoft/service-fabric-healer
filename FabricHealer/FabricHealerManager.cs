@@ -407,9 +407,14 @@ namespace FabricHealer
                 {
                     try
                     {
-                        // FH looks for and resumes FabricNode restart repair jobs when it starts up (so, it will pick up where it left off in the safe restart sequence
-                        // when the Fabric node hosting FH is the one FH restarted).
+                        // FH executor data.
                         if (!JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData, true))
+                        {
+                            continue;
+                        }
+
+                        // Don't cancel node deactivations.
+                        if (exData.RepairPolicy.RepairAction == RepairActionType.DeactivateNode)
                         {
                             continue;
                         }
@@ -433,8 +438,9 @@ namespace FabricHealer
                             maxFHExecutorTime = exData.RepairPolicy.MaxExecutionTime;
                         }
 
-                        // These will be service level repairs, which typically do not take very long at all for FH to execute to completion.
-                        if (isClosing || (repair.CreatedTimestamp.HasValue && DateTime.UtcNow.Subtract(repair.CreatedTimestamp.Value) >= maxFHExecutorTime))
+                        if (isClosing || 
+                            (repair.CreatedTimestamp.HasValue && 
+                             DateTime.UtcNow.Subtract(repair.CreatedTimestamp.Value) >= maxFHExecutorTime))
                         {
                             await FabricRepairTasks.CancelRepairTaskAsync(repair, Token);
                         }
@@ -499,7 +505,7 @@ namespace FabricHealer
 
                 if (InstanceCount is (-1) or > 1)
                 {
-                    await RandomWaitAsync();
+                    await RandomWaitAsync(Token);
                 }
 
                 // Check cluster upgrade status. If the cluster is upgrading to a new version (or rolling back)
@@ -603,7 +609,7 @@ namespace FabricHealer
 
                                             if ((InstanceCount == -1 || InstanceCount > 1) && ConfigSettings.EnableRollingServiceRestarts)
                                             {
-                                                await RandomWaitAsync();
+                                                await RandomWaitAsync(Token);
                                             }
 
                                             await ProcessServiceHealthAsync(service);
@@ -950,6 +956,12 @@ namespace FabricHealer
 
                 foreach (var repair in currentFHRepairTasksInProgress)
                 {
+                    // Ignore FH_Infra repairs (like DeactivateNode).
+                    if (repair.TaskId.StartsWith(RepairConstants.InfraTaskIdPrefix))
+                    {
+                        continue;
+                    }
+
                     if (repair.State == RepairTaskState.Restoring)
                     {
                         continue;
@@ -963,16 +975,19 @@ namespace FabricHealer
                         continue;
                     }
 
-                    if (!JsonSerializationUtility.TryDeserializeObject(
-                            executorData,
-                            out RepairExecutorData repairExecutorData,
-                            treatMissingMembersAsError: true))
+                    if (!JsonSerializationUtility.TryDeserializeObject(executorData, out RepairExecutorData repairExecutorData, true))
                     {
                         continue;
                     }
 
                     // Don't do anything if the orphaned repair was for a different node than this one:
-                    if (InstanceCount == -1 && repairExecutorData.RepairPolicy.NodeName != ServiceContext.NodeContext.NodeName)
+                    if (repairExecutorData.RepairPolicy.NodeName != ServiceContext.NodeContext.NodeName)
+                    {
+                        continue;
+                    }
+
+                    // Don't cancel node deactivations.
+                    if (repairExecutorData.RepairPolicy.RepairAction == RepairActionType.DeactivateNode)
                     {
                         continue;
                     }
@@ -1113,7 +1128,7 @@ namespace FabricHealer
                 else if (InstanceCount > 1)
                 {
                     // Randomly wait to decrease chances of simultaneous ownership among FH instances.
-                    await RandomWaitAsync();
+                    await RandomWaitAsync(Token);
                 }
 
                 if (repairData.Code != null && !SupportedErrorCodes.AppErrorCodesDictionary.ContainsKey(repairData.Code)
@@ -1444,7 +1459,7 @@ namespace FabricHealer
                 if (InstanceCount is (-1) or > 1)
                 {
                     // Randomly wait to decrease chances of simultaneous ownership among FH instances.
-                    await RandomWaitAsync();
+                    await RandomWaitAsync(Token);
                 }
 
                 // Since FH can run on each node (-1 InstanceCount), if this is the case then have FH only try to repair app services that are also
@@ -1654,7 +1669,7 @@ namespace FabricHealer
                     // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
                     if (InstanceCount is (-1) or > 1)
                     {
-                        await RandomWaitAsync();
+                        await RandomWaitAsync(Token);
                     }
 
                     // Was node health event generated by FO or FHProxy?
@@ -1869,7 +1884,7 @@ namespace FabricHealer
 
             if (InstanceCount is (-1) or > 1)
             {
-                await RandomWaitAsync();
+                await RandomWaitAsync(Token);
             }
 
             if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(Token))
@@ -1884,7 +1899,7 @@ namespace FabricHealer
                 return;
             }
 
-            string action = repairData.RepairPolicy.RepairAction == RepairActionType.DeactivateNode ? "Deactivate" : "Restart";
+            string action = repairData.RepairPolicy.RepairAction == RepairActionType.DeactivateNode ? RepairConstants.DeactivateFabricNode : RepairConstants.RestartFabricNode;
             string repairId = $"{repairData.NodeName}_{repairData.NodeType}_{action}";
 
             var currentRepairs =
@@ -1961,7 +1976,7 @@ namespace FabricHealer
             // Random wait to limit potential duplicate (concurrent) repair job creation from other FH instances.
             if (InstanceCount is (-1) or > 1)
             {
-                await RandomWaitAsync();
+                await RandomWaitAsync(Token);
             }
 
             if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(Token))
