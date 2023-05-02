@@ -86,7 +86,7 @@ namespace FabricHealer.Repair
             nodeRepairImpact.ImpactedNodes.Add(impactedNode);
             RepairActionType repairAction = executorData.RepairPolicy.RepairAction;
             string action = repairAction.ToString();
-            string taskId = $"{RepairConstants.FHTaskIdPrefix}/{Guid.NewGuid()}/{action}/{executorData.RepairPolicy.NodeName}";
+            string taskId = $"{executorData.RepairPolicy.RepairIdPrefix ?? RepairConstants.FHTaskIdPrefix}/{Guid.NewGuid()}/{action}/{executorData.RepairPolicy.NodeName}";
             bool doHealthChecks = impact != NodeImpactLevel.None;
 
             // Health checks for app level repairs.
@@ -202,7 +202,7 @@ namespace FabricHealer.Repair
 
             if (FabricHealerManager.InstanceCount is (-1) or > 1)
             {
-                await FabricHealerManager.RandomWaitAsync();
+                await FabricHealerManager.RandomWaitAsync(token);
             }
 
             RepairTaskList repairTasksInProgress =
@@ -275,7 +275,7 @@ namespace FabricHealer.Repair
             {
                 if (FabricHealerManager.InstanceCount is (-1) or > 1)
                 {
-                    await FabricHealerManager.RandomWaitAsync();
+                    await FabricHealerManager.RandomWaitAsync(cancellationToken);
                 }
 
                 RepairTaskList activeRepairs =
@@ -290,12 +290,6 @@ namespace FabricHealer.Repair
                 {
                     foreach (RepairTask repair in activeRepairs)
                     {
-                        // FH does not execute machine level repairs.
-                        if (repair.TaskId.StartsWith($"{RepairConstants.FHTaskIdPrefix}/") || repair.Executor == RepairConstants.FabricHealer)
-                        {
-                            continue;
-                        }
-
                         // This would mean that the job has node-level Impact and its state is at least Approved.
                         if (repair.Impact is NodeRepairImpactDescription impact)
                         {
@@ -347,7 +341,7 @@ namespace FabricHealer.Repair
         {
             if (FabricHealerManager.InstanceCount is (-1) or > 1)
             {
-                await FabricHealerManager.RandomWaitAsync();
+                await FabricHealerManager.RandomWaitAsync(token);
             }
 
             if (taskIdPrefix == RepairConstants.InfraTaskIdPrefix) 

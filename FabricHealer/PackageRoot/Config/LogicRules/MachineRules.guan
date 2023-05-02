@@ -39,6 +39,8 @@
 Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
 
 ## Don't proceed unless the specified watchdog created the Error health event.
+## First, ensure the Source fact is present and not null or empty. Empty is a built-in Guan predicate that evaluates if the supplied argument is null or empty (in the case of a string).
+##Mitigate(Source=?source) :- LogRule(43), Empty(?source), !.
 ##Mitigate(Source=?source) :- notmatch(?source, "EventLogWatchdog"), !.
 
 ## Don't proceed if there are already 2 or more machine repairs currently active in the cluster.
@@ -53,15 +55,15 @@ Mitigate :- CheckInsideNodeProbationPeriod(00:30:00), !.
 ## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours.
 Mitigate :- CheckInsideHealthStateMinDuration(02:00:00), !.
 
-## For certain environments, the correct mitigation is to deactivate the target node. The below rule schedules a node deactivation
-## (Here, the node impact level is RemoveData, but you can supply RestartNode or RemoveNode depending on your intention). If you do not specify an ImpactLevel,
-## the default level used will be RestartNode.
-##Mitigate(Source=?source, Property=?property) :- LogRule(59), match(?source, "EventLogWatchdog"), match(?property, "CriticalMachineFailure"), DeactivateFabricNode(RemoveData).
+## Don't proceed if the specified watchdog and property facts are not present.
+## First, ensure the Property fact is present and not null or empty. Source was already tested above.
+##Mitigate(Property=?property) :- LogRule(60), Empty(?property), !.
+##Mitigate(Source=?source, Property=?property) :- LogRule(61), match(?source, "EventLogWatchdog"), match(?property, "CriticalMachineFailure"), DeactivateFabricNode(Restart).
 
-## If you employ multiple rules with the same repair predicate (e.g., DeactivateFabricNode(ImpactLevel=RemoveData)) and want FH to log them, 
+## If you employ multiple rules with the same repair predicate (e.g., DeactivateFabricNode(ImpactLevel=Restart)) and want FH to log them, 
 ## then you must add the LogRule([LineNumber]) predicate to each rule in order for FabricHealer to trace correctly, regardless of EnableLogicRuleTracing setting. 
 ## Please see the Debugging/Auditing Rules section in Using.md to learn more.
-##Mitigate(Source=?source, Property=?property) :- LogRule(64), match(?source, "SomeOtherWatchdog"), match(?property, "SomeOtherFailure"), DeactivateFabricNode(RemoveData).
+##Mitigate(Source=?source, Property=?property) :- LogRule(66), match(?source, "SomeOtherWatchdog"), match(?property, "SomeOtherFailure"), DeactivateFabricNode(Restart).
 
 ## Infra Mitigations (RM repair scheduling logic - InfrastructureService for the target node type will be the repair Executor, not FH).
 ## The logic below demonstrates how to specify a repair escalation path: Reboot -> Reimage -> Heal -> Triage (human intervention required).
