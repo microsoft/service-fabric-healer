@@ -188,8 +188,7 @@ namespace FabricHealer
 
                 NodeCount = nodeList.Count;
 
-                // First, let's clean up any orphaned non-node level FabricHealer repair tasks left pending. This will also resume Fabric Node repairs that
-                // FH owns and was executing at the time FH exited. Only FH-owned repairs will be canceled, not repairs conducted by other executors.
+                // First, let's clean up any orphaned FabricHealer repair tasks left pending.
                 await CancelAbandonedFHRepairsAsync();
 
                 // Run until RunAsync token is cancelled.
@@ -200,7 +199,7 @@ namespace FabricHealer
                         break;
                     }
 
-                    // This call will try to cancel any FH-owned (and executed) repair that has exceeded the specified (in logic rule or default)
+                    // This call will try to cancel any FH-owned repair that has exceeded the specified (in logic rule or default)
                     // max execution duration.
                     await TryCleanUpOrphanedFabricHealerRepairJobsAsync();
 
@@ -413,14 +412,17 @@ namespace FabricHealer
                             continue;
                         }
 
-                        // Don't cancel node deactivations.
-                        if (exData.RepairPolicy.RepairAction == RepairActionType.DeactivateNode)
+                        // Don't cancel node deactivations, unless it has a MaxExecutionTime setting in place.
+                        if (exData.RepairPolicy.MaxExecutionTime <= TimeSpan.Zero && 
+                            exData.RepairPolicy.RepairAction == RepairActionType.DeactivateNode)
                         {
                             continue;
                         }
 
-                        // This would mean that the job has node-level Impact and its state is at least Approved.
-                        if (repair.Impact is NodeRepairImpactDescription impact)
+                        // This would mean that the job has node-level Impact (like machine repair or restarting a node) and its state is at least Approved.
+                        if (exData.RepairPolicy.MaxExecutionTime <= TimeSpan.Zero &&
+                            exData.RepairPolicy.RepairAction != RepairActionType.DeactivateNode &&
+                            repair.Impact is NodeRepairImpactDescription impact)
                         {
                             if (impact.ImpactedNodes.Any(
                                 n => n.NodeName == exData.RepairPolicy.NodeName
@@ -438,7 +440,7 @@ namespace FabricHealer
                             maxFHExecutorTime = exData.RepairPolicy.MaxExecutionTime;
                         }
 
-                        if (isClosing || 
+                        if ((isClosing && exData.RepairPolicy.RepairAction != RepairActionType.DeactivateNode) || 
                             (repair.CreatedTimestamp.HasValue && 
                              DateTime.UtcNow.Subtract(repair.CreatedTimestamp.Value) >= maxFHExecutorTime))
                         {
@@ -944,7 +946,7 @@ namespace FabricHealer
                 var currentFHRepairTasksInProgress =
                         await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                 () => RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                                        RepairConstants.FHTaskIdPrefix,
+                                        null,
                                         Token,
                                         RepairConstants.FabricHealer),
                                 Token);
@@ -956,7 +958,7 @@ namespace FabricHealer
 
                 foreach (var repair in currentFHRepairTasksInProgress)
                 {
-                    // Ignore FH_Infra repairs (like DeactivateNode).
+                    // Ignore FH_Infra repairs (like DeactivateNode, where FH is Executor).
                     if (repair.TaskId.StartsWith(RepairConstants.InfraTaskIdPrefix))
                     {
                         continue;
@@ -997,24 +999,15 @@ namespace FabricHealer
                         await FabricRepairTasks.CancelRepairTaskAsync(repair, Token);
                     }
 
-                    RepairLogger.LogInfo("Exiting CancelOrResumeAllRunningFHRepairsAsync: Completed.");
+                    RepairLogger.LogInfo("Exiting CancelAbandonedFHRepairsAsync: Completed.");
                 }
             }
             catch (Exception e) when (e is FabricException or OperationCanceledException or TaskCanceledException)
             {
                 if (e is FabricException)
                 {
-                    RepairLogger.LogWarning($"Could not cancel FH repair tasks. Failed with:{Environment.NewLine}{e}");
+                    RepairLogger.LogWarning($"Could not cancel FH repair tasks. Failed with FabricException: {e.Message}");
                 }
-
-                await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "CancelOrResumeAllRunningFHRepairsAsync",
-                        $"Could not cancel abandoned FH repair tasks. Failed with:{Environment.NewLine}{e}",
-                        Token,
-                        null,
-                        ConfigSettings.EnableVerboseLogging);
-
             }
         }
 

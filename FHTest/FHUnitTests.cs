@@ -715,7 +715,7 @@ namespace FHTest
         }
 
         [TestMethod]
-        public async Task ReplicaRules_MemoryMB_Repair_Successful_Validate_Rule_Tracing()
+        public async Task XReplicaRules_MemoryMB_Repair_Successful_Validate_Rule_Tracing()
         {
             var partitions = await fabricClient.QueryManager.GetPartitionListAsync(new Uri("fabric:/TestApp42/ChildProcessCreator"));
             Guid partition = partitions[0].PartitionInformation.Id;
@@ -789,7 +789,7 @@ namespace FHTest
         }
 
         [TestMethod]
-        public async Task SystemServiceRules_MemoryMb_Repair_Successful_Validate_RuleTracing()
+        public async Task XSystemServiceRules_MemoryMb_Repair_Successful_Validate_RuleTracing()
         {
             var repairData = new TelemetryData
             {
@@ -841,7 +841,7 @@ namespace FHTest
                 var nodeHealth =
                     await fabricClient.HealthManager.GetNodeHealthAsync(NodeName, TimeSpan.FromSeconds(60), CancellationToken.None);
                 var FHNodeEvents = nodeHealth.HealthEvents?.Where(
-                        s => s.HealthInformation.SourceId.Contains("FabricDCA")
+                        s => s.HealthInformation.SourceId.Contains(FabricHealerManager.CurrentlyExecutingLogicRulesFileName)
                         && s.HealthInformation.Description.Contains("TimeScopedRestartFabricSystemProcess"));
 
                 Assert.IsTrue(FHNodeEvents.Any());
