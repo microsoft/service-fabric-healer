@@ -85,8 +85,12 @@ namespace FabricHealer.Repair
             NodeImpact impactedNode = new(executorData.RepairPolicy.NodeName, impact);
             nodeRepairImpact.ImpactedNodes.Add(impactedNode);
             RepairActionType repairAction = executorData.RepairPolicy.RepairAction;
-            string action = repairAction.ToString();
-            string taskId = $"{executorData.RepairPolicy.RepairIdPrefix ?? RepairConstants.FHTaskIdPrefix}/{Guid.NewGuid()}/{action}/{executorData.RepairPolicy.NodeName}";
+
+            // To support DeactivateFabricNode, which is FH_Infra, but FH is executor.
+            string action = 
+                !string.IsNullOrWhiteSpace(executorData.RepairPolicy.InfrastructureRepairName) ? executorData.RepairPolicy.InfrastructureRepairName : repairAction.ToString();
+            string taskId = 
+                $"{executorData.RepairPolicy.RepairIdPrefix ?? RepairConstants.FHTaskIdPrefix}/{Guid.NewGuid()}/{action}/{executorData.RepairPolicy.NodeName}";
             bool doHealthChecks = impact != NodeImpactLevel.None;
 
             // Health checks for app level repairs.

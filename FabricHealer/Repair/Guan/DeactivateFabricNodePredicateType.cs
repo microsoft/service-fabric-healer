@@ -9,6 +9,7 @@ using Guan.Logic;
 using System.Fabric.Repair;
 using System.Threading.Tasks;
 using System;
+using System.Linq;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -32,27 +33,53 @@ namespace FabricHealer.Repair.Guan
                 RepairData.RepairPolicy.InfrastructureRepairName = RepairConstants.DeactivateFabricNode;
                 RepairData.RepairPolicy.RepairId = $"{RepairConstants.DeactivateFabricNode}::{RepairData.NodeName}";
                 RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.Restart;
+                
+                // Unlimited.
+                RepairData.RepairPolicy.MaxExecutionTime = TimeSpan.Zero;
 
                 if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
                 {
                     _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRuleAsync(Input.ToString(), RepairData, FabricHealerManager.Token);
                 }
 
-                if (Input.Arguments.Count > 0)
-                {
-                    string value = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue().ToLower();
+                long args = Input.Arguments.Count;
 
-                    if (value == "removedata")
+                for (int i = 0; i < args; i++)
+                {
+                    var typeString = Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name;
+
+                    switch (typeString)
                     {
-                        RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.RemoveData;
-                    }
-                    else if (value == "removenode")
-                    {
-                        RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.RemoveNode;
-                    }
-                    else
-                    {
-                        RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.Restart;
+                        case "TimeSpan":
+
+                            RepairData.RepairPolicy.MaxExecutionTime = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
+                            break;
+
+                        // This only makes sense for Machine-level repair rules, where you can specify any string for machine repair action that is supported in your SF configuration.
+                        // Otherwise, FH already knows what you mean with GetRepairHistory([TimeSpan value]), given the repair context (which FH creates).
+                        case "String":
+
+                            string value = Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue().ToLower();
+
+                            if (value == "removedata")
+                            {
+                                RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.RemoveData;
+                            }
+                            else if (value == "removenode")
+                            {
+                                RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.RemoveNode;
+                            }
+                            else
+                            {
+                                RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.Restart;
+                            }
+                            break;
+
+                        default:
+
+                            throw new GuanException(
+                                "DeactivateFabricNodePredicateType failure. Unsupported argument type: " +
+                                $"{Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name}");
                     }
                 }
 
@@ -97,7 +124,7 @@ namespace FabricHealer.Repair.Guan
         }
 
         private DeactivateFabricNodePredicateType(string name)
-                    : base(name, true, 0)
+                    : base(name, true, 0, 2)
         {
 
         }
