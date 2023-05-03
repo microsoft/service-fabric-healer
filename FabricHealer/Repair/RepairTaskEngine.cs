@@ -554,7 +554,7 @@ namespace FabricHealer.Repair
 
                 var rulesWithPredicate =
                     flattenedLines.Where(line => !string.IsNullOrWhiteSpace(line) &&
-                                                 !line.StartsWith("##") &&
+                                                 !line.Contains("##") &&
                                                  line.Replace("'", "").Replace("\"", "").Replace(" ", "").Contains(predicate, StringComparison.OrdinalIgnoreCase)).ToList();
 
                 // This will be the case for complex rules that employ member predicate, for example, like in DiskRules.guan.
@@ -603,7 +603,7 @@ namespace FabricHealer.Repair
 
                     string line = lines[i].Replace("'", "").Replace("\"", "").Replace(" ", "");
 
-                    if (string.IsNullOrWhiteSpace(line) || line.StartsWith("##"))
+                    if (string.IsNullOrWhiteSpace(line) || line.Contains("##"))
                     {
                         continue;
                     }
