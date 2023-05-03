@@ -1058,6 +1058,15 @@ namespace FHTest
                 repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
                                       RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Active, null);
 
+                if (!repairTasks.Any())
+                {
+                    await FabricHealerProxy.Instance.RepairEntityAsync(WatchDogMachineRepairFacts, token);
+                    await FabricHealerManager.ProcessHealthEventsAsync();
+                    await Task.Delay(5000, token);
+                    repairTasks = await fabricClient.RepairManager.GetRepairTaskListAsync(
+                                     RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Active, null);
+                }
+
                 Assert.IsTrue(repairTasks.Any());
 
                 await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First(), token);

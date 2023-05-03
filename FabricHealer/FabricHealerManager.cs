@@ -1802,6 +1802,11 @@ namespace FabricHealer
                 return;
             }
 
+            if (repairData == null || repairData.RepairPolicy == null)
+            {
+                return;
+            }
+
             // Can only repair local disks.
             if (repairData.NodeName != ServiceContext.NodeContext.NodeName)
             {
@@ -1871,6 +1876,11 @@ namespace FabricHealer
         private static async Task ProcessFabricNodeHealthAsync(HealthEvent healthEvent, TelemetryData repairData)
         {
             if (!ConfigSettings.EnableFabricNodeRepair)
+            {
+                return;
+            }
+
+            if (repairData == null || repairData.RepairPolicy == null)
             {
                 return;
             }
