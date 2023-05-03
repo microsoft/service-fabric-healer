@@ -2,12 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.2.2</version>
+    <version>1.2.3</version>
     <releaseNotes>
-- Bug Fix: https://github.com/microsoft/service-fabric-healer/issues/150: Rules are processed when related policies are disabled (Machine, SystemService).
-- Bug Fix: Rule tracing is inconsistent for more complex rules.
-- Bug Fix: SystemService rules are not being traced.
-- Code improvements, more tests.
+- Bug fixes and code improvements.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

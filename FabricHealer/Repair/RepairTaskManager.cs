@@ -171,7 +171,7 @@ namespace FabricHealer.Repair
         {
             if (FabricHealerManager.InstanceCount is (-1) or > 1)
             {
-                await FabricHealerManager.RandomWaitAsync();
+                await FabricHealerManager.RandomWaitAsync(cancellationToken);
             }
 
             if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
@@ -478,9 +478,7 @@ namespace FabricHealer.Repair
                 }
 
                 // Don't attempt a node-level repair on a node where there is already an active node-level repair.
-                if ((repairData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode
-                    || repairData.RepairPolicy.RepairAction == RepairActionType.DeactivateNode)
-                    && await RepairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(repairData, cancellationToken))
+                if (await RepairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(repairData, cancellationToken))
                 {
                     string message = $"Node {repairData.NodeName} already has a node-impactful repair in progress: " +
                                      $"{repairData.RepairPolicy.RepairAction}";

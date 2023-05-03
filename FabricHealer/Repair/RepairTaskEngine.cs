@@ -85,8 +85,12 @@ namespace FabricHealer.Repair
             NodeImpact impactedNode = new(executorData.RepairPolicy.NodeName, impact);
             nodeRepairImpact.ImpactedNodes.Add(impactedNode);
             RepairActionType repairAction = executorData.RepairPolicy.RepairAction;
-            string action = repairAction.ToString();
-            string taskId = $"{RepairConstants.FHTaskIdPrefix}/{Guid.NewGuid()}/{action}/{executorData.RepairPolicy.NodeName}";
+
+            // To support DeactivateFabricNode, which is FH_Infra, but FH is executor.
+            string action = 
+                !string.IsNullOrWhiteSpace(executorData.RepairPolicy.InfrastructureRepairName) ? executorData.RepairPolicy.InfrastructureRepairName : repairAction.ToString();
+            string taskId = 
+                $"{executorData.RepairPolicy.RepairIdPrefix ?? RepairConstants.FHTaskIdPrefix}/{Guid.NewGuid()}/{action}/{executorData.RepairPolicy.NodeName}";
             bool doHealthChecks = impact != NodeImpactLevel.None;
 
             // Health checks for app level repairs.
@@ -202,7 +206,7 @@ namespace FabricHealer.Repair
 
             if (FabricHealerManager.InstanceCount is (-1) or > 1)
             {
-                await FabricHealerManager.RandomWaitAsync();
+                await FabricHealerManager.RandomWaitAsync(token);
             }
 
             RepairTaskList repairTasksInProgress =
@@ -275,7 +279,7 @@ namespace FabricHealer.Repair
             {
                 if (FabricHealerManager.InstanceCount is (-1) or > 1)
                 {
-                    await FabricHealerManager.RandomWaitAsync();
+                    await FabricHealerManager.RandomWaitAsync(cancellationToken);
                 }
 
                 RepairTaskList activeRepairs =
@@ -290,12 +294,6 @@ namespace FabricHealer.Repair
                 {
                     foreach (RepairTask repair in activeRepairs)
                     {
-                        // FH does not execute machine level repairs.
-                        if (repair.TaskId.StartsWith($"{RepairConstants.FHTaskIdPrefix}/") || repair.Executor == RepairConstants.FabricHealer)
-                        {
-                            continue;
-                        }
-
                         // This would mean that the job has node-level Impact and its state is at least Approved.
                         if (repair.Impact is NodeRepairImpactDescription impact)
                         {
@@ -347,7 +345,7 @@ namespace FabricHealer.Repair
         {
             if (FabricHealerManager.InstanceCount is (-1) or > 1)
             {
-                await FabricHealerManager.RandomWaitAsync();
+                await FabricHealerManager.RandomWaitAsync(token);
             }
 
             if (taskIdPrefix == RepairConstants.InfraTaskIdPrefix) 
@@ -556,7 +554,7 @@ namespace FabricHealer.Repair
 
                 var rulesWithPredicate =
                     flattenedLines.Where(line => !string.IsNullOrWhiteSpace(line) &&
-                                                 !line.StartsWith("##") &&
+                                                 !line.Contains("##") &&
                                                  line.Replace("'", "").Replace("\"", "").Replace(" ", "").Contains(predicate, StringComparison.OrdinalIgnoreCase)).ToList();
 
                 // This will be the case for complex rules that employ member predicate, for example, like in DiskRules.guan.
@@ -605,7 +603,7 @@ namespace FabricHealer.Repair
 
                     string line = lines[i].Replace("'", "").Replace("\"", "").Replace(" ", "");
 
-                    if (string.IsNullOrWhiteSpace(line) || line.StartsWith("##"))
+                    if (string.IsNullOrWhiteSpace(line) || line.Contains("##"))
                     {
                         continue;
                     }

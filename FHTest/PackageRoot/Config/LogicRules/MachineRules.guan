@@ -1,17 +1,9 @@
 ﻿
-## Don't proceed if the target entity is not in Error.
-Mitigate(HealthState=?healthState) :- not(?healthState == Error), !.
-
-## Don't proceed if the Source string (id) of the health event does not contain "EventLogWatchdog" substring.
-## notmatch is a system predicate that, like match, looks for the specified substring in the specified source string. notmatch returns true
-## if the substring is not present in the source string.
-Mitigate(Source=?source) :- notmatch(?source, "EventLogWatchdog"), !.
-
-## Look for specific health event Property substring and do something else. Do not proceed to escalation infra repairs, regardless of success or failure.
-Mitigate(Property=?property) :- match(?property, "WER 42"), !, DeactivateFabricNode(Restart).
-
-## Don't proceed to infra escalations if the health event property does not contain "WER 55".
-Mitigate(Property=?property) :- notmatch(?property, "WER 55"), !.
+Mitigate(HealthState=?healthState) :- LogRule(2), not(?healthState == Error), !.
+Mitigate(Source=?source, Property=?property) :- LogRule(3), ?source == null || ?property == null, !.
+Mitigate(Source=?source) :- LogRule(4), notmatch(?source, "EventLogWatchdog"), !.
+Mitigate(Property=?property) :- LogRule(5), match(?property, "WER 42"), !, DeactivateFabricNode(Restart).
+Mitigate(Property=?property) :- LogRule(6), notmatch(?property, "WER 55"), !.
 
 ## Infra repair escalations.
 

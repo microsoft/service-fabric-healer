@@ -72,7 +72,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (FabricHealerManager.InstanceCount is (-1) or > 1)
                 {
-                    await FabricHealerManager.RandomWaitAsync();
+                    await FabricHealerManager.RandomWaitAsync(FabricHealerManager.Token);
                 }
 
                 bool isRepairAlreadyInProgress =
