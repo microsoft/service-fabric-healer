@@ -35,55 +35,54 @@
 ## Don't proceed if the target entity is not in Error.
 Mitigate(HealthState=?healthState) :- LogRule(36), not(?healthState == Error), !.
 
-## Don't proceed unless a specific watchdog, EventLogWatchdog, put the Fabric node into Error state. You don't need
-## to check for this again as this is a top level constraint.
-##Mitigate(Source=?source) :- LogRule(40), Empty(?source), !.
-##Mitigate(Source=?source) :- LogRule(41), notmatch(?source, "EventLogWatchdog"), !.
-
 ## Don't proceed if there are already 2 or more machine repairs currently active in the cluster.
-Mitigate :- LogRule(44), CheckOutstandingRepairs(2), !.
+Mitigate :- LogRule(39), CheckOutstandingRepairs(2), !.
 
 ## Don't proceed if FH scheduled a machine repair less than 10 minutes ago.
-Mitigate :- LogRule(47), CheckInsideScheduleInterval(00:10:00), !.
+Mitigate :- LogRule(42), CheckInsideScheduleInterval(00:10:00), !.
 
 ## Don't proceed if target machine is currently in recovery probation.
-Mitigate :- LogRule(50), CheckInsideNodeProbationPeriod(00:30:00), !.
+Mitigate :- LogRule(45), CheckInsideNodeProbationPeriod(00:30:00), !.
 
 ## Don't proceed if the target node hasn't been in Error (including cyclic Up/Down) state for at least two hours.
-##Mitigate :- LogRule(53), CheckInsideHealthStateMinDuration(02:00:00), !.
+Mitigate :- LogRule(48), CheckInsideHealthStateMinDuration(02:00:00), !.
 
-## Don't proceed if the required facts are not present.
-##Mitigate(Property=?property) :- LogRule(56), Empty(?property), !.
+## Fabric Node Deactivation Repairs. These are related to detected machine health Errors by EventLogWatchdog (see rules above), for example. 
+## These are FH_Infra repairs, even though they apply only to Fabric nodes (and not underlying machines) in terms of impact. 
+## This is because the root of the problem is the machine, not the Fabric node.
+## The rules below ensure that when some watchdog detects OS issues, the Fabric node is taken out of the active ring and will remain in Disabled state until
+## the related Repair Job is Completed (this is where optional MaxDuration argument comes into play as it means the repair job will last for the specified duration, 
+## then it will be Completed by FH).
 
-## Repairs.
-##Mitigate(Source=?source, Property=?property) :- LogRule(59), match(?property, "CriticalMachineFailure"), match(?property, "1"),
+## Don't proceed unless a specific watchdog, in this case EventLogWatchdog, put the Fabric node into Error state.
+##Mitigate(Source=?source) :- LogRule(58), Empty(?source), !.
+##Mitigate(Source=?source) :- LogRule(59), notmatch(?source, "EventLogWatchdog"), !.
+## Don't proceed if the required Property facts are not present.
+##Mitigate(Property=?property) :- LogRule(61), Empty(?property), !.
+
+##Mitigate(Source=?source, Property=?property) :- LogRule(63), match(?property, "CriticalMachineFailure"), match(?property, "1"),
 	##GetHealthEventHistory(?count, 00:30:00), ?count >= 3,
 	##GetRepairHistory(?repairCount, 08:00:00, DeactivateFabricNode),
 	##?repairCount < 1, !, DeactivateFabricNode(MaxDuration=00:02:00).
 
-##Mitigate(Source=?source, Property=?property) :- LogRule(64), match(?property, "Ntfs"), match(?property, "55"),
+##Mitigate(Source=?source, Property=?property) :- LogRule(68), match(?property, "Ntfs"), match(?property, "55"),
 	##GetHealthEventHistory(?count, 00:30:00), ?count >= 3,
 	##GetRepairHistory(?repairCount, 08:00:00, DeactivateFabricNode),
 	##?repairCount < 1, !, DeactivateFabricNode(MaxDuration=08:00:00).
 
-##Mitigate(Source=?source, Property=?property) :- LogRule(69), match(?property, "CriticalMachineFailure"), match(?property, "2"),
-    ##GetHealthEventHistory(?count, 00:30:00),
-	##?count >= 3, GetRepairHistory(?repairCount, 08:00:00, System.Reboot),
-	##?repairCount < 1, !, ScheduleMachineRepair(System.Reboot).
 
-
-## Infra Mitigations (RM repair scheduling logic - InfrastructureService for the target node type will be the repair Executor, not FH).
-## The logic below demonstrates how to specify a repair escalation path: Reboot -> Reimage -> Heal -> Triage (human intervention required).
+## Machine repairs - Reboot, Reimage, Heal.
+## The logic below demonstrates how to specify a machine repair escalation path: Reboot -> Reimage -> Heal -> Triage (human intervention required).
 ## ScheduleMachineRepair predicate takes any repair action string. There are a handful that are supported by RepairManager/InfrastructureService, like below.
 
-## Reboot.
+## System.Reboot.
 ## Don't process any other rules if scheduling succeeds OR fails (note the position of ! (cut operator)) and there are less than 1 of these repairs that have completed in the last 8 hours.
 Mitigate :- GetRepairHistory(?repairCount, 08:00:00, System.Reboot), ?repairCount < 1, !, ScheduleMachineRepair(System.Reboot).
 
-## ReimageOS escalation. *This is not supported in VMSS-managed clusters*.
+## System.ReimageOS escalation. *This is not supported in VMSS-managed clusters*.
 Mitigate :- GetRepairHistory(?repairCount, 08:00:00, System.ReimageOS), ?repairCount < 1, !, ScheduleMachineRepair(System.ReimageOS).
 
-## Azure.Heal escalation.
+## System.Azure.Heal escalation.
 Mitigate :- GetRepairHistory(?repairCount, 08:00:00, System.Azure.Heal), ?repairCount < 1, !, ScheduleMachineRepair(System.Azure.Heal).
 
 ## Triage escalation.

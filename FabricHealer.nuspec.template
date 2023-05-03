@@ -4,7 +4,7 @@
     <id>%PACKAGE_ID%</id>
     <version>1.2.3</version>
     <releaseNotes>
-- Bug Fix.
+- Bug fixes and code improvements.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

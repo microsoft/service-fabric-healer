@@ -27,6 +27,7 @@ using static ServiceFabric.Mocks.MockConfigurationPackage;
 using System.Fabric.Description;
 using System.Fabric.Query;
 using System.Text;
+using HealthReport = FabricHealer.Utilities.HealthReport;
 
 namespace FHTest
 {
@@ -46,6 +47,7 @@ namespace FHTest
         // This is the name of the node used on your local dev machine's SF cluster. If you customize this, then change it.
         private const string NodeName = "_Node_0";
         private const string FHProxyId = "FabricHealerProxy";
+        private readonly Logger testLogger = new("FHTest", Path.Combine(Environment.CurrentDirectory, "FHTestLogs"));
 
         [ClassInitialize]
 #pragma warning disable IDE0060 // Remove unused parameter
@@ -718,9 +720,11 @@ namespace FHTest
         public async Task XReplicaRules_MemoryMB_Repair_Successful_Validate_Rule_Tracing()
         {
             var partitions = await fabricClient.QueryManager.GetPartitionListAsync(new Uri("fabric:/TestApp42/ChildProcessCreator"));
+            
+            // This service is as stateless, -1, singleton partition.
             Guid partition = partitions[0].PartitionInformation.Id;
             var replicas = await fabricClient.QueryManager.GetReplicaListAsync(partition);
-            Replica replica = replicas[0];
+            Replica replica = replicas.First(r => r.ReplicaStatus == ServiceReplicaStatus.Ready);
             long replicaId = replica.Id;
 
             // This will be the data used to create a repair task.
@@ -729,15 +733,15 @@ namespace FHTest
                 ApplicationName = "fabric:/TestApp42",
                 EntityType = EntityType.Service,
                 NodeName = NodeName,
-                Code = SupportedErrorCodes.AppErrorMemoryMB,
+                Code = SupportedErrorCodes.AppErrorActiveEphemeralPortsPercent,
                 HealthState = HealthState.Warning,
                 PartitionId = partition.ToString(),
                 ReplicaId = replicaId,
-                Source = $"AppObserver({SupportedErrorCodes.AppErrorMemoryMB})",
-                Property = "TestApp42_ChildProcessCreator_MemoryMB",
+                Source = $"AppObserver({SupportedErrorCodes.AppErrorActiveEphemeralPortsPercent})",
+                Property = "TestApp42_ChildProcessCreator_Ports",
                 ProcessName = "ChildProcessCreator",
                 ServiceName = "fabric:/TestApp42/ChildProcessCreator",
-                Value = 1024.0
+                Value = 80
             };
 
             repairData.RepairPolicy = new RepairPolicy
