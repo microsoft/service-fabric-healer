@@ -4,7 +4,8 @@
     <id>%PACKAGE_ID%</id>
     <version>1.2.4</version>
     <releaseNotes>
-- Added null ref checks to all RepairTaskList-returning functions.
+Fixed null ref exception that can happen when an internal repair task query fails. 
+Added more logging.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
