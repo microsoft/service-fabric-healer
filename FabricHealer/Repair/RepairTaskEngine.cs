@@ -135,7 +135,7 @@ namespace FabricHealer.Repair
         /// <summary>
         /// This function returns the list of currently processing FH repair tasks.
         /// </summary>
-        /// <returns>List of repair tasks in Active repair state.</returns>
+        /// <returns>List of repair tasks in Active repair state or null.</returns>
         public static async Task<RepairTaskList> GetFHRepairTasksCurrentlyProcessingAsync(
                                                   string taskIdPrefix,
                                                   CancellationToken cancellationToken,
@@ -153,6 +153,16 @@ namespace FabricHealer.Repair
             }
             catch (Exception e) when (e is FabricException or TaskCanceledException)
             {
+                string message = $"GetFHRepairTasksCurrentlyProcessingAsync failed with '{e.Message}'";
+                
+                FabricHealerManager.RepairLogger.LogInfo(message);
+
+                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                        $"GetFHRepairTasksCurrentlyProcessingAsync::HandledFailure",
+                        message,
+                        FabricHealerManager.Token);
+
                 return null;
             }
         }

@@ -9,7 +9,6 @@ using Guan.Logic;
 using System.Fabric.Repair;
 using System.Threading.Tasks;
 using System;
-using System.Linq;
 
 namespace FabricHealer.Repair.Guan
 {

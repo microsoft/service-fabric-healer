@@ -27,7 +27,6 @@ using static ServiceFabric.Mocks.MockConfigurationPackage;
 using System.Fabric.Description;
 using System.Fabric.Query;
 using System.Text;
-using HealthReport = FabricHealer.Utilities.HealthReport;
 
 namespace FHTest
 {
@@ -47,7 +46,6 @@ namespace FHTest
         // This is the name of the node used on your local dev machine's SF cluster. If you customize this, then change it.
         private const string NodeName = "_Node_0";
         private const string FHProxyId = "FabricHealerProxy";
-        private readonly Logger testLogger = new("FHTest", Path.Combine(Environment.CurrentDirectory, "FHTestLogs"));
 
         [ClassInitialize]
 #pragma warning disable IDE0060 // Remove unused parameter
@@ -497,12 +495,12 @@ namespace FHTest
                 Directory.CreateDirectory(path);
             }
 
-            // Create 2, 2GB files in target directory (path).
+            // Create two 2GB files in target directory (path).
             for (int i = 0; i < 2; i++)
             {
                 using var f = File.Create(Path.Combine(path, $"foo{i}.txt"), 500000, FileOptions.WriteThrough);
 
-                for (int j = 0; j < 25000000; j++)
+                for (int j = 0; j < 25000000; ++j)
                 {
                     f.Write(bytes);
                 }
@@ -583,7 +581,7 @@ namespace FHTest
             {
                 using var f = File.Create(Path.Combine(path, $"foo{i}.txt"), 500, FileOptions.WriteThrough);
 
-                for (int j = 0; j < 50000; j++)
+                for (int j = 0; j < 50000; ++j)
                 {
                     f.Write(bytes);
                 }

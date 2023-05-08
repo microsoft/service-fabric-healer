@@ -50,13 +50,12 @@ namespace FabricHealer
         internal static long InstanceCount { get; private set; }
         internal static bool IsOneNodeCluster { get; private set; }
         internal static StatelessServiceContext ServiceContext { get; private set; }
-        
         public static Logger RepairLogger { get; private set; }
+        public static ConfigSettings ConfigSettings { get; set; }
+        public static string CurrentlyExecutingLogicRulesFileName { get; set; }
 
         // CancellationToken from FabricHealer.RunAsync.
         public static CancellationToken Token { get; private set; }
-        public static ConfigSettings ConfigSettings { get; set; }
-        public static string CurrentlyExecutingLogicRulesFileName { get; set; }
 
         /// <summary>
         /// Singleton FabricClient instance used throughout FH. Thread-safe.
@@ -183,7 +182,8 @@ namespace FabricHealer
 
                 var nodeList =
                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                            () => FabricClientSingleton.QueryManager.GetNodeListAsync(null, ConfigSettings.AsyncTimeout, Token),
+                            () => FabricClientSingleton.QueryManager.GetNodeListAsync(
+                                    null, ConfigSettings.AsyncTimeout, Token),
                             Token);
 
                 NodeCount = nodeList.Count;
@@ -800,20 +800,17 @@ namespace FabricHealer
             healthReporter = new FabricHealthReporter(RepairLogger);
             sfRuntimeVersion = GetServiceFabricRuntimeVersion();
             fabricClient = new FabricClient();
-
-            // Must be synchronous here. The async impls employ retry logic and handle exceptions.
-            InstanceCount = GetServiceInstanceCountAsync().Result;
-            IsOneNodeCluster = IsOneNodeClusterAsync().Result;
         }
 
         /// <summary>
-        /// Checks if repair manager is enabled in the cluster or not
+        /// Checks if repair manager is enabled in the cluster or not, sets important properties.
         /// </summary>
-        /// <param name="serviceNameFabricUri"></param>
-        /// <param name="cancellationToken">cancellation token to stop the async operation</param>
         /// <returns>true if repair manager application is present in cluster, otherwise false</returns>
         private async Task<bool> InitializeAsync()
         {
+            InstanceCount = await GetServiceInstanceCountAsync();
+            IsOneNodeCluster = await IsOneNodeClusterAsync();
+
             string okMessage = $"{repairManagerServiceUri} is deployed.";
             bool isRmDeployed = true;
             var healthReport = new HealthReport
