@@ -31,7 +31,7 @@ namespace FabricHealer
         private DateTime LastTelemetrySendDate { get; set; }
         
         // Folks often use their own version numbers. This is for public diagnostic telemetry.
-        private const string InternalVersionNumber = "1.2.3";
+        private const string InternalVersionNumber = "1.2.4";
         private static FabricHealerManager fhSingleton;
         private static FabricClient fabricClient;
         private bool disposedValue;
@@ -943,15 +943,15 @@ namespace FabricHealer
         {
             try
             {
-                var currentFHRepairTasksInProgress =
-                        await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                () => RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                                        null,
-                                        Token,
-                                        RepairConstants.FabricHealer),
-                                Token);
+                RepairTaskList currentFHRepairTasksInProgress =
+                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                            () => RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
+                                    null,
+                                    Token,
+                                    RepairConstants.FabricHealer),
+                            Token);
 
-                if (currentFHRepairTasksInProgress.Count == 0)
+                if (currentFHRepairTasksInProgress == null || currentFHRepairTasksInProgress.Count == 0)
                 {
                     return;
                 }

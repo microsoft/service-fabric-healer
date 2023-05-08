@@ -290,7 +290,7 @@ namespace FabricHealer.Repair
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
                 
-                if (activeRepairs.Count > 0)
+                if (activeRepairs != null && activeRepairs.Count > 0)
                 {
                     foreach (RepairTask repair in activeRepairs)
                     {
@@ -385,7 +385,7 @@ namespace FabricHealer.Repair
                             token);
             int count = 0;
 
-            if (repairTasksInProgress.Count > 0)
+            if (repairTasksInProgress != null && repairTasksInProgress.Count > 0)
             {
                 foreach (RepairTask repair in repairTasksInProgress)
                 {
@@ -437,7 +437,7 @@ namespace FabricHealer.Repair
                            FabricHealerManager.ConfigSettings.AsyncTimeout,
                            token);
 
-            if (repairTasksInProgress.Count > 0)
+            if (repairTasksInProgress != null && repairTasksInProgress.Count > 0)
             {
                 foreach (RepairTask repair in repairTasksInProgress)
                 {
@@ -463,7 +463,7 @@ namespace FabricHealer.Repair
                            FabricHealerManager.ConfigSettings.AsyncTimeout,
                            token);
 
-            if (repairTasksInProgress.Count > 0)
+            if (repairTasksInProgress != null && repairTasksInProgress.Count > 0)
             {
                 foreach (RepairTask repair in repairTasksInProgress)
                 {

@@ -31,7 +31,12 @@ namespace FabricHealer.Repair
                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                         cancellationToken);
 
-            return desiredStates.Any(desiredState => repairTaskList.Any(rt => rt.State == desiredState));
+            if (repairTaskList == null || repairTaskList.Count == 0) 
+            {
+                return false;
+            }
+
+            return desiredStates != null && desiredStates.Any(desiredState => repairTaskList.Any(rt => rt.State == desiredState));
         }
 
         /// <summary>
@@ -118,10 +123,10 @@ namespace FabricHealer.Repair
                 repairTask.ResultStatus = RepairTaskResult.Succeeded;
 
                 _ =  await FabricHealerManager.FabricClientSingleton.RepairManager.UpdateRepairExecutionStateAsync(
-                                                repairTask,
-                                                FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                                token);
-            }
+                            repairTask,
+                            FabricHealerManager.ConfigSettings.AsyncTimeout,
+                            token);
+}
             catch (Exception e) when (e is FabricException or TaskCanceledException or OperationCanceledException or TimeoutException)
             {
                 return false;
@@ -156,10 +161,7 @@ namespace FabricHealer.Repair
             return true;
         }
 
-        public static async Task<RepairTask> CreateRepairTaskAsync(
-                                                TelemetryData repairData,
-                                                RepairExecutorData executorData,
-                                                CancellationToken token)
+        public static async Task<RepairTask> CreateRepairTaskAsync(TelemetryData repairData, RepairExecutorData executorData, CancellationToken token)
         {
             RepairActionType repairAction = repairData.RepairPolicy.RepairAction;
             RepairTask repairTask;
@@ -334,8 +336,12 @@ namespace FabricHealer.Repair
                                 null,
                                 FabricHealerManager.ConfigSettings.AsyncTimeout,
                                 cancellationToken),
-
                         cancellationToken);
+
+            if (allSystemServices == null || allSystemServices.Count == 0) 
+            {
+                return null;
+            }
 
             var infraInstances = 
                 allSystemServices.Where(i => i.ServiceTypeName.Equals(RepairConstants.InfrastructureServiceType, StringComparison.InvariantCultureIgnoreCase));
@@ -449,7 +455,7 @@ namespace FabricHealer.Repair
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
 
-            if (allRecentFHRepairTasksCompleted?.Count == 0)
+            if (allRecentFHRepairTasksCompleted == null || allRecentFHRepairTasksCompleted.Count == 0)
             {
                 return 0;
             }
@@ -528,7 +534,7 @@ namespace FabricHealer.Repair
                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                             cancellationToken);
 
-            if (allActiveFHRepairTasks?.Count == 0)
+            if (allActiveFHRepairTasks == null || allActiveFHRepairTasks.Count == 0)
             {
                 return 0;
             }
