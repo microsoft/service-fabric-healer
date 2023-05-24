@@ -31,7 +31,7 @@ namespace FabricHealer
         private DateTime LastTelemetrySendDate { get; set; }
         
         // Folks often use their own version numbers. This is for public diagnostic telemetry.
-        private const string InternalVersionNumber = "1.2.4";
+        private const string InternalVersionNumber = "1.2.5";
         private static FabricHealerManager fhSingleton;
         private static FabricClient fabricClient;
         private bool disposedValue;
@@ -125,10 +125,7 @@ namespace FabricHealer
         /// <param name="parameterName">Name of the parameter.</param>
         /// <param name="defaultValue">Default value.</param>
         /// <returns>parameter value.</returns>
-        public static string GetSettingParameterValue(
-                                string sectionName,
-                                string parameterName,
-                                string defaultValue = null)
+        public static string GetSettingParameterValue(string sectionName, string parameterName, string defaultValue = null)
         {
             if (string.IsNullOrWhiteSpace(sectionName) || string.IsNullOrWhiteSpace(parameterName))
             {
@@ -1133,6 +1130,7 @@ namespace FabricHealer
                 List<string> repairRules;
                 string repairId;
                 string system = string.Empty;
+                bool isRepairInProgress = false;
 
                 if (appName.OriginalString == RepairConstants.SystemAppName)
                 {
@@ -1144,7 +1142,7 @@ namespace FabricHealer
                     // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
                     var fhRepairTasks = await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, Token);
 
-                    if (fhRepairTasks.Count > 0)
+                    if (fhRepairTasks != null && fhRepairTasks.Count > 0)
                     {
                         foreach (var repair in fhRepairTasks)
                         {
@@ -1186,7 +1184,7 @@ namespace FabricHealer
 
                     // Is a repair for the target app service instance already happening in the cluster?
                     // There can be multiple Warnings emitted by FO for a single app at the same time.
-                    if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairData.ProcessName)))
+                    if (currentRepairs != null && currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairData.ProcessName)))
                     {
 
                         var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(repairData.ProcessName));
@@ -1202,7 +1200,7 @@ namespace FabricHealer
                     }
 
                     // Repair already in progress?
-                    if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
+                    if (currentRepairs != null && currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
                     {
                         continue;
                     }
@@ -1231,7 +1229,7 @@ namespace FabricHealer
                     string serviceProcessName = $"{repairData.ServiceName?.Replace("fabric:/", "").Replace("/", "")}";
                     var currentFHRepairs =
                         await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, Token);
-
+ 
                     // This is the way each FH repair is ID'd. This data is stored in the related Repair Task's ExecutorData property.
                     repairId = $"{repairData.NodeName}_{serviceProcessName}_{repairData.Metric?.Replace(" ", string.Empty)}";
 
@@ -1262,7 +1260,9 @@ namespace FabricHealer
                                         $"Target node: {repairData.NodeName}. Current node: {repair.Target}. Repair State: {repair.State}.",
                                         Token,
                                         null);
-                                continue;
+
+                                isRepairInProgress = true;
+                                break;
                             }
 
                             // Existing repair for same target in flight.
@@ -1277,10 +1277,17 @@ namespace FabricHealer
                                         Token,
                                         null,
                                         ConfigSettings.EnableVerboseLogging);
-                                continue;
+
+                                isRepairInProgress = true;
+                                break;
                             }
                         }
                     }
+                }
+
+                if (isRepairInProgress)
+                {
+                    continue;
                 }
 
                 /* Start repair workflow */
@@ -1491,6 +1498,7 @@ namespace FabricHealer
 
                 // This is the way each FH repair is ID'd. This data is stored in the related Repair Task's ExecutorData property when FH is executor.
                 repairId = $"{repairData.NodeName}_{serviceProcessName}_{repairData.Metric?.Replace(" ", string.Empty)}";
+                bool repairInProgress = false;
 
                 if (currentFHRepairs != null && currentFHRepairs.Count > 0)
                 {
@@ -1519,7 +1527,9 @@ namespace FabricHealer
                                     $"Target node: {repairData.NodeName}. Current node: {repair.Target}. Repair State: {repair.State}.",
                                     Token,
                                     null);
-                            continue;
+
+                            repairInProgress = true;
+                            break;
                         }
 
                         // Existing repair for same target in flight.
@@ -1534,11 +1544,17 @@ namespace FabricHealer
                                     Token,
                                     null,
                                     ConfigSettings.EnableVerboseLogging);
-                            continue;
+                            
+                            repairInProgress = true;
+                            break;
                         }
                     }
                 }
                 
+                if (repairInProgress)
+                {
+                    continue;
+                }
 
                 /* Start repair workflow */
                 repairData.RepairPolicy = new RepairPolicy
@@ -1906,7 +1922,7 @@ namespace FabricHealer
                 await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, Token);
 
             // Block attempts to reschedule another Fabric node-level repair for the same node if a current repair has not yet completed.
-            if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
+            if (currentRepairs != null && currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
             {
                 var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(repairData.NodeType));
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -2005,7 +2021,7 @@ namespace FabricHealer
                 List<ReplicaHealthState> replicaHealthStates = partitionHealth.ReplicaHealthStates.Where(
                     p => p.AggregatedHealthState is HealthState.Warning or HealthState.Error).ToList();
 
-                if (replicaHealthStates != null && replicaHealthStates.Count > 0)
+                if (replicaHealthStates != null && replicaHealthStates != null && replicaHealthStates.Count > 0)
                 {
                     foreach (var rep in replicaHealthStates)
                     {
@@ -2101,7 +2117,7 @@ namespace FabricHealer
                                 // Repair already in progress?
                                 var currentRepairs = await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, Token);
 
-                                if (currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
+                                if (currentRepairs != null && currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
                                 {
                                     continue;
                                 }

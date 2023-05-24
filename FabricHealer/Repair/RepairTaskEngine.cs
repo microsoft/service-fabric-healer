@@ -151,10 +151,9 @@ namespace FabricHealer.Repair
                                             cancellationToken);
                 return repairTasks;
             }
-            catch (Exception e) when (e is FabricException or TaskCanceledException)
+            catch (FabricException fe)
             {
-                string message = $"GetFHRepairTasksCurrentlyProcessingAsync failed with '{e.Message}'";
-                
+                string message = $"GetFHRepairTasksCurrentlyProcessingAsync failed with '{fe.Message}'";
                 FabricHealerManager.RepairLogger.LogInfo(message);
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -162,9 +161,13 @@ namespace FabricHealer.Repair
                         $"GetFHRepairTasksCurrentlyProcessingAsync::HandledFailure",
                         message,
                         FabricHealerManager.Token);
-
-                return null;
             }
+            catch (TaskCanceledException)
+            { 
+
+            }
+
+            return null;
         }
 
         /// <summary>
