@@ -4,8 +4,7 @@
     <id>%PACKAGE_ID%</id>
     <version>1.2.5</version>
     <releaseNotes>
-Fixed null ref exception that can happen when an internal repair task query fails. 
-Added more logging.
+Fixed rolling service repair bug. Updated rules.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
