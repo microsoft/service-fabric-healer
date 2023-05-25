@@ -63,12 +63,12 @@
 ## The rule below reads: If any of the specified (set in Mitigate) app's service processes have put it into Warning due to CPU over-consumption and today's date is later than the supplied end date, emit a message, stop processing rules (!).
 ## You can use LogInfo, LogWarning or LogError predicates to generate a log event that will create a local text log entry, an ETW event, and an SF health report.
 
-Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("4/15/2023"),
-	LogInfo("Exceeded specified end date for repair of fabric:/CpuStress CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("12/31/2022"), time()), !.
+Mitigate(AppName="fabric:/CpuStress", MetricName="CpuPercent") :- time() > DateTime("8/15/2023"),
+	LogInfo("Exceeded specified end date for repair of fabric:/CpuStress CpuPercent usage violations. Target end date: {0}. Current date (Utc): {1}", DateTime("8/15/2023"), time()), !.
 
 ## Alternatively, you could enforce repair end dates inline (as a subrule) to any rule, e.g.,
 
-Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- time() < DateTime("4/15/2023"),
+Mitigate(AppName="fabric:/PortEater42", MetricName="EphemeralPorts", MetricValue=?MetricValue) :- time() < DateTime("8/15/2023"),
 	?MetricValue >= 8500,
 	TimeScopedRestartCodePackage(4, 01:00:00).
 

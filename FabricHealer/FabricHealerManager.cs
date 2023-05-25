@@ -1976,11 +1976,9 @@ namespace FabricHealer
 
             /*  Example of repairable problem at Replica level, as health event:
 
-                [SourceId] ='System.RAP' reported Warning/Error for property...
+                [SourceId] ='System.RAP'
                 [Property] = 'IStatefulServiceReplica.ChangeRole(N)Duration'.
-                [Description] = The api IStatefulServiceReplica.ChangeRole(N) on node [NodeName] is stuck. 
-
-                Start Time (UTC): 2020-04-26 19:22:55.492. 
+                [Description] = The api IStatefulServiceReplica.ChangeRole(N) on node [NodeName] is stuck.
             */
 
             List<HealthEvent> healthEvents = new();
@@ -2074,8 +2072,7 @@ namespace FabricHealer
                                     Source = RepairConstants.FabricHealerAppName
                                 };
 
-                                string repairId = 
-                                    $"{nodeName}_{serviceHealth.ServiceName.OriginalString.Remove(0, appName.Length + 1)}_{repairData.PartitionId}";
+                                string repairId = $"{nodeName}_{repairData.PartitionId}_{repairData.ReplicaId}";
 
                                 repairData.RepairPolicy = new RepairPolicy
                                 {
@@ -2107,9 +2104,8 @@ namespace FabricHealer
 
                                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                         LogLevel.Info,
-                                        $"MonitorRepairableHealthEventsAsync:Replica_{rep.Id}_{errOrWarn}",
-                                        $"Detected Replica {rep.Id} on Partition " +
-                                        $"{rep.PartitionId} is in {errOrWarn}.{Environment.NewLine}" +
+                                        $"ProcessReplicaHealth::Replica_{rep.Id}_{errOrWarn}",
+                                        $"Detected Replica {rep.Id} on Partition {rep.PartitionId} is in {errOrWarn}.{Environment.NewLine}" +
                                         $"Replica repair policy is enabled. " +
                                         $"{repairRules.Count} Logic rules found for Replica repair.",
                                         Token,
