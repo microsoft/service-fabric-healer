@@ -120,6 +120,7 @@ namespace FHTest
                 }
             }
 
+            await FabricHealerManager.TryClearExistingHealthReportsAsync();
             await DeployTestApp42Async();
         }
 

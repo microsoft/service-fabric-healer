@@ -3,8 +3,7 @@
 ## These rules demonstrates a workflow that employs multiple internal and external predicates to get to a solution for a single unhealthy replica scenario:
 ##		[SourceId] ='System.RAP' reported Warning/Error for property...
 ##		[Property] = 'IStatefulServiceReplica.ChangeRole(N)Duration'.
-##		[Description] = The api IStatefulServiceReplica.ChangeRole(N) on node [NodeName] is stuck. 
-##		Start Time (UTC): 2022-04-26 19:22:55.492.
+##		[Description] = The api IStatefulServiceReplica.ChangeRole(N) on node [NodeName] is stuck.
 
 ## First, check if we are inside run interval. If so, then cut (!), which effectively means stop processing rules (no backtracking to subsequent rules in the file).
 ## This is commented out by default. Just uncomment and set the global run interval for replica level repairs to suit your needs.
@@ -25,11 +24,14 @@ Mitigate :- GetRepairHistory(?repairCount, 01:00:00), _mitigate(?repairCount).
 ## The external predicates here (RestartReplica, RestartCodePackage, RestartFabricNode) implement a BooleanPredicateResolver dervied Resolver type (see /Repair/Guan folder for source code). 
 ## This means that these predicates either succeed (pass true back) or fail (pass false back) as the result of their execution. So, if one fails, then the next rule will be run, etc.
 
-## Try this.
-_mitigate(?count) :- ?count < 4, RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:05:00, MaxExecutionTime=00:10:00).
+## Try this first.
+_mitigate(?count) :- ?count < 1, !, RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:15:00, MaxExecutionTime=00:30:00).
 
 ## Else, try this.
-_mitigate(?count) :- ?count < 4, RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:10:00, MaxExecutionTime=00:30:00).
+_mitigate(?count) :- ?count < 1, !, RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:30:00, MaxExecutionTime=00:45:00).
 
 ## Else, try this.
-_mitigate(?count) :- ?count < 2, RestartFabricNode(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:30:00, MaxExecutionTime=02:00:00).
+_mitigate(?count) :- ?count < 1, !, RestartFabricNode(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=01:00:00, MaxExecutionTime=02:00:00).
+
+## Else.
+Mitigate :- LogInfo("Specified 'stuck replica' repair escalations have been exhausted. Human intervention is required.").

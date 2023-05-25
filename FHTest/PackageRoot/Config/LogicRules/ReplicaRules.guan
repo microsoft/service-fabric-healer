@@ -1,10 +1,13 @@
 ﻿Mitigate :- GetRepairHistory(?repairCount, 01:00:00), _mitigate(?repairCount).
 
-## Try this.
-_mitigate(?count) :- ?count < 1, !, RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:00:05, MaxExecutionTime=00:10:00).
+## Try this first.
+_mitigate(?count) :- ?count < 1, !, RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:00:10, MaxExecutionTime=00:30:00).
 
 ## Else, try this.
-_mitigate(?count) :- ?count < 1, !, RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:00:10, MaxExecutionTime=00:30:00).
+_mitigate(?count) :- ?count < 1, !, RestartCodePackage(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:30:00, MaxExecutionTime=00:45:00).
 
 ## Else, try this.
-_mitigate(?count) :- ?count < 1, !, RestartFabricNode(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:01:00, MaxExecutionTime=02:00:00).
+_mitigate(?count) :- ?count < 1, !, RestartFabricNode(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=01:00:00, MaxExecutionTime=02:00:00).
+
+## Else.
+Mitigate :- LogInfo("Specified 'stuck replica' repair escalations have been exhausted. Human intervention is required.").

@@ -205,7 +205,7 @@ namespace FabricHealer.Repair
                             await FabricHealerManager.RandomWaitAsync(token);
                             var repairs = await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, token);
                             
-                            if (repairs?.Count > 0)
+                            if (repairs != null && repairs.Count > 0)
                             {
                                 foreach (var repair in repairs)
                                 {
@@ -243,20 +243,16 @@ namespace FabricHealer.Repair
             return success ? repairTask : null;
         }
 
-        private static async Task<bool> CreateClusterRepairTaskAsync(
-                                            RepairTask repairTask,
-                                            TelemetryData repairData,
-                                            CancellationToken token)
+        private static async Task<bool> CreateClusterRepairTaskAsync(RepairTask repairTask, TelemetryData repairData, CancellationToken token)
         {
-            if (repairTask == null || repairData?.RepairPolicy == null)
+            if (repairTask == null || repairData.RepairPolicy == null)
             {
                 return false;
             }
 
             try
             {
-                var isRepairAlreadyInProgress =
-                    await RepairTaskEngine.IsRepairInProgressAsync(repairData, token);
+                var isRepairAlreadyInProgress = await RepairTaskEngine.IsRepairInProgressAsync(repairData, token);
 
                 if (!isRepairAlreadyInProgress)
                 {
@@ -266,24 +262,24 @@ namespace FabricHealer.Repair
                                 token);
 
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        $"CreateClusterRepairTaskAsync::{repairData.RepairPolicy.RepairId}",
-                        $"Successfully created repair task {repairTask.TaskId}.",
-                        token,
-                        null,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                            LogLevel.Info,
+                            $"CreateClusterRepairTaskAsync::{repairData.RepairPolicy.RepairId}",
+                            $"Successfully created repair task {repairTask.TaskId}.",
+                            token,
+                            null,
+                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                     return true;
                 }
                 else
                 {
                     await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                       LogLevel.Info,
-                       $"CreateClusterRepairTaskAsync::{repairData.RepairPolicy.RepairId}_AlreadyExists",
-                       $"A repair already exists with internal repair Id {repairData.RepairPolicy.RepairId}. Will not schedule another repair.",
-                       token,
-                       null,
-                       FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                           LogLevel.Info,
+                           $"CreateClusterRepairTaskAsync::{repairData.RepairPolicy.RepairId}_AlreadyExists",
+                           $"A repair already exists with internal repair Id {repairData.RepairPolicy.RepairId}. Will not schedule another repair.",
+                           token,
+                           null,
+                           FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                     return false;
                 }
@@ -442,10 +438,7 @@ namespace FabricHealer.Repair
         /// <param name="repairData">TelemetryData instance that contains repair data.</param>
         /// <param name="cancellationToken">CancellationToken object.</param>
         /// <returns>the count as integer</returns>
-        public static async Task<int> GetCompletedFHRepairCountWithinTimeRangeAsync(
-                                         TimeSpan timeWindow,
-                                         TelemetryData repairData,
-                                         CancellationToken cancellationToken)
+        public static async Task<int> GetCompletedFHRepairCountWithinTimeRangeAsync(TimeSpan timeWindow, TelemetryData repairData, CancellationToken cancellationToken)
         {
             var allRecentFHRepairTasksCompleted =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
@@ -520,10 +513,7 @@ namespace FabricHealer.Repair
         /// <param name="repairData">TelemetryData instance.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns></returns>
-        public static async Task<int> GetScheduledRepairCountWithinTimeRangeAsync(
-                                         TimeSpan timeWindow,
-                                         TelemetryData repairData,
-                                         CancellationToken cancellationToken)
+        public static async Task<int> GetScheduledRepairCountWithinTimeRangeAsync(TimeSpan timeWindow, TelemetryData repairData, CancellationToken cancellationToken)
         {
             var allActiveFHRepairTasks =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
@@ -583,10 +573,7 @@ namespace FabricHealer.Repair
         /// <param name="nodeName">Name of the Service Fabric node for which a machine-level repair was conducted.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns></returns>
-        internal static async Task<bool> IsMachineInPostRepairProbationAsync(
-                                            TimeSpan probationPeriod,
-                                            string nodeName,
-                                            CancellationToken cancellationToken)
+        internal static async Task<bool> IsMachineInPostRepairProbationAsync(TimeSpan probationPeriod, string nodeName, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(nodeName))
             {

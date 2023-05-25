@@ -151,10 +151,9 @@ namespace FabricHealer.Repair
                                             cancellationToken);
                 return repairTasks;
             }
-            catch (Exception e) when (e is FabricException or TaskCanceledException)
+            catch (FabricException fe)
             {
-                string message = $"GetFHRepairTasksCurrentlyProcessingAsync failed with '{e.Message}'";
-                
+                string message = $"GetFHRepairTasksCurrentlyProcessingAsync failed with '{fe.Message}'";
                 FabricHealerManager.RepairLogger.LogInfo(message);
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
@@ -162,9 +161,13 @@ namespace FabricHealer.Repair
                         $"GetFHRepairTasksCurrentlyProcessingAsync::HandledFailure",
                         message,
                         FabricHealerManager.Token);
-
-                return null;
             }
+            catch (TaskCanceledException)
+            { 
+
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -437,7 +440,12 @@ namespace FabricHealer.Repair
             return count;
         }
 
-        internal static async Task<bool> CheckForActiveStopFHRepairJob(CancellationToken token)
+        /// <summary>
+        /// Determines whether or not a FabricHealer.Stop repair job is active. If so, this means that FH should stop all repair activity.
+        /// </summary>
+        /// <param name="token">CancellationToken instance.</param>
+        /// <returns>true if a FabricHealer.Stop repair job is active</returns>
+        internal static async Task<bool> HasActiveStopFHRepairJob(CancellationToken token)
         {
             RepairTaskList repairTasksInProgress =
                    await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
