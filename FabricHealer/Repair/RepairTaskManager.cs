@@ -28,7 +28,7 @@ namespace FabricHealer.Repair
 
         public static async Task StartRepairWorkflowAsync(TelemetryData repairData, List<string> repairRules, CancellationToken cancellationToken)
         {
-            if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
+            if (await RepairTaskEngine.HasActiveStopFHRepairJob(cancellationToken))
             {
                 return;
             }
@@ -88,7 +88,7 @@ namespace FabricHealer.Repair
                                     CancellationToken cancellationToken,
                                     RepairExecutorData repairExecutorData = null)
         {
-            if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
+            if (await RepairTaskEngine.HasActiveStopFHRepairJob(cancellationToken))
             {
                 return;
             }
@@ -174,7 +174,7 @@ namespace FabricHealer.Repair
                 await FabricHealerManager.RandomWaitAsync(cancellationToken);
             }
 
-            if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
+            if (await RepairTaskEngine.HasActiveStopFHRepairJob(cancellationToken))
             {
                 return false;
             }
@@ -449,7 +449,7 @@ namespace FabricHealer.Repair
                     await FabricHealerManager.RandomWaitAsync(cancellationToken);
                 }
 
-                if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
+                if (await RepairTaskEngine.HasActiveStopFHRepairJob(cancellationToken))
                 {
                     return null;
                 }
@@ -528,7 +528,7 @@ namespace FabricHealer.Repair
                     await FabricHealerManager.RandomWaitAsync(cancellationToken);
                 }
 
-                if (await RepairTaskEngine.CheckForActiveStopFHRepairJob(cancellationToken))
+                if (await RepairTaskEngine.HasActiveStopFHRepairJob(cancellationToken))
                 {
                     await FabricRepairTasks.CancelRepairTaskAsync(repairTask, cancellationToken);
                     return false;

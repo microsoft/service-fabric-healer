@@ -440,7 +440,12 @@ namespace FabricHealer.Repair
             return count;
         }
 
-        internal static async Task<bool> CheckForActiveStopFHRepairJob(CancellationToken token)
+        /// <summary>
+        /// Determines whether or not a FabricHealer.Stop repair job is active. If so, this means that FH should stop all repair activity.
+        /// </summary>
+        /// <param name="token">CancellationToken instance.</param>
+        /// <returns>true if a FabricHealer.Stop repair job is active</returns>
+        internal static async Task<bool> HasActiveStopFHRepairJob(CancellationToken token)
         {
             RepairTaskList repairTasksInProgress =
                    await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
