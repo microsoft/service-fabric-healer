@@ -56,7 +56,7 @@ namespace FabricHealer.Utilities.Telemetry
             Key = sharedKey;
             LogType = logType;
             ApiVersion = apiVersion;
-            logger = new Logger("TelemetryLogger");
+            logger = new Logger("TelemetryLogger", FabricHealerManager.ConfigSettings.EnableAppRootFolderAsLogPath);
         }
 
         public async Task ReportHealthAsync(

@@ -40,7 +40,7 @@ namespace FabricHealer.Utilities.Telemetry
 
         public AppInsightsTelemetry(string connectionString)
         {
-            logger = new Logger("TelemetryLog");
+            logger = new Logger("TelemetryLog", FabricHealerManager.ConfigSettings.EnableAppRootFolderAsLogPath);
             telemetryClient = new TelemetryClient(new TelemetryConfiguration() { ConnectionString = connectionString });
         }
 

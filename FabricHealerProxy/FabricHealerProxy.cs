@@ -51,7 +51,7 @@ namespace FabricHealer
         private FabricHealerProxy()
         {
             _repairDataHistory ??= new ConcurrentDictionary<string, (DateTime DateAdded, RepairFacts RepairFacts)>();
-            _logger = new Logger(FHProxyId);
+            _logger = new Logger(FHProxyId, FabricHealerManager.ConfigSettings.EnableAppRootFolderAsLogPath);
         }
 
         // Use one FC for the lifetime of the consuming SF service process that loads FabricHealerProxy.dll.

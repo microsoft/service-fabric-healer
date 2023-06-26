@@ -32,6 +32,7 @@ namespace FabricHealer.Repair
         public const string EnableETW = "EnableETW";
         public const string HealthCheckIntervalInSeconds = "HealthCheckIntervalInSeconds";
         public const string LocalLogPathParameter = "LocalLogPath";
+        public const string EnableAppRootFolderAsLogPathParameter = "EnableAppRootFolderAsLogPath";
         public const string AsyncOperationTimeout = "AsyncOperationTimeoutSeconds";
         public const string EnableFabricHealerOperationalTelemetry = "EnableOperationalTelemetry";
         public const string EnableLogicRuleTracing = "EnableLogicRuleTracing";

@@ -108,6 +108,12 @@ namespace FabricHealer.Utilities
             private set;
         }
 
+        public bool EnableAppRootFolderAsLogPath
+        {
+            get;
+            private set;
+        }
+
         public bool OperationalTelemetryEnabled
         {
             get;
@@ -180,6 +186,11 @@ namespace FabricHealer.Utilities
             }
 
             LocalLogPathParameter = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.LocalLogPathParameter);
+
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableAppRootFolderAsLogPathParameter), out bool enableAppRootFolderAsLogPath))
+            {
+                EnableAppRootFolderAsLogPath = enableAppRootFolderAsLogPath;
+            }
 
             if (int.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.HealthCheckIntervalInSeconds), out int execFrequency))
             {

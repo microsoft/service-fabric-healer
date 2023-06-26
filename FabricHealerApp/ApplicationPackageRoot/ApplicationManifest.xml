@@ -12,6 +12,7 @@
     <Parameter Name="EnableVerboseLogging" DefaultValue="true" />
     <Parameter Name="OperationalTelemetryEnabled" DefaultValue="true" />
     <Parameter Name="LocalLogPath" DefaultValue="fabric_healer_logs" />
+    <Parameter Name="EnableAppRootFolderAsLogPath" DefaultValue="true" />
     <!-- Repair Policy Enablement -->
     <Parameter Name="EnableAppRepair" DefaultValue="true" />
     <Parameter Name="EnableDiskRepair" DefaultValue="false" />
@@ -48,6 +49,7 @@
             <Parameter Name="EnableOperationalTelemetry" Value="[OperationalTelemetryEnabled]" />
             <Parameter Name="EnableRollingServiceRestarts" Value="[EnableRollingServiceRestarts]" />
             <Parameter Name="LocalLogPath" Value="[LocalLogPath]" />
+            <Parameter Name="EnableAppRootFolderAsLogPath" Value="[EnableAppRootFolderAsLogPath]" />
             <Parameter Name="EnableLogicRuleTracing" Value="[EnableLogicRuleTracing]" />
           </Section>
           <!-- Repair policies -->

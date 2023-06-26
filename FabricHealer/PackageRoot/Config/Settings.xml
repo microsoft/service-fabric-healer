@@ -13,6 +13,7 @@
 		<Parameter Name="EnableRollingServiceRestarts" Value="" MustOverride="true" />
 		<!-- Folder name for local log output. You can use a full path or just a folder name. -->
 		<Parameter Name="LocalLogPath" Value="" MustOverride="true" />
+		<Parameter Name="EnableAppRootFolderAsLogPath" Value="" MustOverride="true" />
 		<!-- This will enable FabricHealer to try and trace executed logic rules that employ repair action predicates. -->
 		<Parameter Name="EnableLogicRuleTracing" Value="" MustOverride="true" />
     

@@ -13,7 +13,7 @@
 		<Parameter Name="EnableLogicRuleTracing" Value="true" />
 		<!-- Folder name for local log output. You can use a full path or just a folder name. -->
 		<Parameter Name="LocalLogPath" Value="fabric_healer_testlogs" />
-    
+		<Parameter Name="EnableAppRootFolderAsLogPath" Value="true" />
 		<!-- Default timeout for async SF API calls. -->
 		<Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
 		<!-- Required-If EnableTelemetry is set to true in ApplicationManifest. Values can be either AzureApplicationInsights or AzureLogAnalytics -->

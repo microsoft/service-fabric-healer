@@ -23,7 +23,7 @@ namespace FabricHealer.Utilities.Telemetry
         public TelemetryUtilities(StatelessServiceContext serviceContext)
         {
             this.serviceContext = serviceContext;
-            logger = new Logger(RepairConstants.RepairData)
+            logger = new Logger(RepairConstants.RepairData, FabricHealerManager.ConfigSettings.EnableAppRootFolderAsLogPath)
             {
                 EnableVerboseLogging = FabricHealerManager.ConfigSettings.EnableVerboseLogging,
                 EnableETWLogging = FabricHealerManager.ConfigSettings.EtwEnabled

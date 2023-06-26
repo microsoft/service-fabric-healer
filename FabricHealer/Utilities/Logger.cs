@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics.Tracing;
 using System.Fabric.Health;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using FabricHealer.Utilities.Telemetry;
 using NLog;
@@ -53,16 +54,21 @@ namespace FabricHealer.Utilities
             get; set;
         }
 
+        public bool EnableAppRootFolderAsLogPath
+        {
+            get; set;
+        }
         /// <summary>
         /// Initializes a new instance of the <see cref="Logger"/> class.
         /// </summary>
         /// <param name="sourceName">Name of observer.</param>
         /// <param name="logFolderBasePath">Base folder path.</param>
-        public Logger(string sourceName, string logFolderBasePath = null)
+        public Logger(string sourceName, bool enableAppRootFolderAsLogPath = false, string logFolderBasePath = null)
         {
             FolderName = sourceName;
             Filename = sourceName + ".log";
             loggerName = sourceName;
+            EnableAppRootFolderAsLogPath = enableAppRootFolderAsLogPath;
 
             if (!string.IsNullOrWhiteSpace(logFolderBasePath))
             {
@@ -87,7 +93,12 @@ namespace FabricHealer.Utilities
                     // Add current drive letter if not supplied for Windows path target.
                     if (!LogFolderBasePath[..3].Contains(":\\"))
                     {
-                        string windrive = Environment.SystemDirectory[..3];
+                        string windrive;
+                        if (EnableAppRootFolderAsLogPath) {
+                            windrive = String.Join('\\', AppContext.BaseDirectory.Split('\\').SkipLast(2)) + '\\';
+                        } else {
+                            windrive = Environment.SystemDirectory[..3];                     
+                        }
                         logFolderBase = windrive + LogFolderBasePath;
                     }
                 }
@@ -104,8 +115,12 @@ namespace FabricHealer.Utilities
             {
                 if (OperatingSystem.IsWindows())
                 {
-                    string windrive = Environment.SystemDirectory.Substring(0, 3);
-                    logFolderBase = windrive + "fabric_healer_logs";
+                    if (EnableAppRootFolderAsLogPath) {
+                        logFolderBase = String.Join('\\', AppContext.BaseDirectory.Split('\\').SkipLast(2)) + "\\fabric_healer_logs";
+                    } else {
+                        string windrive = Environment.SystemDirectory.Substring(0, 3);
+                        logFolderBase = windrive + "fabric_healer_logs";
+                    }
                 }
                 else
                 {

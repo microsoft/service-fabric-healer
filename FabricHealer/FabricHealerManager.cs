@@ -788,7 +788,7 @@ namespace FabricHealer
             ServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
             ConfigSettings = new ConfigSettings(context);
             TelemetryUtilities = new TelemetryUtilities(context);
-            RepairLogger = new Logger(RepairConstants.FabricHealer, ConfigSettings.LocalLogPathParameter)
+            RepairLogger = new Logger(RepairConstants.FabricHealer, ConfigSettings.EnableAppRootFolderAsLogPath, ConfigSettings.LocalLogPathParameter)
             {
                 EnableVerboseLogging = ConfigSettings.EnableVerboseLogging,
                 EnableETWLogging = ConfigSettings.EtwEnabled
