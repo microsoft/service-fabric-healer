@@ -31,7 +31,7 @@ namespace FabricHealer
         private DateTime LastTelemetrySendDate { get; set; }
         
         // Folks often use their own version numbers. This is for public diagnostic telemetry.
-        private const string InternalVersionNumber = "1.2.5";
+        private const string InternalVersionNumber = "1.2.6";
         private static FabricHealerManager fhSingleton;
         private static FabricClient fabricClient;
         private bool disposedValue;
@@ -272,14 +272,9 @@ namespace FabricHealer
                                 }
                             }
                         }
-                        catch (Exception ex)
+                        catch (Exception ex) when (ex is not OutOfMemoryException)
                         {
-                            // Telemetry is non-critical and should not take down FH.
-                            if (ex is OutOfMemoryException)
-                            {
-                                // Terminate now.
-                                Environment.FailFast(string.Format("Out of Memory: {0}", ex.Message));
-                            }
+
                         }
                     }
 
@@ -354,15 +349,10 @@ namespace FabricHealer
                         string filepath = Path.Combine(RepairLogger.LogFolderBasePath, $"fh_critical_error_telemetry.log");
                         _ = telemetryEvents.EmitFabricHealerCriticalErrorEvent(fhData, filepath);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not OutOfMemoryException)
                     {
                         // Telemetry is non-critical and should not take down FH.
                         RepairLogger.LogError($"Unable to send operational telemetry: {ex.Message}");
-
-                        if (ex is OutOfMemoryException)
-                        {
-                            Environment.FailFast(string.Format("Out of Memory: {0}", ex.Message));
-                        }
                     }
                 }
 
@@ -641,7 +631,7 @@ namespace FabricHealer
                 // Don't crash..
                 RepairLogger.LogWarning($"{e.Message}");
             }
-            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
+            catch (Exception e) when (e is not OperationCanceledException and not TaskCanceledException)
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Error,
@@ -651,12 +641,6 @@ namespace FabricHealer
                         null);
 
                 RepairLogger.LogError($"Unhandled exception in MonitorHealthEventsAsync:{Environment.NewLine}{e}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast($"FabricHealer hit OOM:{Environment.NewLine}{Environment.StackTrace}");
-                }
 
                 // Fix the bug(s).
                 throw;

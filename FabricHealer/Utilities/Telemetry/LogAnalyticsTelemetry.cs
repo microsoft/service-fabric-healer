@@ -226,7 +226,7 @@ namespace FabricHealer.Utilities.Telemetry
             {
                 logger.LogInfo($"Exception sending telemetry to LogAnalytics service:{Environment.NewLine}{e.Message}");
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 // Do not take down FO with a telemetry fault. Log it. Warning level will always log.
                 // This means there is either a bug in this code or something else that needs your attention.
@@ -235,11 +235,6 @@ namespace FabricHealer.Utilities.Telemetry
 #else
                 logger.LogWarning($"Exception sending telemetry to LogAnalytics service: {e.Message}");
 #endif
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast($"FH hit OOM:{Environment.NewLine}{Environment.StackTrace}");
-                }
             }
         }
 

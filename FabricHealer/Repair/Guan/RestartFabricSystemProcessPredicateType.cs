@@ -108,14 +108,8 @@ namespace FabricHealer.Repair.Guan
                                                         linkedCTS.Token),
                                                 linkedCTS.Token);
                         }
-                        catch (Exception e)
+                        catch (Exception e) when (e is not OutOfMemoryException)
                         {
-                            if (e is OutOfMemoryException)
-                            {
-                                // Terminate now.
-                                Environment.FailFast($"FH hit OOM:{Environment.NewLine}{Environment.StackTrace}");
-                            }
-
                             if (e is not TaskCanceledException and not OperationCanceledException)
                             {
                                 string message = $"Failed to execute {RepairData.RepairPolicy.RepairAction} for repair {RepairData.RepairPolicy.RepairId}: {e.Message}";
