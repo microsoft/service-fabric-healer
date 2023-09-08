@@ -297,20 +297,20 @@ namespace FabricHealer.Repair
 
         public static async Task<bool> RestartSystemServiceProcessAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
-            Process p = null;
+            Process process = null;
 
             try
             {
                 // FO/FHProxy provided the offending process id and (or, in the case of FHProxy) name in TelemetryData instance.
                 if (repairData.ProcessId > 0)
                 {
-                    p = Process.GetProcessById((int)repairData.ProcessId);
+                    process = Process.GetProcessById((int)repairData.ProcessId);
                 }
                 else // We need to figure out the procId from the FO-supplied proc name.
                 {
                     Process[] ps;
 
-                    if (!OperatingSystem.IsWindows() && repairData.ProcessName.EndsWith(".dll"))
+                    if (OperatingSystem.IsLinux() && repairData.ProcessName.EndsWith(".dll"))
                     {
                         ps = GetLinuxDotnetProcessesByFirstArgument(repairData.ProcessName);
                     }
@@ -335,10 +335,10 @@ namespace FabricHealer.Repair
                         return false;
                     }
 
-                    p = ps[0];
+                    process = ps[0];
                 }
 
-                p?.Kill();
+                process?.Kill();
                 UpdateRepairHistory(repairData);
 
                 // Clear Warning from FO. If in fact the issue has not been solved, then FO will generate a new health report for the target and the game will be played again.
@@ -384,7 +384,8 @@ namespace FabricHealer.Repair
             }
             finally
             {
-                p?.Dispose();
+                process?.Dispose();
+                process = null;
             }
 
             return true;
@@ -400,20 +401,22 @@ namespace FabricHealer.Repair
             List<Process> result = new();
             Process[] processes = Process.GetProcessesByName("dotnet");
 
-            foreach (var p in processes)
+            foreach (Process proc in processes)
             {
                 try
                 {
-                    string cmdline = File.ReadAllText($"/proc/{p.Id}/cmdline");
+                    string cmdline = File.ReadAllText($"/proc/{proc.Id}/cmdline");
+                    string sfDataRoot = ServiceFabricConfiguration.Instance.FabricDataRoot;
+                    string sfAppRoot = Path.Combine(sfDataRoot, "App_");
 
-                    // dotnet /mnt/sfroot/_App/__FabricSystem_App4294967295/US.Code.Current/FabricUS.dll 
-                    if (cmdline.Contains("/mnt/sfroot/_App/"))
+                    // E.g., dotnet /mnt/sfroot/_App/__FabricSystem_App4294967295/US.Code.Current/FabricUS.dll 
+                    if (cmdline.Contains(sfAppRoot))
                     {
                         string bin = cmdline[(cmdline.LastIndexOf("/", StringComparison.Ordinal) + 1)..];
 
                         if (string.Equals(argument, bin, StringComparison.InvariantCulture))
                         {
-                            result.Add(p);
+                            result.Add(proc);
                         }
                     }
                     else if (cmdline.Contains("Fabric"))
@@ -423,7 +426,7 @@ namespace FabricHealer.Repair
 
                         if (parts.Length > 1 && string.Equals(argument, parts[1], StringComparison.Ordinal))
                         {
-                            result.Add(p);
+                            result.Add(proc);
                         }
                     }
                 }

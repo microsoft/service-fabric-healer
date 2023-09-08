@@ -84,7 +84,7 @@ namespace FabricHealer.Repair.Guan
                                                                     FabricHealerManager.Token))
                     {
 
-                        TimeSpan maxExecutionTime = TimeSpan.FromMinutes(60);
+                        TimeSpan maxExecutionTime = TimeSpan.FromMinutes(30);
 
                         if (RepairData.RepairPolicy.MaxExecutionTime > TimeSpan.Zero)
                         {

@@ -22,6 +22,8 @@ using Octokit;
 using System.Fabric.Description;
 using System.Runtime.InteropServices;
 using static FabricHealer.Repair.RepairTaskManager;
+using System.ComponentModel;
+using System.Diagnostics;
 
 namespace FabricHealer
 {
@@ -1096,6 +1098,12 @@ namespace FabricHealer
                 if (appName.OriginalString == RepairConstants.SystemAppName)
                 {
                     if (!ConfigSettings.EnableSystemAppRepair)
+                    {
+                        continue;
+                    }
+
+                    // If this is a process restart of a system service, then make sure the process is still the droid we think it is.
+                    if (!EnsureProcess(repairData.ProcessName, (int)repairData.ProcessId, DateTime.Parse(repairData.ProcessStartTime)))
                     {
                         continue;
                     }
@@ -2384,6 +2392,25 @@ namespace FabricHealer
             }
 
             return null;
+        }
+
+        private static bool EnsureProcess(string procName, int procId, DateTime processStartTime)
+        {
+            if (string.IsNullOrWhiteSpace(procName) || procId < 1)
+            {
+                return false;
+            }
+
+            try
+            {
+                using Process proc = Process.GetProcessById(procId);
+                return proc.ProcessName == procName && proc.StartTime == processStartTime;
+            }
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or SystemException or Win32Exception)
+            {
+                RepairLogger.LogWarning(procName + " with id " + procId.ToString() + " not found. " + e.Message);
+                return false;
+            }
         }
     }
 }
