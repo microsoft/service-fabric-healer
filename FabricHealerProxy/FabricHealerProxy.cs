@@ -319,6 +319,7 @@ namespace FabricHealer
 
                             appName = appNameResult.ApplicationName;
                             repairData.ApplicationName = appName.OriginalString;
+                            repairData.ServiceName = serviceName.OriginalString;
                         }
                         else
                         {
@@ -630,6 +631,17 @@ namespace FabricHealer
             {
                 /* Try and fix malformed app/service names, if possible. */
 
+                if (string.IsNullOrWhiteSpace(uriString))
+                {
+                    fixedUri = null;
+                    return false;
+                }
+
+                if (uriString.Contains(' '))
+                {
+                    uriString = uriString.Replace(" ", string.Empty);
+                }
+
                 if (!uriString.StartsWith("fabric:/"))
                 {
                     uriString = uriString.Insert(0, "fabric:/");
@@ -638,11 +650,6 @@ namespace FabricHealer
                 if (uriString.Contains("://"))
                 {
                     uriString = uriString.Replace("://", ":/");
-                }
-
-                if (uriString.Contains(" "))
-                {
-                    uriString = uriString.Replace(" ", string.Empty);
                 }
 
                 if (Uri.IsWellFormedUriString(uriString, UriKind.RelativeOrAbsolute))

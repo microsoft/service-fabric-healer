@@ -1162,12 +1162,12 @@ namespace FHTest
         static readonly RepairFacts RepairFactsExistingServiceTarget = new()
         {
             // The service here must be one that is running in your test cluster.
-            // TODO: install a local test app as part of tests.
-            ServiceName = "fabric:/TestApp42/ChildProcessCreator",
+            // Adding extra spaces to ensure FHProxy's URI string fixer works.
+            ServiceName = "fabric: /TestApp42 / ChildProcessCreator",
             NodeName = NodeName,
             // Specifying Source is Required for unit tests.
             // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
-            Source = "fabric:/test"
+            Source = "FHTest"
         };
 
         static readonly RepairFacts RepairFactsNonExistingServiceTarget = new()
@@ -1177,7 +1177,7 @@ namespace FHTest
             NodeName = NodeName,
             // Specifying Source is Required for unit tests.
             // For unit tests, there is no FabricRuntime static, so FHProxy, which utilizes this type, will fail unless Source is provided here.
-            Source = "fabric:/test"
+            Source = "FHTest"
         };
 
         // This specifies that you want FabricHealer to repair a Fabric node named _Node_0. The only supported Fabric node repair in FabricHealer is a Restart.

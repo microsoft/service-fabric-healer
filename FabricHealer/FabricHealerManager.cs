@@ -2364,14 +2364,14 @@ namespace FabricHealer
             try
             {
                 var githubClient = new GitHubClient(new ProductHeaderValue(RepairConstants.FabricHealer));
-                IReadOnlyList<Release> releases = await githubClient.Repository.Release.GetAll("microsoft", "service-fabric-healer");
+                Release latestRelease = await githubClient.Repository.Release.GetLatest("microsoft", "service-fabric-healer");
 
-                if (releases.Count == 0)
+                if (latestRelease == null)
                 {
                     return;
                 }
 
-                string releaseAssetName = releases[0].Name;
+                string releaseAssetName = latestRelease.Name;
                 string latestVersion = releaseAssetName.Split(" ")[1];
                 Version latestGitHubVersion = new(latestVersion);
                 Version localVersion = new(InternalVersionNumber);
@@ -2391,8 +2391,11 @@ namespace FabricHealer
                             "NewVersionAvailable",
                             EntityType.Application);
                 }
+
+                latestRelease = null;
+                githubClient = null;
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 // Don't take down FO due to error in version check.
                 RepairLogger.LogWarning($"Failure in CheckGithubForNewVersionAsync:{Environment.NewLine}{e}");
