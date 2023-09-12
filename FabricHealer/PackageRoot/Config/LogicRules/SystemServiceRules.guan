@@ -57,10 +57,10 @@ Mitigate(MetricName="CpuPercent", ProcessName=?SysProcName) :- not(?SysProcName 
 ## FabricDCA (Linux)
 Mitigate(MetricName="MemoryMB", ProcessName="FabricDCA.dll", OS="Linux") :- LogRule(58), TimeScopedRestartFabricSystemProcess(1, 01:00:00).
 
-##Mitigate(MetricName="MemoryMB", ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
-	##GetHealthEventHistory(?HealthEventCount, 00:30:00),
-	##?HealthEventCount >= 3,
-	##TimeScopedRestartFabricSystemProcess(5, 01:00:00).
+Mitigate(MetricName="MemoryMB", ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
+	GetHealthEventHistory(?HealthEventCount, 00:30:00),
+	?HealthEventCount >= 3,
+	TimeScopedRestartFabricSystemProcess(5, 01:00:00).
 
 ##Mitigate(MetricName="MemoryMB", ProcessName="Fabric", MetricValue=?Value) :- ?Value >= 1500, GetHealthEventHistory(?HealthEventCount, 00:15:00),
 ##	?HealthEventCount >= 3,

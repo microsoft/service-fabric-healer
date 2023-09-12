@@ -1023,12 +1023,12 @@ namespace FabricHealer
                         or ApplicationUpgradeState.RollingForwardInProgress
                         or ApplicationUpgradeState.RollingForwardPending)
                     {
-                        var udInAppUpgrade = await UpgradeChecker.GetUDWhereApplicationUpgradeInProgressAsync(appName, Token);
+                        string udInAppUpgrade = await UpgradeChecker.GetUDWhereApplicationUpgradeInProgressAsync(appName, Token);
                         string udText = string.Empty;
 
-                        if (udInAppUpgrade != null)
+                        if (!string.IsNullOrWhiteSpace(udInAppUpgrade))
                         {
-                            udText = $"in UD {udInAppUpgrade.First()}";
+                            udText = $"in UD {udInAppUpgrade}";
                         }
 
                         string telemetryDescription = $"{appName} is upgrading {udText}. Will not attempt application repair at this time.";
@@ -1046,7 +1046,7 @@ namespace FabricHealer
                 }
                 catch (FabricException)
                 {
-                    // This upgrade check should not prevent moving forward if the fabric client call fails with an FE.
+                    // This upgrade check should not prevent moving forward.
                 }
             }
 
@@ -1102,10 +1102,30 @@ namespace FabricHealer
                         continue;
                     }
 
-                    // If this is a process restart of a system service, then make sure the process is still the droid we think it is.
-                    if (!EnsureProcess(repairData.ProcessName, (int)repairData.ProcessId, DateTime.Parse(repairData.ProcessStartTime)))
+                    /* If this is a process restart of a system service, then make sure the process is still the droid we think it is. */
+
+                    // Process name and id must be provided.
+                    if (!string.IsNullOrWhiteSpace(repairData.ProcessName) && repairData.ProcessId > 0)
                     {
-                        continue;
+                        // FHProxy may not provide this information or the date string may be malformed.
+                        if (!DateTime.TryParse(repairData.ProcessStartTime, out DateTime procStartDateTime))
+                        {
+                            try
+                            {
+                                using Process p = Process.GetProcessById((int)repairData.ProcessId);
+                                procStartDateTime = p.StartTime;
+                            }
+                            catch (Exception e) when (e is ArgumentException or InvalidOperationException or SystemException or Win32Exception)
+                            {
+                                continue;
+                            }
+                        }
+
+                        // Process of specified name and id must still be running.
+                        if (!EnsureProcess(repairData.ProcessName, (int)repairData.ProcessId, procStartDateTime))
+                        {
+                            continue;
+                        }
                     }
 
                     // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
@@ -1196,7 +1216,7 @@ namespace FabricHealer
                     }
 
                     string serviceId = $"{repairData.ServiceName?.Replace("fabric:/", "").Replace("/", "")}";
-                    var currentFHRepairs =
+                    RepairTaskList currentFHRepairs =
                         await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, Token);
  
                     // This is the way each FH repair is ID'd. This data is stored in the related Repair Task's ExecutorData property.
