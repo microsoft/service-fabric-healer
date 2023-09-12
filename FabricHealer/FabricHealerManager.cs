@@ -1017,36 +1017,34 @@ namespace FabricHealer
             {
                 try
                 {
-                    var appUpgradeStatus = await FabricClientSingleton.ApplicationManager.GetApplicationUpgradeProgressAsync(appName);
+                    var appUpgradeStatus =
+                        await FabricClientSingleton.ApplicationManager.GetApplicationUpgradeProgressAsync(appName, ConfigSettings.AsyncTimeout, Token);
 
                     if (appUpgradeStatus.UpgradeState is ApplicationUpgradeState.RollingBackInProgress
                         or ApplicationUpgradeState.RollingForwardInProgress
                         or ApplicationUpgradeState.RollingForwardPending)
                     {
                         string udInAppUpgrade = await UpgradeChecker.GetUDWhereApplicationUpgradeInProgressAsync(appName, Token);
-                        string udText = string.Empty;
 
                         if (!string.IsNullOrWhiteSpace(udInAppUpgrade))
                         {
-                            udText = $"in UD {udInAppUpgrade}";
+                            string udText = $"in UD {udInAppUpgrade}";
+                            string telemetryDescription = $"{appName} is upgrading {udText}. Will not attempt application repair at this time.";
+
+                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                    LogLevel.Info,
+                                    "MonitorRepairableHealthEventsAsync::AppUpgradeDetected",
+                                    telemetryDescription,
+                                    Token,
+                                    null,
+                                    ConfigSettings.EnableVerboseLogging);
+                            return;
                         }
-
-                        string telemetryDescription = $"{appName} is upgrading {udText}. Will not attempt application repair at this time.";
-
-                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                LogLevel.Info,
-                                "MonitorRepairableHealthEventsAsync::AppUpgradeDetected",
-                                telemetryDescription,
-                                Token,
-                                null,
-                                ConfigSettings.EnableVerboseLogging);
-
-                        return;
                     }
                 }
-                catch (FabricException)
+                catch (Exception e) when (e is not OutOfMemoryException)
                 {
-                    // This upgrade check should not prevent moving forward.
+                    // App upgrade check failure should not prevent moving forward.
                 }
             }
 
@@ -1364,29 +1362,26 @@ namespace FabricHealer
                         or ApplicationUpgradeState.RollingForwardPending)
                     {
                         string udInAppUpgrade = await UpgradeChecker.GetUDWhereApplicationUpgradeInProgressAsync(serviceName, Token);
-                        string udText = string.Empty;
 
-                        if (udInAppUpgrade != null)
+                        if (!string.IsNullOrWhiteSpace(udInAppUpgrade))
                         {
-                            udText = $"in UD {udInAppUpgrade}";
+                            string udText = $"in UD {udInAppUpgrade}";
+                            string telemetryDescription = $"{appName.OriginalString} is upgrading {udText}. Will not attempt service repair at this time.";
+
+                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                    LogLevel.Info,
+                                    "AppUpgradeDetected",
+                                    telemetryDescription,
+                                    Token,
+                                    null,
+                                    ConfigSettings.EnableVerboseLogging);
+                            return;
                         }
-
-                        string telemetryDescription = $"{appName.OriginalString} is upgrading {udText}. Will not attempt service repair at this time.";
-
-                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                LogLevel.Info,
-                                "AppUpgradeDetected",
-                                telemetryDescription,
-                                Token,
-                                null,
-                                ConfigSettings.EnableVerboseLogging);
-
-                        return;
                     }
                 }
-                catch (FabricException)
+                catch (Exception e) when (e is not OutOfMemoryException)
                 {
-                    // This upgrade check should not prevent moving forward if the fabric client call fails with an FE.
+                    // This upgrade check should not prevent moving forward.
                 }
             }
 
