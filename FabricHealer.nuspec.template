@@ -4,7 +4,8 @@
     <id>%PACKAGE_ID%</id>
     <version>1.2.6</version>
     <releaseNotes>
-Fixed rolling service repair bug. Updated rules.
+- Bug Fix: Crash due to bug in app upgrade UD string parsing.
+- Code and performance improvements.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
