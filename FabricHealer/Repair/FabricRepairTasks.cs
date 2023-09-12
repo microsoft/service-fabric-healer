@@ -148,13 +148,6 @@ namespace FabricHealer.Repair
                         "FabricRepairTasks.CompleteCustomActionRepairJobAsync",
                         $"Failed to Complete Repair Job {repairTask.TaskId} with unhandled exception:{Environment.NewLine}{e.Message}",
                         token);
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast($"FH hit OOM:{Environment.NewLine}{Environment.StackTrace}");
-                }
-
                 throw;
             }
 

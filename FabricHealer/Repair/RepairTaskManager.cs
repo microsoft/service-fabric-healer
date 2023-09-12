@@ -891,7 +891,7 @@ namespace FabricHealer.Repair
 
                 if (success)
                 {
-                    string target = Enum.GetName(typeof(EntityType), repairData.EntityType);
+                    string target = repairData.EntityType.ToString();
                     TimeSpan probationDuration = TimeSpan.FromMinutes(5);
 
                     switch (repairData.EntityType)
@@ -949,25 +949,26 @@ namespace FabricHealer.Repair
 
                     if (isHealthy)
                     {
-                       await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                LogLevel.Info,
-                                "ExecuteFabricHealerRmRepairTask",
-                                $"{repairData.RepairPolicy.RepairAction} repair for {repairTarget} has succeeded.",
-                                cancellationToken,
-                                repairData,
-                                FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                    LogLevel.Info,
+                                    "ExecuteFabricHealerRmRepairTask",
+                                    $"{repairData.RepairPolicy.RepairAction} repair for {repairTarget} has succeeded.",
+                                    cancellationToken,
+                                    repairData,
+                                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
                     }
                     else
                     {
-                       await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                LogLevel.Info,
-                                "ExecuteFabricHealerRmRepairTask",
-                                $"{repairData.RepairPolicy.RepairAction} repair for {repairTarget} has failed. " +
-                                $"{repairTarget} is still in an unhealthy state after {probationDuration} of post-repair probation.",
-                                cancellationToken,
-                                repairData,
-                                FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                    LogLevel.Info,
+                                    "ExecuteFabricHealerRmRepairTask",
+                                    $"{repairData.RepairPolicy.RepairAction} repair for {repairTarget} has failed. " +
+                                    $"{repairTarget} is still in an unhealthy state after {probationDuration} of post-repair probation.",
+                                    cancellationToken,
+                                    repairData,
+                                    FabricHealerManager.ConfigSettings.EnableVerboseLogging);
                     }
+                    
 
                     // Tell RM we are ready to move to Completed state as our custom code has completed its repair execution successfully.
                     // This is done by setting the repair task to Restoring State with ResultStatus Succeeded. RM will then move forward to Restoring

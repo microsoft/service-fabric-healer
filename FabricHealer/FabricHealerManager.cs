@@ -22,6 +22,8 @@ using Octokit;
 using System.Fabric.Description;
 using System.Runtime.InteropServices;
 using static FabricHealer.Repair.RepairTaskManager;
+using System.ComponentModel;
+using System.Diagnostics;
 
 namespace FabricHealer
 {
@@ -31,7 +33,7 @@ namespace FabricHealer
         private DateTime LastTelemetrySendDate { get; set; }
         
         // Folks often use their own version numbers. This is for public diagnostic telemetry.
-        private const string InternalVersionNumber = "1.2.5";
+        private const string InternalVersionNumber = "1.2.6";
         private static FabricHealerManager fhSingleton;
         private static FabricClient fabricClient;
         private bool disposedValue;
@@ -272,14 +274,9 @@ namespace FabricHealer
                                 }
                             }
                         }
-                        catch (Exception ex)
+                        catch (Exception ex) when (ex is not OutOfMemoryException)
                         {
-                            // Telemetry is non-critical and should not take down FH.
-                            if (ex is OutOfMemoryException)
-                            {
-                                // Terminate now.
-                                Environment.FailFast(string.Format("Out of Memory: {0}", ex.Message));
-                            }
+
                         }
                     }
 
@@ -354,15 +351,10 @@ namespace FabricHealer
                         string filepath = Path.Combine(RepairLogger.LogFolderBasePath, $"fh_critical_error_telemetry.log");
                         _ = telemetryEvents.EmitFabricHealerCriticalErrorEvent(fhData, filepath);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not OutOfMemoryException)
                     {
                         // Telemetry is non-critical and should not take down FH.
                         RepairLogger.LogError($"Unable to send operational telemetry: {ex.Message}");
-
-                        if (ex is OutOfMemoryException)
-                        {
-                            Environment.FailFast(string.Format("Out of Memory: {0}", ex.Message));
-                        }
                     }
                 }
 
@@ -641,7 +633,7 @@ namespace FabricHealer
                 // Don't crash..
                 RepairLogger.LogWarning($"{e.Message}");
             }
-            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
+            catch (Exception e) when (e is not OperationCanceledException and not TaskCanceledException)
             {
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Error,
@@ -651,12 +643,6 @@ namespace FabricHealer
                         null);
 
                 RepairLogger.LogError($"Unhandled exception in MonitorHealthEventsAsync:{Environment.NewLine}{e}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast($"FabricHealer hit OOM:{Environment.NewLine}{Environment.StackTrace}");
-                }
 
                 // Fix the bug(s).
                 throw;
@@ -1031,36 +1017,34 @@ namespace FabricHealer
             {
                 try
                 {
-                    var appUpgradeStatus = await FabricClientSingleton.ApplicationManager.GetApplicationUpgradeProgressAsync(appName);
+                    var appUpgradeStatus =
+                        await FabricClientSingleton.ApplicationManager.GetApplicationUpgradeProgressAsync(appName, ConfigSettings.AsyncTimeout, Token);
 
                     if (appUpgradeStatus.UpgradeState is ApplicationUpgradeState.RollingBackInProgress
                         or ApplicationUpgradeState.RollingForwardInProgress
                         or ApplicationUpgradeState.RollingForwardPending)
                     {
-                        var udInAppUpgrade = await UpgradeChecker.GetUDWhereApplicationUpgradeInProgressAsync(appName, Token);
-                        string udText = string.Empty;
+                        string udInAppUpgrade = await UpgradeChecker.GetUDWhereApplicationUpgradeInProgressAsync(appName, Token);
 
-                        if (udInAppUpgrade != null)
+                        if (!string.IsNullOrWhiteSpace(udInAppUpgrade))
                         {
-                            udText = $"in UD {udInAppUpgrade.First()}";
+                            string udText = $"in UD {udInAppUpgrade}";
+                            string telemetryDescription = $"{appName} is upgrading {udText}. Will not attempt application repair at this time.";
+
+                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                    LogLevel.Info,
+                                    "MonitorRepairableHealthEventsAsync::AppUpgradeDetected",
+                                    telemetryDescription,
+                                    Token,
+                                    null,
+                                    ConfigSettings.EnableVerboseLogging);
+                            return;
                         }
-
-                        string telemetryDescription = $"{appName} is upgrading {udText}. Will not attempt application repair at this time.";
-
-                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                LogLevel.Info,
-                                "MonitorRepairableHealthEventsAsync::AppUpgradeDetected",
-                                telemetryDescription,
-                                Token,
-                                null,
-                                ConfigSettings.EnableVerboseLogging);
-
-                        return;
                     }
                 }
-                catch (FabricException)
+                catch (Exception e) when (e is not OutOfMemoryException)
                 {
-                    // This upgrade check should not prevent moving forward if the fabric client call fails with an FE.
+                    // App upgrade check failure should not prevent moving forward.
                 }
             }
 
@@ -1114,6 +1098,32 @@ namespace FabricHealer
                     if (!ConfigSettings.EnableSystemAppRepair)
                     {
                         continue;
+                    }
+
+                    /* If this is a process restart of a system service, then make sure the process is still the droid we think it is. */
+
+                    // Process name and id must be provided.
+                    if (!string.IsNullOrWhiteSpace(repairData.ProcessName) && repairData.ProcessId > 0)
+                    {
+                        // FHProxy may not provide this information or the date string may be malformed.
+                        if (!DateTime.TryParse(repairData.ProcessStartTime, out DateTime procStartDateTime))
+                        {
+                            try
+                            {
+                                using Process p = Process.GetProcessById((int)repairData.ProcessId);
+                                procStartDateTime = p.StartTime;
+                            }
+                            catch (Exception e) when (e is ArgumentException or InvalidOperationException or SystemException or Win32Exception)
+                            {
+                                continue;
+                            }
+                        }
+
+                        // Process of specified name and id must still be running.
+                        if (!EnsureProcess(repairData.ProcessName, (int)repairData.ProcessId, procStartDateTime))
+                        {
+                            continue;
+                        }
                     }
 
                     // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
@@ -1204,7 +1214,7 @@ namespace FabricHealer
                     }
 
                     string serviceId = $"{repairData.ServiceName?.Replace("fabric:/", "").Replace("/", "")}";
-                    var currentFHRepairs =
+                    RepairTaskList currentFHRepairs =
                         await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, Token);
  
                     // This is the way each FH repair is ID'd. This data is stored in the related Repair Task's ExecutorData property.
@@ -1352,29 +1362,26 @@ namespace FabricHealer
                         or ApplicationUpgradeState.RollingForwardPending)
                     {
                         string udInAppUpgrade = await UpgradeChecker.GetUDWhereApplicationUpgradeInProgressAsync(serviceName, Token);
-                        string udText = string.Empty;
 
-                        if (udInAppUpgrade != null)
+                        if (!string.IsNullOrWhiteSpace(udInAppUpgrade))
                         {
-                            udText = $"in UD {udInAppUpgrade}";
+                            string udText = $"in UD {udInAppUpgrade}";
+                            string telemetryDescription = $"{appName.OriginalString} is upgrading {udText}. Will not attempt service repair at this time.";
+
+                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                    LogLevel.Info,
+                                    "AppUpgradeDetected",
+                                    telemetryDescription,
+                                    Token,
+                                    null,
+                                    ConfigSettings.EnableVerboseLogging);
+                            return;
                         }
-
-                        string telemetryDescription = $"{appName.OriginalString} is upgrading {udText}. Will not attempt service repair at this time.";
-
-                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                LogLevel.Info,
-                                "AppUpgradeDetected",
-                                telemetryDescription,
-                                Token,
-                                null,
-                                ConfigSettings.EnableVerboseLogging);
-
-                        return;
                     }
                 }
-                catch (FabricException)
+                catch (Exception e) when (e is not OutOfMemoryException)
                 {
-                    // This upgrade check should not prevent moving forward if the fabric client call fails with an FE.
+                    // This upgrade check should not prevent moving forward.
                 }
             }
 
@@ -2352,14 +2359,14 @@ namespace FabricHealer
             try
             {
                 var githubClient = new GitHubClient(new ProductHeaderValue(RepairConstants.FabricHealer));
-                IReadOnlyList<Release> releases = await githubClient.Repository.Release.GetAll("microsoft", "service-fabric-healer");
+                Release latestRelease = await githubClient.Repository.Release.GetLatest("microsoft", "service-fabric-healer");
 
-                if (releases.Count == 0)
+                if (latestRelease == null)
                 {
                     return;
                 }
 
-                string releaseAssetName = releases[0].Name;
+                string releaseAssetName = latestRelease.Name;
                 string latestVersion = releaseAssetName.Split(" ")[1];
                 Version latestGitHubVersion = new(latestVersion);
                 Version localVersion = new(InternalVersionNumber);
@@ -2379,8 +2386,11 @@ namespace FabricHealer
                             "NewVersionAvailable",
                             EntityType.Application);
                 }
+
+                latestRelease = null;
+                githubClient = null;
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 // Don't take down FO due to error in version check.
                 RepairLogger.LogWarning($"Failure in CheckGithubForNewVersionAsync:{Environment.NewLine}{e}");
@@ -2400,6 +2410,25 @@ namespace FabricHealer
             }
 
             return null;
+        }
+
+        private static bool EnsureProcess(string procName, int procId, DateTime processStartTime)
+        {
+            if (string.IsNullOrWhiteSpace(procName) || procId < 1)
+            {
+                return false;
+            }
+
+            try
+            {
+                using Process proc = Process.GetProcessById(procId);
+                return proc.ProcessName == procName && proc.StartTime == processStartTime;
+            }
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or SystemException or Win32Exception)
+            {
+                RepairLogger.LogWarning(procName + " with id " + procId.ToString() + " not found. " + e.Message);
+                return false;
+            }
         }
     }
 }

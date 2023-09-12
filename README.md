@@ -1,4 +1,4 @@
-## FabricHealer 1.2.5
+## FabricHealer 1.2.6
 ### Service Fabric Auto-Repair Service with Declarative Logic for Repair Policy Specification. 
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-healer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-healer.json)
@@ -72,24 +72,24 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH125 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FH126 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH125
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH126
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.2.5   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.2.6   
 
 #Create the Service instance:  
 
-# FH can be deployed with a single instance or run on all nodes. It's up to you. Note that for certain repairs, it must run as -1 (Disk repairs (file deletion), System service process restarts).
+# FH can be deployed with a single instance or run on all nodes. Note that for certain repairs, it must be deployed to all nodes (InstanceCount = -1). If you employ Disk repair and/or System service process restarts, deploy with InstanceCount set to -1.
 New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName fabric:/FabricHealer -ServiceName fabric:/FabricHealer/FabricHealerService -ServiceTypeName FabricHealerType -InstanceCount -1
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.2.5 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.2.6 -Monitored -FailureAction rollback
 ```  
 
 ## Using FabricHealer  

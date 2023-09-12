@@ -54,6 +54,9 @@ Mitigate(MetricName="CpuPercent", ProcessName=?SysProcName) :- not(?SysProcName 
 
 ## Memory Use - Megabytes in use
 
+## FabricDCA (Linux)
+Mitigate(MetricName="MemoryMB", ProcessName="FabricDCA.dll", OS="Linux") :- LogRule(58), TimeScopedRestartFabricSystemProcess(1, 01:00:00).
+
 Mitigate(MetricName="MemoryMB", ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
 	GetHealthEventHistory(?HealthEventCount, 00:30:00),
 	?HealthEventCount >= 3,
@@ -110,4 +113,4 @@ Mitigate(MetricName="FileHandles", OS="Linux", ProcessName="Fabric") :- TimeScop
 ## Generic catch-all.
 ## Doesn't matter what the problem is, just restart the service process if it is not Fabric or FabricHost (for hopefully obvious reasons).
 
-Mitigate(ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), TimeScopedRestartFabricSystemProcess(2, 08:00:00).
+##Mitigate(ProcessName=?SysProcName) :- not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), TimeScopedRestartFabricSystemProcess(2, 08:00:00).

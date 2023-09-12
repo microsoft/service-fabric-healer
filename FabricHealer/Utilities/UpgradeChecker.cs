@@ -60,16 +60,10 @@ namespace FabricHealer.Repair
                                   $"{appName.OriginalString}:{Environment.NewLine}{e.Message}");
                 return null;
             }
-            catch (Exception e) // This call should not crash FO. Log the error, fix the bug, if any.
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 Logger.LogError($"Unhandled Exception getting UDs for application upgrade in progress for " +
                 $"{appName.OriginalString}:{e.Message}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast($"FH hit OOM:{Environment.NewLine}{Environment.StackTrace}");
-                }
 
                 return null;
             }
@@ -105,16 +99,9 @@ namespace FabricHealer.Repair
                 Logger.LogWarning($"Handled Exception in GetCurrentUDWhereFabricUpgradeInProgressAsync: {e.Message}");
                 return null;
             }
-            catch (Exception e) // This call should not crash FO. Log the error, fix the bug, if any.
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 Logger.LogError($"Unhandled Exception in GetCurrentUDWhereFabricUpgradeInProgressAsync: {e.Message}");
-                
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast($"FH hit OOM:{Environment.NewLine}{Environment.StackTrace}");
-                }
-
                 return null;
             }
         }
@@ -135,7 +122,7 @@ namespace FabricHealer.Repair
                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                             token);
 
-                bool isAzureTenantRepairInProgress = repairTasks?.Count > 0;
+                bool isAzureTenantRepairInProgress = repairTasks != null && repairTasks.Count > 0;
 
                 if (!isAzureTenantRepairInProgress)
                 {
@@ -187,16 +174,9 @@ namespace FabricHealer.Repair
                 Logger.LogWarning($"Handled Exception in IsAzureJobInProgressAsync: {e.Message}");
                 return false;
             }
-            catch (Exception e) // This call should not crash FO. Log the error, fix the bug, if any.
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 Logger.LogError($"Unhandled Exception in IsAzureJobInProgressAsync: {e.Message}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast($"FH hit OOM:{Environment.NewLine}{Environment.StackTrace}");
-                }
-
                 return false;
             }
 
