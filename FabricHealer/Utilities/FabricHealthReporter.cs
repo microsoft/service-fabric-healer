@@ -33,15 +33,8 @@ namespace FabricHealer.Utilities
                 return;
             }
 
-            var sendOptions = new HealthReportSendOptions { Immediate = false };
-
-            // Quickly send OK (clears warning/errors states).
-            if (healthReport.State == HealthState.Ok)
-            {
-                sendOptions.Immediate = true;
-            }
-
-            var timeToLive = TimeSpan.FromMinutes(5);
+            HealthReportSendOptions sendOptions = new() { Immediate = true };
+            TimeSpan timeToLive = TimeSpan.FromMinutes(5);
 
             if (healthReport.HealthReportTimeToLive != default)
             {
