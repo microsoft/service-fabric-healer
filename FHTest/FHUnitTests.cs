@@ -507,7 +507,6 @@ namespace FHTest
                 }
             }
 
-            // This will be the data used to create a repair task.
             var repairData = new TelemetryData
             {
                 EntityType = EntityType.Disk,
@@ -516,39 +515,33 @@ namespace FHTest
                 Code = SupportedErrorCodes.NodeErrorDiskSpacePercent,
                 HealthState = HealthState.Warning,
                 Source = $"DiskObserver({SupportedErrorCodes.NodeErrorDiskSpacePercent})",
-                Property = $"{NodeName}_{SupportedMetricNames.DiskSpaceUsagePercentage.Replace(" ", string.Empty)}"
+                Property = $"{NodeName}_{SupportedMetricNames.DiskSpaceUsagePercentage.Replace(" ", string.Empty)}",
+                Value = 90.0
             };
 
-            repairData.RepairPolicy = new RepairPolicy
+            Assert.IsTrue(JsonSerializationUtility.TrySerializeObject(repairData, out string description));
+
+            Logger logger = new("FHTest", Environment.CurrentDirectory);
+            FabricHealthReporter healthReporter = new(logger);
+
+            FabricHealer.Utilities.HealthReport healthReport = new()
             {
-                RepairId = $"Test42_DiskRepair{NodeName}",
-                AppName = repairData.ApplicationName,
-                RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
-                NodeName = repairData.NodeName,
                 Code = repairData.Code,
-                HealthState = repairData.HealthState,
+                EntityType = EntityType.Disk,
+                HealthMessage = description,
+                HealthReportTimeToLive = TimeSpan.FromMinutes(5),
+                State = HealthState.Warning,
+                NodeName = NodeName,
+                Property = repairData.Property,
+                SourceId = RepairConstants.FabricHealer,
+                HealthData = repairData,
+                ResourceUsageDataProperty = SupportedMetricNames.DiskSpaceUsagePercentage
             };
 
-            var executorData = new RepairExecutorData
-            {
-                RepairPolicy = repairData.RepairPolicy
-            };
-
-            var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "DiskRules.guan");
-            FabricHealerManager.CurrentlyExecutingLogicRulesFileName = "DiskRules.guan";
-            List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
-
-            try
-            {
-                await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
-
-                Process[] procs = Process.GetProcesses();
-                var x = procs.Where(p => p.Threads.Count > 4000);
-            }
-            catch (GuanException ge)
-            {
-                throw new AssertFailedException(ge.Message, ge);
-            }
+            using var healerManager = FabricHealerManager.Instance(TestServiceContext, token);
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            await FabricHealerManager.ProcessHealthEventsAsync();
 
             // Validate that the repair rule is traced and repair predicate succeeds.
             try
@@ -566,7 +559,7 @@ namespace FHTest
                 throw;
             }
 
-            Assert.IsTrue(!Directory.GetFiles(path).Any(f => f == "foo0.txt" || f == "foo1.txt"));
+            Assert.IsFalse(Directory.GetFiles(path).Any(f => f == "foo0.txt" || f == "foo1.txt"));
         }
 
         [TestMethod]
@@ -597,36 +590,33 @@ namespace FHTest
                 Code = SupportedErrorCodes.NodeWarningFolderSizeMB,
                 HealthState = HealthState.Warning,
                 Source = $"DiskObserver({SupportedErrorCodes.NodeWarningFolderSizeMB})",
-                Property = $"{NodeName}_{SupportedMetricNames.FolderSizeMB.Replace(" ", string.Empty)}"
+                Property = $"{NodeName}_{SupportedMetricNames.FolderSizeMB.Replace(" ", string.Empty)}",
+                Value = 5
             };
 
-            repairData.RepairPolicy = new RepairPolicy
+            Assert.IsTrue(JsonSerializationUtility.TrySerializeObject(repairData, out string description));
+
+            Logger logger = new("FHTest", Environment.CurrentDirectory);
+            FabricHealthReporter healthReporter = new(logger);
+
+            FabricHealer.Utilities.HealthReport healthReport = new()
             {
-                RepairId = $"Test42_DiskRepair{NodeName}",
-                AppName = repairData.ApplicationName,
-                RepairIdPrefix = RepairConstants.FHTaskIdPrefix,
-                NodeName = repairData.NodeName,
                 Code = repairData.Code,
-                HealthState = repairData.HealthState
+                EntityType = EntityType.Disk,
+                HealthMessage = description,
+                HealthReportTimeToLive = TimeSpan.FromMinutes(5),
+                State = HealthState.Warning,
+                NodeName = NodeName,
+                Property = repairData.Property,
+                SourceId = RepairConstants.FabricHealer,
+                HealthData = repairData,
+                ResourceUsageDataProperty = SupportedMetricNames.FolderSizeMB
             };
 
-            var executorData = new RepairExecutorData
-            {
-                RepairPolicy = repairData.RepairPolicy
-            };
-
-            var file = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "LogicRules", "DiskRules.guan");
-            FabricHealerManager.CurrentlyExecutingLogicRulesFileName = "DiskRules.guan";
-            List<string> repairRules = FabricHealerManager.ParseRulesFile(await File.ReadAllLinesAsync(file, token));
-
-            try
-            {
-                await TestInitializeGuanAndRunQuery(repairData, repairRules, executorData);
-            }
-            catch (GuanException ge)
-            {
-                throw new AssertFailedException(ge.Message, ge);
-            }
+            using var healerManager = FabricHealerManager.Instance(TestServiceContext, token);
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            await FabricHealerManager.ProcessHealthEventsAsync();
 
             // Validate that both the repair rule (contains LogRule predicate) and repair predicate (w/expanded variables) is traced.
             try
@@ -644,7 +634,7 @@ namespace FHTest
                 throw;
             }
 
-            Assert.IsTrue(!Directory.GetFiles(path).Any(f => f.StartsWith("foo") && f.EndsWith(".txt")));
+            Assert.IsFalse(Directory.GetFiles(path).Any(f => f.StartsWith("foo") && f.EndsWith(".txt")));
         }
 
         [TestMethod]

@@ -4,7 +4,7 @@
 	CheckFolderSize(?X, MaxFolderSizeGB=?Y),
 	DeleteFiles(?X, SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true).
 
-Mitigate(ErrorCode=FO043) :- GetRepairHistory(?repairCount, 08:00:00),
+Mitigate(ErrorCode=FO043) :- LogRule(7), GetRepairHistory(?repairCount, 08:00:00),
 	?repairCount < 4,
 	CheckFolderSize("C:\SFDevCluster\Log\QueryTraces", MaxFolderSizeMB=5),
 	DeleteFiles("C:\SFDevCluster\Log\QueryTraces", SortOrder=Ascending, MaxFilesToDelete=5, RecurseSubdirectories=false).
