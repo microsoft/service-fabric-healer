@@ -67,7 +67,7 @@ namespace FHTest
         //          <Parameter Name="TargetReplicaSetSize" Value="3" />
         //     </Section>
         // Save the file. Set autoInstallRMWindows to true. Run the tests.
-        private const bool autoInstallRMWindows = true;
+        private const bool autoInstallRMWindows = false;
 
         // This is the name of the node used on your local dev machine's SF cluster. If you customize this, then change it.
         private const string NodeName = "_Node_0";
@@ -503,7 +503,7 @@ namespace FHTest
         {
             // Ensure FHProxy cleans up its health reports.
             FabricHealerProxy.Instance.Close();
-            //await RemoveTestApplicationsAsync();
+            await RemoveTestApplicationsAsync();
 
             // Clean up all test repair tasks.
             var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync();
