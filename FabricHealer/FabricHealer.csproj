@@ -13,8 +13,8 @@
          <RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 	<Product>FabricHealer</Product>
-	<Version>1.2.7</Version>
-    <FileVersion>1.2.7</FileVersion>
+	<Version>1.2.8</Version>
+    <FileVersion>1.2.8</FileVersion>
     <StartupObject>FabricHealer.Program</StartupObject>
     <Platforms>x64</Platforms>
   </PropertyGroup>

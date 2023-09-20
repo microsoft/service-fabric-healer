@@ -8,6 +8,8 @@ using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using System.Threading.Tasks;
+using System.Threading;
+using System;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -67,15 +69,60 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
-                // Now execute the repair.
-                bool success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
-                                                repairTask,
-                                                RepairData,
-                                                FabricHealerManager.Token),
-                                        FabricHealerManager.Token);
+                // MaxExecutionTime impl.
+                using (CancellationTokenSource tokenSource = new())
+                {
+                    using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(tokenSource.Token, FabricHealerManager.Token))
+                    {
+                        RepairData.RepairPolicy.MaxExecutionTime = TimeSpan.FromMinutes(60);
 
-                return success;
+                        tokenSource.CancelAfter(RepairData.RepairPolicy.MaxExecutionTime);
+                        tokenSource.Token.Register(() =>
+                        {
+                            _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
+                        });
+
+                        bool success = false;
+
+                        try
+                        {
+                            // Now execute the repair.
+                            success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                    () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
+                                                            repairTask,
+                                                            RepairData,
+                                                            linkedCTS.Token),
+                                                    linkedCTS.Token);
+                            return success;
+                        }
+                        catch (Exception e) when (e is not OutOfMemoryException)
+                        {
+                            if (e is not TaskCanceledException and not OperationCanceledException)
+                            {
+                                string message = $"Failed to execute {RepairData.RepairPolicy.RepairAction} for repair {RepairData.RepairPolicy.RepairId}: {e.Message}";
+#if DEBUG
+                                message += $"{Environment.NewLine}{e}";
+#endif
+                                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                        LogLevel.Info,
+                                        "RestartFabricNodePredicateType::HandledException",
+                                        message,
+                                        FabricHealerManager.Token);
+                            }
+
+                            success = false;
+                        }
+
+                        // Best effort FH repair job cleanup retry.
+                        if (!success && linkedCTS.IsCancellationRequested)
+                        {
+                            await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
+                            return true;
+                        }
+
+                        return success;
+                    }
+                }
             }
         }
 

@@ -2,11 +2,13 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.2.7</version>
+    <version>1.2.8</version>
     <releaseNotes>
-- Bug Fix: Disk Repair.
+- Added MaxExecutionTime for DiskRepair and FabricNode repairs.
+- Fixed bug where FH is not going into Warning when RepairManager service is not deployed in the cluster.
+- Updated default logic rules.
 - Code and performance improvements.
-- Updated tests to prevent Disk repair bug regression.
+- Updated unit tests.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>

@@ -26,12 +26,19 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
 		<PackageReference Include="ServiceFabric.Mocks" Version="7.0.1" />
+		<PackageReference Include="System.ServiceProcess.ServiceController" Version="7.0.1" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\FabricHealerProxy\FabricHealerProxy.csproj" />
         <ProjectReference Include="..\FabricHealer\FabricHealer.csproj" />
     </ItemGroup>
     <ItemGroup>
+        <None Update="clusterManifestRM.xml">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="clusterManifestRM_5node.xml">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
         <None Update="PackageRoot\Config\LogicRules\AppRules.guan">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>

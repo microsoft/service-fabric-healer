@@ -33,18 +33,19 @@ namespace FabricHealer
         private DateTime LastTelemetrySendDate { get; set; }
         
         // Folks often use their own version numbers. This is for public diagnostic telemetry.
-        private const string InternalVersionNumber = "1.2.7";
+        private const string InternalVersionNumber = "1.2.8";
         private static FabricHealerManager fhSingleton;
         private static FabricClient fabricClient;
         private bool disposedValue;
         private bool detectedStopJob;
-        private readonly Uri systemAppUri = new(RepairConstants.SystemAppName);
-        private readonly Uri repairManagerServiceUri = new(RepairConstants.RepairManagerAppName);
+        private static readonly Uri systemAppUri = new(RepairConstants.SystemAppName);
+        private static readonly Uri repairManagerServiceUri = new(RepairConstants.RepairManagerAppName);
         private readonly FabricHealthReporter healthReporter;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private readonly string sfRuntimeVersion;
         private DateTime UtcStartDateTime;
         private static readonly object lockObj = new();
+        private static bool IsRmDeployed;
 
         internal static TelemetryUtilities TelemetryUtilities { get; private set; }
         internal static RepairData RepairHistory { get; private set; }
@@ -176,6 +177,7 @@ namespace FabricHealer
             {
                 if (!await InitializeAsync())
                 {
+                    // No-op: RM is not deployed.
                     return;
                 }
 
@@ -195,7 +197,8 @@ namespace FabricHealer
                 {
                     if (!ConfigSettings.EnableAutoMitigation)
                     {
-                        break;
+                        await Task.Delay(TimeSpan.FromSeconds(10), Token);
+                        continue;
                     }
 
                     // This call will try to cancel any FH-owned repair that has exceeded the specified (in logic rule or default)
@@ -274,7 +277,7 @@ namespace FabricHealer
                                 }
                             }
                         }
-                        catch (Exception ex) when (ex is not OutOfMemoryException)
+                        catch (Exception e) when (e is not OutOfMemoryException)
                         {
 
                         }
@@ -292,7 +295,6 @@ namespace FabricHealer
                             ConfigSettings.HealthCheckIntervalInSeconds > 0 ? ConfigSettings.HealthCheckIntervalInSeconds : 10), Token);
                 }
 
-                RepairLogger.LogInfo("Shutdown signaled. Stopping.");
                 await TryClearExistingHealthReportsAsync();
             }
             catch (AggregateException)
@@ -374,6 +376,11 @@ namespace FabricHealer
         /// <returns>Task</returns>
         public static async Task TryCleanUpOrphanedFabricHealerRepairJobsAsync(bool isClosing = false)
         {
+            if (!IsRmDeployed)
+            {
+                return;
+            }
+
             TimeSpan maxFHExecutorTime = TimeSpan.FromMinutes(60);
 
             try
@@ -396,7 +403,7 @@ namespace FabricHealer
                     try
                     {
                         // FH executor data.
-                        if (!JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData, true))
+                        if (!JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData))
                         {
                             continue;
                         }
@@ -785,23 +792,23 @@ namespace FabricHealer
             fabricClient = new FabricClient();
         }
 
-        private async Task<bool> InitializeAsync()
+        public static async Task<bool> InitializeAsync()
         {
             InstanceCount = await GetServiceInstanceCountAsync();
             IsOneNodeCluster = await IsOneNodeClusterAsync();
 
-            string okMessage = $"{repairManagerServiceUri} is deployed.";
+            string message = $"{repairManagerServiceUri} is deployed.";
             bool isRmDeployed = true;
             var healthReport = new HealthReport
             {
+                ServiceName = ServiceContext.ServiceName,
                 NodeName = ServiceContext.NodeContext.NodeName,
-                AppName = new Uri(RepairConstants.FabricHealerAppName),
-                EntityType = EntityType.Application,
-                HealthMessage = okMessage,
+                EntityType = EntityType.Service,
+                HealthMessage = message,
                 State = HealthState.Ok,
                 Property = "RequirementCheck::RMDeployed",
                 HealthReportTimeToLive = TimeSpan.FromDays(1),
-                SourceId = RepairConstants.FabricHealer,
+                SourceId = RepairConstants.FabricHealer
             };
             ServiceList serviceList = await FabricClientSingleton.QueryManager.GetServiceListAsync(
                                               systemAppUri,
@@ -811,20 +818,28 @@ namespace FabricHealer
 
             if ((serviceList?.Count ?? 0) == 0)
             {
-                string warnMessage =
-                    $"{repairManagerServiceUri} could not be found, " +
-                    $"FabricHealer Service requires {repairManagerServiceUri} system service to be deployed in the cluster. " +
-                    "Consider adding a RepairManager section in your cluster manifest.";
+                message =
+                    $"FabricHealer Service requires RepairManager service to be deployed in the cluster. " +
+                    $"See <a href=\"https://learn.microsoft.com/en-us/azure/service-fabric/service-fabric-cluster-config-upgrade-azure\" target=\"new\">Upgrade Cluster configuration in Azure</a> for more information and guidance.";
 
-                healthReport.HealthMessage = warnMessage;
+                healthReport.HealthMessage = message;
                 healthReport.State = HealthState.Warning;
-                healthReport.Code = SupportedErrorCodes.Ok;
                 healthReport.HealthReportTimeToLive = TimeSpan.MaxValue;
-                healthReport.SourceId = "CheckRepairManagerDeploymentStatusAsync";
                 isRmDeployed = false;
             }
 
-            healthReporter.ReportHealthToServiceFabric(healthReport);
+            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                    healthReport.State == HealthState.Warning ? LogLevel.Warning : LogLevel.Info,
+                    healthReport.SourceId,
+                    healthReport.HealthMessage,
+                    Token,
+                    telemetryData: null,
+                    verboseLogging: true,
+                    healthReport.HealthReportTimeToLive,
+                    healthReport.Property,
+                    healthReport.EntityType);
+
+            IsRmDeployed = isRmDeployed;
             return isRmDeployed;
         }
 

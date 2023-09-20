@@ -10,6 +10,8 @@ using FabricHealer.Utilities.Telemetry;
 using System.Threading.Tasks;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Fabric.Repair;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -67,6 +69,7 @@ namespace FabricHealer.Repair.Guan
                 string searchPattern = null;
                 FileSortOrder direction = FileSortOrder.Ascending;
                 int count = Input.Arguments.Count;
+                TimeSpan maxHealthCheckOk = TimeSpan.Zero, maxExecutionTime = TimeSpan.Zero;
 
                 for (int i = 1; i < count; i++)
                 {
@@ -88,8 +91,22 @@ namespace FabricHealer.Repair.Guan
                             searchPattern = Input.Arguments[i].Value.GetEffectiveTerm().GetStringValue();
                             break;
 
+                        case "maxwaittimeforhealthstateok":
+                            maxHealthCheckOk = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
+                            break;
+
+                        case "maxexecutiontime":
+                            maxExecutionTime = (TimeSpan)Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue();
+                            break;
+
                         default:
-                            throw new GuanException($"Unsupported input: {Input.Arguments[i].Name}");
+                            await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                   LogLevel.Warning,
+                                   "DeleteFilesPredicateType::InvalidArgument",
+                                   "DeleteFilesPredicateType failure: Invalid argument specified - " + Input.Arguments[i].Name,
+                                   FabricHealerManager.Token);
+
+                            return false;
                     }
                 }
 
@@ -108,11 +125,10 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 string id = RepairData.RepairPolicy.RepairId;
-                TimeSpan maxTimePostRepairHealthCheck = RepairData.RepairPolicy.MaxTimePostRepairHealthCheck;
                 bool doHealthChecks = RepairData.RepairPolicy.DoHealthChecks;
 
                 // DiskRepairPolicy
-                var diskRepairPolicy = new DiskRepairPolicy
+                DiskRepairPolicy diskRepairPolicy = new()
                 {
                     Code = RepairData.Code,
                     FolderPath = path,
@@ -122,54 +138,78 @@ namespace FabricHealer.Repair.Guan
                     RecurseSubdirectories = recurseSubDirectories,
                     FileSearchPattern = !string.IsNullOrWhiteSpace(searchPattern) ? searchPattern : "*",
                     RepairId = id,
-                    MaxTimePostRepairHealthCheck = maxTimePostRepairHealthCheck,
+                    MaxTimePostRepairHealthCheck = maxHealthCheckOk,
                     DoHealthChecks = doHealthChecks,
                     RepairAction = RepairActionType.DeleteFiles
                 };
 
                 RepairData.RepairPolicy = diskRepairPolicy;
                 RepairData.RepairPolicy.RepairIdPrefix = RepairConstants.FHTaskIdPrefix;
+                RepairData.RepairPolicy.MaxExecutionTime = maxExecutionTime;
+                RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = maxHealthCheckOk;
 
                 // Try to schedule repair with RM.
-                var repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                          () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
-                                                  RepairData,
-                                                  FabricHealerManager.Token),
-                                           FabricHealerManager.Token);
+                RepairTask repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                              () => RepairTaskManager.ScheduleFabricHealerRepairTaskAsync(
+                                                      RepairData,
+                                                      FabricHealerManager.Token),
+                                               FabricHealerManager.Token);
                 if (repairTask == null)
                 {
                     return false;
                 }
 
-                bool success = false;
-
-                // Try to execute repair (FH executor does this work and manages repair state through RM, as always).
-                try
+                // MaxExecutionTime impl.
+                using (CancellationTokenSource tokenSource = new())
                 {
-                     success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
-                                                repairTask,
-                                                RepairData,
-                                                FabricHealerManager.Token),
-                                            FabricHealerManager.Token);
-                }
-                catch (Exception e) when (e is not OutOfMemoryException)
-                {
-                    if (e is not TaskCanceledException and not OperationCanceledException)
+                    using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(tokenSource.Token, FabricHealerManager.Token))
                     {
-                        string message = $"Failed to execute {RepairData.RepairPolicy.RepairAction} for repair {RepairData.RepairPolicy.RepairId}: {e.Message}";
+                        tokenSource.CancelAfter(maxExecutionTime > TimeSpan.Zero ? maxExecutionTime : TimeSpan.FromMinutes(10));
+                        tokenSource.Token.Register(() =>
+                        {
+                            _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
+                        });
+
+                        bool success = false;
+
+                        // Try to execute repair (FH executor does this work and manages repair state through RM, as always).
+                        try
+                        {
+                            success = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                               () => RepairTaskManager.ExecuteFabricHealerRepairTaskAsync(
+                                                       repairTask,
+                                                       RepairData,
+                                                       linkedCTS.Token),
+                                                   linkedCTS.Token);
+                        }
+                        catch (Exception e) when (e is not OutOfMemoryException)
+                        {
+                            if (e is not TaskCanceledException and not OperationCanceledException)
+                            {
+                                string message = $"Failed to execute {RepairData.RepairPolicy.RepairAction} for repair {RepairData.RepairPolicy.RepairId}: {e.Message}";
 #if DEBUG
-                        message += $"{Environment.NewLine}{e}";
+                                message += $"{Environment.NewLine}{e}";
 #endif
-                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                LogLevel.Info,
-                                "DeleteFilesPredicateType::HandledException",
-                                message,
-                                FabricHealerManager.Token);
+                                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                        LogLevel.Info,
+                                        "DeleteFilesPredicateType::HandledException",
+                                        message,
+                                        FabricHealerManager.Token);
+                            }
+
+                            success = false;
+                        }
+
+                        // Best effort FH repair job cleanup retry.
+                        if (!success && linkedCTS.IsCancellationRequested)
+                        {
+                            await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
+                            return true;
+                        }
+
+                        return success;
                     }
                 }
-
-                return false;
             }
         }
 

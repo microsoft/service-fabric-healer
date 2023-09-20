@@ -1,4 +1,6 @@
 ﻿## Logic rule examples for Service Fabric Node repairs.
+## RestartFabricNode predicate does not support arguments.
+## DeactivateFabricNode predicate supports optional arguments which represent node impact: RemoveData, RemoveNode. Default is Restart, if no arguments are specified.
 
 ## Restart/Deactivate. Try Restarting the node twice in an 8 hour window. Else, deactivate (with node impact = RemoveData) the node.
 Mitigate(HealthState=Error) :- GetRepairHistory(?repairCount, 08:00:00), ?repairCount < 2, !, RestartFabricNode.

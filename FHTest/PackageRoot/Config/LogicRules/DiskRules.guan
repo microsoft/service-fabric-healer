@@ -1,10 +1,20 @@
-﻿Mitigate(MetricName=?MetricName) :- match(?MetricName, "DiskSpace"), LogRule(1), GetRepairHistory(?repairCount, 08:00:00), 
+﻿## Max execution time test. Test function = DiskRules_FolderSizeMB_Repair_Successful_Validate_RuleTracing_MaxExecutionTime()
+Mitigate(MetricName="FolderSizeMB", Source=?source) :- LogRule(2), match(?source, "_FHTest_Ex"),
+	CheckFolderSize("C:\SFDevCluster\Log\QueryTraces", MaxFolderSizeMB=5),
+	DeleteFiles("C:\SFDevCluster\Log\QueryTraces", SortOrder=Ascending, MaxFilesToDelete=5, MaxExecutionTime=00:00:00.200).
+
+Mitigate(MetricName=?MetricName) :- LogRule(6), match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, 08:00:00), 
 	?repairCount < 4,
-	member(config(?X,?Y), [config("C:\SFDevCluster\Log\Traces", 10), config("C:\FHTest\cluster_observer_logs", 1), config("C:\SFDevCluster\Log\QueryTraces", 10)]), 
+	member(config(?X,?Y), [config("C:\SFDevCluster\Log\Traces", 10), config("C:\SFDevCluster\Log\QueryTraces", 10)]), 
 	CheckFolderSize(?X, MaxFolderSizeGB=?Y),
 	DeleteFiles(?X, SortOrder=Ascending, MaxFilesToDelete=10, RecurseSubdirectories=true).
 
-Mitigate(ErrorCode=FO043) :- LogRule(7), GetRepairHistory(?repairCount, 08:00:00),
+Mitigate(ErrorCode=FO043) :- LogRule(12), GetRepairHistory(?repairCount, 08:00:00),
 	?repairCount < 4,
 	CheckFolderSize("C:\SFDevCluster\Log\QueryTraces", MaxFolderSizeMB=5),
 	DeleteFiles("C:\SFDevCluster\Log\QueryTraces", SortOrder=Ascending, MaxFilesToDelete=5, RecurseSubdirectories=false).
+
+Mitigate(MetricName=?MetricName) :- LogRule(17), match(?MetricName, "DiskSpace"), GetRepairHistory(?repairCount, 08:00:00),
+	?repairCount < 4,
+	CheckFolderSize("C:\FHTest\cluster_observer_logs", MaxFolderSizeGB=1),
+	DeleteFiles("C:\FHTest\cluster_observer_logs", SortOrder=Ascending, MaxFilesToDelete=10).

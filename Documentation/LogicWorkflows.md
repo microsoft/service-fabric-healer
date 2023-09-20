@@ -140,6 +140,7 @@ Arguments:
 - MaxFilesToDelete (long), Optional.
 - RecurseSubdirectories (Boolean), Optional.
 - SearchPattern (String), Optional.
+- MaxExecutionTime (TimeSpan). Optional.
 
 Attempts to delete files in a supplied path. You can supply target path, max number of files to remove, sort order (ASC/DESC). 
 
