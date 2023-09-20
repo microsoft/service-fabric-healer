@@ -27,11 +27,14 @@ using static ServiceFabric.Mocks.MockConfigurationPackage;
 using System.Fabric.Description;
 using System.Fabric.Query;
 using System.Text;
+using System.ServiceProcess;
+using TimeoutException = System.TimeoutException;
+using System.Xml.Linq;
 
 namespace FHTest
 {
     /// <summary>
-    /// NOTE: Run these tests on your machine with a local SF dev cluster running.
+    /// NOTE: Run these tests on your machine with a local 1 or 5 node SF dev cluster running.
     /// </summary>
 
     [TestClass]
@@ -42,6 +45,29 @@ namespace FHTest
         private static ICodePackageActivationContext CodePackageContext = null;
         private static StatelessServiceContext TestServiceContext = null;
         private static readonly CancellationToken token = new();
+        private const string ServiceFabricHostWindowsServiceName = "FabricHostSvc";
+        private const string TicketWindowsFileDirectoryRelativePath = @"Fabric\Work";
+
+        // Change this to true if you want FHUnitTests to attempt to deploy RM to your local Windows dev cluster.
+        // However, you must update the clusterManifestRM.xml file: 
+        // Open the clusterManifest.xml file located on your local dev cluster (e.g., C:\SfDevCluster\Data\ClusterManifest.xml).
+        // Copy the contents (this is important to ensure you are using the right manifest for the version of SF you installed).
+        // Open clusterManifestRM.xml/clusterManifestRM_5node.xml (depending upon your local node configuration (1 or 5 node cluster)) in FHTests directory.
+        // Paste the contents.
+        // Then, add this RM Service section to the file under the <FabricSettings> section:
+        // For 1 node cluster (\FHTest\clusterManifestRM.xml):
+        //     <Section Name="RepairManager">
+        //          <Parameter Name="MinReplicaSetSize" Value="1" />
+        //          <Parameter Name="TargetReplicaSetSize" Value="1" />
+        //     </Section>
+        //
+        // For 5 node cluster (\FHTest\clusterManifestRM_5node.xml):
+        //     <Section Name="RepairManager">
+        //          <Parameter Name="MinReplicaSetSize" Value="3" />
+        //          <Parameter Name="TargetReplicaSetSize" Value="3" />
+        //     </Section>
+        // Save the file. Set autoInstallRMWindows to true. Run the tests.
+        private const bool autoInstallRMWindows = true;
 
         // This is the name of the node used on your local dev machine's SF cluster. If you customize this, then change it.
         private const string NodeName = "_Node_0";
@@ -55,6 +81,56 @@ namespace FHTest
             if (!IsLocalSFRuntimePresent())
             {
                 throw new Exception("Local dev cluster must be running to execute these tests correctly.");
+            }
+
+            // RM must be deployed to local dev cluster to run these tests successfully. These are hybrid unit/end-to-end tests.
+            // See the clusterManifestRM.xml file in this project (FHTest) for the RM service configuration addition. 
+            // Steps to deploy RM to local dev cluster:
+            // Open the clusterManifest.xml file located on your local dev cluster (e.g., C:\SfDevCluster\Data\ClusterManifest.xml).
+            // Copy the contents (this is important to ensure you are using the right manifest for the version of SF you installed).
+            // Open clusterManifestRM.xml/clusterManifestRM_5node.xml (depending upon your local node configuration (1 or 5 node cluster)) in FHTests directory.
+            // Paste the contents.
+            // Then, add this RM Service section to the file under the <FabricSettings> section:
+            // For 1 node cluster (\FHTest\clusterManifestRM.xml):
+            //     <Section Name="RepairManager">
+            //          <Parameter Name="MinReplicaSetSize" Value="1" />
+            //          <Parameter Name="TargetReplicaSetSize" Value="1" />
+            //     </Section>
+            //
+            // For 5 node cluster (\FHTest\clusterManifestRM_5node.xml):
+            //     <Section Name="RepairManager">
+            //          <Parameter Name="MinReplicaSetSize" Value="3" />
+            //          <Parameter Name="TargetReplicaSetSize" Value="3" />
+            //     </Section>
+            //
+            // 1. Stop your local cluster.
+            // 2. Open a PowerShell window. 
+            // 3. Run this cmdlet (for 1 node dev cluster, in this example. For 5 node, you would use clusterManifestRM_5node.xml, per above):
+            //    Update-ServiceFabricNodeConfiguration -ClusterManifestPath [repo dir]\service-fabric-healer\FHTest\clusterManifestRM.xml -Force
+            // 4. Start your local cluster.
+            // 5. Wait for the cluster to come up to green state.
+            // 6. Run the tests.
+            ServiceList serviceList = await fabricClient.QueryManager.GetServiceListAsync(
+                                             new Uri("fabric:/System"),
+                                             new Uri("fabric:/System/RepairManagerService"),
+                                             TimeSpan.FromSeconds(60),
+                                             token);
+
+            if (serviceList == null || serviceList.Count == 0)
+            {
+                if (OperatingSystem.IsLinux())
+                {
+                    throw new Exception("RepairManagerService must be running to execute these tests correctly.");
+                }
+
+                if (autoInstallRMWindows)
+                {
+                    await DeployWindowsRepairManagerServiceAsync();
+                }
+                else
+                {
+                    throw new Exception("RepairManagerService must be running to execute these tests correctly.");
+                }           
             }
 
             /* SF runtime mocking care of ServiceFabric.Mocks by loekd.
@@ -293,12 +369,141 @@ namespace FHTest
             }
         }
 
+        public static Task StopWindowsClusterAsync() => Task.Run(() =>
+        {
+#pragma warning disable CA1416 // Validate platform compatibility
+            using (ServiceController serviceController = new(ServiceFabricHostWindowsServiceName))
+            {
+                serviceController.Stop();
+                serviceController.WaitForStatus(ServiceControllerStatus.Stopped);
+            }
+#pragma warning restore CA1416 // Validate platform compatibility
+            CleanTicketFiles();
+        });
+
+        private static async Task DeployWindowsRepairManagerServiceAsync()
+        {
+            if (OperatingSystem.IsLinux())
+            {
+                throw new NotSupportedException("DeployWindowsRepairManagerServiceAsync is not supported on Linux.");
+            }
+
+            NodeList nodes = await fabricClient.QueryManager.GetNodeListAsync(null, TimeSpan.FromSeconds(90), token);
+            string rmConfigFileName = "clusterManifestRM.xml";
+
+            if (nodes.Count > 1)
+            {
+                rmConfigFileName = "clusterManifestRM_5Node.xml";
+            }
+
+            string clusterManifestRMFilePath = Path.Combine(Environment.CurrentDirectory, rmConfigFileName);
+
+            await StopWindowsClusterAsync();
+
+            using Process p = new();
+
+            p.StartInfo = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = "Update-ServiceFabricNodeConfiguration -ClusterManifestPath " + clusterManifestRMFilePath + " -Force",
+                UseShellExecute = false,
+            };
+
+            p.Start();
+            p.WaitForExit();
+
+            await StartWindowsClusterAsync();
+
+            TimeSpan maxClusterStartWaitTime = TimeSpan.FromMinutes(5);
+            Stopwatch sw = Stopwatch.StartNew();
+            
+            // It takes a while for a 5 node cluster to come up to green state. So, wait for it. For 1 node, it's pretty quick.
+            while (sw.Elapsed <= maxClusterStartWaitTime)
+            {
+                var clusterHealth = await fabricClient.HealthManager.GetClusterHealthAsync(TimeSpan.FromMinutes(3), token);
+                
+                if (clusterHealth.AggregatedHealthState == HealthState.Ok)
+                {
+                    break;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(5));
+            }
+
+            if (sw.Elapsed > maxClusterStartWaitTime)
+            {
+                throw new TimeoutException("Cluster did not come up to green state in allotted time.");
+            }
+        }
+
+        private static Task StartWindowsClusterAsync() => Task.Run(() =>
+        {
+            CleanTicketFiles();
+
+#pragma warning disable CA1416 // Validate platform compatibility
+            using (ServiceController serviceController = new(ServiceFabricHostWindowsServiceName))
+            {
+                serviceController.Start();
+                serviceController.WaitForStatus(ServiceControllerStatus.Running);
+            }
+#pragma warning restore CA1416 // Validate platform compatibility
+        });
+
+        private static void CleanTicketFiles()
+        {
+            string localClusterDataRoot = ServiceFabricConfiguration.Instance.FabricDataRoot;
+
+            if (!Directory.Exists(localClusterDataRoot))
+            {
+                return;
+            }
+
+            try
+            {
+                List<string> stringList = new();
+
+                foreach (string directory in Directory.GetDirectories(localClusterDataRoot))
+                {
+                    string path = Path.Combine(directory, TicketWindowsFileDirectoryRelativePath);
+
+                    if (Directory.Exists(path))
+                    {
+                        stringList.AddRange(Directory.GetFiles(path, "*.tkt"));
+                    }
+                }
+
+                Parallel.ForEach(stringList, file => DeleteFileWithRetry(file));
+            }
+            catch
+            {
+
+            }
+        }
+
+        private static void DeleteFileWithRetry(string filePath)
+        {
+            for (int index = 0; index < 3; ++index)
+            {
+                try
+                {
+                    File.Delete(filePath);
+                    break;
+                }
+                catch
+                {
+                    Thread.Sleep(3);
+                }
+            }
+        }
+
+        /* End Helpers */
+
         [ClassCleanup]
         public static async Task TestClassCleanupAsync()
         {
             // Ensure FHProxy cleans up its health reports.
             FabricHealerProxy.Instance.Close();
-            await RemoveTestApplicationsAsync();
+            //await RemoveTestApplicationsAsync();
 
             // Clean up all test repair tasks.
             var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync();
@@ -540,8 +745,15 @@ namespace FHTest
 
             using var healerManager = FabricHealerManager.Instance(TestServiceContext, token);
             healthReporter.ReportHealthToServiceFabric(healthReport);
-            await Task.Delay(TimeSpan.FromSeconds(10));
-            await FabricHealerManager.ProcessHealthEventsAsync();
+
+            if (await FabricHealerManager.InitializeAsync())
+            {
+                await FabricHealerManager.ProcessHealthEventsAsync();
+            }
+            else
+            {
+                throw new InternalTestFailureException("FabricHealerManager.InitializeAsync() failed.");
+            }
 
             // Validate that the repair rule is traced and repair predicate succeeds.
             try
@@ -615,8 +827,15 @@ namespace FHTest
 
             using var healerManager = FabricHealerManager.Instance(TestServiceContext, token);
             healthReporter.ReportHealthToServiceFabric(healthReport);
-            await Task.Delay(TimeSpan.FromSeconds(10));
-            await FabricHealerManager.ProcessHealthEventsAsync();
+
+            if (await FabricHealerManager.InitializeAsync())
+            {
+                await FabricHealerManager.ProcessHealthEventsAsync();
+            }
+            else
+            {
+                throw new InternalTestFailureException("FabricHealerManager.InitializeAsync() failed.");
+            }
 
             // Validate that both the repair rule (contains LogRule predicate) and repair predicate (w/expanded variables) is traced.
             try
@@ -634,6 +853,98 @@ namespace FHTest
                 throw;
             }
 
+            Assert.IsFalse(Directory.GetFiles(path).Any(f => f.StartsWith("foo") && f.EndsWith(".txt")));
+        }
+
+        [TestMethod]
+        public async Task DiskRules_FolderSizeMB_Repair_Successful_Validate_RuleTracing_MaxExecutionTime()
+        {
+            // Create temp files. This assumes C:\SFDevCluster\Log\QueryTraces exists. This is the path used in the related logic rule.
+            // See DiskRules.guan in FHTest\PackageRoot\Config\LogicRules folder.
+            // You can use whatever path you want, but you need to make sure that is also specified in the related test logic rule.
+            byte[] bytes = Encoding.ASCII.GetBytes("foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz");
+            string path = @"C:\SFDevCluster\Log\QueryTraces";
+
+            for (int i = 0; i < 5; i++)
+            {
+                using var f = File.Create(Path.Combine(path, $"foo{i}.txt"), 500, FileOptions.WriteThrough);
+
+                for (int j = 0; j < 50000; ++j)
+                {
+                    f.Write(bytes);
+                }
+            }
+
+            // This will be the data used to create a repair task.
+            var repairData = new TelemetryData
+            {
+                EntityType = EntityType.Disk,
+                NodeName = NodeName,
+                Metric = SupportedMetricNames.FolderSizeMB,
+                Code = SupportedErrorCodes.NodeWarningFolderSizeMB,
+                HealthState = HealthState.Warning,
+                Source = $"DiskObserver({SupportedErrorCodes.NodeWarningFolderSizeMB})_FHTest_Ex",
+                Property = $"{NodeName}_{SupportedMetricNames.FolderSizeMB.Replace(" ", string.Empty)}",
+                Value = 5
+            };
+
+            Assert.IsTrue(JsonSerializationUtility.TrySerializeObject(repairData, out string description));
+
+            Logger logger = new("FHTest", Environment.CurrentDirectory);
+            FabricHealthReporter healthReporter = new(logger);
+
+            FabricHealer.Utilities.HealthReport healthReport = new()
+            {
+                Code = repairData.Code,
+                EntityType = EntityType.Disk,
+                HealthMessage = description,
+                HealthReportTimeToLive = TimeSpan.FromMinutes(5),
+                State = HealthState.Warning,
+                NodeName = NodeName,
+                Property = repairData.Property,
+                SourceId = RepairConstants.FabricHealer,
+                HealthData = repairData,
+                ResourceUsageDataProperty = SupportedMetricNames.FolderSizeMB
+            };
+
+            using var healerManager = FabricHealerManager.Instance(TestServiceContext, token);
+            healthReporter.ReportHealthToServiceFabric(healthReport);
+
+            if (await FabricHealerManager.InitializeAsync())
+            {
+                await FabricHealerManager.ProcessHealthEventsAsync();
+            }
+            else
+            {
+                throw new InternalTestFailureException("FabricHealerManager.InitializeAsync() failed.");
+            }
+
+            // Validate that both the repair rule (contains LogRule predicate) and repair predicate (w/expanded variables) is traced.
+            try
+            {
+                var nodeHealth =
+                    await fabricClient.HealthManager.GetNodeHealthAsync(NodeName, TimeSpan.FromSeconds(60), CancellationToken.None);
+                var FHNodeEvents = nodeHealth.HealthEvents?.Where(
+                        s => s.HealthInformation.SourceId.Contains("DiskRules.guan") && s.HealthInformation.Description.Contains("DeleteFiles"));
+
+                Assert.IsTrue(FHNodeEvents.Any());
+                Assert.IsTrue(FHNodeEvents.Any(e => e.HealthInformation.Description.Contains("QueryTraces")));
+            }
+            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
+            {
+                throw;
+            }
+            
+            await Task.Delay(TimeSpan.FromSeconds(5));
+
+            // Ensure that the repair task was cancelled per MaxExecutionTime.
+            var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync(RepairConstants.FHTaskIdPrefix, RepairTaskStateFilter.Completed, null);   
+            Assert.IsTrue(repairs.Any(
+                    r => JsonSerializationUtility.TryDeserializeObject(
+                      r.ExecutorData, out RepairExecutorData exData)
+                        && exData.RepairPolicy.MaxExecutionTime < TimeSpan.FromSeconds(1) 
+                        && r.ResultStatus == RepairTaskResult.Cancelled));
+            
             Assert.IsFalse(Directory.GetFiles(path).Any(f => f.StartsWith("foo") && f.EndsWith(".txt")));
         }
 

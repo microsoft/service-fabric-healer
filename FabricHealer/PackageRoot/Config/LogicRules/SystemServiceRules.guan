@@ -13,6 +13,8 @@
 ## | ProcessStartTime          | The time (UTC) the process was created on the machine                                                        |
 ## | OS                        | The name of the OS from which the data was collected (Linux or Windows)                                      |
 ## | HealthState               | The HealthState of the target entity: Error or Warning                                                       |
+## | Source                    | The Source ID of the related SF Health Event                                                                 |
+## | Property                  | The Property of the related SF Health Event                                                                  |
 
 ## System Service-related Metric Names.
 ## | Name                      |                                                                                    

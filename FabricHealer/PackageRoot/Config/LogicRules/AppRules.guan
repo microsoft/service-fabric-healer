@@ -19,7 +19,9 @@
 ## | ProcessName               | The name of the service process                                                              |
 ## | ProcessStartTime          | The time (UTC) the process was created on the machine                                        |
 ## | HealthState               | The HealthState of the target entity: Error or Warning                                       |
- 
+## | Source                    | The Source ID of the related SF Health Event                                                 |
+## | Property                  | The Property of the related SF Health Event                                                  |
+
 ## Application-related Metric Names.
 ## | Name                      |                                                                                    
 ## |---------------------------|

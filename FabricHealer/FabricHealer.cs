@@ -32,8 +32,36 @@ namespace FabricHealer
             // The FabricHealerManager ctor is private.
             using var healerManager = FabricHealerManager.Instance(Context, cancellationToken);
 
-            // Blocks until cancellationToken cancellation.
+            // Blocks until StartAsync completes. If RM is not deployed, for example, StartAsync will complete immediately.
             await healerManager.StartAsync();
+
+            try
+            {
+                // Blocks until cancellation token is cancelled to prevent exiting RunAsync in the absence of RM being deployed.
+                await Task.Delay(-1, cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+                // Do nothing.
+            }
+
+            // exit RunAsync.
+        }
+
+        // CTRL-C (graceful shutdown).
+        protected override async Task OnCloseAsync(CancellationToken token)
+        {
+            try
+            {
+                await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync(true);
+                await FabricHealerManager.TryClearExistingHealthReportsAsync();
+            }
+            catch (Exception e) when (e is ArgumentException or AggregateException or FabricException or ObjectDisposedException)
+            {
+
+            }
+
+            _ = base.OnCloseAsync(token);
         }
 
         // FH Replica instance deleted.

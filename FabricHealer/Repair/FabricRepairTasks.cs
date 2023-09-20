@@ -73,9 +73,9 @@ namespace FabricHealer.Repair
                     {
                         _ = await FabricHealerManager.FabricClientSingleton.RepairManager.CancelRepairTaskAsync(repairTask.TaskId, repairTask.Version, true);
                     }
-                    catch (FabricException)
+                    catch (FabricException fe)
                     {
-                        throw;
+                        FabricHealerManager.RepairLogger.LogWarning("CancelRepairTaskAsync Cancel repair task failure: {0}. RepairTaskId = {1}", fe.Message, repairTask.TaskId);
                     }
                     catch (InvalidOperationException)
                     {
@@ -93,9 +93,9 @@ namespace FabricHealer.Repair
                     {
                         _ = await FabricHealerManager.FabricClientSingleton.RepairManager.UpdateRepairExecutionStateAsync(repairTask);
                     }
-                    catch (FabricException)
+                    catch (FabricException fe)
                     {
-                        throw;
+                        FabricHealerManager.RepairLogger.LogWarning("CancelRepairTaskAsync 'Move to Restoring state' failure: {0}. RepairTaskId = {1}", fe.Message, repairTask.TaskId);
                     }
                     catch (InvalidOperationException)
                     {
@@ -141,14 +141,13 @@ namespace FabricHealer.Repair
 
                 return false;
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
                         "FabricRepairTasks.CompleteCustomActionRepairJobAsync",
                         $"Failed to Complete Repair Job {repairTask.TaskId} with unhandled exception:{Environment.NewLine}{e.Message}",
                         token);
-                throw;
             }
 
             return true;
