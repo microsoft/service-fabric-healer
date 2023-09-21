@@ -935,7 +935,7 @@ namespace FHTest
                 throw;
             }
             
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(10));
 
             // Ensure that the repair task was cancelled per MaxExecutionTime.
             var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync(RepairConstants.FHTaskIdPrefix, RepairTaskStateFilter.Completed, null);   

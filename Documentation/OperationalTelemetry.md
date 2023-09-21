@@ -17,8 +17,20 @@ As with most of FabricHealer's application settings, you can also do this with a
 ```Powershell
 Connect-ServiceFabricCluster ...
 
-$appParams = @{ "EnableOperationalTelemetry" = "false"; }
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationParameter $appParams -ApplicationTypeVersion 1.0.10 -UnMonitoredAuto
+$appName = "fabric:/FabricHealer"
+$appVersion = "1.2.9"
+$application = Get-ServiceFabricApplication -ApplicationName $appName
+$appParamCollection = $application.ApplicationParameters
+$applicationParameterMap = @{}
+
+# Fill the map with current app parameter settings.
+foreach ($pair in $appParamCollection)
+{
+    $applicationParameterMap.Add($pair.Name, $pair.Value);
+}
+
+$applicationParameterMap["OperationalTelemetryEnabled"] = "false";
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationParameter $appParams -ApplicationTypeVersion $appVersion -UnMonitoredAuto
  
 ```
 
@@ -44,7 +56,7 @@ Here is a full example of exactly what is sent in one of these telemetry events,
   "ClusterId": "00000000-1111-1111-0000-00f00d000d",
   "ClusterType": "SFRP",
   "NodeNameHash": "3e83569d4c6aad78083cd081215dafc81e5218556b6a46cb8dd2b183ed0095ad",
-  "FHVersion": "1.2.8",
+  "FHVersion": "1.2.9",
   "UpTime": "00:00:00.2164523",
   "Timestamp": "2023-09-14T21:45:25.2443014Z",
   "OS": "Windows",

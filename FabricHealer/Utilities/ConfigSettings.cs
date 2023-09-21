@@ -57,13 +57,6 @@ namespace FabricHealer.Utilities
             private set;
         }
 
-        // For Azure ApplicationInsights Telemetry
-        public string AppInsightsInstrumentationKey
-        {
-            get;
-            private set;
-        }
-
         public string AppInsightsConnectionString
         {
             get;
@@ -280,7 +273,7 @@ namespace FabricHealer.Utilities
                     {
                         AppInsightsConnectionString = GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AppInsightsConnectionStringParameter);
 
-                        if (string.IsNullOrWhiteSpace(AppInsightsInstrumentationKey))
+                        if (string.IsNullOrWhiteSpace(AppInsightsConnectionString))
                         {
                             TelemetryEnabled = false;
                             return;
