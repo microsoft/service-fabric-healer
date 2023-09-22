@@ -33,9 +33,6 @@
         <ProjectReference Include="..\FabricHealer\FabricHealer.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <None Update="clusterManifestRM.xml">
-          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
         <None Update="clusterManifestRM_5node.xml">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
