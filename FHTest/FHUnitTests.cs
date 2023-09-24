@@ -346,7 +346,7 @@ namespace FHTest
         {
             // Ensure FHProxy cleans up its health reports.
             FabricHealerProxy.Instance.Close();
-            await RemoveTestApplicationsAsync();
+            //await RemoveTestApplicationsAsync();
 
             // Clean up all test repair tasks.
             var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync();
@@ -598,8 +598,6 @@ namespace FHTest
                 throw new InternalTestFailureException("FabricHealerManager.InitializeAsync() failed.");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(10));
-
             // Validate that the repair rule is traced and repair predicate succeeds.
             try
             {
@@ -681,8 +679,6 @@ namespace FHTest
             {
                 throw new InternalTestFailureException("FabricHealerManager.InitializeAsync() failed.");
             }
-
-            await Task.Delay(TimeSpan.FromSeconds(5));
 
             // Validate that both the repair rule (contains LogRule predicate) and repair predicate (w/expanded variables) is traced.
             try
@@ -782,7 +778,7 @@ namespace FHTest
                 throw;
             }
             
-            await Task.Delay(TimeSpan.FromSeconds(10));
+            await Task.Delay(TimeSpan.FromSeconds(5));
 
             // Ensure that the repair task was cancelled per MaxExecutionTime.
             var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync(RepairConstants.FHTaskIdPrefix, RepairTaskStateFilter.Completed, null);   
