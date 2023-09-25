@@ -30,12 +30,16 @@ using System.Text;
 using System.ServiceProcess;
 using TimeoutException = System.TimeoutException;
 using System.Xml.Linq;
+using Microsoft.Win32;
+using System.Security;
+using ServiceFabric.Mocks.ReliableCollections;
+using System.Diagnostics.Metrics;
 
 namespace FHTest
 {
-    /// <summary>
-    /// NOTE: Run these tests on your machine with a local 1 or 5 node SF dev cluster running.
-    /// </summary>
+    // NOTE: Run these tests on your machine with a local 1 or 5 node SF dev cluster running.
+    // RepairManagerService must be running on your local dev cluster. See below for instructions on how to deploy RM to your local dev cluster.
+    // These tests are hybrid unit/end-to-end tests. They are not pure unit tests.
 
     [TestClass]
     public class FHUnitTests
@@ -45,29 +49,6 @@ namespace FHTest
         private static ICodePackageActivationContext CodePackageContext = null;
         private static StatelessServiceContext TestServiceContext = null;
         private static readonly CancellationToken token = new();
-        private const string ServiceFabricHostWindowsServiceName = "FabricHostSvc";
-        private const string TicketWindowsFileDirectoryRelativePath = @"Fabric\Work";
-
-        // Change this to true if you want FHUnitTests to attempt to deploy RM to your local Windows dev cluster.
-        // However, you must update the clusterManifestRM.xml file: 
-        // Open the clusterManifest.xml file located on your local dev cluster (e.g., C:\SfDevCluster\Data\ClusterManifest.xml).
-        // Copy the contents (this is important to ensure you are using the right manifest for the version of SF you installed).
-        // Open clusterManifestRM.xml/clusterManifestRM_5node.xml (depending upon your local node configuration (1 or 5 node cluster)) in FHTests directory.
-        // Paste the contents.
-        // Then, add this RM Service section to the file under the <FabricSettings> section:
-        // For 1 node cluster (\FHTest\clusterManifestRM.xml):
-        //     <Section Name="RepairManager">
-        //          <Parameter Name="MinReplicaSetSize" Value="1" />
-        //          <Parameter Name="TargetReplicaSetSize" Value="1" />
-        //     </Section>
-        //
-        // For 5 node cluster (\FHTest\clusterManifestRM_5node.xml):
-        //     <Section Name="RepairManager">
-        //          <Parameter Name="MinReplicaSetSize" Value="3" />
-        //          <Parameter Name="TargetReplicaSetSize" Value="3" />
-        //     </Section>
-        // Save the file. Set autoInstallRMWindows to true. Run the tests.
-        private const bool autoInstallRMWindows = true;
 
         // This is the name of the node used on your local dev machine's SF cluster. If you customize this, then change it.
         private const string NodeName = "_Node_0";
@@ -84,29 +65,30 @@ namespace FHTest
             }
 
             // RM must be deployed to local dev cluster to run these tests successfully. These are hybrid unit/end-to-end tests.
-            // See the clusterManifestRM.xml file in this project (FHTest) for the RM service configuration addition. 
+
             // Steps to deploy RM to local dev cluster:
             // Open the clusterManifest.xml file located on your local dev cluster (e.g., C:\SfDevCluster\Data\ClusterManifest.xml).
             // Copy the contents (this is important to ensure you are using the right manifest for the version of SF you installed).
-            // Open clusterManifestRM.xml/clusterManifestRM_5node.xml (depending upon your local node configuration (1 or 5 node cluster)) in FHTests directory.
-            // Paste the contents.
+            // Paste the contents into new file.
             // Then, add this RM Service section to the file under the <FabricSettings> section:
-            // For 1 node cluster (\FHTest\clusterManifestRM.xml):
+            // For 1 node cluster (e.g., you named your updated file clusterManifestRM.xml):
             //     <Section Name="RepairManager">
             //          <Parameter Name="MinReplicaSetSize" Value="1" />
             //          <Parameter Name="TargetReplicaSetSize" Value="1" />
             //     </Section>
             //
-            // For 5 node cluster (\FHTest\clusterManifestRM_5node.xml):
+            // For 5 node cluster (e.g., you named your updated file clusterManifestRM_5node.xml):
             //     <Section Name="RepairManager">
             //          <Parameter Name="MinReplicaSetSize" Value="3" />
             //          <Parameter Name="TargetReplicaSetSize" Value="3" />
             //     </Section>
             //
+            // Save as clusterManifestRM.xml or clusterManifestRM_5node.xml(depending upon your local node configuration(1 or 5 node cluster)) to some location of your choice.
+
             // 1. Stop your local cluster.
             // 2. Open a PowerShell window. 
             // 3. Run this cmdlet (for 1 node dev cluster, in this example. For 5 node, you would use clusterManifestRM_5node.xml, per above):
-            //    Update-ServiceFabricNodeConfiguration -ClusterManifestPath [repo dir]\service-fabric-healer\FHTest\clusterManifestRM.xml -Force
+            //    Update-ServiceFabricNodeConfiguration -ClusterManifestPath [path to your updated clusterManifest file] -Force
             // 4. Start your local cluster.
             // 5. Wait for the cluster to come up to green state.
             // 6. Run the tests.
@@ -118,19 +100,7 @@ namespace FHTest
 
             if (serviceList == null || serviceList.Count == 0)
             {
-                if (OperatingSystem.IsLinux())
-                {
-                    throw new Exception("RepairManagerService must be running to execute these tests correctly.");
-                }
-
-                if (autoInstallRMWindows)
-                {
-                    await DeployWindowsRepairManagerServiceAsync();
-                }
-                else
-                {
-                    throw new Exception("RepairManagerService must be running to execute these tests correctly.");
-                }           
+                throw new Exception("RepairManagerService must be running to execute these tests correctly.");
             }
 
             /* SF runtime mocking care of ServiceFabric.Mocks by loekd.
@@ -368,134 +338,7 @@ namespace FHTest
                 await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
             }
         }
-
-        public static Task StopWindowsClusterAsync() => Task.Run(() =>
-        {
-#pragma warning disable CA1416 // Validate platform compatibility
-            using (ServiceController serviceController = new(ServiceFabricHostWindowsServiceName))
-            {
-                serviceController.Stop();
-                serviceController.WaitForStatus(ServiceControllerStatus.Stopped);
-            }
-#pragma warning restore CA1416 // Validate platform compatibility
-            CleanTicketFiles();
-        });
-
-        private static async Task DeployWindowsRepairManagerServiceAsync()
-        {
-            if (OperatingSystem.IsLinux())
-            {
-                throw new NotSupportedException("DeployWindowsRepairManagerServiceAsync is not supported on Linux.");
-            }
-
-            NodeList nodes = await fabricClient.QueryManager.GetNodeListAsync(null, TimeSpan.FromSeconds(90), token);
-            string rmConfigFileName = "clusterManifestRM.xml";
-
-            if (nodes.Count > 1)
-            {
-                rmConfigFileName = "clusterManifestRM_5Node.xml";
-            }
-
-            string clusterManifestRMFilePath = Path.Combine(Environment.CurrentDirectory, rmConfigFileName);
-
-            await StopWindowsClusterAsync();
-
-            using Process p = new();
-
-            p.StartInfo = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = "Update-ServiceFabricNodeConfiguration -ClusterManifestPath " + clusterManifestRMFilePath + " -Force",
-                UseShellExecute = false,
-            };
-
-            p.Start();
-            p.WaitForExit();
-
-            await StartWindowsClusterAsync();
-
-            TimeSpan maxClusterStartWaitTime = TimeSpan.FromMinutes(5);
-            Stopwatch sw = Stopwatch.StartNew();
-            
-            // It takes a while for a 5 node cluster to come up to green state. So, wait for it. For 1 node, it's pretty quick.
-            while (sw.Elapsed <= maxClusterStartWaitTime)
-            {
-                var clusterHealth = await fabricClient.HealthManager.GetClusterHealthAsync(TimeSpan.FromMinutes(3), token);
-                
-                if (clusterHealth.AggregatedHealthState == HealthState.Ok)
-                {
-                    break;
-                }
-
-                await Task.Delay(TimeSpan.FromSeconds(5));
-            }
-
-            if (sw.Elapsed > maxClusterStartWaitTime)
-            {
-                throw new TimeoutException("Cluster did not come up to green state in allotted time.");
-            }
-        }
-
-        private static Task StartWindowsClusterAsync() => Task.Run(() =>
-        {
-            CleanTicketFiles();
-
-#pragma warning disable CA1416 // Validate platform compatibility
-            using (ServiceController serviceController = new(ServiceFabricHostWindowsServiceName))
-            {
-                serviceController.Start();
-                serviceController.WaitForStatus(ServiceControllerStatus.Running);
-            }
-#pragma warning restore CA1416 // Validate platform compatibility
-        });
-
-        private static void CleanTicketFiles()
-        {
-            string localClusterDataRoot = ServiceFabricConfiguration.Instance.FabricDataRoot;
-
-            if (!Directory.Exists(localClusterDataRoot))
-            {
-                return;
-            }
-
-            try
-            {
-                List<string> stringList = new();
-
-                foreach (string directory in Directory.GetDirectories(localClusterDataRoot))
-                {
-                    string path = Path.Combine(directory, TicketWindowsFileDirectoryRelativePath);
-
-                    if (Directory.Exists(path))
-                    {
-                        stringList.AddRange(Directory.GetFiles(path, "*.tkt"));
-                    }
-                }
-
-                Parallel.ForEach(stringList, file => DeleteFileWithRetry(file));
-            }
-            catch
-            {
-
-            }
-        }
-
-        private static void DeleteFileWithRetry(string filePath)
-        {
-            for (int index = 0; index < 3; ++index)
-            {
-                try
-                {
-                    File.Delete(filePath);
-                    break;
-                }
-                catch
-                {
-                    Thread.Sleep(3);
-                }
-            }
-        }
-
+        
         /* End Helpers */
 
         [ClassCleanup]
@@ -503,7 +346,7 @@ namespace FHTest
         {
             // Ensure FHProxy cleans up its health reports.
             FabricHealerProxy.Instance.Close();
-            //await RemoveTestApplicationsAsync();
+            await RemoveTestApplicationsAsync();
 
             // Clean up all test repair tasks.
             var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync();
@@ -1074,6 +917,8 @@ namespace FHTest
             {
                 throw new AssertFailedException(ge.Message, ge);
             }
+
+            await Task.Delay(TimeSpan.FromSeconds(5));
 
             // Validate that the repair predicate is traced.
             try
