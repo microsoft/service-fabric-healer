@@ -7,6 +7,7 @@
 - Bug Fix: AppInsights telemetry.
 - Bug Fix: EnsureProcess impl for Linux.
 - Updated SystemService repair rules.
+- Updated package dependencies.
 - Code improvements.
 	</releaseNotes>
     <authors>Microsoft</authors>

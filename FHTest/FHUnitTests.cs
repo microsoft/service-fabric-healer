@@ -346,7 +346,7 @@ namespace FHTest
         {
             // Ensure FHProxy cleans up its health reports.
             FabricHealerProxy.Instance.Close();
-            //await RemoveTestApplicationsAsync();
+            await RemoveTestApplicationsAsync();
 
             // Clean up all test repair tasks.
             var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync();
