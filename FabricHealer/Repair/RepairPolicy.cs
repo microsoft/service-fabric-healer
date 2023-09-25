@@ -116,11 +116,14 @@ namespace FabricHealer.Repair
             get; set;
         }
 
-        [EventField]
         public HealthState HealthState
         {
             get; set;
         }
-        public NodeImpactLevel NodeImpactLevel { get; internal set; }
+
+        public NodeImpactLevel NodeImpactLevel 
+        { 
+            get; internal set; 
+        }
     }
 }

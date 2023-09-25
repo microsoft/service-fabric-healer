@@ -391,7 +391,7 @@ namespace FabricHealer.Repair
             return true;
         }
 
-        private static Process[] GetLinuxDotnetProcessesByFirstArgument(string argument)
+        internal static Process[] GetLinuxDotnetProcessesByFirstArgument(string argument)
         {
             if (OperatingSystem.IsWindows())
             {

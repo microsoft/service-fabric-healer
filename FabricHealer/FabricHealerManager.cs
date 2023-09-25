@@ -1127,28 +1127,47 @@ namespace FabricHealer
                         continue;
                     }
 
-                    /* If this is a process restart of a system service, then make sure the process is still the droid we think it is. */
-
                     // Process name and id must be provided.
                     if (!string.IsNullOrWhiteSpace(repairData.ProcessName) && repairData.ProcessId > 0)
                     {
-                        // FHProxy may not provide this information or the date string may be malformed.
-                        if (!DateTime.TryParse(repairData.ProcessStartTime, out DateTime procStartDateTime))
+                        // FH Proxy doesn't supply process start time fact or datetime string is malformed.
+                        if (!DateTime.TryParse(repairData.ProcessStartTime, out DateTime startTime))
                         {
-                            try
+                            if (OperatingSystem.IsLinux() && repairData.ProcessName.EndsWith(".dll"))
                             {
-                                using Process p = Process.GetProcessById((int)repairData.ProcessId);
-                                procStartDateTime = p.StartTime;
+                                var ps = RepairExecutor.GetLinuxDotnetProcessesByFirstArgument(repairData.ProcessName);
+
+                                if (ps != null && ps.Length > 0)
+                                {
+                                    using (Process p = ps[0])
+                                    {
+                                        startTime = p.StartTime;
+                                    }
+                                }   
                             }
-                            catch (Exception e) when (e is ArgumentException or InvalidOperationException or SystemException or Win32Exception)
+                            else
                             {
-                                continue;
+                                using (Process p = Process.GetProcessById((int)repairData.ProcessId))
+                                {
+                                    startTime = p.StartTime;
+                                }
                             }
                         }
 
-                        // Process of specified name and id must still be running.
-                        if (!EnsureProcess(repairData.ProcessName, (int)repairData.ProcessId, procStartDateTime))
+                        // Make sure the process is still the droid we're looking for.
+                        if (!EnsureProcess(repairData.ProcessName, (int)repairData.ProcessId, startTime))
                         {
+                            string message = 
+                                $"Process {repairData.ProcessName} with PID {repairData.ProcessId} with StartTime {startTime} is no longer running. Will not attempt repair at this time.";
+
+                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                    LogLevel.Info,
+                                    $"ProcessApplicationHealth::System::ProcNotRunning({repairData.ProcessId})",
+                                    message,
+                                    Token,
+                                    null,
+                                    ConfigSettings.EnableVerboseLogging);
+
                             continue;
                         }
                     }
@@ -1347,7 +1366,7 @@ namespace FabricHealer
                     LastWarningTransitionAt = evt.LastWarningTransitionAt,
                     SourceId = evt.HealthInformation.SourceId,
                     SourceUtcTimestamp = evt.SourceUtcTimestamp,
-                    Property = evt.HealthInformation.Property
+                    Property = evt.HealthInformation.Property,
                 };
 
                 DetectedHealthEvents.Add(eventData);
@@ -2446,15 +2465,50 @@ namespace FabricHealer
                 return false;
             }
 
+            Process proc = null;
+
             try
             {
-                using Process proc = Process.GetProcessById(procId);
-                return proc.ProcessName == procName && proc.StartTime == processStartTime;
+                if (OperatingSystem.IsLinux() && procName.EndsWith(".dll"))
+                {
+                    Process[] ps = RepairExecutor.GetLinuxDotnetProcessesByFirstArgument(procName);
+
+                    if (ps != null && ps.Length > 0)
+                    {
+                        proc = ps[0];
+                        procName = proc.ProcessName;
+                    }
+                    else
+                    {
+                        // no-op. Process not found.
+                        RepairLogger.LogWarning(procName + " with id " + procId.ToString() + " not found.");
+                        return false;
+                    }
+                }
+                else
+                {
+                    proc = Process.GetProcessById(procId);
+                }
+
+                // ToString() on processStartTime as FO supplies this value as a string. Compare the values directly.
+                return proc != null && proc.ProcessName == procName && proc.StartTime.ToString() == processStartTime.ToString();
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or SystemException or Win32Exception)
             {
-                RepairLogger.LogWarning(procName + " with id " + procId.ToString() + " not found. " + e.Message);
+                RepairLogger.LogWarning(procName + " with id " + procId.ToString() + " not found with Exception: " + e.Message);
+                _ = TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                $"ProcessApplicationHealth::System{procName}::Exception",
+                                procName + " with id " + procId.ToString() + " not found with Exception: " + e.Message,
+                                Token,
+                                null,
+                                ConfigSettings.EnableVerboseLogging);
                 return false;
+            }
+            finally
+            {
+                proc?.Dispose();
+                proc = null;
             }
         }
     }

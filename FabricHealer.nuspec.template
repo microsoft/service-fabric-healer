@@ -4,7 +4,10 @@
     <id>%PACKAGE_ID%</id>
     <version>1.2.9</version>
     <releaseNotes>
-- AppInsights telemtetry fix.
+- Bug Fix: AppInsights telemetry.
+- Bug Fix: EnsureProcess impl for Linux.
+- Updated SystemService repair rules.
+- Code improvements.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
