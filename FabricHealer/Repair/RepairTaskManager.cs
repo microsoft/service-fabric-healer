@@ -66,8 +66,8 @@ namespace FabricHealer.Repair
             {
                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
-                        "StartRepairWorkflowAsync:GuanException",
-                        $"Failed in Guan:{Environment.NewLine}{ge}",
+                        $"{repairData.Property ?? "RunGuanQueryAsync"}::GuanException",
+                        $"Failure executing Guan query: {ge.Message}",
                         cancellationToken,
                         null,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);

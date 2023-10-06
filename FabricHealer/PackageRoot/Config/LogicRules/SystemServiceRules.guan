@@ -41,7 +41,7 @@ TimeScopedRestartFabricNode(?count, ?time) :- GetRepairHistory(?repairCount, ?ti
 ## TimeScopedRestartFabricSystemProcess is an internal predicate to check for the number of times a System service process restart repair has run to completion within a supplied time window. 
 ## If Completed Repair count is less then supplied value, then run RestartFabricSystemProcess mitigation.
 
-TimeScopedRestartFabricSystemProcess(?count, ?time) :- GetRepairHistory(?repairCount, ?time), ?repairCount < ?count, 
+TimeScopedRestartFabricSystemProcess(?count, ?time) :- LogRule(44), GetRepairHistory(?repairCount, ?time), ?repairCount < ?count, 
 	RestartFabricSystemProcess(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:05:00, MaxExecutionTime=00:10:00).
 	
 ## Mitigation rules for multiple metrics and targets. NOTE: Do not restart Fabric or FabricHost processes unless you want to take the Fabric node down. For the latter (restart node),
@@ -56,8 +56,8 @@ Mitigate(MetricName="CpuPercent", ProcessName=?SysProcName) :- LogRule(52), not(
 
 ## Memory Use - Megabytes in use
 
-## FabricDCA
-Mitigate(MetricName="MemoryMB", ProcessName=?SysProcName) :- LogRule(60), match(?SysProcName, "FabricDCA"), TimeScopedRestartFabricSystemProcess(5, 01:00:00).
+## FabricDCA - Linux OS only. Restart the offending dotnet process that hosts FabricDCA.dll (FH only needs the name of the hosted SF library in the dotnet process case).
+Mitigate(MetricName="MemoryMB", OS="Linux", ProcessName="FabricDCA.dll") :- RestartFabricSystemProcess(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:01:00, MaxExecutionTime=00:05:00).
 
 ## Any system service process besides Fabric or FabricHost.
 Mitigate(MetricName="MemoryMB", ProcessName=?SysProcName) :- LogRule(63), not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"),
@@ -111,9 +111,9 @@ Mitigate(MetricName="FileHandles", OS="Linux", ProcessName=?SysProcName) :- LogR
 ## Open File Handles - Linux OS, Fabric process. In these cases, we want a safe (graceful) restart of the Fabric node; not just kill the process, which will restart the node, but not gracefully.
 ## Restart the Fabric node where the offending instance is running.
 
-Mitigate(MetricName="FileHandles", OS="Linux", ProcessName="Fabric") :- TimeScopedRestartFabricNode(2, 08:00:00).
+Mitigate(MetricName="FileHandles", OS="Linux", ProcessName="Fabric") :- LogRule(114), TimeScopedRestartFabricNode(2, 08:00:00).
 
 ## Generic catch-all.
 ## Doesn't matter what the problem is, just restart the service process if it is not Fabric or FabricHost (for hopefully obvious reasons).
 
-##Mitigate(ProcessName=?SysProcName) :- LogRule(119), not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), TimeScopedRestartFabricSystemProcess(2, 08:00:00).
+Mitigate(ProcessName=?SysProcName) :- LogRule(119), not(?SysProcName == "Fabric" || ?SysProcName == "FabricHost"), TimeScopedRestartFabricSystemProcess(1, 01:00:00).

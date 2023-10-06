@@ -589,7 +589,7 @@ namespace FHTest
             using var healerManager = FabricHealerManager.Instance(TestServiceContext, token);
             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-            if (await FabricHealerManager.InitializeAsync())
+            if (await FabricHealerManager.TryInitializeAsync())
             {
                 await FabricHealerManager.ProcessHealthEventsAsync();
             }
@@ -671,7 +671,7 @@ namespace FHTest
             using var healerManager = FabricHealerManager.Instance(TestServiceContext, token);
             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-            if (await FabricHealerManager.InitializeAsync())
+            if (await FabricHealerManager.TryInitializeAsync())
             {
                 await FabricHealerManager.ProcessHealthEventsAsync();
             }
@@ -753,7 +753,7 @@ namespace FHTest
             using var healerManager = FabricHealerManager.Instance(TestServiceContext, token);
             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-            if (await FabricHealerManager.InitializeAsync())
+            if (await FabricHealerManager.TryInitializeAsync())
             {
                 await FabricHealerManager.ProcessHealthEventsAsync();
             }
@@ -785,7 +785,7 @@ namespace FHTest
             Assert.IsTrue(repairs.Any(
                     r => JsonSerializationUtility.TryDeserializeObject(
                       r.ExecutorData, out RepairExecutorData exData)
-                        && exData.RepairPolicy.MaxExecutionTime < TimeSpan.FromSeconds(1) 
+                        && exData.RepairPolicy.MaxExecutionTime <= TimeSpan.FromSeconds(1) 
                         && r.ResultStatus == RepairTaskResult.Cancelled));
             
             Assert.IsFalse(Directory.GetFiles(path).Any(f => f.StartsWith("foo") && f.EndsWith(".txt")));

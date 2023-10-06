@@ -19,7 +19,7 @@ namespace FabricHealer.Utilities
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricHealthReporter"/> class.
         /// </summary>
-        /// <param name="fabricClient"></param>
+        /// <param name="logger">Instance of Logger to use for local file logging.</param>
         public FabricHealthReporter(Logger logger)
         {
             _logger = logger;
@@ -29,7 +29,7 @@ namespace FabricHealer.Utilities
         {
             if (healthReport == null)
             {
-                _logger?.LogInfo("ReportHealthToServiceFabric: healthReport is null.");
+                _logger?.LogWarning("ReportHealthToServiceFabric failure: Unable to submit health report since provided HealthReport parameter (healthReport) is null.");
                 return;
             }
 
@@ -49,15 +49,25 @@ namespace FabricHealer.Utilities
             };
 
             // Local file logging.
-            if (healthReport.EmitLogEvent)
+            if (healthReport.EmitLogEvent && _logger != null)
             {
-                if (healthReport.State == HealthState.Ok)
+                switch (healthReport.State)
                 {
-                    _logger?.LogInfo(healthReport.HealthMessage);
-                }
-                else
-                {
-                    _logger?.LogWarning(healthReport.HealthMessage);
+                    case HealthState.Ok:
+                        _logger.LogInfo(healthReport.HealthMessage);
+                        break;
+
+                    case HealthState.Warning:
+                        _logger.LogWarning(healthReport.HealthMessage);
+                        break;
+
+                    case HealthState.Error:
+                        _logger.LogError(healthReport.HealthMessage);
+                        break;
+
+                    default:
+                        _logger.LogWarning(healthReport.HealthMessage);
+                        break;
                 }
             }
 

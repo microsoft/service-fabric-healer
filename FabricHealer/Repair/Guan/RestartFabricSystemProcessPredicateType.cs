@@ -61,7 +61,7 @@ namespace FabricHealer.Repair.Guan
                             break;
 
                         default:
-                            throw new GuanException($"Unsupported argument type for RestartFabricSystemProcess: {typeString}");
+                            throw new GuanException($"RestartFabricSystemProcessPredicateType: Unsupported argument type: {typeString}");
                     }
                 }
 

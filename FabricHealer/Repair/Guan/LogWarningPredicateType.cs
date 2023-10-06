@@ -32,7 +32,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (count == 0)
                 {
-                    throw new GuanException("At least 1 argument is required.");
+                    throw new GuanException("LogWarningPredicateType: At least 1 argument is required.");
                 }
 
                 format = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue();
