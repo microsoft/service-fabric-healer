@@ -29,7 +29,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (count == 0 || Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() != typeof(long))
                 {
-                    throw new GuanException("CheckOutstandingRepairs: One argument is required and it must be a number (int).");
+                    throw new GuanException("CheckOutstandingRepairs: One argument is required and it must be a number.");
                 }
 
                 long maxRepairs = (long)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();

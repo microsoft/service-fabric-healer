@@ -648,7 +648,6 @@ namespace FabricHealer.Repair
                             null,
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
-
                     return false;
                 }
 
@@ -661,9 +660,9 @@ namespace FabricHealer.Repair
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                 UpdateRepairHistory(repairData);
+                //ClearEntityHealthWarnings(repairData);
             }
 
-            //ClearEntityHealthWarnings(repairData);
             return true;
         }
 
@@ -911,6 +910,8 @@ namespace FabricHealer.Repair
 
                 await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
                 UpdateRepairHistory(repairData);
+                //ClearEntityHealthWarnings(repairData);
+
                 return true;
             }
             catch (Exception e) when (e is FabricException or TimeoutException)

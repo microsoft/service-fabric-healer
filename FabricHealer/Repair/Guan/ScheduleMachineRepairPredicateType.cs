@@ -64,7 +64,7 @@ namespace FabricHealer.Repair.Guan
 
                         default:
                             throw new GuanException(
-                                "Failure in ScheduleMachineRepair. Unsupported argument type specified: " +
+                                "Failure in ScheduleMachineRepairPredicateType. Unsupported argument type specified: " +
                                 $"{Input.Arguments[i].Value.GetEffectiveTerm().GetObjectValue().GetType().Name}{Environment.NewLine}" +
                                 "Only String and Boolean argument types are supported by this predicate.");
                     }

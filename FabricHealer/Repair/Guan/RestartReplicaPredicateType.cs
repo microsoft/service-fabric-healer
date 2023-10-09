@@ -55,7 +55,7 @@ namespace FabricHealer.Repair.Guan
                             break;
 
                         default:
-                            throw new GuanException($"Unsupported argument type for RestartReplica: {typeString}");
+                            throw new GuanException($"RestartReplicaPredicateType: Unsupported argument type: {typeString}");
                     }
                 }
 

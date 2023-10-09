@@ -33,7 +33,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (count == 0)
                 {
-                    throw new GuanException("Must supply at least one argument (full path to folder).");
+                    throw new GuanException("CheckFolderSizePredicateType: Must supply at least one argument (full path to folder).");
                 }
 
                 string folderPath = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue();
