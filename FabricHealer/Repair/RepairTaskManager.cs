@@ -454,6 +454,31 @@ namespace FabricHealer.Repair
                     return null;
                 }
 
+                if (repairData.RepairPolicy == null)
+                {
+                    return null;
+                }
+
+                // FH instance and node checks when multiple instance of FH are running in a cluster.
+                // FH can only restart system service processes on the machine where it is running. If it the repair is to restart a Fabric node, 
+                // then the FH instance should not take ownership of the repair if it is running the target Fabric node.
+                if (FabricHealerManager.InstanceCount is (-1) or > 1)
+                {
+                    // Take ownership of Restart Fabric node repair only if this FH instance is not running on the target node.
+                    if (repairData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode 
+                        && repairData.NodeName == FabricHealerManager.ServiceContext.NodeContext.NodeName)
+                    {
+                        return null;
+                    }
+
+                    // Take ownership of Restart system service process repair only if the process is running on the same node as this FH instance.
+                    if (repairData.RepairPolicy.RepairAction == RepairActionType.RestartProcess
+                        && repairData.NodeName != FabricHealerManager.ServiceContext.NodeContext.NodeName)
+                    {
+                        return null;
+                    }
+                }
+
                 // Internal throttling to protect against bad rules (over-scheduling of repair tasks within a fixed time range). 
                 if (await CheckRepairCountThrottle(repairData, cancellationToken))
                 {
@@ -523,15 +548,15 @@ namespace FabricHealer.Repair
             
             try
             {
-                if (FabricHealerManager.InstanceCount is (-1) or > 1)
-                {
-                    await FabricHealerManager.RandomWaitAsync(cancellationToken);
-                }
-
                 if (await RepairTaskEngine.HasActiveStopFHRepairJob(cancellationToken))
                 {
                     await FabricRepairTasks.CancelRepairTaskAsync(repairTask, cancellationToken);
                     return false;
+                }
+
+                if (FabricHealerManager.InstanceCount is (-1) or > 1)
+                {
+                    await FabricHealerManager.RandomWaitAsync(cancellationToken);
                 }
 
                 RepairTaskList repairs =

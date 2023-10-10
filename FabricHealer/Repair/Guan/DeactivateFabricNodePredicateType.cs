@@ -27,6 +27,11 @@ namespace FabricHealer.Repair.Guan
 
             protected override async Task<bool> CheckAsync()
             {
+                if (FabricHealerManager.InstanceCount is (-1) or > 1)
+                {
+                    await FabricHealerManager.RandomWaitAsync();
+                }
+
                 RepairData.RepairPolicy.RepairAction = RepairActionType.DeactivateNode;
                 RepairData.RepairPolicy.RepairIdPrefix = RepairConstants.InfraTaskIdPrefix;
                 RepairData.RepairPolicy.InfrastructureRepairName = RepairConstants.DeactivateFabricNode;

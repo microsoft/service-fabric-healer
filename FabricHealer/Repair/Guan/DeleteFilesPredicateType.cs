@@ -36,6 +36,11 @@ namespace FabricHealer.Repair.Guan
                     return false;
                 }
 
+                if (FabricHealerManager.InstanceCount is (-1) or > 1)
+                {
+                    await FabricHealerManager.RandomWaitAsync();
+                }
+
                 if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
                 {
                     _ = await RepairTaskEngine.TryTraceCurrentlyExecutingRuleAsync(Input.ToString(), RepairData, FabricHealerManager.Token);

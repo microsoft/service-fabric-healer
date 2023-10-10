@@ -24,7 +24,6 @@ using System.Runtime.InteropServices;
 using static FabricHealer.Repair.RepairTaskManager;
 using System.ComponentModel;
 using System.Diagnostics;
-using Guan.Logic;
 
 namespace FabricHealer
 {
@@ -34,7 +33,7 @@ namespace FabricHealer
         private DateTime LastTelemetrySendDate { get; set; }
         
         // Folks often use their own version numbers. This is for public diagnostic telemetry.
-        private const string InternalVersionNumber = "1.2.10";
+        private const string InternalVersionNumber = "1.2.11";
         private static FabricHealerManager fhSingleton;
         private static FabricClient fabricClient;
         private bool disposedValue;
@@ -567,7 +566,7 @@ namespace FabricHealer
                     }
                 }
 
-                // Process Application/Service health.
+                // Process SystemApplication/Service health.
                 if (clusterHealth.ApplicationHealthStates != null && clusterHealth.ApplicationHealthStates.Count > 0)
                 {
                     if (ConfigSettings.EnableAppRepair || ConfigSettings.EnableSystemAppRepair)
@@ -637,7 +636,7 @@ namespace FabricHealer
                     }
                 }
             }
-            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
+            catch (Exception e) when (e is ArgumentException or FabricException or InvalidOperationException or TimeoutException)
             {
                 // Don't crash..
                 RepairLogger.LogWarning($"{e.Message}");
@@ -1102,13 +1101,7 @@ namespace FabricHealer
                     continue;
                 }
 
-                // Since FH can run on each node (-1 InstanceCount), if this is the case then have FH only try to repair app services that are also running on the same node.
-                // This removes the need to try and orchestrate repairs across nodes (which we will have to do in the non -1 case).
-                if (InstanceCount == -1 && repairData.NodeName != ServiceContext.NodeContext.NodeName)
-                {
-                    continue;
-                }
-                else if (InstanceCount > 1)
+                if (InstanceCount == -1 || InstanceCount > 1)
                 {
                     // Randomly wait to decrease chances of simultaneous ownership among FH instances.
                     await RandomWaitAsync(Token);
@@ -1135,62 +1128,16 @@ namespace FabricHealer
                         continue;
                     }
 
-                    // Process name and id must be provided.
-                    if (!string.IsNullOrWhiteSpace(repairData.ProcessName) && repairData.ProcessId > 0)
-                    {
-                        // FH Proxy doesn't supply process start time fact or datetime string is malformed.
-                        if (!DateTime.TryParse(repairData.ProcessStartTime, out DateTime startTime))
-                        {
-                            if (OperatingSystem.IsLinux() && repairData.ProcessName.EndsWith(".dll"))
-                            {
-                                var ps = RepairExecutor.GetLinuxDotnetProcessesByFirstArgument(repairData.ProcessName);
-
-                                if (ps != null && ps.Length > 0)
-                                {
-                                    using (Process p = ps[0])
-                                    {
-                                        startTime = p.StartTime;
-                                    }
-                                }   
-                            }
-                            else
-                            {
-                                using (Process p = Process.GetProcessById((int)repairData.ProcessId))
-                                {
-                                    startTime = p.StartTime;
-                                }
-                            }
-                        }
-
-                        // Make sure the process is still the droid we're looking for.
-                        if (!EnsureProcess(repairData.ProcessName, (int)repairData.ProcessId, startTime))
-                        {
-                            string message = 
-                                $"Process {repairData.ProcessName} with PID {repairData.ProcessId} with StartTime {startTime} is no longer running. Will not attempt repair at this time.";
-
-                            await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                    LogLevel.Info,
-                                    $"ProcessApplicationHealth::System::ProcNotRunning({repairData.ProcessId})",
-                                    message,
-                                    Token,
-                                    null,
-                                    ConfigSettings.EnableVerboseLogging);
-
-                            continue;
-                        }
-                    }
-
-                    // Block attempts to schedule node-level or system service restart repairs if one is already executing in the cluster.
+                    // Block attempts to schedule Fabric node or system service restart repairs if one is already executing in the cluster.
                     var fhRepairTasks = await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, Token);
 
                     if (fhRepairTasks != null && fhRepairTasks.Count > 0)
                     {
                         foreach (var repair in fhRepairTasks)
                         {
-                            var executorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
+                            RepairExecutorData executorData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
 
-                            if (executorData?.RepairPolicy?.RepairAction is not RepairActionType.RestartFabricNode and
-                                not RepairActionType.RestartProcess)
+                            if (executorData?.RepairPolicy?.RepairAction is not RepairActionType.RestartFabricNode and not RepairActionType.RestartProcess)
                             {
                                 continue;
                             }
@@ -1220,27 +1167,16 @@ namespace FabricHealer
                     repairId = $"{repairData.NodeName}_{repairData.ProcessName}_{repairData.Code}";
                     system = "System ";
 
+                    if (InstanceCount == -1 || InstanceCount > 1)
+                    {
+                        // Randomly wait to decrease chances of simultaneous ownership among FH instances.
+                        await RandomWaitAsync(Token);
+                    }
+
                     var currentRepairs =
                         await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, Token);
 
-                    // Is a repair for the target app service instance already happening in the cluster?
-                    // There can be multiple Warnings emitted by FO for a single app at the same time.
-                    if (currentRepairs != null && currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairData.ProcessName)))
-                    {
-
-                        var repair = currentRepairs.FirstOrDefault(r => r.ExecutorData.Contains(repairData.ProcessName));
-                        await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                                LogLevel.Info,
-                                $"MonitorRepairableHealthEventsAsync::{repairData.ProcessName}",
-                                $"There is already a repair in progress for Fabric system service {repairData.ProcessName}(state: {repair.State})",
-                                Token,
-                                null,
-                                ConfigSettings.EnableVerboseLogging);
-
-                        continue;
-                    }
-
-                    // Repair already in progress?
+                    // Repair already scheduled?
                     if (currentRepairs != null && currentRepairs.Count > 0 && currentRepairs.Any(r => r.ExecutorData.Contains(repairId)))
                     {
                         continue;
@@ -1355,7 +1291,7 @@ namespace FabricHealer
 
                 await TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,
-                        $"MonitorRepairableHealthEventsAsync:{repairId}",
+                        $"ProcessApplicationHealth:{repairId}",
                         $"Detected {errOrWarn} state for Application {repairData.ApplicationName}{Environment.NewLine}" +
                         $"SourceId: {evt.HealthInformation.SourceId}{Environment.NewLine}" +
                         $"Property: {evt.HealthInformation.Property}{Environment.NewLine}" +
@@ -1363,7 +1299,7 @@ namespace FabricHealer
                         $"{repairRules.Count} Logic rules found for {system}Application-level repair.",
                         Token,
                         null,
-                        ConfigSettings.EnableVerboseLogging);
+                        true);
 
                 HealthEventData eventData = new()
                 {
@@ -2466,7 +2402,7 @@ namespace FabricHealer
             return null;
         }
 
-        private static bool EnsureProcess(string procName, int procId, DateTime processStartTime)
+        internal static bool EnsureProcess(string procName, int procId, DateTime processStartTime)
         {
             if (string.IsNullOrWhiteSpace(procName) || procId < 1)
             {

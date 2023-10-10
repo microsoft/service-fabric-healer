@@ -9,6 +9,9 @@ using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using System.Threading.Tasks;
 using System.Threading;
+using FabricHealer.TelemetryLib;
+using Newtonsoft.Json.Linq;
+using System.Diagnostics;
 
 namespace FabricHealer.Repair.Guan
 {
@@ -31,6 +34,54 @@ namespace FabricHealer.Repair.Guan
                 if (RepairData.NodeName != FabricHealerManager.ServiceContext.NodeContext.NodeName)
                 {
                     return false;
+                }
+
+                if (FabricHealerManager.InstanceCount is (-1) or > 1)
+                {
+                    await FabricHealerManager.RandomWaitAsync();
+                }
+
+                // Ensure the process is still running.
+                if (!string.IsNullOrWhiteSpace(RepairData.ProcessName) && RepairData.ProcessId > 0)
+                {
+                    // FH Proxy doesn't supply process start time fact or datetime string is malformed.
+                    if (!DateTime.TryParse(RepairData.ProcessStartTime, out DateTime startTime))
+                    {
+                        if (OperatingSystem.IsLinux() && RepairData.ProcessName.EndsWith(".dll"))
+                        {
+                            var ps = RepairExecutor.GetLinuxDotnetProcessesByFirstArgument(RepairData.ProcessName);
+
+                            if (ps != null && ps.Length > 0)
+                            {
+                                using (Process p = ps[0])
+                                {
+                                    startTime = p.StartTime;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            using (Process p = Process.GetProcessById((int)RepairData.ProcessId))
+                            {
+                                startTime = p.StartTime;
+                            }
+                        }
+                    }
+
+                    if (!FabricHealerManager.EnsureProcess(RepairData.ProcessName, (int)RepairData.ProcessId, startTime))
+                    {
+                        string message =
+                            $"Process {RepairData.ProcessName} with PID {RepairData.ProcessId} with StartTime {startTime} is no longer running. Will not attempt repair at this time.";
+                        
+                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                                    $"ProcessApplicationHealth::System::ProcNotRunning({RepairData.ProcessId})",
+                                    message,
+                                    FabricHealerManager.Token,
+                                    null,
+                                    true);
+                        return false;
+                    }
                 }
 
                 RepairData.RepairPolicy.RepairAction = RepairActionType.RestartProcess;
@@ -79,19 +130,14 @@ namespace FabricHealer.Repair.Guan
                 // MaxExecutionTime impl.
                 using (CancellationTokenSource tokenSource = new())
                 {
-                    using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(
-                                                                    tokenSource.Token,
-                                                                    FabricHealerManager.Token))
+                    using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(tokenSource.Token, FabricHealerManager.Token))
                     {
-
-                        TimeSpan maxExecutionTime = TimeSpan.FromMinutes(30);
-
-                        if (RepairData.RepairPolicy.MaxExecutionTime > TimeSpan.Zero)
+                        if (RepairData.RepairPolicy.MaxExecutionTime == TimeSpan.Zero)
                         {
-                            maxExecutionTime = RepairData.RepairPolicy.MaxExecutionTime;
+                            RepairData.RepairPolicy.MaxExecutionTime = TimeSpan.FromMinutes(30);
                         }
 
-                        tokenSource.CancelAfter(maxExecutionTime);
+                        tokenSource.CancelAfter(RepairData.RepairPolicy.MaxExecutionTime);
                         tokenSource.Token.Register(() =>
                         {
                             _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();

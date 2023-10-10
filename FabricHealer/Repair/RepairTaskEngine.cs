@@ -139,13 +139,14 @@ namespace FabricHealer.Repair
         public static async Task<RepairTaskList> GetFHRepairTasksCurrentlyProcessingAsync(
                                                   string taskIdPrefix,
                                                   CancellationToken cancellationToken,
-                                                  string executor = null)
+                                                  string executor = null,
+                                                  RepairTaskStateFilter stateFilter = RepairTaskStateFilter.Active)
         {
             try
             {
                 var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
                                             taskIdPrefix,
-                                            RepairTaskStateFilter.Active,
+                                            stateFilter,
                                             executor,
                                             FabricHealerManager.ConfigSettings.AsyncTimeout,
                                             cancellationToken);

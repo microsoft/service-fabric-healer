@@ -27,6 +27,11 @@ namespace FabricHealer.Repair.Guan
 
             protected override async Task<bool> CheckAsync()
             {
+                if (FabricHealerManager.InstanceCount is (-1) or > 1)
+                {
+                    await FabricHealerManager.RandomWaitAsync();
+                }
+
                 RepairData.RepairPolicy.RepairAction = RepairActionType.RestartCodePackage;
 
                 if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
@@ -73,18 +78,14 @@ namespace FabricHealer.Repair.Guan
                 // MaxExecutionTime impl.
                 using (CancellationTokenSource tokenSource = new())
                 {
-                    using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(
-                                                                    tokenSource.Token,
-                                                                    FabricHealerManager.Token))
+                    using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(tokenSource.Token, FabricHealerManager.Token))
                     {
-                        TimeSpan maxExecutionTime = TimeSpan.FromMinutes(60);
-                        
-                        if (RepairData.RepairPolicy.MaxExecutionTime > TimeSpan.Zero)
+                        if (RepairData.RepairPolicy.MaxExecutionTime == TimeSpan.Zero)
                         {
-                            maxExecutionTime = RepairData.RepairPolicy.MaxExecutionTime;
+                            RepairData.RepairPolicy.MaxExecutionTime = TimeSpan.FromMinutes(30);
                         }
 
-                        tokenSource.CancelAfter(maxExecutionTime);
+                        tokenSource.CancelAfter(RepairData.RepairPolicy.MaxExecutionTime);
                         tokenSource.Token.Register(() =>
                         {
                              _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();

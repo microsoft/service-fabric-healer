@@ -923,11 +923,12 @@ namespace FHTest
             // Validate that the repair predicate is traced.
             try
             {
-                var nodeHealth =
+                NodeHealth nodeHealth =
                     await fabricClient.HealthManager.GetNodeHealthAsync(NodeName, TimeSpan.FromSeconds(60), CancellationToken.None);
-                var FHNodeEvents = nodeHealth.HealthEvents?.Where(
-                        s => s.HealthInformation.SourceId.Contains("ReplicaRules.guan")
-                        && s.HealthInformation.Description.Contains("RestartReplica"));
+                
+                IEnumerable<HealthEvent> FHNodeEvents = nodeHealth.HealthEvents?.Where(
+                            s => s.HealthInformation.SourceId.Contains("ReplicaRules.guan")
+                              && s.HealthInformation.Description.Contains("RestartReplica"));
 
                 Assert.IsTrue(FHNodeEvents.Any());
             }
