@@ -76,7 +76,7 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 bool isRepairAlreadyInProgress =
-                        await RepairTaskEngine.IsNodeLevelRepairCurrentlyInFlightAsync(RepairData, FabricHealerManager.Token);
+                        await RepairTaskEngine.IsNodeRepairCurrentlyInFlightAsync(RepairData, FabricHealerManager.Token);
 
                 if (isRepairAlreadyInProgress)
                 {

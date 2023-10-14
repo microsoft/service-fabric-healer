@@ -9,8 +9,6 @@ using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using System.Threading.Tasks;
 using System.Threading;
-using FabricHealer.TelemetryLib;
-using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 
 namespace FabricHealer.Repair.Guan
@@ -38,7 +36,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (FabricHealerManager.InstanceCount is (-1) or > 1)
                 {
-                    await FabricHealerManager.RandomWaitAsync();
+                    await FabricHealerManager.RandomWaitAsync(FabricHealerManager.Token);
                 }
 
                 // Ensure the process is still running.
@@ -85,6 +83,9 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 RepairData.RepairPolicy.RepairAction = RepairActionType.RestartProcess;
+                
+                // Set repair ownership to this instance of FH.
+                RepairData.RepairPolicy.FHRepairExecutorNodeName = FabricHealerManager.ServiceContext.NodeContext.NodeName;
 
                 if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
                 {
@@ -113,6 +114,34 @@ namespace FabricHealer.Repair.Guan
 
                         default:
                             throw new GuanException($"RestartFabricSystemProcessPredicateType: Unsupported argument type: {typeString}");
+                    }
+                }
+
+                // Block attempts to schedule Fabric node or system service restart repairs if one is already executing in the cluster.
+                var fhRepairTasks = await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, FabricHealerManager.Token);
+
+                if (fhRepairTasks != null && fhRepairTasks.Count > 0)
+                {
+                    foreach (var repair in fhRepairTasks)
+                    {
+                        RepairExecutorData execData = JsonSerializationUtility.TryDeserializeObject(repair.ExecutorData, out RepairExecutorData exData) ? exData : null;
+
+                        if (execData?.RepairPolicy?.RepairAction is not RepairActionType.RestartFabricNode and not RepairActionType.RestartProcess)
+                        {
+                            continue;
+                        }
+
+                        string message = $"A Service Fabric System service repair ({repair.TaskId}) is already in progress in the cluster(state: {repair.State}). " +
+                                         $"Will not attempt repair at this time.";
+
+                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                                LogLevel.Info,
+                                $"RestartFabricSystemProcessPredicateType::{repair.TaskId}",
+                                message,
+                                FabricHealerManager.Token,
+                                null);
+
+                        return false;
                     }
                 }
 
@@ -175,7 +204,6 @@ namespace FabricHealer.Repair.Guan
                         if (!success && linkedCTS.IsCancellationRequested)
                         {
                             await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
-                            return true;
                         }
 
                         return success;

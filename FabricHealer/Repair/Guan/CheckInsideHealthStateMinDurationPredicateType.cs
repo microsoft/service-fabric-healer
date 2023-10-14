@@ -29,7 +29,7 @@ namespace FabricHealer.Repair.Guan
             {
                 TimeSpan timeWindow, duration;
 
-                if (Input.Arguments.Count == 0 || Input.Arguments[0].Value.GetObjectValue().GetType() != typeof(TimeSpan))
+                if (Input.Arguments.Count == 0 || Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() != typeof(TimeSpan))
                 {
                     throw new GuanException(
                                 "CheckInsideHealthStateMinDuration: One argument is required and it must be a TimeSpan " +

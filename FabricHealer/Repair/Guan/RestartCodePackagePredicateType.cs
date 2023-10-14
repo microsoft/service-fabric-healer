@@ -27,12 +27,10 @@ namespace FabricHealer.Repair.Guan
 
             protected override async Task<bool> CheckAsync()
             {
-                if (FabricHealerManager.InstanceCount is (-1) or > 1)
-                {
-                    await FabricHealerManager.RandomWaitAsync();
-                }
-
                 RepairData.RepairPolicy.RepairAction = RepairActionType.RestartCodePackage;
+                
+                // Set repair ownership to this instance of FH.
+                RepairData.RepairPolicy.FHRepairExecutorNodeName = FabricHealerManager.ServiceContext.NodeContext.NodeName;
 
                 if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
                 {
@@ -88,7 +86,7 @@ namespace FabricHealer.Repair.Guan
                         tokenSource.CancelAfter(RepairData.RepairPolicy.MaxExecutionTime);
                         tokenSource.Token.Register(() =>
                         {
-                             _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
+                            _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
                         });
 
                         bool success = false;
@@ -124,7 +122,6 @@ namespace FabricHealer.Repair.Guan
                         if (!success && linkedCTS.IsCancellationRequested)
                         {
                             await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
-                            return true;
                         }
 
                         return success;

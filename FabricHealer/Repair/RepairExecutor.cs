@@ -20,7 +20,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Fabric.Description;
-using System.Numerics;
+using System.Reflection.Metadata.Ecma335;
 
 namespace FabricHealer.Repair
 {
@@ -527,7 +527,7 @@ namespace FabricHealer.Repair
 
         internal static async Task<bool> DeleteFilesAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
-           string actionMessage =
+            string actionMessage =
                 $"Attempting to delete files in folder {(repairData.RepairPolicy as DiskRepairPolicy).FolderPath} " +
                 $"on node {repairData.NodeName}.";
 
@@ -535,7 +535,7 @@ namespace FabricHealer.Repair
                     LogLevel.Info,
                     "DeleteFiles::Start",
                     actionMessage,
-                    cancellationToken,
+                    CancellationToken.None,
                     null,
                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
@@ -547,7 +547,7 @@ namespace FabricHealer.Repair
                         LogLevel.Info,
                         "DeleteFiles::DirectoryDoesNotExist",
                         $"The specified directory, {targetFolderPath}, does not exist.",
-                        cancellationToken,
+                        CancellationToken.None,
                         null,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
@@ -588,7 +588,7 @@ namespace FabricHealer.Repair
                             LogLevel.Info,
                             "DeleteFiles::NoFilesMatchSearchPattern",
                             $"No files match specified search pattern, {searchPattern}, in {targetFolderPath}. Nothing to do here.",
-                            cancellationToken,
+                            CancellationToken.None,
                             null,
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
@@ -597,7 +597,10 @@ namespace FabricHealer.Repair
 
                 foreach (var file in files)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        return false;
+                    }    
 
                     if (maxFiles > 0 && deletedFiles == maxFiles)
                     {
@@ -615,7 +618,7 @@ namespace FabricHealer.Repair
                                 LogLevel.Info,
                                 "DeleteFiles::HandledException",
                                 $"Unable to delete {file}: {e.Message}",
-                                cancellationToken,
+                                CancellationToken.None,
                                 null,
                                 FabricHealerManager.ConfigSettings.EnableVerboseLogging);
                     }
@@ -629,7 +632,7 @@ namespace FabricHealer.Repair
                             LogLevel.Info,
                             "DeleteFiles::IncompleteOperation",
                             $"Unable to delete specified number of files ({maxFiles}).",
-                            cancellationToken,
+                            CancellationToken.None,
                             null,
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
                     
@@ -644,7 +647,7 @@ namespace FabricHealer.Repair
                             LogLevel.Info,
                             "DeleteFiles::IncompleteOperation",
                             "Unable to delete all files.",
-                            cancellationToken,
+                            CancellationToken.None,
                             null,
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
@@ -655,12 +658,11 @@ namespace FabricHealer.Repair
                         LogLevel.Info,
                         "DeleteFiles::Success",
                         $"Successfully deleted {(maxFiles > 0 ? "up to " + maxFiles : "all")} files in {targetFolderPath}",
-                        cancellationToken,
+                        CancellationToken.None,
                         null,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
 
                 UpdateRepairHistory(repairData);
-                //ClearEntityHealthWarnings(repairData);
             }
 
             return true;
@@ -783,7 +785,7 @@ namespace FabricHealer.Repair
             // If FH is installed on multiple nodes and this node is the target, then another FH instance should restart the node.
             if (FabricHealerManager.InstanceCount is (-1) or > 1)
             {
-                if (repairData.NodeName.Equals(FabricHealerManager.ServiceContext.NodeContext.NodeName, StringComparison.OrdinalIgnoreCase))
+                if (repairData.NodeName == FabricHealerManager.ServiceContext.NodeContext.NodeName)
                 { 
                     return false;
                 }
@@ -793,7 +795,7 @@ namespace FabricHealer.Repair
                 await FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(
                         repairData.NodeName,
                         FabricHealerManager.ConfigSettings.AsyncTimeout,
-                        cancellationToken);
+                        CancellationToken.None);
 
             if (!nodeList.Any(n => n.NodeName == repairData.NodeName))
             {
@@ -803,21 +805,20 @@ namespace FabricHealer.Repair
                         LogLevel.Info,
                         "RestartFabricNodeAsync::MissingNode",
                         info,
-                        cancellationToken,
+                        CancellationToken.None,
                         repairData,
                         FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                return false;
             }
 
-            BigInteger nodeInstanceId = nodeList[0].NodeInstanceId;
-            Stopwatch stopwatch = new();
-            TimeSpan maxWaitTimeout = TimeSpan.FromMinutes(MaxWaitTimeMinutesForNodeOperation);
-            string actionMessage = $"Attempting to restart Fabric node {repairData.NodeName} with InstanceId {nodeInstanceId}.";
+            string actionMessage = $"Attempting to restart Fabric node {repairData.NodeName}.";
             
             await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                     LogLevel.Info,
                     $"AttemptingNodeRestart::{repairData.NodeName}",
                     actionMessage,
-                    cancellationToken,
+                    CancellationToken.None,
                     repairData,
                     FabricHealerManager.ConfigSettings.EnableVerboseLogging);
             try
@@ -827,7 +828,7 @@ namespace FabricHealer.Repair
                             () =>
                                 FabricHealerManager.FabricClientSingleton.FaultManager.RestartNodeAsync(
                                     repairData.NodeName,
-                                    nodeInstanceId,
+                                    -1,
                                     false,
                                     CompletionMode.Verify,
                                     FabricHealerManager.ConfigSettings.AsyncTimeout,
@@ -845,93 +846,28 @@ namespace FabricHealer.Repair
                             FabricHealerManager.ConfigSettings.EnableVerboseLogging);
                 }
 
-                stopwatch.Start();
-
-                Node targetNode;
-
-                // Wait for Disabled/OK states.
-                while (stopwatch.Elapsed <= maxWaitTimeout)
-                {
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        return true;
-                    }
-
-                    nodeList =
-                        await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                () =>
-                                FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(
-                                    repairData.NodeName,
-                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                    cancellationToken),
-                                cancellationToken);
-
-                    targetNode = nodeList[0];
-
-                    // Node is ready to be enabled.
-                    if (targetNode.NodeStatus == NodeStatus.Disabled && targetNode.HealthState == HealthState.Ok)
-                    {
-                        break;
-                    }
-
-                    await Task.Delay(1000, cancellationToken);
-                }
-
-                stopwatch.Stop();
-                stopwatch.Reset();
-
-                // Enable the node. 
-                await FabricHealerManager.FabricClientSingleton.ClusterManager.ActivateNodeAsync(
-                        repairData.NodeName, 
-                        FabricHealerManager.ConfigSettings.AsyncTimeout,
-                        cancellationToken);
-
-                await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
-
-                nodeList =
-                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                            () =>
-                                FabricHealerManager.FabricClientSingleton.QueryManager.GetNodeListAsync(
-                                    repairData.NodeName,
-                                    FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                    cancellationToken),
-                                cancellationToken);
-
-                targetNode = nodeList[0];
-
-                // Make sure activation request went through.
-                if (targetNode.NodeStatus == NodeStatus.Disabled && targetNode.HealthState == HealthState.Ok)
-                {
-                    await FabricHealerManager.FabricClientSingleton.ClusterManager.ActivateNodeAsync(
-                            repairData.NodeName,
-                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                            cancellationToken);
-                }
-
-                await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
                 UpdateRepairHistory(repairData);
-                //ClearEntityHealthWarnings(repairData);
-
                 return true;
             }
-            catch (Exception e) when (e is FabricException or TimeoutException)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
-#if DEBUG
-                string err = $"Handled Exception restarting Fabric node {repairData.NodeName}, NodeInstanceId {nodeInstanceId}:{e.GetType().Name}";
-                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                        LogLevel.Info,
-                        "RestartFabricNodeAsync::HandledException",
-                        err,
-                        cancellationToken,
-                        repairData,
-                        FabricHealerManager.ConfigSettings.EnableVerboseLogging);
-                FabricHealerManager.RepairLogger.LogInfo(err);
-#endif
-                FabricHealerManager.RepairHistory.FailedRepairs++;
-                return false;
-            }
-            catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
-            {
+                if (e is not OperationCanceledException or TaskCanceledException)
+                {
+                    string err = $"Exception restarting Fabric node {repairData.NodeName}: {e.Message}";
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                            LogLevel.Info,
+                            "RestartFabricNodeAsync::HandledException",
+                            err,
+                            cancellationToken,
+                            repairData,
+                            FabricHealerManager.ConfigSettings.EnableVerboseLogging);
+
+                    FabricHealerManager.RepairLogger.LogInfo(err);
+                    FabricHealerManager.RepairHistory.FailedRepairs++;
+                    return false;
+                }
+
+                // FH Closing or max exec time reached.
                 return true;
             }
         }

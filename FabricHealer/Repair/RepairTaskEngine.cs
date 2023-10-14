@@ -46,10 +46,9 @@ namespace FabricHealer.Repair
             }
 
             // Rolling Service Restarts.
-            if (executorData.RepairPolicy.RepairAction is RepairActionType.RestartCodePackage
-               or RepairActionType.RestartReplica)
+            if (executorData.RepairPolicy.RepairAction is RepairActionType.RestartCodePackage or RepairActionType.RestartReplica)
             {
-                if ((FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                if ((FabricHealerManager.InstanceCount is (-1) or > 1)
                      && FabricHealerManager.ConfigSettings.EnableRollingServiceRestarts)
                 {
                     var currentFHRepairs = await GetFHRepairTasksCurrentlyProcessingAsync(RepairConstants.FHTaskIdPrefix, token);
@@ -115,6 +114,11 @@ namespace FabricHealer.Repair
             if (impact is NodeImpactLevel.Restart or NodeImpactLevel.RemoveData)
             {
                 description = executorData.RepairPolicy.RepairId;
+
+                if (executorData.RepairPolicy.RepairAction == RepairActionType.RestartFabricNode)
+                {
+                    executorData.RepairPolicy.CanResume = true;
+                }
             }
 
             var repairTask = new ClusterRepairTask(taskId, action)
@@ -144,12 +148,17 @@ namespace FabricHealer.Repair
         {
             try
             {
+                if (FabricHealerManager.InstanceCount is (-1) or > 1)
+                {
+                    await FabricHealerManager.RandomWaitAsync(cancellationToken);
+                }
+
                 var repairTasks = await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
-                                            taskIdPrefix,
-                                            stateFilter,
-                                            executor,
-                                            FabricHealerManager.ConfigSettings.AsyncTimeout,
-                                            cancellationToken);
+                                        taskIdPrefix,
+                                        stateFilter,
+                                        executor,
+                                        FabricHealerManager.ConfigSettings.AsyncTimeout,
+                                        cancellationToken);
                 return repairTasks;
             }
             catch (FabricException fe)
@@ -282,15 +291,20 @@ namespace FabricHealer.Repair
         }
 
         /// <summary>
-        /// Determines if a node-impactful repair has already been scheduled/claimed for a target node.
+        /// Determines if a node-impactful repair has already been scheduled/claimed for a target node or any node if repairData parameter is null.
         /// </summary>
         /// <param name="repairData">TelemetryData instance.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>Returns true if a repair job is currently in flight that has node-level impact. Otherwise, false.</returns>
-        public static async Task<bool> IsNodeLevelRepairCurrentlyInFlightAsync(TelemetryData repairData, CancellationToken cancellationToken)
+        public static async Task<bool> IsNodeRepairCurrentlyInFlightAsync(TelemetryData repairData = null, CancellationToken cancellationToken = default)
         {
             try
             {
+                if (cancellationToken == default)
+                {
+                    cancellationToken = CancellationToken.None;
+                }
+
                 if (FabricHealerManager.InstanceCount is (-1) or > 1)
                 {
                     await FabricHealerManager.RandomWaitAsync(cancellationToken);
@@ -311,11 +325,21 @@ namespace FabricHealer.Repair
                         // This would mean that the job has node-level Impact and its state is at least Approved.
                         if (repair.Impact is NodeRepairImpactDescription impact)
                         {
-                            if (!impact.ImpactedNodes.Any(
-                                n => n.NodeName == repairData.NodeName
-                                  && (n.ImpactLevel == NodeImpactLevel.Restart ||
-                                      n.ImpactLevel == NodeImpactLevel.RemoveData ||
-                                      n.ImpactLevel == NodeImpactLevel.RemoveNode)))
+                            if (repairData != null)
+                            {
+                                if (!impact.ImpactedNodes.Any(
+                                    n => n.NodeName == repairData.NodeName
+                                      && (n.ImpactLevel == NodeImpactLevel.Restart ||
+                                          n.ImpactLevel == NodeImpactLevel.RemoveData ||
+                                          n.ImpactLevel == NodeImpactLevel.RemoveNode)))
+                                {
+                                    continue;
+                                }
+                            }
+                            else if (!impact.ImpactedNodes.Any(
+                                     n => n.ImpactLevel == NodeImpactLevel.Restart ||
+                                          n.ImpactLevel == NodeImpactLevel.RemoveData ||
+                                          n.ImpactLevel == NodeImpactLevel.RemoveNode))
                             {
                                 continue;
                             }
@@ -326,11 +350,12 @@ namespace FabricHealer.Repair
                         // State == Created/Claimed if we get here (there is no Impact established yet).
                         if (repair.Target is NodeRepairTargetDescription target) 
                         {
-                            if (!target.Nodes.Any(n => n == repairData.NodeName))
+                            if (repairData != null && !target.Nodes.Any(n => n == repairData.NodeName))
                             {
                                 continue;
                             }
 
+                            // TOTHINK: How to deal with custom executors that are not in the NodeRepairActionSubstrings array?
                             if ((!string.IsNullOrWhiteSpace(repair.Executor)
                                    && repair.Executor.Contains(RepairConstants.InfrastructureService, StringComparison.OrdinalIgnoreCase))
                                 || MatchSubstring(NodeRepairActionSubstrings, repair.Action))
@@ -364,7 +389,7 @@ namespace FabricHealer.Repair
 
             if (taskIdPrefix == RepairConstants.InfraTaskIdPrefix) 
             {
-                return await GetAllOutstandingNodeRepairsCountAsync(token);   
+                return await GetAllOutstandingMachineRepairsCountAsync(token);   
             }
 
             RepairTaskList repairTasksInProgress =
@@ -388,7 +413,7 @@ namespace FabricHealer.Repair
             return repairTasksInProgress.Count(r => r.TaskId.StartsWith(taskIdPrefix));
         }
 
-        private static async Task<int> GetAllOutstandingNodeRepairsCountAsync(CancellationToken token)
+        private static async Task<int> GetAllOutstandingMachineRepairsCountAsync(CancellationToken token)
         {
             RepairTaskList repairTasksInProgress =
                     await FabricHealerManager.FabricClientSingleton.RepairManager.GetRepairTaskListAsync(
@@ -489,7 +514,7 @@ namespace FabricHealer.Repair
                     // Cancel stop repair(s).
                     if (repair.Action == RepairConstants.FabricHealerStopAction)
                     {
-                        await FabricRepairTasks.CancelRepairTaskAsync(repair, token);
+                        await FabricRepairTasks.CancelRepairTaskAsync(repair);
                         continue;
                     }
 

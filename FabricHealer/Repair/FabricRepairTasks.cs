@@ -11,6 +11,7 @@ using System.Fabric.Repair;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 
@@ -45,20 +46,8 @@ namespace FabricHealer.Repair
         /// <param name="repairTask"><see cref="RepairTask"/> to be cancelled</param>
         /// <returns></returns>
         /// <exception cref="FabricException">Throws FabricException if it can't complete the task.</exception>
-        public static async Task CancelRepairTaskAsync(RepairTask repairTask, CancellationToken token)
+        public static async Task CancelRepairTaskAsync(RepairTask repairTask)
         {
-            if (JsonSerializationUtility.TryDeserializeObject(repairTask.ExecutorData, out RepairExecutorData execData))
-            {
-                var repairs = 
-                    await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                            execData.RepairPolicy.RepairIdPrefix, token);
-
-                if (repairs != null && repairs.Count > 0)
-                {
-                    repairTask = repairs[0];
-                }
-            }
-
             switch (repairTask.State)
             {
                 case RepairTaskState.Restoring:
@@ -191,7 +180,7 @@ namespace FabricHealer.Repair
                     // Rolling Service Restarts.
                     if (repairAction is RepairActionType.RestartCodePackage or RepairActionType.RestartReplica)
                     {
-                        if ((FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                        if ((FabricHealerManager.InstanceCount is (-1) or > 1)
                              && FabricHealerManager.ConfigSettings.EnableRollingServiceRestarts)
                         {
                             await FabricHealerManager.RandomWaitAsync(token);

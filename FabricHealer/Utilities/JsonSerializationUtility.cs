@@ -73,7 +73,7 @@ namespace FabricHealer.Utilities
         /// <param name="obj">Json string representing an instance of type T.</param>
         /// <param name="data">out: an instance of type T.</param>
         /// <param name="treatMissingMembersAsError">Optional boolean to treat missing type members as Error or not.</param>
-        /// <returns>An instance of the specified type T or null if the string can't be deserialized into the specified type T.</returns>
+        /// <returns>An instance of the specified type T or default if the string can't be deserialized into the specified type T.</returns>
         public static bool TryDeserializeObject<T>(string obj, out T data, bool treatMissingMembersAsError = false)
         {
             if (string.IsNullOrWhiteSpace(obj))
