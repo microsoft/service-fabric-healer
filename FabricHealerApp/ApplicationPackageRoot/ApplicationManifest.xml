@@ -29,6 +29,12 @@
     <Parameter Name="MachineRulesConfigurationFile" DefaultValue="MachineRules.guan" />
     <Parameter Name="ReplicaRulesConfigurationFile" DefaultValue="ReplicaRules.guan" />
     <Parameter Name="SystemServiceRulesConfigurationFile" DefaultValue="SystemServiceRules.guan" />
+    <!-- If set, will override values used in *machine repair* logic rules where a related predicate requires this fact to be specified as an argument. 
+		 Period/Duration values are represented as TimeSpan strings. E.g., "00:30:00" for 30 minutes. MaxOutstandingRepairs is a whole number. -->
+    <Parameter Name="MachineRepairMinHealthStateDuration" DefaultValue="" />
+    <Parameter Name="MachineRepairScheduleInterval" DefaultValue="" />
+    <Parameter Name="MachineRepairNodeProbationPeriod" DefaultValue="" />
+    <Parameter Name="MachineRepairMaxOutstandingRepairs" DefaultValue="" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
@@ -74,6 +80,10 @@
           <Section Name="MachineRepairPolicy">
             <Parameter Name="Enabled" Value="[EnableMachineRepair]" />
             <Parameter Name="LogicRulesConfigurationFile" Value="[MachineRulesConfigurationFile]" />
+            <Parameter Name="MaxOutstandingRepairs" Value="[MachineRepairMaxOutstandingRepairs]" />
+            <Parameter Name="MinHealthStateDuration" Value="[MachineRepairMinHealthStateDuration]" />
+            <Parameter Name="NodeProbationPeriod" Value="[MachineRepairNodeProbationPeriod]" />
+            <Parameter Name="ScheduleInterval" Value="[MachineRepairScheduleInterval]" />
           </Section>
         </Settings>
       </ConfigOverride>

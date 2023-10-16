@@ -27,13 +27,7 @@ using static ServiceFabric.Mocks.MockConfigurationPackage;
 using System.Fabric.Description;
 using System.Fabric.Query;
 using System.Text;
-using System.ServiceProcess;
 using TimeoutException = System.TimeoutException;
-using System.Xml.Linq;
-using Microsoft.Win32;
-using System.Security;
-using ServiceFabric.Mocks.ReliableCollections;
-using System.Diagnostics.Metrics;
 
 namespace FHTest
 {

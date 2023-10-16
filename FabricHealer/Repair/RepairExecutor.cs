@@ -20,7 +20,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Fabric.Description;
-using System.Reflection.Metadata.Ecma335;
 
 namespace FabricHealer.Repair
 {

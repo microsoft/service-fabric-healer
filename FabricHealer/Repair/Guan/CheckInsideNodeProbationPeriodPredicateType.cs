@@ -26,18 +26,26 @@ namespace FabricHealer.Repair.Guan
 
             protected override async Task<bool> CheckAsync()
             {
-                if (Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() != typeof(TimeSpan))
+                TimeSpan interval;
+                string machineRulesConfigFileName =
+                        FabricHealerManager.GetSettingParameterValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.LogicRulesConfigurationFile);
+
+                if (FabricHealerManager.CurrentlyExecutingLogicRulesFileName == machineRulesConfigFileName && !string.IsNullOrWhiteSpace(
+                    FabricHealerManager.GetSettingParameterValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.NodeProbationPeriod)))
+                {
+                    _ = TimeSpan.TryParse(
+                           FabricHealerManager.GetSettingParameterValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.NodeProbationPeriod),
+                           out interval);
+                }
+                else if (Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() == typeof(TimeSpan))
+                {
+                    interval = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
+                }
+                else
                 {
                     throw new GuanException(
-                                "CheckInsideProbationPeriod: Second argument is required and it must be a TimeSpan " +
-                                "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
-                }
-
-                var interval = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
-                
-                if (interval == TimeSpan.MinValue)
-                {
-                    return false;
+                               "CheckInsideProbationPeriod: One argument is required and it must be a TimeSpan " +
+                               "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
                 }
 
                 bool insideProbationPeriod = 

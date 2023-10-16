@@ -70,6 +70,13 @@
 	<Section Name="MachineRepairPolicy">
 		<Parameter Name="Enabled" Value="" MustOverride="true" />
 		<Parameter Name="LogicRulesConfigurationFile" Value="" MustOverride="true" />
+		<!-- These are global settings that you can use to override values set in logic rules without having to redeploy FH with updated logic rules when
+		     you want to change one or more of these values. Internally, FH will look for changes like this and apply to an executing rule that employs one a related
+			 fact. -->
+		<Parameter Name="ScheduleInterval" Value="" MustOverride="true" />
+		<Parameter Name="NodeProbationPeriod" Value="" MustOverride="true" />
+	    <Parameter Name="MinHealthStateDuration" Value="" MustOverride="true" />
+		<Parameter Name="MaxOutstandingRepairs" Value="" MustOverride="true" />
 		<!-- This prevents rules from over-scheduling repairs, which can be detrimental to cluster health. 
 		     Think of this as a guardrail that overrides faulty logic with respect to repair count. 
 			 The below setting translates to if 5 machine repairs have been scheduled in the last two 2 hours, do not schedule 

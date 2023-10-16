@@ -27,24 +27,36 @@ namespace FabricHealer.Repair.Guan
             protected override async Task<bool> CheckAsync()
             {
                 int count = Input.Arguments.Count;
+                TimeSpan scheduleInterval;
+                string machineRulesConfigFileName =
+                    FabricHealerManager.GetSettingParameterValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.LogicRulesConfigurationFile);
 
-                if (count == 0 || Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() != typeof(TimeSpan))
+                if (FabricHealerManager.CurrentlyExecutingLogicRulesFileName == machineRulesConfigFileName && !string.IsNullOrWhiteSpace(
+                    FabricHealerManager.GetSettingParameterValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.ScheduleInterval)))
+                {
+                    _ = TimeSpan.TryParse(
+                           FabricHealerManager.GetSettingParameterValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.ScheduleInterval),
+                           out scheduleInterval);
+                }
+                else if (count > 0 && Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() == typeof(TimeSpan))
+                {
+                    scheduleInterval = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
+                }
+                else
                 {
                     throw new GuanException(
                                 "CheckInsideScheduleInterval: One argument is required and it must be a TimeSpan " +
                                 "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
                 }
 
-                var interval = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
-
-                if (interval == TimeSpan.MinValue)
+                if (scheduleInterval == TimeSpan.MinValue || scheduleInterval == TimeSpan.Zero)
                 {
                     return false;
-                }
+                }   
 
                 bool insideScheduleInterval =
                     await FabricRepairTasks.IsLastScheduledRepairJobWithinTimeRangeAsync(
-                            interval,
+                            scheduleInterval,
                             RepairData,
                             FabricHealerManager.Token);
 
@@ -54,7 +66,7 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 string message = $"{RepairData.RepairPolicy.RepairAction} job has already been scheduled at least once within the specified scheduling interval " +
-                                 $"({interval}). Will not schedule {RepairData.EntityType} repair at this time.";
+                                 $"({scheduleInterval}). Will not schedule {RepairData.EntityType} repair at this time.";
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Info,

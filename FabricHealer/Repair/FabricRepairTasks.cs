@@ -11,7 +11,6 @@ using System.Fabric.Repair;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 
@@ -64,7 +63,7 @@ namespace FabricHealer.Repair
                     }
                     catch (FabricException fe)
                     {
-                        FabricHealerManager.RepairLogger.LogWarning("CancelRepairTaskAsync Cancel repair task failure: {0}. RepairTaskId = {1}", fe.Message, repairTask.TaskId);
+                        FabricHealerManager.RepairLogger.LogWarning("CancelRepairTaskAsync failure: {0}. RepairTaskId = {1}", fe.Message, repairTask.TaskId);
                     }
                     catch (InvalidOperationException)
                     {

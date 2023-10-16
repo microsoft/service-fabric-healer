@@ -43,12 +43,12 @@ namespace FabricHealer.Repair.Guan
                 RepairData.EntityType = EntityType.Node;
                 RepairData.RepairPolicy.RepairIdPrefix = RepairConstants.FHTaskIdPrefix;
                 RepairData.RepairPolicy.NodeImpactLevel = NodeImpactLevel.Restart;
-                RepairData.RepairPolicy.MaxExecutionTime = TimeSpan.FromHours(8);
+                RepairData.RepairPolicy.MaxExecutionTime = TimeSpan.FromHours(4);
                 
                 // Set repair ownership to this instance of FH.
                 RepairData.RepairPolicy.FHRepairExecutorNodeName = FabricHealerManager.ServiceContext.NodeContext.NodeName;
 
-                if (Input.Arguments.Count == 1 && Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType().Name == "TimeSpan")
+                if (Input.Arguments.Count == 1 && Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() == typeof(TimeSpan))
                 {
                     RepairData.RepairPolicy.MaxExecutionTime = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
                 }

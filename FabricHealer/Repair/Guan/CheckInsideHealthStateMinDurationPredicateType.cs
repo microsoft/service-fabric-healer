@@ -28,15 +28,27 @@ namespace FabricHealer.Repair.Guan
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
             {
                 TimeSpan timeWindow, duration;
+                int count = Input.Arguments.Count;
+                string machineRulesConfigFileName =
+                    FabricHealerManager.GetSettingParameterValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.LogicRulesConfigurationFile);
 
-                if (Input.Arguments.Count == 0 || Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() != typeof(TimeSpan))
+                if (FabricHealerManager.CurrentlyExecutingLogicRulesFileName == machineRulesConfigFileName && !string.IsNullOrWhiteSpace(
+                    FabricHealerManager.GetSettingParameterValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.MinHealthStateDuration)))
+                {
+                    _ = TimeSpan.TryParse(
+                           FabricHealerManager.GetSettingParameterValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.MinHealthStateDuration),
+                           out timeWindow);
+                }
+                else if (count > 0 && Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() == typeof(TimeSpan))
+                {
+                    timeWindow = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
+                }
+                else
                 {
                     throw new GuanException(
                                 "CheckInsideHealthStateMinDuration: One argument is required and it must be a TimeSpan " +
                                 "(xx:yy:zz format, for example 00:30:00 represents 30 minutes).");
                 }
-
-                timeWindow = (TimeSpan)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
 
                 if (timeWindow == TimeSpan.MinValue || timeWindow == TimeSpan.Zero)
                 {
