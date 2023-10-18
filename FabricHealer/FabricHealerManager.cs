@@ -291,8 +291,9 @@ namespace FabricHealer
                     catch (Exception e) when (e is ArgumentException or FabricException or OperationCanceledException or TaskCanceledException or TimeoutException)
                     {
                         // RunAsync token Cancellation occurred while in the loop.
-                        if (e is OperationCanceledException && Token.IsCancellationRequested)
+                        if ((e is OperationCanceledException or TaskCanceledException) && Token.IsCancellationRequested)
                         {
+                            // Go to outer catch block.
                             throw;
                         }
                     }
@@ -300,7 +301,7 @@ namespace FabricHealer
             }
             catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
             {
-                // ...and we're done.
+                // ...and we're done. FabricHealer class will take care of shutdown work as the CancellationToken used is always the RunAsync token.
             }
             catch (Exception e)
             {
