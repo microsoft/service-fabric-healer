@@ -4,7 +4,8 @@
     <id>%PACKAGE_ID%</id>
     <version>1.2.11</version>
     <releaseNotes>
-- Code, performance, and reliability improvements.
+- Bug fix in RestartFabricNode repair logic.
+- Important reliability improvements.
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
