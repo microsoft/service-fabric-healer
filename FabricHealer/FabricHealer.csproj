@@ -13,8 +13,8 @@
          <RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 	<Product>FabricHealer</Product>
-	<Version>1.2.10</Version>
-    <FileVersion>1.2.10</FileVersion>
+	<Version>1.2.11</Version>
+    <FileVersion>1.2.11</FileVersion>
     <StartupObject>FabricHealer.Program</StartupObject>
     <Platforms>x64</Platforms>
   </PropertyGroup>
@@ -23,7 +23,7 @@
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
 	<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="NLog" Version="5.2.4" />
-    <PackageReference Include="Octokit" Version="8.0.1" />
+    <PackageReference Include="Octokit" Version="8.1.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />

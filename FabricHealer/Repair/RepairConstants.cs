@@ -146,5 +146,11 @@ namespace FabricHealer.Repair
         public const string AzureTaskIdPrefix = "Azure";
         public const string FabricHealerStartAction = "FabricHealer.Start";
         public const string FabricHealerStopAction = "FabricHealer.Stop";
+
+        // Overridable machine repair helper predicate arguments.
+        public const string ScheduleInterval = "ScheduleInterval";
+        public const string MaxOutstandingRepairs = "MaxOutstandingRepairs";
+        public const string NodeProbationPeriod = "NodeProbationPeriod";
+        public const string MinHealthStateDuration = "MinHealthStateDuration";
     }
 }

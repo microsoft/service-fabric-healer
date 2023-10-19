@@ -147,6 +147,9 @@ namespace FabricHealer.Repair.Guan
                 RepairData.RepairPolicy.RepairIdPrefix = RepairConstants.FHTaskIdPrefix;
                 RepairData.RepairPolicy.MaxExecutionTime = maxExecutionTime;
                 RepairData.RepairPolicy.MaxTimePostRepairHealthCheck = maxHealthCheckOk;
+                
+                // Set repair ownership to this instance of FH.
+                RepairData.RepairPolicy.FHRepairExecutorNodeName = FabricHealerManager.ServiceContext.NodeContext.NodeName;
 
                 // Try to schedule repair with RM.
                 RepairTask repairTask = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -162,14 +165,19 @@ namespace FabricHealer.Repair.Guan
                 // MaxExecutionTime impl.
                 using (CancellationTokenSource tokenSource = new())
                 {
-                    using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(tokenSource.Token, FabricHealerManager.Token))
+                    if (RepairData.RepairPolicy.MaxExecutionTime == TimeSpan.Zero)
                     {
-                        tokenSource.CancelAfter(maxExecutionTime > TimeSpan.Zero ? maxExecutionTime : TimeSpan.FromMinutes(10));
-                        tokenSource.Token.Register(() =>
-                        {
-                            _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
-                        });
+                        RepairData.RepairPolicy.MaxExecutionTime = TimeSpan.FromMinutes(5);
+                    }
 
+                    tokenSource.CancelAfter(RepairData.RepairPolicy.MaxExecutionTime);
+                    tokenSource.Token.Register(() =>
+                    {
+                        _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
+                    });
+
+                    using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(tokenSource.Token, FabricHealerManager.Token))
+                    { 
                         bool success = false;
 
                         // Try to execute repair (FH executor does this work and manages repair state through RM, as always).
@@ -204,7 +212,6 @@ namespace FabricHealer.Repair.Guan
                         if (!success && linkedCTS.IsCancellationRequested)
                         {
                             await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
-                            return true;
                         }
 
                         return success;

@@ -45,20 +45,8 @@ namespace FabricHealer.Repair
         /// <param name="repairTask"><see cref="RepairTask"/> to be cancelled</param>
         /// <returns></returns>
         /// <exception cref="FabricException">Throws FabricException if it can't complete the task.</exception>
-        public static async Task CancelRepairTaskAsync(RepairTask repairTask, CancellationToken token)
+        public static async Task CancelRepairTaskAsync(RepairTask repairTask)
         {
-            if (JsonSerializationUtility.TryDeserializeObject(repairTask.ExecutorData, out RepairExecutorData execData))
-            {
-                var repairs = 
-                    await RepairTaskEngine.GetFHRepairTasksCurrentlyProcessingAsync(
-                            execData.RepairPolicy.RepairIdPrefix, token);
-
-                if (repairs != null && repairs.Count > 0)
-                {
-                    repairTask = repairs[0];
-                }
-            }
-
             switch (repairTask.State)
             {
                 case RepairTaskState.Restoring:
@@ -75,7 +63,7 @@ namespace FabricHealer.Repair
                     }
                     catch (FabricException fe)
                     {
-                        FabricHealerManager.RepairLogger.LogWarning("CancelRepairTaskAsync Cancel repair task failure: {0}. RepairTaskId = {1}", fe.Message, repairTask.TaskId);
+                        FabricHealerManager.RepairLogger.LogWarning("CancelRepairTaskAsync failure: {0}. RepairTaskId = {1}", fe.Message, repairTask.TaskId);
                     }
                     catch (InvalidOperationException)
                     {
@@ -191,7 +179,7 @@ namespace FabricHealer.Repair
                     // Rolling Service Restarts.
                     if (repairAction is RepairActionType.RestartCodePackage or RepairActionType.RestartReplica)
                     {
-                        if ((FabricHealerManager.InstanceCount == -1 || FabricHealerManager.InstanceCount > 1)
+                        if ((FabricHealerManager.InstanceCount is (-1) or > 1)
                              && FabricHealerManager.ConfigSettings.EnableRollingServiceRestarts)
                         {
                             await FabricHealerManager.RandomWaitAsync(token);

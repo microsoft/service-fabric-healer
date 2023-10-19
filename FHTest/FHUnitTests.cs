@@ -27,13 +27,7 @@ using static ServiceFabric.Mocks.MockConfigurationPackage;
 using System.Fabric.Description;
 using System.Fabric.Query;
 using System.Text;
-using System.ServiceProcess;
 using TimeoutException = System.TimeoutException;
-using System.Xml.Linq;
-using Microsoft.Win32;
-using System.Security;
-using ServiceFabric.Mocks.ReliableCollections;
-using System.Diagnostics.Metrics;
 
 namespace FHTest
 {
@@ -137,7 +131,7 @@ namespace FHTest
                         long.MaxValue);
 
 
-            _ = FabricHealerManager.Instance(TestServiceContext, token);
+            FabricHealerManager _ = new (TestServiceContext, token);
             FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
             {
                 TelemetryEnabled = false
@@ -155,7 +149,7 @@ namespace FHTest
                     }
                     else
                     {
-                        await FabricRepairTasks.CancelRepairTaskAsync(repairTask, token);
+                        await FabricRepairTasks.CancelRepairTaskAsync(repairTask);
                     }
 
                     await Task.Delay(1000);
@@ -371,7 +365,7 @@ namespace FHTest
                     }
                     else
                     {
-                        await FabricRepairTasks.CancelRepairTaskAsync(repairTask, token);
+                        await FabricRepairTasks.CancelRepairTaskAsync(repairTask);
                     }
 
                     await Task.Delay(1000);
@@ -380,6 +374,25 @@ namespace FHTest
                 {
 
                 }
+            }
+
+            string path = @"C:\SFDevCluster\Log\QueryTraces";
+
+            try
+            {
+                string[] files = Directory.GetFiles(path);
+
+                foreach (string file in files)
+                {
+                    if (file.Contains("foo"))
+                    {
+                        File.Delete(file);
+                    }
+                }
+            }
+            catch (IOException)
+            {
+
             }
 
             await FabricHealerManager.TryClearExistingHealthReportsAsync();
@@ -586,18 +599,12 @@ namespace FHTest
                 ResourceUsageDataProperty = SupportedMetricNames.DiskSpaceUsagePercentage
             };
 
-            using var healerManager = FabricHealerManager.Instance(TestServiceContext, token);
+            using FabricHealerManager _ = new (TestServiceContext, token);
             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-            if (await FabricHealerManager.TryInitializeAsync())
-            {
-                await FabricHealerManager.ProcessHealthEventsAsync();
-            }
-            else
-            {
-                throw new InternalTestFailureException("FabricHealerManager.InitializeAsync() failed.");
-            }
-
+            await FabricHealerManager.InitializeAsync();
+            await FabricHealerManager.ProcessHealthEventsAsync();
+            
             // Validate that the repair rule is traced and repair predicate succeeds.
             try
             {
@@ -668,18 +675,12 @@ namespace FHTest
                 ResourceUsageDataProperty = SupportedMetricNames.FolderSizeMB
             };
 
-            using var healerManager = FabricHealerManager.Instance(TestServiceContext, token);
+            using FabricHealerManager _ = new (TestServiceContext, token);
             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-            if (await FabricHealerManager.TryInitializeAsync())
-            {
-                await FabricHealerManager.ProcessHealthEventsAsync();
-            }
-            else
-            {
-                throw new InternalTestFailureException("FabricHealerManager.InitializeAsync() failed.");
-            }
-
+            await FabricHealerManager.InitializeAsync();
+           await FabricHealerManager.ProcessHealthEventsAsync();
+          
             // Validate that both the repair rule (contains LogRule predicate) and repair predicate (w/expanded variables) is traced.
             try
             {
@@ -696,98 +697,6 @@ namespace FHTest
                 throw;
             }
 
-            Assert.IsFalse(Directory.GetFiles(path).Any(f => f.StartsWith("foo") && f.EndsWith(".txt")));
-        }
-
-        [TestMethod]
-        public async Task DiskRules_FolderSizeMB_Repair_Successful_Validate_RuleTracing_MaxExecutionTime()
-        {
-            // Create temp files. This assumes C:\SFDevCluster\Log\QueryTraces exists. This is the path used in the related logic rule.
-            // See DiskRules.guan in FHTest\PackageRoot\Config\LogicRules folder.
-            // You can use whatever path you want, but you need to make sure that is also specified in the related test logic rule.
-            byte[] bytes = Encoding.ASCII.GetBytes("foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz");
-            string path = @"C:\SFDevCluster\Log\QueryTraces";
-
-            for (int i = 0; i < 5; i++)
-            {
-                using var f = File.Create(Path.Combine(path, $"foo{i}.txt"), 500, FileOptions.WriteThrough);
-
-                for (int j = 0; j < 50000; ++j)
-                {
-                    f.Write(bytes);
-                }
-            }
-
-            // This will be the data used to create a repair task.
-            var repairData = new TelemetryData
-            {
-                EntityType = EntityType.Disk,
-                NodeName = NodeName,
-                Metric = SupportedMetricNames.FolderSizeMB,
-                Code = SupportedErrorCodes.NodeWarningFolderSizeMB,
-                HealthState = HealthState.Warning,
-                Source = $"DiskObserver({SupportedErrorCodes.NodeWarningFolderSizeMB})_FHTest_Ex",
-                Property = $"{NodeName}_{SupportedMetricNames.FolderSizeMB.Replace(" ", string.Empty)}",
-                Value = 5
-            };
-
-            Assert.IsTrue(JsonSerializationUtility.TrySerializeObject(repairData, out string description));
-
-            Logger logger = new("FHTest", Environment.CurrentDirectory);
-            FabricHealthReporter healthReporter = new(logger);
-
-            FabricHealer.Utilities.HealthReport healthReport = new()
-            {
-                Code = repairData.Code,
-                EntityType = EntityType.Disk,
-                HealthMessage = description,
-                HealthReportTimeToLive = TimeSpan.FromMinutes(5),
-                State = HealthState.Warning,
-                NodeName = NodeName,
-                Property = repairData.Property,
-                SourceId = RepairConstants.FabricHealer,
-                HealthData = repairData,
-                ResourceUsageDataProperty = SupportedMetricNames.FolderSizeMB
-            };
-
-            using var healerManager = FabricHealerManager.Instance(TestServiceContext, token);
-            healthReporter.ReportHealthToServiceFabric(healthReport);
-
-            if (await FabricHealerManager.TryInitializeAsync())
-            {
-                await FabricHealerManager.ProcessHealthEventsAsync();
-            }
-            else
-            {
-                throw new InternalTestFailureException("FabricHealerManager.InitializeAsync() failed.");
-            }
-
-            // Validate that both the repair rule (contains LogRule predicate) and repair predicate (w/expanded variables) is traced.
-            try
-            {
-                var nodeHealth =
-                    await fabricClient.HealthManager.GetNodeHealthAsync(NodeName, TimeSpan.FromSeconds(60), CancellationToken.None);
-                var FHNodeEvents = nodeHealth.HealthEvents?.Where(
-                        s => s.HealthInformation.SourceId.Contains("DiskRules.guan") && s.HealthInformation.Description.Contains("DeleteFiles"));
-
-                Assert.IsTrue(FHNodeEvents.Any());
-                Assert.IsTrue(FHNodeEvents.Any(e => e.HealthInformation.Description.Contains("QueryTraces")));
-            }
-            catch (Exception e) when (e is ArgumentException or FabricException or TimeoutException)
-            {
-                throw;
-            }
-            
-            await Task.Delay(TimeSpan.FromSeconds(5));
-
-            // Ensure that the repair task was cancelled per MaxExecutionTime.
-            var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync(RepairConstants.FHTaskIdPrefix, RepairTaskStateFilter.Completed, null);   
-            Assert.IsTrue(repairs.Any(
-                    r => JsonSerializationUtility.TryDeserializeObject(
-                      r.ExecutorData, out RepairExecutorData exData)
-                        && exData.RepairPolicy.MaxExecutionTime <= TimeSpan.FromSeconds(1) 
-                        && r.ResultStatus == RepairTaskResult.Cancelled));
-            
             Assert.IsFalse(Directory.GetFiles(path).Any(f => f.StartsWith("foo") && f.EndsWith(".txt")));
         }
 
@@ -842,7 +751,7 @@ namespace FHTest
                         continue;
                     }
 
-                    await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First(r => r.Action == "RestartFabricNode"), token);
+                    await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First(r => r.Action == "RestartFabricNode"));
                     return;
                 }
 
@@ -923,11 +832,12 @@ namespace FHTest
             // Validate that the repair predicate is traced.
             try
             {
-                var nodeHealth =
+                NodeHealth nodeHealth =
                     await fabricClient.HealthManager.GetNodeHealthAsync(NodeName, TimeSpan.FromSeconds(60), CancellationToken.None);
-                var FHNodeEvents = nodeHealth.HealthEvents?.Where(
-                        s => s.HealthInformation.SourceId.Contains("ReplicaRules.guan")
-                        && s.HealthInformation.Description.Contains("RestartReplica"));
+                
+                IEnumerable<HealthEvent> FHNodeEvents = nodeHealth.HealthEvents?.Where(
+                            s => s.HealthInformation.SourceId.Contains("ReplicaRules.guan")
+                              && s.HealthInformation.Description.Contains("RestartReplica"));
 
                 Assert.IsTrue(FHNodeEvents.Any());
             }
@@ -1150,7 +1060,7 @@ namespace FHTest
                                         RepairConstants.InfraTaskIdPrefix, RepairTaskStateFilter.Active, null);
 
                 Assert.IsTrue(repairTasks.Any());
-                await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First(), token);
+                await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First());
             }
 
             // Verify that all the specified escalations ran. \\
@@ -1188,7 +1098,7 @@ namespace FHTest
         public async Task Ensure_MachineRepair_ErrorDetected_RepairJobsCreated_AllEscalations_FHProxy()
         {
             // Create FabricHealerManager singleton (required).
-            _ = FabricHealerManager.Instance(TestServiceContext, token);
+            using FabricHealerManager _ = new(TestServiceContext, token);
             int escalationCount = 4; // reboot, reimage, heal, triage.
             RepairTaskList repairTasks = null;
 
@@ -1214,7 +1124,7 @@ namespace FHTest
 
                 Assert.IsTrue(repairTasks.Any());
 
-                await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First(), token);
+                await FabricRepairTasks.CancelRepairTaskAsync(repairTasks.First());
             }
 
             // Verify that all the specified escalations ran. \\

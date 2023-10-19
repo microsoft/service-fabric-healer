@@ -28,6 +28,9 @@ namespace FabricHealer.Repair.Guan
             protected override async Task<bool> CheckAsync()
             {
                 RepairData.RepairPolicy.RepairAction = RepairActionType.RestartCodePackage;
+                
+                // Set repair ownership to this instance of FH.
+                RepairData.RepairPolicy.FHRepairExecutorNodeName = FabricHealerManager.ServiceContext.NodeContext.NodeName;
 
                 if (FabricHealerManager.ConfigSettings.EnableLogicRuleTracing)
                 {
@@ -73,21 +76,17 @@ namespace FabricHealer.Repair.Guan
                 // MaxExecutionTime impl.
                 using (CancellationTokenSource tokenSource = new())
                 {
-                    using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(
-                                                                    tokenSource.Token,
-                                                                    FabricHealerManager.Token))
+                    using (var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(tokenSource.Token, FabricHealerManager.Token))
                     {
-                        TimeSpan maxExecutionTime = TimeSpan.FromMinutes(60);
-                        
-                        if (RepairData.RepairPolicy.MaxExecutionTime > TimeSpan.Zero)
+                        if (RepairData.RepairPolicy.MaxExecutionTime == TimeSpan.Zero)
                         {
-                            maxExecutionTime = RepairData.RepairPolicy.MaxExecutionTime;
+                            RepairData.RepairPolicy.MaxExecutionTime = TimeSpan.FromMinutes(30);
                         }
 
-                        tokenSource.CancelAfter(maxExecutionTime);
+                        tokenSource.CancelAfter(RepairData.RepairPolicy.MaxExecutionTime);
                         tokenSource.Token.Register(() =>
                         {
-                             _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
+                            _ = FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
                         });
 
                         bool success = false;
@@ -123,7 +122,6 @@ namespace FabricHealer.Repair.Guan
                         if (!success && linkedCTS.IsCancellationRequested)
                         {
                             await FabricHealerManager.TryCleanUpOrphanedFabricHealerRepairJobsAsync();
-                            return true;
                         }
 
                         return success;

@@ -26,15 +26,27 @@ namespace FabricHealer.Repair.Guan
             protected override async Task<bool> CheckAsync()
             {
                 int count = Input.Arguments.Count;
+                long maxRepairs;
+                string machineRulesConfigFileName =
+                   FabricHealerManager.GetSettingParameterValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.LogicRulesConfigurationFile);
 
-                if (count == 0 || Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() != typeof(long))
+                if (FabricHealerManager.CurrentlyExecutingLogicRulesFileName == machineRulesConfigFileName && !string.IsNullOrWhiteSpace(
+                    FabricHealerManager.GetSettingParameterValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.MaxOutstandingRepairs)))
                 {
-                    throw new GuanException("CheckOutstandingRepairs: One argument is required and it must be a number.");
+                    _ = long.TryParse(
+                           FabricHealerManager.GetSettingParameterValue(RepairConstants.MachineRepairPolicySectionName, RepairConstants.MaxOutstandingRepairs),
+                           out maxRepairs);
+                }
+                else if (count == 0 || Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue().GetType() == typeof(long))
+                {
+                    maxRepairs = (long)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
+                }
+                else
+                {
+                    throw new GuanException("CheckOutstandingRepairs: One argument is required and it must be a whole number.");
                 }
 
-                long maxRepairs = (long)Input.Arguments[0].Value.GetEffectiveTerm().GetObjectValue();
-                
-                if (maxRepairs == 0)
+                if (maxRepairs <= 0)
                 {
                     return false;
                 }

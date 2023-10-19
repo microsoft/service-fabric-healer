@@ -125,5 +125,23 @@ namespace FabricHealer.Repair
         { 
             get; internal set; 
         }
+
+        public bool CanResume
+        {
+            get; set;
+        }
+
+        public bool IsResuming 
+        { 
+            get; set; 
+        }
+
+        /// <summary>
+        /// The name of the node where the FH instance that claimed the repair is running.
+        /// </summary>
+        public string FHRepairExecutorNodeName
+        {
+            get; set;
+        }
     }
 }
