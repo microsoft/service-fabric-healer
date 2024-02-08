@@ -3,9 +3,17 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
 using System.Fabric;
+using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricHealer.Interfaces;
+using FabricHealer.Utilities;
+using FabricHealer.Utilities.Telemetry;
+using McMaster.NETCore.Plugins;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Services.Runtime;
 
 namespace FabricHealer
@@ -15,9 +23,12 @@ namespace FabricHealer
     /// </summary>
     public sealed class FabricHealer : StatelessService
     {
+        private readonly Logger logger;
+
         public FabricHealer(StatelessServiceContext context)
                 : base(context)
         {
+            logger = new Logger(nameof(FabricHealer));
         }
 
         /// <summary>
@@ -26,10 +37,100 @@ namespace FabricHealer
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            using FabricHealerManager healerManager = new(Context, cancellationToken);
+            var services = new ServiceCollection();
+            await LoadCustomServiceInitializers(services);
+
+            await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+            using FabricHealerManager healerManager = new(Context, serviceProvider, cancellationToken);
             
             // Blocks until StartAsync exits.
             await healerManager.StartAsync();
+        }
+
+        private async Task LoadCustomServiceInitializers(IServiceCollection services)
+        {
+            string pluginsDir = Path.Combine(Context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
+
+            if (!Directory.Exists(pluginsDir))
+            {
+                return;
+            }
+
+            string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.AllDirectories);
+
+            if (pluginDlls.Length == 0)
+            {
+                return;
+            }
+
+            PluginLoader[] pluginLoaders = new PluginLoader[pluginDlls.Length];
+            Type[] sharedTypes = { typeof(CustomServiceInitializerAttribute), typeof(ICustomServiceInitializer), typeof(IServiceCollection) };
+            string dll = "";
+
+            for (int i = 0; i < pluginDlls.Length; ++i)
+            {
+                dll = pluginDlls[i];
+                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(dll, sharedTypes, a => a.IsUnloadable = false);
+                pluginLoaders[i] = loader;
+            }
+
+            for (int i = 0; i < pluginLoaders.Length; ++i)
+            {
+                var pluginLoader = pluginLoaders[i];
+                Assembly pluginAssembly;
+
+                try
+                {
+                    // If your plugin has native library dependencies (that's fine), then we will land in the catch (BadImageFormatException).
+                    // This is by design. The Managed FO plugin assembly will successfully load, of course.
+                    pluginAssembly = pluginLoader.LoadDefaultAssembly();
+                    CustomServiceInitializerAttribute initializerAttribute = pluginAssembly.GetCustomAttribute<CustomServiceInitializerAttribute>();
+
+                    object initializerObject = Activator.CreateInstance(initializerAttribute.InitializerType);
+
+                    if (initializerObject is ICustomServiceInitializer customServiceInitializer)
+                    {
+                        // The null parameter (re FabricClient) is used here *only to preserve the existing (historical, in use..) interface specification for IFabricObserverStartup*. 
+                        // There is actually no longer a need to pass in a FabricClient instance as this is now a singleton instance managed by 
+                        // FabricObserver.Extensibility.FabricClientUtilities that protects against premature disposal (by plugins, for example).
+                        await customServiceInitializer.InitializeAsync();
+                    }
+                    else
+                    {
+                        // This will bring down FO, which it should: This means your plugin is not supported. Fix your bug.
+                        throw new Exception($"{initializerAttribute.InitializerType.FullName} must implement ICustomServiceInitializer.");
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException)
+                {
+                    if (e is IOException)
+                    {
+                        string error = $"Plugin dll {dll} could not be loaded. {e.Message}";
+                        HealthReport healthReport = new()
+                        {
+                            AppName = new Uri($"{Context.CodePackageActivationContext.ApplicationName}"),
+                            EmitLogEvent = true,
+                            HealthMessage = error,
+                            EntityType = EntityType.Application,
+                            HealthReportTimeToLive = TimeSpan.FromMinutes(10),
+                            State = System.Fabric.Health.HealthState.Warning,
+                            Property = "FabricObserverPluginLoadError",
+                            SourceId = $"FabricObserverService-{Context.NodeContext.NodeName}",
+                            NodeName = Context.NodeContext.NodeName,
+                        };
+
+                        FabricHealthReporter observerHealth = new(logger);
+                        observerHealth.ReportHealthToServiceFabric(healthReport);
+                    }
+
+                    continue;
+                }
+                catch (Exception e) when (e is not OutOfMemoryException)
+                {
+                    logger.LogError($"Unhandled exception in FabricObserverService Instance: {e.Message}");
+                    throw;
+                }
+            }
         }
 
         // Graceful close.
