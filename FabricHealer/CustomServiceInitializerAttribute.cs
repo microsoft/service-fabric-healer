@@ -2,7 +2,7 @@
 
 namespace FabricHealer
 {
-    [AttributeUsage(AttributeTargets.Assembly)]
+    [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
     public class CustomServiceInitializerAttribute: Attribute
     {
         public Type InitializerType { get; }
