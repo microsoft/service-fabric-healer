@@ -127,7 +127,7 @@ namespace FabricHealer
                 }
                 catch (Exception e) when (e is not OutOfMemoryException)
                 {
-                    logger.LogError($"Unhandled exception in FabricObserverService Instance: {e.Message}");
+                    logger.LogError($"Unhandled exception in FabricHealerService Instance: {e.Message}");
                     throw;
                 }
             }
