@@ -47,7 +47,6 @@ namespace FabricHealer
         private readonly string sfRuntimeVersion;
         private DateTime UtcStartDateTime;
         private static readonly object lockObj = new();
-        private readonly ICustomServiceInitializer CustomServiceInitializer;
         private static bool IsRmDeployed;
 
         internal static TelemetryUtilities TelemetryUtilities { get; private set; }
@@ -178,7 +177,7 @@ namespace FabricHealer
 
             try
             {
-                await InitializeAsync(this.CustomServiceInitializer);
+                await InitializeAsync();
 
                 while (true)
                 {
@@ -843,11 +842,6 @@ namespace FabricHealer
             await Task.Delay(waitTimeMS, token == default ? Token : token);
         }
 
-        public FabricHealerManager(StatelessServiceContext context, IServiceProvider serviceProvider, CancellationToken token) : this(context, token)
-        {
-            this.CustomServiceInitializer = serviceProvider.GetService<ICustomServiceInitializer>();
-        }
-
         public FabricHealerManager(StatelessServiceContext context, CancellationToken token)
         {
             ServiceContext = context;
@@ -866,7 +860,7 @@ namespace FabricHealer
             fabricClient = new FabricClient();
         }
 
-        public static async Task InitializeAsync(ICustomServiceInitializer customServiceInitializer = null)
+        public static async Task InitializeAsync()
         {
             await TryCancelAbandonedFHRepairsAsync();
 
@@ -923,11 +917,6 @@ namespace FabricHealer
                     healthReport.EntityType);
 
             IsRmDeployed = isRmDeployed;
-
-            if (customServiceInitializer != null)
-            {
-                await customServiceInitializer?.InitializeAsync();
-            }
         }
 
         private static async Task<long> GetServiceInstanceCountAsync()
