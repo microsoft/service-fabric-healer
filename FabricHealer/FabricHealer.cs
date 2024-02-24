@@ -99,27 +99,39 @@ namespace FabricHealer
                         throw new Exception($"{initializerAttribute.InitializerType.FullName} must implement ICustomServiceInitializer.");
                     }
                 }
-                catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException)
+                catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException or NullReferenceException)
                 {
-                    if (e is IOException)
+                    string error = "";
+                    switch (e)
                     {
-                        string error = $"Plugin dll {dll} could not be loaded. {e.Message}";
-                        HealthReport healthReport = new()
-                        {
-                            AppName = new Uri($"{Context.CodePackageActivationContext.ApplicationName}"),
-                            EmitLogEvent = true,
-                            HealthMessage = error,
-                            EntityType = EntityType.Application,
-                            HealthReportTimeToLive = TimeSpan.FromMinutes(10),
-                            State = System.Fabric.Health.HealthState.Warning,
-                            Property = "FabricHealerInitializerLoadError",
-                            SourceId = $"FabricHealerService-{Context.NodeContext.NodeName}",
-                            NodeName = Context.NodeContext.NodeName,
-                        };
-
-                        FabricHealthReporter observerHealth = new(logger);
-                        observerHealth.ReportHealthToServiceFabric(healthReport);
+                        case IOException:
+                            error = $"Plugin dll {dll} could not be loaded. {e.Message}.";
+                            break;
+                        case NullReferenceException:
+                            error = $"Plugin dll {dll} could not be loaded. {e.Message}. Please ignore if a dll which is not supposed to implement the ICustomServiceInitializer.";
+                            break;
+                        case BadImageFormatException:
+                            error = $"Plugin dll {dll} could not be loaded. {e.Message}. Please ignore if this is a native dll.";
+                            break;
                     }
+
+                    HealthReport healthReport = new()
+                    {
+                        AppName = new Uri($"{Context.CodePackageActivationContext.ApplicationName}"),
+                        EmitLogEvent = true,
+                        HealthMessage = error,
+                        EntityType = EntityType.Application,
+                        HealthReportTimeToLive = TimeSpan.FromMinutes(10),
+                        State = System.Fabric.Health.HealthState.Warning,
+                        Property = "FabricHealerInitializerLoadError",
+                        SourceId = $"FabricHealerService-{Context.NodeContext.NodeName}",
+                        NodeName = Context.NodeContext.NodeName,
+                    };
+
+                    FabricHealthReporter observerHealth = new(logger);
+                    observerHealth.ReportHealthToServiceFabric(healthReport);
+
+                    logger.LogWarning($"handled exception in FabricHealerService Instance: {e.Message}. {error}");
 
                     continue;
                 }
