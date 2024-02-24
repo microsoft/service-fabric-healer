@@ -82,7 +82,7 @@ namespace FabricHealer
                 try
                 {
                     // If your plugin has native library dependencies (that's fine), then we will land in the catch (BadImageFormatException).
-                    // This is by design. The Managed FO plugin assembly will successfully load, of course.
+                    // This is by design. The Managed FH plugin assembly will successfully load, of course.
                     pluginAssembly = pluginLoader.LoadDefaultAssembly();
                     CustomServiceInitializerAttribute initializerAttribute = pluginAssembly.GetCustomAttribute<CustomServiceInitializerAttribute>();
 
@@ -114,8 +114,8 @@ namespace FabricHealer
                             EntityType = EntityType.Application,
                             HealthReportTimeToLive = TimeSpan.FromMinutes(10),
                             State = System.Fabric.Health.HealthState.Warning,
-                            Property = "FabricObserverPluginLoadError",
-                            SourceId = $"FabricObserverService-{Context.NodeContext.NodeName}",
+                            Property = "FabricHealerInitializerLoadError",
+                            SourceId = $"FabricHealerService-{Context.NodeContext.NodeName}",
                             NodeName = Context.NodeContext.NodeName,
                         };
 
