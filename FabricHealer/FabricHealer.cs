@@ -105,7 +105,7 @@ namespace FabricHealer
                     switch (e)
                     {
                         case NullReferenceException:
-                            error = $"{error} Please ignore if a dll which is not supposed to implement the ICustomServiceInitializer.";
+                            error = $"{error} Please ignore if this dll is not supposed to implement the ICustomServiceInitializer.";
                             break;
                         case BadImageFormatException:
                             error = $"{error} Please ignore if this is a native dll.";
