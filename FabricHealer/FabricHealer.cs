@@ -88,14 +88,11 @@ namespace FabricHealer
 
                     if (initializerObject is ICustomServiceInitializer customServiceInitializer)
                     {
-                        // The null parameter (re FabricClient) is used here *only to preserve the existing (historical, in use..) interface specification for IFabricObserverStartup*. 
-                        // There is actually no longer a need to pass in a FabricClient instance as this is now a singleton instance managed by 
-                        // FabricObserver.Extensibility.FabricClientUtilities that protects against premature disposal (by plugins, for example).
                         await customServiceInitializer.InitializeAsync();
                     }
                     else
                     {
-                        // This will bring down FO, which it should: This means your plugin is not supported. Fix your bug.
+                        // This will bring down FH, which it should: This means your plugin is not supported. Fix your bug.
                         throw new Exception($"{initializerAttribute.InitializerType.FullName} must implement ICustomServiceInitializer.");
                     }
                 }
