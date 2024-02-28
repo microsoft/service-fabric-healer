@@ -99,15 +99,6 @@ namespace FabricHealer
                 catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException or NullReferenceException)
                 {
                     string error = $"Plugin dll {dll} could not be loaded. Exception - {e.Message}.";
-                    switch (e)
-                    {
-                        case NullReferenceException:
-                            error = $"{error} Please ignore if this dll is not supposed to implement the ICustomServiceInitializer.";
-                            break;
-                        case BadImageFormatException:
-                            error = $"{error} Please ignore if this is a native dll.";
-                            break;
-                    }
 
                     HealthReport healthReport = new()
                     {
