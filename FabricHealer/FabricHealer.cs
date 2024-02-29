@@ -88,9 +88,6 @@ namespace FabricHealer
 
                     if (initializerObject is ICustomServiceInitializer customServiceInitializer)
                     {
-                        // The null parameter (re FabricClient) is used here *only to preserve the existing (historical, in use..) interface specification for IFabricObserverStartup*. 
-                        // There is actually no longer a need to pass in a FabricClient instance as this is now a singleton instance managed by 
-                        // FabricObserver.Extensibility.FabricClientUtilities that protects against premature disposal (by plugins, for example).
                         await customServiceInitializer.InitializeAsync();
                     }
                     else
@@ -125,8 +122,8 @@ namespace FabricHealer
                         NodeName = Context.NodeContext.NodeName,
                     };
 
-                    FabricHealthReporter observerHealth = new(logger);
-                    observerHealth.ReportHealthToServiceFabric(healthReport);
+                    FabricHealthReporter healerHealth = new(logger);
+                    healerHealth.ReportHealthToServiceFabric(healthReport);
 
                     logger.LogWarning($"handled exception in FabricHealerService Instance: {e.Message}. {error}");
 
