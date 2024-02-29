@@ -62,7 +62,7 @@ namespace FabricHealer
             }
 
             PluginLoader[] pluginLoaders = new PluginLoader[pluginDlls.Length];
-            Type[] sharedTypes = { typeof(CustomServiceInitializerAttribute), typeof(ICustomServiceInitializer), typeof(IServiceCollection) };
+            Type[] sharedTypes = { typeof(CustomServiceInitializerAttribute), typeof(ICustomServiceInitializer)};
             string dll = "";
 
             for (int i = 0; i < pluginDlls.Length; ++i)
