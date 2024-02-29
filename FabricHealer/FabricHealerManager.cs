@@ -24,6 +24,9 @@ using System.Runtime.InteropServices;
 using static FabricHealer.Repair.RepairTaskManager;
 using System.ComponentModel;
 using System.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
+using FabricHealer.Interfaces;
+using System.Runtime.CompilerServices;
 
 namespace FabricHealer
 {
@@ -33,7 +36,7 @@ namespace FabricHealer
         private DateTime LastTelemetrySendDate { get; set; }
         
         // Folks often use their own version numbers. This is for public diagnostic telemetry.
-        private const string InternalVersionNumber = "1.2.11";
+        private const string InternalVersionNumber = "1.2.12";
         private static FabricClient fabricClient;
         private bool disposedValue;
         private bool detectedStopJob;

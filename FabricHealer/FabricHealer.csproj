@@ -13,12 +13,14 @@
          <RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 	<Product>FabricHealer</Product>
-	<Version>1.2.11</Version>
-    <FileVersion>1.2.11</FileVersion>
+	<Version>1.2.12</Version>
+    <FileVersion>1.2.12</FileVersion>
     <StartupObject>FabricHealer.Program</StartupObject>
     <Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Microsoft.Logic.Guan" Version="1.0.4" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
 	<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
@@ -27,5 +29,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="PackageRoot\Data\Plugins\" />
   </ItemGroup>
 </Project>
