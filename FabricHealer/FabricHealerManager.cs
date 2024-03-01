@@ -24,9 +24,6 @@ using System.Runtime.InteropServices;
 using static FabricHealer.Repair.RepairTaskManager;
 using System.ComponentModel;
 using System.Diagnostics;
-using Microsoft.Extensions.DependencyInjection;
-using FabricHealer.Interfaces;
-using System.Runtime.CompilerServices;
 
 namespace FabricHealer
 {
@@ -49,7 +46,7 @@ namespace FabricHealer
         private static readonly object lockObj = new();
         private static bool IsRmDeployed;
 
-        internal static TelemetryUtilities TelemetryUtilities { get; private set; }
+        public static TelemetryUtilities TelemetryUtilities { get; private set; }
         internal static RepairData RepairHistory { get; private set; }
         internal static int NodeCount { get; private set; }
         internal static long InstanceCount { get; private set; }

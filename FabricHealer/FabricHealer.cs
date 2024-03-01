@@ -14,7 +14,6 @@ using FabricHealer.Interfaces;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using McMaster.NETCore.Plugins;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Services.Runtime;
 
 namespace FabricHealer
