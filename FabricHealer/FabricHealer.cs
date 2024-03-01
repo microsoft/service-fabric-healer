@@ -9,6 +9,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricHealer.Attributes;
 using FabricHealer.Interfaces;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
