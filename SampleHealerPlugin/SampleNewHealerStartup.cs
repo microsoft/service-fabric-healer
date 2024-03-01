@@ -6,12 +6,11 @@
 using FabricHealer.Attributes;
 using FabricHealer.Interfaces;
 using FabricHealer.Repair.Guan;
-using FabricObserver.Observers;
 using Guan.Logic;
 using FabricHealer.Utilities.Telemetry;
 
 [assembly: CustomRepairPredicateType(typeof(SampleNewHealerStartup))]
-namespace FabricObserver.Observers
+namespace FabricHealer.Repair.Guan
 {
     public class SampleNewHealerStartup : IPredicateTypesCollection
     {
