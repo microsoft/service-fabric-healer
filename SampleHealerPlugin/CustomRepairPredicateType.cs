@@ -6,7 +6,6 @@
 using System.Globalization;
 using Guan.Logic;
 using FabricHealer.Utilities;
-using FabricHealer.TelemetryLib;
 using FabricHealer.Utilities.Telemetry;
 using System.Diagnostics;
 
