@@ -184,7 +184,6 @@ namespace FabricHealer.Repair
         {
             StatelessServiceContext context = FabricHealerManager.ServiceContext;
             string pluginsDir = Path.Combine(context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
-            //string pluginsDir = context.CodePackageActivationContext.GetCodePackageObject("Code").Path;
 
             if (!Directory.Exists(pluginsDir))
             {
