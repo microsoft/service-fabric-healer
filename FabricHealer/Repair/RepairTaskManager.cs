@@ -199,7 +199,7 @@ namespace FabricHealer.Repair
             }
 
             PluginLoader[] pluginLoaders = new PluginLoader[pluginDlls.Length];
-            Type[] sharedTypes = { typeof(CustomRepairPredicateTypeAttribute), typeof(IPredicateTypesCollection) };
+            Type[] sharedTypes = { typeof(CustomRepairPredicateTypeAttribute), typeof(ICustomPredicateType) };
             string dll = "";
 
             for (int i = 0; i < pluginDlls.Length; ++i)
@@ -223,9 +223,9 @@ namespace FabricHealer.Repair
 
                     object customPredicateObject = Activator.CreateInstance(customPredicateAttribute.CustomRepairPredicateType);
 
-                    if (customPredicateObject is IPredicateTypesCollection predicateTypesCollection)
+                    if (customPredicateObject is ICustomPredicateType customPredicateType)
                     {
-                        predicateTypesCollection.RegisterPredicateTypes(functorTable, repairData);
+                        customPredicateType.RegisterToPredicateTypesCollection(functorTable, repairData);
                     }
                     else
                     {

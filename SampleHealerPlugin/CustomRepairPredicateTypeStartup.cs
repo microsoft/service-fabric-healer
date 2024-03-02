@@ -9,14 +9,14 @@ using FabricHealer.Repair.Guan;
 using Guan.Logic;
 using FabricHealer.Utilities.Telemetry;
 
-[assembly: CustomRepairPredicateType(typeof(SampleNewHealerStartup))]
+[assembly: CustomRepairPredicateType(typeof(CustomRepairPredicateTypeStartup))]
 namespace FabricHealer.Repair.Guan
 {
-    public class SampleNewHealerStartup : IPredicateTypesCollection
+    public class CustomRepairPredicateTypeStartup : IPredicateTypesCollection
     {
         public void RegisterPredicateTypes(FunctorTable functorTable, TelemetryData repairData)
         {
-            functorTable.Add(SampleHealerPluginPredicateType.Singleton(nameof(SampleHealerPluginPredicateType), repairData));
+            functorTable.Add(CustomRepairPredicateType.Singleton("CustomRepair", repairData));
         }
     }
 }

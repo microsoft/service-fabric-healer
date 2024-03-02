@@ -15,9 +15,9 @@ namespace FabricHealer.Repair.Guan
     /// <summary>
     ///  Helper external predicate that generates health/etw/telemetry events.
     /// </summary>
-    public class SampleHealerPluginPredicateType : PredicateType
+    public class CustomRepairPredicateType : PredicateType
     {
-        private static SampleHealerPluginPredicateType Instance;
+        private static CustomRepairPredicateType Instance;
         private static TelemetryData RepairData;
 
         private class Resolver : BooleanPredicateResolver
@@ -36,7 +36,7 @@ namespace FabricHealer.Repair.Guan
 
                 if (count == 0)
                 {
-                    throw new GuanException("SampleHealerPluginPredicateType: At least 1 argument is required.");
+                    throw new GuanException("CustomRepairPredicateType: At least 1 argument is required.");
                 }
 
                 format = Input.Arguments[0].Value.GetEffectiveTerm().GetStringValue();
@@ -73,13 +73,13 @@ namespace FabricHealer.Repair.Guan
             }
         }
 
-        public static SampleHealerPluginPredicateType Singleton(string name, TelemetryData repairData)
+        public static CustomRepairPredicateType Singleton(string name, TelemetryData repairData)
         {
             RepairData = repairData;
-            return Instance ??= new SampleHealerPluginPredicateType(name);
+            return Instance ??= new CustomRepairPredicateType(name);
         }
 
-        private SampleHealerPluginPredicateType(string name)
+        private CustomRepairPredicateType(string name)
                  : base(name, true, 1)
         {
 
