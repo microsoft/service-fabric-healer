@@ -5,12 +5,12 @@
 
 using FabricHealer.Attributes;
 using FabricHealer.Interfaces;
-using FabricHealer.Repair.Guan;
+using FabricHealer.SamplePlugins;
 using Guan.Logic;
 using FabricHealer.Utilities.Telemetry;
 
 [assembly: CustomRepairPredicateType(typeof(CustomRepairPredicateTypeStartup))]
-namespace FabricHealer.Repair.Guan
+namespace FabricHealer.SamplePlugins
 {
     public class CustomRepairPredicateTypeStartup : ICustomPredicateType
     {

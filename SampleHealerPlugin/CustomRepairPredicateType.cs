@@ -9,7 +9,7 @@ using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using System.Diagnostics;
 
-namespace FabricHealer.Repair.Guan
+namespace FabricHealer.SamplePlugins
 {
     /// <summary>
     ///  Helper external predicate that generates health/etw/telemetry events.
