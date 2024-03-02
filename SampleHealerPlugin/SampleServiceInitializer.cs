@@ -2,10 +2,10 @@
 using FabricHealer.Attributes;
 using FabricHealer.Interfaces;
 
-[assembly: CustomServiceInitializer(typeof(CustomServiceInitializer))]
+[assembly: ServiceInitializer(typeof(SampleServiceInitializer))]
 namespace FabricHealer.SamplePlugins
 {
-    public class CustomServiceInitializer : ICustomServiceInitializer
+    public class SampleServiceInitializer : IServiceInitializer
     {
         public Task InitializeAsync()
         {
