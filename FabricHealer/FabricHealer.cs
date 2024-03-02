@@ -7,6 +7,7 @@ using System.Fabric;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Attributes;
+using FabricHealer.Interfaces;
 using FabricHealer.Utilities;
 using Microsoft.ServiceFabric.Services.Runtime;
 
@@ -41,8 +42,8 @@ namespace FabricHealer
 
         private async Task LoadCustomServiceInitializers()
         {
-            var pluginLoader = new CustomServiceInitializerPluginLoader(this.logger, this.Context);
-            await pluginLoader.LoadPluginsAndCallCustomAction(typeof(CustomServiceInitializerAttribute), typeof(IServiceInitializer));
+            var pluginLoader = new ServiceInitializerPluginLoader(this.logger, this.Context);
+            await pluginLoader.LoadPluginsAndCallCustomAction(typeof(ServiceInitializerAttribute), typeof(IServiceInitializer));
         }
 
         // Graceful close.

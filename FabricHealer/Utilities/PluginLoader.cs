@@ -108,12 +108,12 @@ namespace FabricHealer.Utilities
         }
     }
 
-    internal class CustomRepairPredicateTypePluginLoader : BasePluginLoader
+    internal class RepairPredicateTypePluginLoader : BasePluginLoader
     {
         private FunctorTable FunctorTable { get; }
         private TelemetryData RepairData { get; }
 
-        public CustomRepairPredicateTypePluginLoader(
+        public RepairPredicateTypePluginLoader(
             Logger logger,
             ServiceContext serviceContext,
             FunctorTable FunctorTable,
@@ -143,16 +143,16 @@ namespace FabricHealer.Utilities
         }
     }
 
-    internal class CustomServiceInitializerPluginLoader : BasePluginLoader
+    internal class ServiceInitializerPluginLoader : BasePluginLoader
     {
-        public CustomServiceInitializerPluginLoader(Logger logger, ServiceContext serviceContext)
+        public ServiceInitializerPluginLoader(Logger logger, ServiceContext serviceContext)
             : base(logger, serviceContext)
         {
         }
 
         protected override Object GetPluginClassInstance(Assembly assembly)
         {
-            CustomServiceInitializerAttribute attribute = assembly.GetCustomAttribute<CustomServiceInitializerAttribute>();
+            ServiceInitializerAttribute attribute = assembly.GetCustomAttribute<ServiceInitializerAttribute>();
             return Activator.CreateInstance(attribute.InitializerType);
         }
 

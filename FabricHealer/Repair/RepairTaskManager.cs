@@ -18,6 +18,8 @@ using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
 using Module = Guan.Logic.Module;
+using FabricHealer.Attributes;
+using FabricHealer.Interfaces;
 
 namespace FabricHealer.Repair
 {
@@ -171,7 +173,7 @@ namespace FabricHealer.Repair
 
         private static void LoadCustomPredicateTypes(FunctorTable functorTable, TelemetryData repairData)
         {
-            var pluginLoader = new CustomRepairPredicateTypePluginLoader(FabricHealerManager.RepairLogger, FabricHealerManager.ServiceContext, functorTable, repairData);
+            var pluginLoader = new RepairPredicateTypePluginLoader(FabricHealerManager.RepairLogger, FabricHealerManager.ServiceContext, functorTable, repairData);
             Task.Run(async () => await pluginLoader.LoadPluginsAndCallCustomAction(typeof(RepairPredicateTypeAttribute), typeof(IRepairPredicateType))).Wait();
         }
 

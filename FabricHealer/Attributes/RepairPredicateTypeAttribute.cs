@@ -3,11 +3,11 @@
 namespace FabricHealer.Attributes
 {
     [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
-    public class CustomRepairPredicateTypeAttribute : Attribute
+    public class RepairPredicateTypeAttribute : Attribute
     {
         public Type CustomRepairPredicateType { get; }
 
-        public CustomRepairPredicateTypeAttribute(Type className)
+        public RepairPredicateTypeAttribute(Type className)
         {
             CustomRepairPredicateType = className;
         }

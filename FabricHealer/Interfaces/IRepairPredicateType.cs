@@ -3,7 +3,7 @@ using Guan.Logic;
 
 namespace FabricHealer.Interfaces
 {
-    public interface ICustomPredicateType
+    public interface IRepairPredicateType
     {
         void RegisterToPredicateTypesCollection(FunctorTable functorTable, TelemetryData repairData);
     }

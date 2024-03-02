@@ -3,11 +3,11 @@
 namespace FabricHealer.Attributes
 {
     [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
-    public class CustomServiceInitializerAttribute : Attribute
+    public class ServiceInitializerAttribute : Attribute
     {
         public Type InitializerType { get; }
 
-        public CustomServiceInitializerAttribute(Type startupType)
+        public ServiceInitializerAttribute(Type startupType)
         {
             InitializerType = startupType;
         }
