@@ -12,9 +12,9 @@ using FabricHealer.Utilities.Telemetry;
 [assembly: CustomRepairPredicateType(typeof(CustomRepairPredicateTypeStartup))]
 namespace FabricHealer.Repair.Guan
 {
-    public class CustomRepairPredicateTypeStartup : IPredicateTypesCollection
+    public class CustomRepairPredicateTypeStartup : ICustomPredicateType
     {
-        public void RegisterPredicateTypes(FunctorTable functorTable, TelemetryData repairData)
+        public void RegisterToPredicateTypesCollection(FunctorTable functorTable, TelemetryData repairData)
         {
             functorTable.Add(CustomRepairPredicateType.Singleton("CustomRepair", repairData));
         }
