@@ -3,17 +3,11 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using System;
 using System.Fabric;
-using System.IO;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Attributes;
-using FabricHealer.Interfaces;
 using FabricHealer.Utilities;
-using FabricHealer.Utilities.Telemetry;
-using McMaster.NETCore.Plugins;
 using Microsoft.ServiceFabric.Services.Runtime;
 
 namespace FabricHealer
@@ -47,85 +41,8 @@ namespace FabricHealer
 
         private async Task LoadCustomServiceInitializers()
         {
-            string pluginsDir = Path.Combine(Context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
-
-            if (!Directory.Exists(pluginsDir))
-            {
-                return;
-            }
-
-            string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.AllDirectories);
-
-            if (pluginDlls.Length == 0)
-            {
-                return;
-            }
-
-            PluginLoader[] pluginLoaders = new PluginLoader[pluginDlls.Length];
-            Type[] sharedTypes = { typeof(CustomServiceInitializerAttribute), typeof(ICustomServiceInitializer)};
-            string dll = "";
-
-            for (int i = 0; i < pluginDlls.Length; ++i)
-            {
-                dll = pluginDlls[i];
-                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(dll, sharedTypes, a => a.IsUnloadable = false);
-                pluginLoaders[i] = loader;
-            }
-
-            for (int i = 0; i < pluginLoaders.Length; ++i)
-            {
-                var pluginLoader = pluginLoaders[i];
-                Assembly pluginAssembly;
-
-                try
-                {
-                    // If your plugin has native library dependencies (that's fine), then we will land in the catch (BadImageFormatException).
-                    // This is by design. The Managed FH plugin assembly will successfully load, of course.
-                    pluginAssembly = pluginLoader.LoadDefaultAssembly();
-                    CustomServiceInitializerAttribute initializerAttribute = pluginAssembly.GetCustomAttribute<CustomServiceInitializerAttribute>();
-
-                    object initializerObject = Activator.CreateInstance(initializerAttribute.InitializerType);
-
-                    if (initializerObject is ICustomServiceInitializer customServiceInitializer)
-                    {
-                        await customServiceInitializer.InitializeAsync();
-                    }
-                    else
-                    {
-                        // This will bring down FH, which it should: This means your plugin is not supported. Fix your bug.
-                        throw new Exception($"{initializerAttribute.InitializerType.FullName} must implement ICustomServiceInitializer.");
-                    }
-                }
-                catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException or NullReferenceException)
-                {
-                    string error = $"Plugin dll {dll} could not be loaded. Exception - {e.Message}.";
-
-                    HealthReport healthReport = new()
-                    {
-                        AppName = new Uri($"{Context.CodePackageActivationContext.ApplicationName}"),
-                        EmitLogEvent = true,
-                        HealthMessage = error,
-                        EntityType = EntityType.Application,
-                        HealthReportTimeToLive = TimeSpan.FromMinutes(10),
-                        State = System.Fabric.Health.HealthState.Warning,
-                        Property = "FabricHealerInitializerLoadError",
-                        SourceId = $"FabricHealerService-{Context.NodeContext.NodeName}",
-                        NodeName = Context.NodeContext.NodeName,
-                    };
-
-                    FabricHealthReporter healerHealth = new(logger);
-                    healerHealth.ReportHealthToServiceFabric(healthReport);
-
-                    logger.LogWarning($"handled exception in FabricHealerService Instance: {e.Message}. {error}");
-
-                    continue;
-                }
-                catch (Exception e) when (e is not OutOfMemoryException)
-                {
-                    logger.LogError($"Unhandled exception in FabricHealerService Instance: {e.Message}");
-                    throw;
-                }
-            }
+            var pluginLoader = new CustomServiceInitializerPluginLoader(this.logger, this.Context);
+            await pluginLoader.LoadPluginsAndCallCustomAction(typeof(CustomServiceInitializerAttribute), typeof(IServiceInitializer));
         }
 
         // Graceful close.

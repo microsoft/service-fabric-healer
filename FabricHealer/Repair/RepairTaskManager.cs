@@ -17,12 +17,6 @@ using FabricHealer.Utilities.Telemetry;
 using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
-using FabricHealer.Attributes;
-using FabricHealer.Interfaces;
-using McMaster.NETCore.Plugins;
-using System.IO;
-using System.Reflection;
-using HealthReport = FabricHealer.Utilities.HealthReport;
 using Module = Guan.Logic.Module;
 
 namespace FabricHealer.Repair
@@ -127,7 +121,7 @@ namespace FabricHealer.Repair
             functorTable.Add(ScheduleMachineRepairPredicateType.Singleton(RepairConstants.ScheduleMachineRepair, repairData));
 
             // register custom predicates.
-            RepairTaskManager.RegisterCustomPredicateType(functorTable, repairData);
+            RepairTaskManager.LoadCustomPredicateTypes(functorTable, repairData);
 
             // Parse rules.
             Module module = Module.Parse("fh_external", repairRules, functorTable);
@@ -175,93 +169,10 @@ namespace FabricHealer.Repair
             await queryDispatcher.RunQueryAsync(compoundTerms, cancellationToken);
         }
 
-        private static void RegisterCustomPredicateType(FunctorTable functorTable, TelemetryData repairData)
-        {
-            RepairTaskManager.LoadCustomPredicateTypes(functorTable, repairData);
-        }
-
         private static void LoadCustomPredicateTypes(FunctorTable functorTable, TelemetryData repairData)
         {
-            StatelessServiceContext context = FabricHealerManager.ServiceContext;
-            string pluginsDir = Path.Combine(context.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
-
-            if (!Directory.Exists(pluginsDir))
-            {
-                return;
-            }
-
-            string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.AllDirectories);
-
-            if (pluginDlls.Length == 0)
-            {
-                return;
-            }
-
-            PluginLoader[] pluginLoaders = new PluginLoader[pluginDlls.Length];
-            Type[] sharedTypes = { typeof(CustomRepairPredicateTypeAttribute), typeof(ICustomPredicateType) };
-            string dll = "";
-
-            for (int i = 0; i < pluginDlls.Length; ++i)
-            {
-                dll = pluginDlls[i];
-                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(dll, sharedTypes, a => a.IsUnloadable = false);
-                pluginLoaders[i] = loader;
-            }
-
-            for (int i = 0; i < pluginLoaders.Length; ++i)
-            {
-                var pluginLoader = pluginLoaders[i];
-                Assembly pluginAssembly;
-
-                try
-                {
-                    // If your plugin has native library dependencies (that's fine), then we will land in the catch (BadImageFormatException).
-                    // This is by design. The Managed FH plugin assembly will successfully load, of course.
-                    pluginAssembly = pluginLoader.LoadDefaultAssembly();
-                    CustomRepairPredicateTypeAttribute customPredicateAttribute = pluginAssembly.GetCustomAttribute<CustomRepairPredicateTypeAttribute>();
-
-                    object customPredicateObject = Activator.CreateInstance(customPredicateAttribute.CustomRepairPredicateType);
-
-                    if (customPredicateObject is ICustomPredicateType customPredicateType)
-                    {
-                        customPredicateType.RegisterToPredicateTypesCollection(functorTable, repairData);
-                    }
-                    else
-                    {
-                        // This will bring down FH, which it should: This means your plugin is not supported. Fix your bug.
-                        throw new Exception($"{customPredicateAttribute.CustomRepairPredicateType.FullName} must implement ICustomServiceInitializer.");
-                    }
-                }
-                catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException or NullReferenceException)
-                {
-                    string error = $"Plugin dll {dll} could not be loaded. Exception - {e.Message}.";
-
-                    HealthReport healthReport = new()
-                    {
-                        AppName = new Uri($"{context.CodePackageActivationContext.ApplicationName}"),
-                        EmitLogEvent = true,
-                        HealthMessage = error,
-                        EntityType = EntityType.Application,
-                        HealthReportTimeToLive = TimeSpan.FromMinutes(10),
-                        State = System.Fabric.Health.HealthState.Warning,
-                        Property = "FabricHealerInitializerLoadError",
-                        SourceId = $"FabricHealerService-{context.NodeContext.NodeName}",
-                        NodeName = context.NodeContext.NodeName,
-                    };
-
-                    FabricHealthReporter healerHealth = new(FabricHealerManager.RepairLogger);
-                    healerHealth.ReportHealthToServiceFabric(healthReport);
-
-                    FabricHealerManager.RepairLogger.LogWarning($"handled exception in FabricHealerService Instance: {e.Message}. {error}");
-
-                    continue;
-                }
-                catch (Exception e) when (e is not OutOfMemoryException)
-                {
-                    FabricHealerManager.RepairLogger.LogError($"Unhandled exception in FabricHealerService Instance: {e.Message}");
-                    throw;
-                }
-            }
+            var pluginLoader = new CustomRepairPredicateTypePluginLoader(FabricHealerManager.RepairLogger, FabricHealerManager.ServiceContext, functorTable, repairData);
+            Task.Run(async () => await pluginLoader.LoadPluginsAndCallCustomAction(typeof(RepairPredicateTypeAttribute), typeof(IRepairPredicateType))).Wait();
         }
 
         // The repair will be executed by SF Infrastructure service, not FH. This is the case for all
