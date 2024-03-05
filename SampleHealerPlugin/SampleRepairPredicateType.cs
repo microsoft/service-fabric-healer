@@ -7,7 +7,6 @@ using System.Globalization;
 using Guan.Logic;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
-using System.Diagnostics;
 
 namespace FabricHealer.SamplePlugins
 {
@@ -29,7 +28,6 @@ namespace FabricHealer.SamplePlugins
 
             protected override async Task<bool> CheckAsync()
             {
-                Debugger.Launch();
                 int count = Input.Arguments.Count;
                 string output, format;
 
