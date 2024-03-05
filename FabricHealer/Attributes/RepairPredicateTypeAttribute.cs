@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace FabricHealer.Attributes
+namespace FabricHealer
 {
     [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
     public class RepairPredicateTypeAttribute : Attribute

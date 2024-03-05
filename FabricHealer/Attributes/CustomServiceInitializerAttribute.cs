@@ -1,13 +1,13 @@
 ﻿using System;
 
-namespace FabricHealer.Attributes
+namespace FabricHealer
 {
     [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
-    public class ServiceInitializerAttribute : Attribute
+    public class CustomServiceInitializerAttribute : Attribute
     {
         public Type InitializerType { get; }
 
-        public ServiceInitializerAttribute(Type startupType)
+        public CustomServiceInitializerAttribute(Type startupType)
         {
             InitializerType = startupType;
         }

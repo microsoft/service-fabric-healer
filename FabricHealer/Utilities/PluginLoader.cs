@@ -1,5 +1,4 @@
-﻿using FabricHealer.Attributes;
-using FabricHealer.Interfaces;
+﻿using FabricHealer.Interfaces;
 using FabricHealer.Utilities.Telemetry;
 using Guan.Logic;
 using McMaster.NETCore.Plugins;
@@ -152,19 +151,19 @@ namespace FabricHealer.Utilities
 
         protected override Object GetPluginClassInstance(Assembly assembly)
         {
-            ServiceInitializerAttribute attribute = assembly.GetCustomAttribute<ServiceInitializerAttribute>();
+            CustomServiceInitializerAttribute attribute = assembly.GetCustomAttribute<CustomServiceInitializerAttribute>();
             return Activator.CreateInstance(attribute.InitializerType);
         }
 
         protected override Task CallCustomAction(Object instance)
         {
-            if (instance is IServiceInitializer customServiceInitializer)
+            if (instance is ICustomServiceInitializer customServiceInitializer)
             {
                 return customServiceInitializer.InitializeAsync();
             }
 
             // This will bring down FH, which it should: This means your plugin is not supported. Fix your bug.
-            throw new Exception($"{instance.GetType().FullName} must implement IServiceInitializer.");
+            throw new Exception($"{instance.GetType().FullName} must implement ICustomServiceInitializer.");
         }
     }
 }

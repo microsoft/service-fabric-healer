@@ -18,7 +18,6 @@ using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
 using Module = Guan.Logic.Module;
-using FabricHealer.Attributes;
 using FabricHealer.Interfaces;
 
 namespace FabricHealer.Repair

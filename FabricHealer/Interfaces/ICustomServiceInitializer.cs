@@ -2,7 +2,7 @@
 
 namespace FabricHealer.Interfaces
 {
-    public interface IServiceInitializer
+    public interface ICustomServiceInitializer
     {
         Task InitializeAsync();
     }
