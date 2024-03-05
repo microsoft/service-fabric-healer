@@ -199,4 +199,5 @@ TimeScopedRestartCodePackage :- RestartCodePackage(DoHealthChecks=false, MaxWait
 ## Restart individual replica hosted in the process. If you do not specify a value for MaxExecutionTime argument, the default is 60 minutes.
 TimeScopedRestartReplica :- RestartReplica(DoHealthChecks=false, MaxWaitTimeForHealthStateOk=00:01:00, MaxExecutionTime=00:15:00).
 
+## Custom Repair - This is an example of how to call a custom repair from a plugin. This is a placeholder for a real repair that you would write in your own plugin.
 ##Mitigate(HealthState="Warning") :- CustomRepair("repair rule loaded from plugin").
