@@ -31,7 +31,7 @@ namespace FabricHealer
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            await LoadCustomServiceInitializers();
+            await LoadCustomServiceInitializersAsync();
 
             using FabricHealerManager healerManager = new(Context, cancellationToken);
             
@@ -39,7 +39,7 @@ namespace FabricHealer
             await healerManager.StartAsync();
         }
 
-        private async Task LoadCustomServiceInitializers()
+        private async Task LoadCustomServiceInitializersAsync()
         {
             var pluginLoader = new ServiceInitializerPluginLoader(this.logger, this.Context);
             await pluginLoader.LoadPluginsAndCallCustomAction(typeof(CustomServiceInitializerAttribute), typeof(ICustomServiceInitializer));
