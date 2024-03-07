@@ -6,7 +6,6 @@
 using System.Globalization;
 using Guan.Logic;
 using FabricHealer.Utilities;
-using FabricHealer.Utilities.Telemetry;
 
 namespace FabricHealer.SamplePlugins
 {
@@ -16,7 +15,7 @@ namespace FabricHealer.SamplePlugins
     public class SampleRepairPredicateType : PredicateType
     {
         private static SampleRepairPredicateType Instance;
-        private static TelemetryData RepairData;
+        private static SampleTelemetryData RepairData;
 
         private class Resolver : BooleanPredicateResolver
         {
@@ -60,6 +59,11 @@ namespace FabricHealer.SamplePlugins
                     output = format;
                 }
 
+                if (JsonSerializationUtility.TrySerializeObject <SampleTelemetryData>(RepairData, out string customTelemetry))
+                {
+                    output += " | additional telemetry info - " + customTelemetry;
+                }
+
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
                         "LogWarningPredicate",
@@ -70,7 +74,7 @@ namespace FabricHealer.SamplePlugins
             }
         }
 
-        public static SampleRepairPredicateType Singleton(string name, TelemetryData repairData)
+        public static SampleRepairPredicateType Singleton(string name, SampleTelemetryData repairData)
         {
             RepairData = repairData;
             return Instance ??= new SampleRepairPredicateType(name);

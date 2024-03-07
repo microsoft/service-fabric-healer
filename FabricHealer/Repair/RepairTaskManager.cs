@@ -28,7 +28,7 @@ namespace FabricHealer.Repair
         private static DateTime LastHealthEventsListClearDateTime = DateTime.UtcNow;
         internal static readonly List<HealthEventData> DetectedHealthEvents = new();
 
-        public static async Task StartRepairWorkflowAsync(TelemetryData repairData, List<string> repairRules, CancellationToken cancellationToken)
+        public static async Task StartRepairWorkflowAsync(TelemetryData repairData, List<string> repairRules, CancellationToken cancellationToken, string serializedRepairData = "")
         {
             if (await RepairTaskEngine.HasActiveStopFHRepairJob(cancellationToken))
             {
@@ -62,7 +62,7 @@ namespace FabricHealer.Repair
 
             try
             {
-                await RunGuanQueryAsync(repairData, repairRules, cancellationToken);
+                await RunGuanQueryAsync(repairData, repairRules, cancellationToken, serializedRepairData: serializedRepairData);
             }
             catch (GuanException ge)
             {
@@ -88,7 +88,8 @@ namespace FabricHealer.Repair
                                     TelemetryData repairData,
                                     List<string> repairRules,
                                     CancellationToken cancellationToken,
-                                    RepairExecutorData repairExecutorData = null)
+                                    RepairExecutorData repairExecutorData = null,
+                                    string serializedRepairData = "")
         {
             if (await RepairTaskEngine.HasActiveStopFHRepairJob(cancellationToken))
             {
@@ -124,7 +125,7 @@ namespace FabricHealer.Repair
             // register custom predicates.
             if (FabricHealerManager.ConfigSettings.EnableCustomRepairPredicateType)
             {
-                RepairTaskManager.LoadCustomPredicateTypes(functorTable, repairData);
+                RepairTaskManager.LoadCustomPredicateTypes(functorTable, serializedRepairData);
             }
 
             // Parse rules.
@@ -173,9 +174,9 @@ namespace FabricHealer.Repair
             await queryDispatcher.RunQueryAsync(compoundTerms, cancellationToken);
         }
 
-        private static void LoadCustomPredicateTypes(FunctorTable functorTable, TelemetryData repairData)
+        private static void LoadCustomPredicateTypes(FunctorTable functorTable, string serializedRepairData)
         {
-            var pluginLoader = new RepairPredicateTypePluginLoader(FabricHealerManager.RepairLogger, FabricHealerManager.ServiceContext, functorTable, repairData);
+            var pluginLoader = new RepairPredicateTypePluginLoader(FabricHealerManager.RepairLogger, FabricHealerManager.ServiceContext, functorTable, serializedRepairData);
             Task.Run(async () => await pluginLoader.LoadPluginsAndCallCustomAction(typeof(RepairPredicateTypeAttribute), typeof(IRepairPredicateType))).Wait();
         }
 

@@ -7,15 +7,16 @@ using FabricHealer;
 using FabricHealer.Interfaces;
 using FabricHealer.SamplePlugins;
 using Guan.Logic;
-using FabricHealer.Utilities.Telemetry;
+using FabricHealer.Utilities;
 
 [assembly: RepairPredicateType(typeof(SampleRepairPredicateTypeStartup))]
 namespace FabricHealer.SamplePlugins
 {
     public class SampleRepairPredicateTypeStartup : IRepairPredicateType
     {
-        public void RegisterToPredicateTypesCollection(FunctorTable functorTable, TelemetryData repairData)
+        public void RegisterToPredicateTypesCollection(FunctorTable functorTable, string serializedRepairData)
         {
+            JsonSerializationUtility.TryDeserializeObject(serializedRepairData, out SampleTelemetryData repairData);
             functorTable.Add(SampleRepairPredicateType.Singleton("CustomRepair", repairData));
         }
     }

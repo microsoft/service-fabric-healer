@@ -1378,7 +1378,7 @@ namespace FabricHealer
                 DetectedHealthEvents.Add(eventData);
 
                 // Start the repair workflow.
-                await StartRepairWorkflowAsync(repairData, repairRules, Token);
+                await StartRepairWorkflowAsync(repairData, repairRules, Token, serializedRepairData: evt.HealthInformation.Description);
             }
         }
 
@@ -1639,7 +1639,7 @@ namespace FabricHealer
                 DetectedHealthEvents.Add(eventData);
 
                 // Start the repair workflow.
-                await StartRepairWorkflowAsync(repairData, repairRules, Token);
+                await StartRepairWorkflowAsync(repairData, repairRules, Token, serializedRepairData: evt.HealthInformation.Description);
             }
         }
 
@@ -1839,7 +1839,7 @@ namespace FabricHealer
                     DetectedHealthEvents.Add(eventData);
 
                     // Start the repair workflow.
-                    await StartRepairWorkflowAsync(repairData, repairRules, Token);
+                    await StartRepairWorkflowAsync(repairData, repairRules, Token, serializedRepairData: evt.HealthInformation.Description);
                 }
             }
         }

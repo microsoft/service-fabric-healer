@@ -7,11 +7,13 @@
   </PropertyGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="copy &quot;$(ProjectDir)packages\microsoft.logic.guan\1.0.4\lib\netstandard2.0\Guan.dll&quot; &quot;$(OutDir)&quot;&#xD;&#xA;" />
+    <Exec Command="copy &quot;$(ProjectDir)packages\newtonsoft.json\13.0.3\lib\net6.0\Newtonsoft.Json.dll&quot; &quot;$(OutDir)&quot;&#xD;&#xA;" />
     <Exec Command="copy &quot;$(OutDir)*.dll&quot; &quot;$(OutDir)FabricHealerPkg\Data\Plugins&quot;&#xD;&#xA;copy &quot;$(OutDir)*.pdb&quot; &quot;$(OutDir)FabricHealerPkg\Data\Plugins&quot;" /> 
   </Target>
   <ItemGroup>
     <PackageReference Include="Microsoft.Logic.Guan" Version="1.0.4" />
     <PackageReference Include="microsoft.servicefabricapps.fabrichealer.windows.selfcontained" Version="1.2.12" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>

@@ -110,17 +110,17 @@ namespace FabricHealer.Utilities
     internal class RepairPredicateTypePluginLoader : BasePluginLoader
     {
         private FunctorTable FunctorTable { get; }
-        private TelemetryData RepairData { get; }
+        private string serializedRepairData { get; }
 
         public RepairPredicateTypePluginLoader(
             Logger logger,
             ServiceContext serviceContext,
             FunctorTable FunctorTable,
-            TelemetryData RepairData)
+            string serializedRepairData)
             : base(logger, serviceContext)
         {
             this.FunctorTable = FunctorTable;
-            this.RepairData = RepairData;
+            this.serializedRepairData = serializedRepairData;
         }
 
         protected override Object GetPluginClassInstance(Assembly assembly)
@@ -133,7 +133,7 @@ namespace FabricHealer.Utilities
         {
             if (instance is IRepairPredicateType customPredicateType)
             {
-                customPredicateType.RegisterToPredicateTypesCollection(this.FunctorTable, this.RepairData);
+                customPredicateType.RegisterToPredicateTypesCollection(this.FunctorTable, this.serializedRepairData);
                 return Task.CompletedTask;
             }
 

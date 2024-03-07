@@ -1,10 +1,9 @@
-﻿using FabricHealer.Utilities.Telemetry;
-using Guan.Logic;
+﻿using Guan.Logic;
 
 namespace FabricHealer.Interfaces
 {
     public interface IRepairPredicateType
     {
-        void RegisterToPredicateTypesCollection(FunctorTable functorTable, TelemetryData repairData);
+        void RegisterToPredicateTypesCollection(FunctorTable functorTable, string serializedRepairData);
     }
 }
