@@ -38,8 +38,8 @@
 		<!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
 		<Parameter Name="LogAnalyticsLogType" Value="FabricHealer" />
 
-		<Parameter Name="EnableCustomServiceInitializers" Value="" />
-		<Parameter Name="EnableCustomRepairPredicateType" Value="" />
+		<Parameter Name="EnableCustomServiceInitializers" Value="" MustOverride="true" />
+		<Parameter Name="EnableCustomRepairPredicateType" Value="" MustOverride="true" />
 	</Section>
 
 	<!-- Repair Policies -->
