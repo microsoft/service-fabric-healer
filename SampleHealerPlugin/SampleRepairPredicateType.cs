@@ -11,7 +11,7 @@ using FabricHealer.Utilities.Telemetry;
 namespace FabricHealer.SamplePlugins
 {
     /// <summary>
-    ///  Helper external predicate that generates health/etw/telemetry events.
+    ///  sample external predicate. copy of LogWarningPredicateType.
     /// </summary>
     public class SampleRepairPredicateType : PredicateType
     {
