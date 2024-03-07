@@ -145,6 +145,18 @@ namespace FabricHealer.Utilities
             set;
         }
 
+        public bool EnableCustomRepairPredicateType
+        {
+            get;
+            set;
+        }
+
+        public bool EnableCustomServiceInitializers
+        {
+            get;
+            set;
+        }
+
         public ConfigSettings(StatelessServiceContext context)
         {
             this.context = context ?? throw new ArgumentException("ServiceContext can't be null.");
@@ -164,6 +176,16 @@ namespace FabricHealer.Utilities
             if (int.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.AsyncOperationTimeout), out int timeout))
             {
                 AsyncTimeout = TimeSpan.FromSeconds(timeout);
+            }
+
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableCustomServiceInitializers), out bool enableCustomServiceInitializers))
+            {
+                EnableCustomServiceInitializers = enableCustomServiceInitializers;
+            }
+
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableCustomServiceInitializers), out bool enableCustomRepairPredicateType))
+            {
+                EnableCustomRepairPredicateType = enableCustomRepairPredicateType;
             }
 
             // Logger

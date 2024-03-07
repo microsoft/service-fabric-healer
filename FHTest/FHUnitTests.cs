@@ -134,7 +134,9 @@ namespace FHTest
             FabricHealerManager _ = new (TestServiceContext, token);
             FabricHealerManager.ConfigSettings = new ConfigSettings(TestServiceContext)
             {
-                TelemetryEnabled = false
+                TelemetryEnabled = false,
+                EnableCustomServiceInitializers = false,
+                EnableCustomRepairPredicateType = false
             };
 
             var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync();

@@ -122,7 +122,10 @@ namespace FabricHealer.Repair
             functorTable.Add(ScheduleMachineRepairPredicateType.Singleton(RepairConstants.ScheduleMachineRepair, repairData));
 
             // register custom predicates.
-            RepairTaskManager.LoadCustomPredicateTypes(functorTable, repairData);
+            if (FabricHealerManager.ConfigSettings.EnableCustomRepairPredicateType)
+            {
+                RepairTaskManager.LoadCustomPredicateTypes(functorTable, repairData);
+            }
 
             // Parse rules.
             Module module = Module.Parse("fh_external", repairRules, functorTable);

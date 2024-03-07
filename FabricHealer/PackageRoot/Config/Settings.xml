@@ -37,6 +37,9 @@
 		<Parameter Name="LogAnalyticsSharedKey" Value="" />
 		<!-- Required-If TelemetryProvider is AzureLogAnalytics. -->
 		<Parameter Name="LogAnalyticsLogType" Value="FabricHealer" />
+
+		<Parameter Name="EnableCustomServiceInitializers" Value="" />
+		<Parameter Name="EnableCustomRepairPredicateType" Value="" />
 	</Section>
 
 	<!-- Repair Policies -->
