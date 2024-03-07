@@ -58,8 +58,8 @@
             <Parameter Name="EnableRollingServiceRestarts" Value="[EnableRollingServiceRestarts]" />
             <Parameter Name="LocalLogPath" Value="[LocalLogPath]" />
             <Parameter Name="EnableLogicRuleTracing" Value="[EnableLogicRuleTracing]" />
-            <Parameter Name="EnableCustomServiceInitializers" Value="[EnableLogicRuleTracing]" />
-            <Parameter Name="EnableCustomRepairPredicateType" Value="[EnableLogicRuleTracing]" />
+            <Parameter Name="EnableCustomServiceInitializers" Value="[EnableCustomServiceInitializers]" />
+            <Parameter Name="EnableCustomRepairPredicateType" Value="[EnableCustomRepairPredicateType]" />
           </Section>
           <!-- Repair policies -->
           <Section Name="AppRepairPolicy">
