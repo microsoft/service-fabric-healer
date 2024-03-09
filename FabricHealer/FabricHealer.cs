@@ -35,7 +35,7 @@ namespace FabricHealer
 
             if (FabricHealerManager.ConfigSettings.EnableCustomServiceInitializers)
             {
-                await LoadCustomServiceInitializersAsync();
+                await this.LoadCustomServiceInitializersAsync();
             }
             
             // Blocks until StartAsync exits.

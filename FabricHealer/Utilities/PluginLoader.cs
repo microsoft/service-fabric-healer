@@ -18,7 +18,7 @@ namespace FabricHealer.Utilities
 
         protected BasePluginLoader(Logger logger, ServiceContext serviceContext)
         {
-            Logger = logger;
+            this.Logger = logger;
             this.ServiceContext = serviceContext;
         }
 

@@ -9,7 +9,7 @@ namespace FabricHealer
 
         public CustomServiceInitializerAttribute(Type startupType)
         {
-            InitializerType = startupType;
+            this.InitializerType = startupType;
         }
     }
 }

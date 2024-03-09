@@ -9,7 +9,7 @@ namespace FabricHealer
 
         public RepairPredicateTypeAttribute(Type className)
         {
-            CustomRepairPredicateType = className;
+            this.CustomRepairPredicateType = className;
         }
     }
 }
