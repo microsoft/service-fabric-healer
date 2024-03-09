@@ -66,7 +66,7 @@ namespace FabricHealer.SamplePlugins
 
                 await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
-                        "LogWarningPredicate",
+                        "SamplePredicateType",
                         output,
                         FabricHealerManager.Token);
 
