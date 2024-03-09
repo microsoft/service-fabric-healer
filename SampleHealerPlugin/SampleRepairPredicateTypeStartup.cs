@@ -17,7 +17,7 @@ namespace FabricHealer.SamplePlugins
         public void RegisterToPredicateTypesCollection(FunctorTable functorTable, string serializedRepairData)
         {
             JsonSerializationUtility.TryDeserializeObject(serializedRepairData, out SampleTelemetryData repairData);
-            functorTable.Add(SampleRepairPredicateType.Singleton("CustomRepair", repairData));
+            functorTable.Add(SampleRepairPredicateType.Singleton("SampleRepair", repairData));
         }
     }
 }
