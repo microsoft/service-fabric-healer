@@ -35,14 +35,14 @@ namespace FabricHealer
 
             if (FabricHealerManager.ConfigSettings.EnableCustomServiceInitializers)
             {
-                await this.LoadCustomServiceInitializersAsync();
+                await this.LoadCustomServiceInitializers();
             }
             
             // Blocks until StartAsync exits.
             await healerManager.StartAsync();
         }
 
-        private async Task LoadCustomServiceInitializersAsync()
+        private async Task LoadCustomServiceInitializers()
         {
             var pluginLoader = new ServiceInitializerPluginLoader(this.logger, this.Context);
             await pluginLoader.LoadPluginsAndCallCustomAction(typeof(CustomServiceInitializerAttribute), typeof(ICustomServiceInitializer));
