@@ -19,6 +19,12 @@
     <Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="PackageRoot\Data\Plugins\Readme Repair Predicate Plugin.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="PackageRoot\Data\Plugins\Readme Repair Predicate Plugin.md" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Microsoft.Logic.Guan" Version="1.0.4" />
@@ -29,8 +35,5 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="PackageRoot\Data\Plugins\" />
   </ItemGroup>
 </Project>
