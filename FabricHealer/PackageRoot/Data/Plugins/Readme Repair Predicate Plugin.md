@@ -32,7 +32,8 @@ namespace FabricHealer.SamplePlugins
 
             protected override async Task<bool> CheckAsync()
             {
-                //implement code
+                //implement code that contains a RepairData.RepairPolicy object
+                //you can check the FabricHealer\Repair\Guan path for more detailed examples
             }
         }
 
@@ -81,12 +82,20 @@ namespace FabricHealer.SamplePlugins
 }
 ```
 
-5. Build your custom worker project, drop the output dll and *ALL* of its dependencies, both managed and native (this is *very* important), into the Data/Plugins folder in FabricHealer/PackageRoot. 
+5. You must also then employ the new repair rule. So based on the example files above you will need to add the logic programming to a guan file. The guan files are in the FabricHealer\Repair\Guan directory. For example, based on the lines of code above,
+
+```C#
+Mitigate(some argument) :- [some logical expresion], SampleRepair("repair rule based on plugin").
+```
+
+
+
+6. Build your custom worker project, drop the output dll and *ALL* of its dependencies, both managed and native (this is *very* important), into the Data/Plugins folder in FabricHealer/PackageRoot. 
    You can place your plugin dll and all of its dependencies in its own (*same*) folder under the Plugins directory (useful if you have multiple plugins). 
    Again, ALL plugin dll dependencies (and their dependencies, if any) need to live in the *same* folder as the plugin dll.
 
 
-6. Test your code and Ship it!
+7. Test your code and Ship it!
 
 If you want to build your own nupkg from FH source, then:
 
