@@ -17,9 +17,9 @@ using FabricHealer.Utilities;
 namespace FabricHealer.SamplePlugins
 {
 
-    public class SampleRepairPredicateType : PredicateType
+    public class MyRepairPredicateType : PredicateType
     {
-        private static SampleRepairPredicateType Instance;
+        private static MyRepairPredicateType Instance;
         private static SampleTelemetryData RepairData;
 
         private class Resolver : BooleanPredicateResolver
@@ -37,13 +37,13 @@ namespace FabricHealer.SamplePlugins
             }
         }
 
-        public static SampleRepairPredicateType Singleton(string name, SampleTelemetryData repairData)
+        public static MyRepairPredicateType Singleton(string name, SampleTelemetryData repairData)
         {
             RepairData = repairData;
-            return Instance ??= new SampleRepairPredicateType(name);
+            return Instance ??= new MyRepairPredicateType(name);
         }
 
-        private SampleRepairPredicateType(string name)
+        private MyRepairPredicateType(string name)
                  : base(name, true, 1)
         {
 
@@ -76,7 +76,7 @@ namespace FabricHealer.SamplePlugins
         public void RegisterToPredicateTypesCollection(FunctorTable functorTable, string serializedRepairData)
         {
             JsonSerializationUtility.TryDeserializeObject(serializedRepairData, out SampleTelemetryData repairData);
-            functorTable.Add(SampleRepairPredicateType.Singleton("SampleRepair", repairData));
+            functorTable.Add(MyRepairPredicateType.Singleton("SampleRepair", repairData));
         }
     }
 }
