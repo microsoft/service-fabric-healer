@@ -59,7 +59,7 @@ namespace FabricHealer.SamplePlugins
 
 ```
 
-4. Create a [RepairTypeName]Startup.cs file with this format (e.g., MyRepairPredicateType is the name of your plugin class.). All Startup classes must implement the IRepairPredicateType interface.
+4. Create a [RepairTypeName]Startup.cs file with this format (e.g., MyRepairPredicateType is the name of your plugin class.). All Startup classes must implement the IRepairPredicateType interface and must include the RepairPredicateType attribute.
 
 ```C#
 using FabricHealer;
