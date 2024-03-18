@@ -6,6 +6,9 @@
 using System.Globalization;
 using Guan.Logic;
 using FabricHealer.Utilities;
+using Polly.Retry;
+using Polly;
+using System.Fabric;
 
 namespace FabricHealer.SamplePlugins
 {
@@ -59,16 +62,27 @@ namespace FabricHealer.SamplePlugins
                     output = format;
                 }
 
-                if (JsonSerializationUtility.TrySerializeObject <SampleTelemetryData>(RepairData, out string customTelemetry))
+                if (JsonSerializationUtility.TrySerializeObject<SampleTelemetryData>(RepairData, out string customTelemetry))
                 {
                     output += " | additional telemetry info - " + customTelemetry;
                 }
 
-                await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                AsyncRetryPolicy retryPolicy = Policy.Handle<FabricException>()
+                                   .Or<TimeoutException>()
+                                   .WaitAndRetryAsync(
+                                       new[]
+                                       {
+                                            TimeSpan.FromSeconds(1),
+                                            TimeSpan.FromSeconds(3),
+                                            TimeSpan.FromSeconds(5),
+                                            TimeSpan.FromSeconds(10),
+                                       });
+                await retryPolicy.ExecuteAsync(
+                        () => FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                         LogLevel.Warning,
                         "SamplePredicateType",
                         output,
-                        FabricHealerManager.Token);
+                        FabricHealerManager.Token));
 
                 return true;
             }
