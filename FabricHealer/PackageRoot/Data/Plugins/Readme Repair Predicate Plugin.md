@@ -32,7 +32,7 @@ namespace FabricHealer.SamplePlugins
 
             protected override async Task<bool> CheckAsync()
             {
-                //implement code that contains a RepairData.RepairPolicy object
+                //implement the action you want to perform in the custom repair.
                 //you can check the FabricHealer\Repair\Guan path for more detailed examples
             }
         }
