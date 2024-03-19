@@ -17,6 +17,8 @@ using FabricHealer.Utilities.Telemetry;
 using Guan.Logic;
 using FabricHealer.Repair.Guan;
 using FabricHealer.Utilities;
+using Module = Guan.Logic.Module;
+using FabricHealer.Interfaces;
 
 namespace FabricHealer.Repair
 {
@@ -26,7 +28,7 @@ namespace FabricHealer.Repair
         private static DateTime LastHealthEventsListClearDateTime = DateTime.UtcNow;
         internal static readonly List<HealthEventData> DetectedHealthEvents = new();
 
-        public static async Task StartRepairWorkflowAsync(TelemetryData repairData, List<string> repairRules, CancellationToken cancellationToken)
+        public static async Task StartRepairWorkflowAsync(TelemetryData repairData, List<string> repairRules, CancellationToken cancellationToken, string serializedRepairData = "")
         {
             if (await RepairTaskEngine.HasActiveStopFHRepairJob(cancellationToken))
             {
@@ -60,7 +62,7 @@ namespace FabricHealer.Repair
 
             try
             {
-                await RunGuanQueryAsync(repairData, repairRules, cancellationToken);
+                await RunGuanQueryAsync(repairData, repairRules, cancellationToken, serializedRepairData: serializedRepairData);
             }
             catch (GuanException ge)
             {
@@ -86,7 +88,8 @@ namespace FabricHealer.Repair
                                     TelemetryData repairData,
                                     List<string> repairRules,
                                     CancellationToken cancellationToken,
-                                    RepairExecutorData repairExecutorData = null)
+                                    RepairExecutorData repairExecutorData = null,
+                                    string serializedRepairData = "")
         {
             if (await RepairTaskEngine.HasActiveStopFHRepairJob(cancellationToken))
             {
@@ -118,6 +121,12 @@ namespace FabricHealer.Repair
             functorTable.Add(RestartFabricSystemProcessPredicateType.Singleton(RepairConstants.RestartFabricSystemProcess, repairData));
             functorTable.Add(RestartReplicaPredicateType.Singleton(RepairConstants.RestartReplica, repairData));
             functorTable.Add(ScheduleMachineRepairPredicateType.Singleton(RepairConstants.ScheduleMachineRepair, repairData));
+
+            // register custom predicates.
+            if (FabricHealerManager.ConfigSettings.EnableCustomRepairPredicateType)
+            {
+                RepairTaskManager.LoadCustomPredicateTypes(functorTable, serializedRepairData);
+            }
 
             // Parse rules.
             Module module = Module.Parse("fh_external", repairRules, functorTable);
@@ -163,6 +172,12 @@ namespace FabricHealer.Repair
             // Run Guan query.
             // This is where the supplied rules are run with FO data that may or may not lead to mitigation of some supported SF entity in trouble (or a VM/Disk).
             await queryDispatcher.RunQueryAsync(compoundTerms, cancellationToken);
+        }
+
+        private static void LoadCustomPredicateTypes(FunctorTable functorTable, string serializedRepairData)
+        {
+            var pluginLoader = new RepairPredicateTypePluginLoader(FabricHealerManager.RepairLogger, FabricHealerManager.ServiceContext, functorTable, serializedRepairData);
+            Task.Run(async () => await pluginLoader.LoadPluginsAndCallCustomAction(typeof(RepairPredicateTypeAttribute), typeof(IRepairPredicateType))).Wait();
         }
 
         // The repair will be executed by SF Infrastructure service, not FH. This is the case for all

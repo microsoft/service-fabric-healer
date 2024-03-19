@@ -35,6 +35,8 @@ namespace FabricHealer.Repair
         public const string AsyncOperationTimeout = "AsyncOperationTimeoutSeconds";
         public const string EnableFabricHealerOperationalTelemetry = "EnableOperationalTelemetry";
         public const string EnableLogicRuleTracing = "EnableLogicRuleTracing";
+        public const string EnableCustomServiceInitializers = nameof(EnableCustomServiceInitializers);
+        public const string EnableCustomRepairPredicateType = nameof(EnableCustomRepairPredicateType);
 
         // General Repair Settings Parameters.
         public const string EnableAutoMitigation = "EnableAutoMitigation";

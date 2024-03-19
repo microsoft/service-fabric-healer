@@ -31,6 +31,6 @@
     <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="PackageRoot\Data\Plugins\" />
+	<Folder Include="PackageRoot\Data\Plugins\" />
   </ItemGroup>
 </Project>

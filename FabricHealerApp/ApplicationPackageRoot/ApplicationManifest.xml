@@ -35,6 +35,9 @@
     <Parameter Name="MachineRepairScheduleInterval" DefaultValue="" />
     <Parameter Name="MachineRepairNodeProbationPeriod" DefaultValue="" />
     <Parameter Name="MachineRepairMaxOutstandingRepairs" DefaultValue="" />
+    <!--flags for enabling plugin support-->
+    <Parameter Name="EnableCustomRepairPredicateType" DefaultValue="false" />
+    <Parameter Name="EnableCustomServiceInitializers" DefaultValue="false" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
@@ -55,6 +58,8 @@
             <Parameter Name="EnableRollingServiceRestarts" Value="[EnableRollingServiceRestarts]" />
             <Parameter Name="LocalLogPath" Value="[LocalLogPath]" />
             <Parameter Name="EnableLogicRuleTracing" Value="[EnableLogicRuleTracing]" />
+            <Parameter Name="EnableCustomServiceInitializers" Value="[EnableCustomServiceInitializers]" />
+            <Parameter Name="EnableCustomRepairPredicateType" Value="[EnableCustomRepairPredicateType]" />
           </Section>
           <!-- Repair policies -->
           <Section Name="AppRepairPolicy">
