@@ -30,6 +30,8 @@ The plugin model for FabricHealer (FH) allows for a customer to hook a plugin to
    You can place your plugin dll and all of its dependencies in its own (*same*) folder under the Plugins directory (useful if you have multiple plugins). 
    Again, ALL plugin dll dependencies (and their dependencies, if any) need to live in the *same* folder as the plugin dll.
 
+   Also make sure that you set EnableCustomServiceInitializers to true in the ApplicationManifest.xml file so that FH knows to look for these plugins.
+
 
 5. Test your code and Ship it!
 
