@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.2.12" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricHealerType" ApplicationTypeVersion="1.2.13" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- FabricHealerManager Settings  -->
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
@@ -35,12 +35,15 @@
     <Parameter Name="MachineRepairScheduleInterval" DefaultValue="" />
     <Parameter Name="MachineRepairNodeProbationPeriod" DefaultValue="" />
     <Parameter Name="MachineRepairMaxOutstandingRepairs" DefaultValue="" />
+    <!--flags for enabling plugin support-->
+    <Parameter Name="EnableCustomRepairPredicateType" DefaultValue="false" />
+    <Parameter Name="EnableCustomServiceInitializers" DefaultValue="false" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.2.12" />
+    <ServiceManifestRef ServiceManifestName="FabricHealerPkg" ServiceManifestVersion="1.2.13" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -55,6 +58,8 @@
             <Parameter Name="EnableRollingServiceRestarts" Value="[EnableRollingServiceRestarts]" />
             <Parameter Name="LocalLogPath" Value="[LocalLogPath]" />
             <Parameter Name="EnableLogicRuleTracing" Value="[EnableLogicRuleTracing]" />
+            <Parameter Name="EnableCustomServiceInitializers" Value="[EnableCustomServiceInitializers]" />
+            <Parameter Name="EnableCustomRepairPredicateType" Value="[EnableCustomRepairPredicateType]" />
           </Section>
           <!-- Repair policies -->
           <Section Name="AppRepairPolicy">
