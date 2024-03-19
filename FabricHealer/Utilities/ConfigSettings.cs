@@ -183,7 +183,7 @@ namespace FabricHealer.Utilities
                 EnableCustomServiceInitializers = enableCustomServiceInitializers;
             }
 
-            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableCustomServiceInitializers), out bool enableCustomRepairPredicateType))
+            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableCustomRepairPredicateType), out bool enableCustomRepairPredicateType))
             {
                 EnableCustomRepairPredicateType = enableCustomRepairPredicateType;
             }
