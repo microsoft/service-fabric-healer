@@ -9,6 +9,7 @@ using FabricHealer.Utilities;
 using Polly.Retry;
 using Polly;
 using System.Fabric;
+using FabricHealer.Repair;
 
 namespace FabricHealer.SamplePlugins
 {
@@ -66,6 +67,8 @@ namespace FabricHealer.SamplePlugins
                 {
                     output += " | additional telemetry info - " + customTelemetry;
                 }
+
+                output += $" | InmemoryEventCount - {RepairTaskManager.GetDetectedHealthEvents().Count()}";
 
                 AsyncRetryPolicy retryPolicy = Policy.Handle<FabricException>()
                                    .Or<TimeoutException>()

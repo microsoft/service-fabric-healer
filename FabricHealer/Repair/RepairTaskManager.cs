@@ -28,6 +28,12 @@ namespace FabricHealer.Repair
         private static DateTime LastHealthEventsListClearDateTime = DateTime.UtcNow;
         internal static readonly List<HealthEventData> DetectedHealthEvents = new();
 
+        // this API can be used by the plugins to access the inmemory health events
+        public static IEnumerable<HealthEventData> GetDetectedHealthEvents()
+        {
+            return DetectedHealthEvents.AsReadOnly();
+        }
+
         public static async Task StartRepairWorkflowAsync(TelemetryData repairData, List<string> repairRules, CancellationToken cancellationToken, string serializedRepairData = "")
         {
             if (await RepairTaskEngine.HasActiveStopFHRepairJob(cancellationToken))
