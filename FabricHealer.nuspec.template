@@ -5,7 +5,8 @@
     <version>1.2.14</version>
     <releaseNotes>
 - Added an api that can be used by plugins to access inmemory health events
-- This new version also contains newly properly signed binaries
+- This new version also contains newly properly signed binaries.
+- Updated Dependencies
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
