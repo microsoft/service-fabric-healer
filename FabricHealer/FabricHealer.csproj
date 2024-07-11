@@ -13,15 +13,15 @@
          <RuntimeIdentifier>win-x64</RuntimeIdentifier>-->
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 	<Product>FabricHealer</Product>
-	<Version>1.2.13</Version>
-    <FileVersion>1.2.13</FileVersion>
+	<Version>1.2.14</Version>
+    <FileVersion>1.2.14</FileVersion>
     <StartupObject>FabricHealer.Program</StartupObject>
     <Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Logic.Guan" Version="1.0.4" />
+    <PackageReference Include="Microsoft.Logic.Guan" Version="1.0.5" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
 	<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="NLog" Version="5.2.4" />

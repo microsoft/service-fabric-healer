@@ -11,7 +11,7 @@
 		<Exec Command="copy &quot;$(OutDir)*.dll&quot; &quot;$(OutDir)FabricHealerPkg\Data\Plugins&quot;&#xD;&#xA;copy &quot;$(OutDir)*.pdb&quot; &quot;$(OutDir)FabricHealerPkg\Data\Plugins&quot;" />
 	</Target>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Logic.Guan" Version="1.0.4" />
+		<PackageReference Include="Microsoft.Logic.Guan" Version="1.0.5" />
 		<PackageReference Include="Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" Version="1.2.13" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 
