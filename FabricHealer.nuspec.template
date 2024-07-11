@@ -2,9 +2,10 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.2.13</version>
+    <version>1.2.14</version>
     <releaseNotes>
-- Added ability for customer to have predicate plugin support in FH and perform custom repairs
+- Added an api that can be used by plugins to access inmemory health events
+- This new version also contains newly properly signed binaries
 	</releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
