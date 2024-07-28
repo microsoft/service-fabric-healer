@@ -36,6 +36,9 @@ namespace FabricHealer.Utilities
         {
             string pluginsDir = Path.Combine(this.ServiceContext.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
 
+            var enableRepairPredicatePluginHotReload =
+                FabricHealerManager.ConfigSettings.EnableCustomRepairPredicatePluginHotReload;
+
             if (!Directory.Exists(pluginsDir))
             {
                 return;
@@ -55,7 +58,7 @@ namespace FabricHealer.Utilities
             for (int i = 0; i < pluginDlls.Length; ++i)
             {
                 dll = pluginDlls[i];
-                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(dll, sharedTypes, a => a.IsUnloadable = false);
+                PluginLoader loader = PluginLoader.CreateFromAssemblyFile(dll, sharedTypes, a => a.IsUnloadable = !enableRepairPredicatePluginHotReload);
                 pluginLoaders[i] = loader;
             }
 

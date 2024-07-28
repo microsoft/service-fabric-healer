@@ -37,6 +37,7 @@ namespace FabricHealer.Repair
         public const string EnableLogicRuleTracing = "EnableLogicRuleTracing";
         public const string EnableCustomServiceInitializers = nameof(EnableCustomServiceInitializers);
         public const string EnableCustomRepairPredicateType = nameof(EnableCustomRepairPredicateType);
+        public const string EnableCustomRepairPredicatePluginHotReload = nameof(EnableCustomRepairPredicatePluginHotReload);
 
         // General Repair Settings Parameters.
         public const string EnableAutoMitigation = "EnableAutoMitigation";

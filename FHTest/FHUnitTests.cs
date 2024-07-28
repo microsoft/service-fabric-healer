@@ -136,7 +136,8 @@ namespace FHTest
             {
                 TelemetryEnabled = false,
                 EnableCustomServiceInitializers = false,
-                EnableCustomRepairPredicateType = false
+                EnableCustomRepairPredicateType = false,
+                EnableCustomRepairPredicatePluginHotReload = false
             };
 
             var repairs = await fabricClient.RepairManager.GetRepairTaskListAsync();
