@@ -4,7 +4,7 @@
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<Platforms>x64</Platforms>
-		<FileVersion>1.0.4</FileVersion> 
+		<FileVersion>1.0.5</FileVersion> 
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
