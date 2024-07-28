@@ -38,7 +38,7 @@
     <!--flags for enabling plugin support-->
     <Parameter Name="EnableCustomRepairPredicateType" DefaultValue="false" />
     <Parameter Name="EnableCustomServiceInitializers" DefaultValue="false" />
-    <Parameter Name="EnableCustomRepairPredicatePluginHotReload" DefaultValue="false" />
+    <Parameter Name="EnableCustomRepairPredicatePluginHotReload" DefaultValue="true" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
