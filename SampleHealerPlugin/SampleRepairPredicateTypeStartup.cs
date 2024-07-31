@@ -12,12 +12,20 @@ using FabricHealer.Utilities;
 [assembly: RepairPredicateType(typeof(SampleRepairPredicateTypeStartup))]
 namespace FabricHealer.SamplePlugins
 {
-    public class SampleRepairPredicateTypeStartup : IRepairPredicateType
+    public class SampleRepairPredicateTypeStartup : IRepairPredicateType, IRepairPredicateTypeV2
     {
         public void RegisterToPredicateTypesCollection(FunctorTable functorTable, string serializedRepairData)
         {
             JsonSerializationUtility.TryDeserializeObject(serializedRepairData, out SampleTelemetryData repairData);
             functorTable.Add(SampleRepairPredicateType.Singleton("SampleRepair", repairData));
+        }
+
+        public Dictionary<string, Type> GetPredicateTypes()
+        {
+            return new Dictionary<string, Type>
+            {
+                { "SampleRepair", typeof(SampleRepairPredicateType) }
+            };
         }
     }
 }

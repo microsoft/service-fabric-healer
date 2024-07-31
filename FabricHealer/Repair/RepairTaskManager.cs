@@ -182,7 +182,15 @@ namespace FabricHealer.Repair
 
         private static void LoadCustomPredicateTypes(FunctorTable functorTable, string serializedRepairData)
         {
-            var pluginLoader = new RepairPredicateTypePluginLoader(FabricHealerManager.RepairLogger, FabricHealerManager.ServiceContext, functorTable, serializedRepairData);
+            BasePluginLoader pluginLoader;
+            bool disableHotReload = true; // TODO: get from SF application parameter
+            if (disableHotReload)
+            {
+                pluginLoader = new RepairPredicateTypePluginLoaderV2(FabricHealerManager.RepairLogger, FabricHealerManager.ServiceContext, functorTable, serializedRepairData);
+                Task.Run(async () => await pluginLoader.LoadPluginsAndCallCustomAction(typeof(RepairPredicateTypeAttribute), typeof(IRepairPredicateTypeV2))).Wait();
+                return;
+            }
+            pluginLoader = new RepairPredicateTypePluginLoader(FabricHealerManager.RepairLogger, FabricHealerManager.ServiceContext, functorTable, serializedRepairData);
             Task.Run(async () => await pluginLoader.LoadPluginsAndCallCustomAction(typeof(RepairPredicateTypeAttribute), typeof(IRepairPredicateType))).Wait();
         }
 
