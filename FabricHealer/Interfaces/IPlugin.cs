@@ -22,7 +22,10 @@ namespace FabricHealer.Interfaces
         /// <param name="serviceContext">Fabric healer's service context</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns></returns>
-        Task InitializeAsync(ServiceContext serviceContext, CancellationToken cancellationToken);
+        Task InitializeAsync(ServiceContext serviceContext, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException("InitializeAsync must be implemented if EnableCustomServiceInitializers application parameter is set.");
+        }
 
         /// <summary>
         /// Optional
@@ -47,6 +50,9 @@ namespace FabricHealer.Interfaces
         /// A map of predicate names and their respective types.
         /// types should be classes that inherit from <see cref="IPredicate"/> and <see cref="PredicateType"/>
         /// </returns>
-        IReadOnlyDictionary<string, Type> GetPredicateTypes();
+        IReadOnlyDictionary<string, Type> GetPredicateTypes()
+        {
+            throw new NotImplementedException("GetPredicateTypes must be implemented if EnableCustomRepairPredicateType application parameter is set.");
+        }
     }
 }
