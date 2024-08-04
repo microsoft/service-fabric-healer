@@ -131,7 +131,15 @@ namespace FabricHealer.Repair
             // register custom predicates.
             if (FabricHealerManager.ConfigSettings.EnableCustomRepairPredicateType)
             {
-                RepairTaskManager.LoadCustomPredicateTypes(functorTable, serializedRepairData);
+                // TODO: replace true with application parameter value
+                if (true)
+                {
+                    RepairTaskManager.LoadCustomPredicateTypesV2(functorTable, serializedRepairData);
+                }
+                else
+                {
+                    RepairTaskManager.LoadCustomPredicateTypes(functorTable, serializedRepairData);
+                }
             }
 
             // Parse rules.
@@ -178,6 +186,12 @@ namespace FabricHealer.Repair
             // Run Guan query.
             // This is where the supplied rules are run with FO data that may or may not lead to mitigation of some supported SF entity in trouble (or a VM/Disk).
             await queryDispatcher.RunQueryAsync(compoundTerms, cancellationToken);
+        }
+
+        private static void LoadCustomPredicateTypesV2(FunctorTable functorTable, string serializedRepairData)
+        {
+            var pluginLoader = FabricHealerPluginLoader.Create(FabricHealerManager.ServiceContext);
+            pluginLoader.RegisterPredicateTypes(functorTable, serializedRepairData);
         }
 
         private static void LoadCustomPredicateTypes(FunctorTable functorTable, string serializedRepairData)

@@ -33,13 +33,40 @@ namespace FabricHealer
         {
             using FabricHealerManager healerManager = new(Context, cancellationToken);
 
-            if (FabricHealerManager.ConfigSettings.EnableCustomServiceInitializers)
+            // TODO: replace true with application parameter value
+            if (true)
+            {
+                await this.LoadPluginsAsync(cancellationToken);
+            }
+            else if (FabricHealerManager.ConfigSettings.EnableCustomServiceInitializers)
             {
                 await this.LoadCustomServiceInitializers();
             }
             
             // Blocks until StartAsync exits.
             await healerManager.StartAsync();
+        }
+
+        private async Task LoadPluginsAsync(CancellationToken cancellationToken)
+        {
+            if (!FabricHealerManager.ConfigSettings.EnableCustomRepairPredicateType &&
+                !FabricHealerManager.ConfigSettings.EnableCustomServiceInitializers)
+            {
+                return;
+            }
+
+            var pluginLoader = FabricHealerPluginLoader.Create(this.Context);
+            pluginLoader.LoadPlugins();
+
+            if (FabricHealerManager.ConfigSettings.EnableCustomServiceInitializers)
+            {
+                await pluginLoader.InitializePluginsAsync(cancellationToken);
+            }
+
+            if (FabricHealerManager.ConfigSettings.EnableCustomRepairPredicateType)
+            {
+                pluginLoader.LoadPluginPredicateTypes();
+            }
         }
 
         private async Task LoadCustomServiceInitializers()

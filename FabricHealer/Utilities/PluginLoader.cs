@@ -3,9 +3,11 @@ using FabricHealer.Utilities.Telemetry;
 using Guan.Logic;
 using McMaster.NETCore.Plugins;
 using System;
+using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace FabricHealer.Utilities
@@ -164,6 +166,142 @@ namespace FabricHealer.Utilities
 
             // This will bring down FH, which it should: This means your plugin is not supported. Fix your bug.
             throw new Exception($"{instance.GetType().FullName} must implement ICustomServiceInitializer.");
+        }
+    }
+
+    public interface IPluginLoader
+    {
+        void LoadPlugins();
+        Task InitializePluginsAsync(CancellationToken cancellationToken);
+        void LoadPluginPredicateTypes();
+        void RegisterPredicateTypes(FunctorTable functorTable, string serializedRepairData);
+    }
+
+    public class FabricHealerPluginLoader : IPluginLoader
+    {
+        private readonly ServiceContext _serviceContext;
+        private static readonly IDictionary<IPlugin, IList<PredicateType>> Plugins = new Dictionary<IPlugin, IList<PredicateType>>();
+
+        public static IPluginLoader Create(ServiceContext context)
+        {
+            return new FabricHealerPluginLoader(context);
+        }
+
+        private FabricHealerPluginLoader(ServiceContext context)
+        {
+            this._serviceContext = context;
+        }
+
+        public async Task InitializePluginsAsync(CancellationToken cancellationToken)
+        {
+            foreach (var plugin in FabricHealerPluginLoader.Plugins.Keys)
+            {
+                await plugin.InitializeAsync(this._serviceContext, cancellationToken);
+            }
+        }
+
+        public void LoadPluginPredicateTypes()
+        {
+            foreach (var plugin in FabricHealerPluginLoader.Plugins.Keys)
+            {
+                foreach (var predicateTypeWithName in plugin.GetPredicateTypes())
+                {
+                    var parameters = new object[] { predicateTypeWithName.Key };
+                    var predicateType = Activator.CreateInstance(predicateTypeWithName.Value, parameters);
+                    FabricHealerPluginLoader.Plugins[plugin].Add((PredicateType)predicateType);
+                }
+            }
+        }
+
+
+        public void RegisterPredicateTypes(FunctorTable functorTable, string serializedRepairData)
+        {
+            foreach (var plugin in FabricHealerPluginLoader.Plugins.Keys)
+            {
+                var repairData = plugin.DeserializeRepairData<TelemetryData>(serializedRepairData);
+                foreach (var predicateType in FabricHealerPluginLoader.Plugins[plugin])
+                {
+                    if(predicateType is not IPredicate predicate)
+                    {
+                        throw new Exception($"{predicateType.GetType().FullName} must implement IPredicate.");
+                    }
+                    predicate.SetRepairData(repairData);
+                    functorTable.Add(predicateType);
+                }
+            }
+        }
+
+        public void LoadPlugins()
+        {
+            string pluginsDir = Path.Combine(this._serviceContext.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
+
+            if (!Directory.Exists(pluginsDir))
+            {
+                return;
+            }
+
+            string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.AllDirectories);
+            PluginLoader[] pluginLoaders = new PluginLoader[pluginDlls.Length];
+
+            if (pluginDlls.Length == 0)
+            {
+                return;
+            }
+
+            Type[] sharedTypes = { typeof(IPlugin), typeof(PluginAttribute), typeof(IPredicate) };
+            string dll = "";
+
+            for (int i = 0; i < pluginDlls.Length; ++i)
+            {
+                dll = pluginDlls[i];
+                var loader = PluginLoader.CreateFromAssemblyFile(dll, sharedTypes, a => a.IsUnloadable = false);
+                pluginLoaders[i] = loader;
+            }
+
+            foreach (var pluginLoader in pluginLoaders)
+            {
+                try
+                {
+                    // If your plugin has native library dependencies (that's fine), then we will land in the catch (BadImageFormatException).
+                    // This is by design. The Managed FH plugin assembly will successfully load, of course.
+                    var pluginAssembly = pluginLoader.LoadDefaultAssembly();
+
+                    var attribute = pluginAssembly.GetCustomAttribute<PluginAttribute>();
+
+                    if (attribute != null
+                        && Activator.CreateInstance(attribute.PluginType) is IPlugin plugin)
+                    {
+                        FabricHealerPluginLoader.Plugins.Add(plugin, new List<PredicateType>());
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException or NullReferenceException)
+                {
+                    string error = $"Plugin dll {dll} could not be loaded. Exception - {e.Message}.";
+
+                    HealthReport healthReport = new()
+                    {
+                        AppName = new Uri($"{this._serviceContext.CodePackageActivationContext.ApplicationName}"),
+                        EmitLogEvent = true,
+                        HealthMessage = error,
+                        EntityType = EntityType.Application,
+                        HealthReportTimeToLive = TimeSpan.FromMinutes(10),
+                        State = System.Fabric.Health.HealthState.Warning,
+                        Property = "FabricHealerInitializerLoadError",
+                        SourceId = $"FabricHealerService-{this._serviceContext.NodeContext.NodeName}",
+                        NodeName = this._serviceContext.NodeContext.NodeName,
+                    };
+
+                    FabricHealthReporter healerHealth = new(FabricHealerManager.RepairLogger);
+                    healerHealth.ReportHealthToServiceFabric(healthReport);
+
+                    FabricHealerManager.RepairLogger.LogWarning($"handled exception in FabricHealerService Instance: {e.Message}. {error}");
+                }
+                catch (Exception e) when (e is not OutOfMemoryException)
+                {
+                    FabricHealerManager.RepairLogger.LogError($"Unhandled exception in FabricHealerService Instance: {e.Message}");
+                    throw;
+                }
+            }
         }
     }
 }
