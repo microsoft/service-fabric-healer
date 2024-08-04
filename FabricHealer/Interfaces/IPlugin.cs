@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Fabric;
+using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
@@ -19,8 +20,9 @@ namespace FabricHealer.Interfaces
         /// Will be executed once at the beginning of the service.
         /// </summary>
         /// <param name="serviceContext">Fabric healer's service context</param>
+        /// <param name="cancellationToken">Cancellation token</param>
         /// <returns></returns>
-        Task InitializeAsync(ServiceContext serviceContext);
+        Task InitializeAsync(ServiceContext serviceContext, CancellationToken cancellationToken);
 
         /// <summary>
         /// Optional
