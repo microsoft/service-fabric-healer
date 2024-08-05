@@ -173,7 +173,7 @@ namespace FabricHealer.Utilities
     public class FabricHealerPluginLoader
     {
         private readonly ServiceContext _serviceContext;
-        private static readonly IDictionary<IPlugin, IList<PredicateType>> Plugins = new Dictionary<IPlugin, IList<PredicateType>>();
+        private static readonly IDictionary<IRepairPredicateType, IList<PredicateType>> RepairPredicateTypes = new Dictionary<IRepairPredicateType, IList<PredicateType>>();
         private static readonly HashSet<ICustomServiceInitializer> CustomServiceInitializers = new();
 
         public FabricHealerPluginLoader(ServiceContext context)
@@ -192,14 +192,14 @@ namespace FabricHealer.Utilities
 
         public void LoadPluginPredicateTypes()
         {
-            foreach (var plugin in FabricHealerPluginLoader.Plugins.Keys)
+            foreach (var repairPredicateType in FabricHealerPluginLoader.RepairPredicateTypes.Keys)
             {
                 var serviceCollection = new ServiceCollection();
-                plugin.RegisterPredicateTypes(serviceCollection);
+                repairPredicateType.LoadPredicateTypes(serviceCollection);
                 var predicateTypes = serviceCollection.BuildServiceProvider().GetServices<PredicateType>();
                 foreach (var predicateType in predicateTypes)
                 {
-                    FabricHealerPluginLoader.Plugins[plugin].Add((PredicateType)predicateType);
+                    FabricHealerPluginLoader.RepairPredicateTypes[repairPredicateType].Add((PredicateType)predicateType);
                 }
             }
         }
@@ -207,9 +207,9 @@ namespace FabricHealer.Utilities
 
         public void RegisterPredicateTypes(FunctorTable functorTable, string serializedRepairData)
         {
-            foreach (var plugin in FabricHealerPluginLoader.Plugins.Keys)
+            foreach (var plugin in FabricHealerPluginLoader.RepairPredicateTypes.Keys)
             {
-                foreach (var predicateType in FabricHealerPluginLoader.Plugins[plugin])
+                foreach (var predicateType in FabricHealerPluginLoader.RepairPredicateTypes[plugin])
                 {
                     if(predicateType is not IPredicateType predicate)
                     {
@@ -239,7 +239,7 @@ namespace FabricHealer.Utilities
                 return;
             }
 
-            Type[] sharedTypes = { typeof(IPlugin), typeof(PluginAttribute), typeof(IPredicateType), typeof(ICustomServiceInitializer) };
+            Type[] sharedTypes = { typeof(IRepairPredicateType), typeof(PluginAttribute), typeof(IPredicateType), typeof(ICustomServiceInitializer) };
             string dll = "";
 
             for (int i = 0; i < pluginDlls.Length; ++i)
@@ -261,9 +261,9 @@ namespace FabricHealer.Utilities
 
                     if (attribute != null)
                     {
-                        if (Activator.CreateInstance(attribute.PluginType) is IPlugin plugin)
+                        if (Activator.CreateInstance(attribute.PluginType) is IRepairPredicateType repairPredicateType)
                         {
-                            FabricHealerPluginLoader.Plugins.Add(plugin, new List<PredicateType>());
+                            FabricHealerPluginLoader.RepairPredicateTypes.Add(repairPredicateType, new List<PredicateType>());
                         }
 
                         if (Activator.CreateInstance(attribute.PluginType) is ICustomServiceInitializer customServiceInitializer)
