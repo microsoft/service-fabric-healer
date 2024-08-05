@@ -12,7 +12,7 @@
 	</Target>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Logic.Guan" Version="1.0.5" />
-		<PackageReference Include="Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" Version="1.2.13" />
+		<PackageReference Include="Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" Version="1.2.14" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
 
