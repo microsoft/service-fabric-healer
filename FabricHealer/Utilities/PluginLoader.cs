@@ -9,6 +9,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FabricHealer.Utilities
 {
@@ -204,10 +205,11 @@ namespace FabricHealer.Utilities
         {
             foreach (var plugin in FabricHealerPluginLoader.Plugins.Keys)
             {
-                foreach (var predicateTypeWithName in plugin.GetPredicateTypes())
+                var serviceCollection = new ServiceCollection();
+                plugin.RegisterPredicateTypes(serviceCollection);
+                var predicateTypes = serviceCollection.BuildServiceProvider().GetServices<PredicateType>();
+                foreach (var predicateType in predicateTypes)
                 {
-                    var parameters = new object[] { predicateTypeWithName.Key };
-                    var predicateType = Activator.CreateInstance(predicateTypeWithName.Value, parameters);
                     FabricHealerPluginLoader.Plugins[plugin].Add((PredicateType)predicateType);
                 }
             }

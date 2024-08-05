@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Fabric;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FabricHealer.Interfaces
 {
@@ -46,13 +46,16 @@ namespace FabricHealer.Interfaces
         /// Has to be implemented if EnableCustomRepairPredicateType application parameter is set.
         /// Will be executed once at the beginning of the service.
         /// </summary>
+        /// <param name="services">
+        /// Service collection to register custom predicate types.
+        /// Predicate types should inherit from <see cref="PredicateType"/> and implement <see cref="IPredicate"/>
+        /// Predicate types should be registered as singleton instances.
+        /// </param>
         /// <returns>
-        /// A map of predicate names and their respective types.
-        /// types should be classes that inherit from <see cref="IPredicate"/> and <see cref="PredicateType"/>
         /// </returns>
-        IReadOnlyDictionary<string, Type> GetPredicateTypes()
+        void RegisterPredicateTypes(IServiceCollection services)
         {
-            throw new NotImplementedException("GetPredicateTypes must be implemented if EnableCustomRepairPredicateType application parameter is set.");
+            throw new NotImplementedException("RegisterPredicateTypes must be implemented if EnableCustomRepairPredicateType application parameter is set.");
         }
     }
 }

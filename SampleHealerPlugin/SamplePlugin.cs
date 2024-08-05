@@ -4,6 +4,8 @@ using FabricHealer.Interfaces;
 using FabricHealer.SamplePlugins;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
+using Guan.Logic;
+using Microsoft.Extensions.DependencyInjection;
 using SampleHealerPlugin;
 
 [assembly: Plugin(typeof(SamplePlugin))]
@@ -27,12 +29,10 @@ namespace SampleHealerPlugin
             return repairData as T;
         }
 
-        public IReadOnlyDictionary<string, Type> GetPredicateTypes()
+        public void RegisterPredicateTypes(IServiceCollection services)
         {
-            return new Dictionary<string, Type>
-            {
-                { "SampleRepairV2", typeof(SamplePredicateType) }
-            };
+            var samplePredicate = new SamplePredicateType("SampleRepairV2");
+            services.AddSingleton<PredicateType>(samplePredicate);
         }
     }
 }
