@@ -55,7 +55,7 @@ namespace FabricHealer
                 return;
             }
 
-            var pluginLoader = FabricHealerPluginLoader.Create(this.Context);
+            var pluginLoader = new FabricHealerPluginLoader(this.Context);
             pluginLoader.LoadPlugins();
 
             if (FabricHealerManager.ConfigSettings.EnableCustomServiceInitializers)

@@ -170,25 +170,12 @@ namespace FabricHealer.Utilities
         }
     }
 
-    public interface IPluginLoader
-    {
-        void LoadPlugins();
-        Task InitializePluginsAsync(CancellationToken cancellationToken);
-        void LoadPluginPredicateTypes();
-        void RegisterPredicateTypes(FunctorTable functorTable, string serializedRepairData);
-    }
-
-    public class FabricHealerPluginLoader : IPluginLoader
+    public class FabricHealerPluginLoader
     {
         private readonly ServiceContext _serviceContext;
         private static readonly IDictionary<IPlugin, IList<PredicateType>> Plugins = new Dictionary<IPlugin, IList<PredicateType>>();
 
-        public static IPluginLoader Create(ServiceContext context)
-        {
-            return new FabricHealerPluginLoader(context);
-        }
-
-        private FabricHealerPluginLoader(ServiceContext context)
+        public FabricHealerPluginLoader(ServiceContext context)
         {
             this._serviceContext = context;
         }

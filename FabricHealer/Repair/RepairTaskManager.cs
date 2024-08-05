@@ -190,7 +190,7 @@ namespace FabricHealer.Repair
 
         private static void LoadCustomPredicateTypesV2(FunctorTable functorTable, string serializedRepairData)
         {
-            var pluginLoader = FabricHealerPluginLoader.Create(FabricHealerManager.ServiceContext);
+            var pluginLoader = new FabricHealerPluginLoader(FabricHealerManager.ServiceContext);
             pluginLoader.RegisterPredicateTypes(functorTable, serializedRepairData);
         }
 
