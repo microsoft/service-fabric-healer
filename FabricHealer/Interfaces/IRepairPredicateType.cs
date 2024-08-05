@@ -7,7 +7,10 @@ namespace FabricHealer.Interfaces
     public interface IRepairPredicateType
     {
         [Obsolete("This will be removed in a future release. Please use the LoadPredicateTypes() method instead.")]
-        void RegisterToPredicateTypesCollection(FunctorTable functorTable, string serializedRepairData);
+        void RegisterToPredicateTypesCollection(FunctorTable functorTable, string serializedRepairData)
+        {
+
+        }
 
         /// <summary>
         /// Has to be implemented if EnableCustomRepairPredicateType application parameter is set.
