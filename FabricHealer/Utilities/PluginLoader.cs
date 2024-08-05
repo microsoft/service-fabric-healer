@@ -210,9 +210,9 @@ namespace FabricHealer.Utilities
                 var repairData = plugin.DeserializeRepairData<TelemetryData>(serializedRepairData);
                 foreach (var predicateType in FabricHealerPluginLoader.Plugins[plugin])
                 {
-                    if(predicateType is not IPredicate predicate)
+                    if(predicateType is not IPredicateType predicate)
                     {
-                        throw new Exception($"{predicateType.GetType().FullName} must implement IPredicate.");
+                        throw new Exception($"{predicateType.GetType().FullName} must implement IPredicateType.");
                     }
                     predicate.SetRepairData(repairData);
                     functorTable.Add(predicateType);
@@ -237,7 +237,7 @@ namespace FabricHealer.Utilities
                 return;
             }
 
-            Type[] sharedTypes = { typeof(IPlugin), typeof(PluginAttribute), typeof(IPredicate) };
+            Type[] sharedTypes = { typeof(IPlugin), typeof(PluginAttribute), typeof(IPredicateType) };
             string dll = "";
 
             for (int i = 0; i < pluginDlls.Length; ++i)
