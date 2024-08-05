@@ -174,6 +174,7 @@ namespace FabricHealer.Utilities
     {
         private readonly ServiceContext _serviceContext;
         private static readonly IDictionary<IPlugin, IList<PredicateType>> Plugins = new Dictionary<IPlugin, IList<PredicateType>>();
+        private static readonly HashSet<ICustomServiceInitializer> CustomServiceInitializers = new();
 
         public FabricHealerPluginLoader(ServiceContext context)
         {
@@ -182,9 +183,10 @@ namespace FabricHealer.Utilities
 
         public async Task InitializePluginsAsync(CancellationToken cancellationToken)
         {
-            foreach (var plugin in FabricHealerPluginLoader.Plugins.Keys)
+            foreach (var customServiceInitializer in FabricHealerPluginLoader.CustomServiceInitializers)
             {
-                await plugin.InitializeAsync(this._serviceContext, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                await customServiceInitializer.InitializeAsync();
             }
         }
 
@@ -237,7 +239,7 @@ namespace FabricHealer.Utilities
                 return;
             }
 
-            Type[] sharedTypes = { typeof(IPlugin), typeof(PluginAttribute), typeof(IPredicateType) };
+            Type[] sharedTypes = { typeof(IPlugin), typeof(PluginAttribute), typeof(IPredicateType), typeof(ICustomServiceInitializer) };
             string dll = "";
 
             for (int i = 0; i < pluginDlls.Length; ++i)
@@ -257,10 +259,17 @@ namespace FabricHealer.Utilities
 
                     var attribute = pluginAssembly.GetCustomAttribute<PluginAttribute>();
 
-                    if (attribute != null
-                        && Activator.CreateInstance(attribute.PluginType) is IPlugin plugin)
+                    if (attribute != null)
                     {
-                        FabricHealerPluginLoader.Plugins.Add(plugin, new List<PredicateType>());
+                        if (Activator.CreateInstance(attribute.PluginType) is IPlugin plugin)
+                        {
+                            FabricHealerPluginLoader.Plugins.Add(plugin, new List<PredicateType>());
+                        }
+
+                        if (Activator.CreateInstance(attribute.PluginType) is ICustomServiceInitializer customServiceInitializer)
+                        {
+                            FabricHealerPluginLoader.CustomServiceInitializers.Add(customServiceInitializer);
+                        }
                     }
                 }
                 catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException or NullReferenceException)

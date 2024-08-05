@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Fabric;
-using System.Threading;
-using System.Threading.Tasks;
 using FabricHealer.Utilities;
 using FabricHealer.Utilities.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,18 +12,6 @@ namespace FabricHealer.Interfaces
     /// </summary>
     public interface IPlugin
     {
-        /// <summary>
-        /// Has to be implemented if EnableCustomServiceInitializers application parameter is set.
-        /// Will be executed once at the beginning of the service.
-        /// </summary>
-        /// <param name="serviceContext">Fabric healer's service context</param>
-        /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns></returns>
-        Task InitializeAsync(ServiceContext serviceContext, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException("InitializeAsync must be implemented if EnableCustomServiceInitializers application parameter is set.");
-        }
-
         /// <summary>
         /// Optional
         /// Has to be overridden if plugins need custom deserialization of the repair data.
