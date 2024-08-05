@@ -209,13 +209,13 @@ namespace FabricHealer.Utilities
         {
             foreach (var plugin in FabricHealerPluginLoader.Plugins.Keys)
             {
-                var repairData = plugin.DeserializeRepairData<TelemetryData>(serializedRepairData);
                 foreach (var predicateType in FabricHealerPluginLoader.Plugins[plugin])
                 {
                     if(predicateType is not IPredicateType predicate)
                     {
                         throw new Exception($"{predicateType.GetType().FullName} must implement IPredicateType.");
                     }
+                    var repairData = predicate.DeserializeRepairData<TelemetryData>(serializedRepairData);
                     predicate.SetRepairData(repairData);
                     functorTable.Add(predicateType);
                 }

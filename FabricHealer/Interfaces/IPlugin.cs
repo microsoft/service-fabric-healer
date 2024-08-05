@@ -1,6 +1,4 @@
 ﻿using System;
-using FabricHealer.Utilities;
-using FabricHealer.Utilities.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FabricHealer.Interfaces
@@ -12,21 +10,6 @@ namespace FabricHealer.Interfaces
     /// </summary>
     public interface IPlugin
     {
-        /// <summary>
-        /// Optional
-        /// Has to be overridden if plugins need custom deserialization of the repair data.
-        /// Will be executed during every repair workflows if EnableCustomRepairPredicateType application parameter is set.
-        /// By default, it will deserialize the repair data to <see cref="TelemetryData"/>.
-        /// </summary>
-        /// <typeparam name="T">Deserialization target type. A class that inherits from <see cref="TelemetryData"/></typeparam>
-        /// <param name="json">Repair info present in the SF Health report</param>
-        /// <returns>Deserialized repair data</returns>
-        virtual T DeserializeRepairData<T>(string json) where T : TelemetryData
-        {
-            JsonSerializationUtility.TryDeserializeObject(json, out TelemetryData repairData);
-            return (T)repairData;
-        }
-
         /// <summary>
         /// Has to be implemented if EnableCustomRepairPredicateType application parameter is set.
         /// Will be executed once at the beginning of the service.
