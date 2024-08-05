@@ -11,7 +11,7 @@ namespace SampleHealerPlugin
 {
     /// <summary>
     /// Sample plugin for FabricHealer.
-    ///  Implemented using the new Fabric healer plugin contracts.
+    /// Implemented using the new Fabric healer plugin contracts.
     /// </summary>
     internal class SamplePlugin : IPlugin
     {
