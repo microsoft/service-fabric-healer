@@ -131,8 +131,7 @@ namespace FabricHealer.Repair
             // register custom predicates.
             if (FabricHealerManager.ConfigSettings.EnableCustomRepairPredicateType)
             {
-                // TODO: replace true with application parameter value
-                if (true)
+                if (FabricHealerManager.ConfigSettings.UsePluginModelV2)
                 {
                     RepairTaskManager.LoadCustomPredicateTypesV2(functorTable, serializedRepairData);
                 }
