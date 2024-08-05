@@ -33,8 +33,7 @@ namespace FabricHealer
         {
             using FabricHealerManager healerManager = new(Context, cancellationToken);
 
-            // TODO: replace true with application parameter value
-            if (true)
+            if (FabricHealerManager.ConfigSettings.UsePluginModelV2)
             {
                 await this.LoadPluginsAsync(cancellationToken);
             }
