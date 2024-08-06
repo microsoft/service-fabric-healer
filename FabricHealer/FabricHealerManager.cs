@@ -1474,7 +1474,7 @@ namespace FabricHealer
                     continue;
                 }
 
-                if (repairData.ServiceName.ToLower() != serviceName.OriginalString.ToLower())
+                if (!repairData.ServiceName.Equals(serviceName.OriginalString, StringComparison.CurrentCultureIgnoreCase))
                 {
                     continue;
                 }
@@ -2040,7 +2040,7 @@ namespace FabricHealer
                 [Description] = The api IStatefulServiceReplica.ChangeRole(N) on node [NodeName] is stuck.
             */
 
-            List<HealthEvent> healthEvents = new();
+            List<HealthEvent> healthEvents = [];
             var partitionHealthStates = serviceHealth.PartitionHealthStates.Where(
                 p => p.AggregatedHealthState is HealthState.Warning or HealthState.Error);
 

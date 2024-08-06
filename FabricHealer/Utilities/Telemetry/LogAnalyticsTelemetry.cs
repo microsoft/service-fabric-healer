@@ -20,44 +20,35 @@ using Newtonsoft.Json;
 
 namespace FabricHealer.Utilities.Telemetry
 {
-    public class LogAnalyticsTelemetry : ITelemetryProvider
+    public class LogAnalyticsTelemetry(
+            string workspaceId,
+            string sharedKey,
+            string logType,
+            string apiVersion = "2016-04-01") : ITelemetryProvider
     {
-        private readonly Logger logger;
+        private readonly Logger logger = new("TelemetryLogger");
 
-        private string WorkspaceId 
-        { 
+        private string WorkspaceId
+        {
             get;
-        }
+        } = workspaceId;
 
-        public string Key 
-        { 
-            get; set; 
-        }
+        public string Key
+        {
+            get; set;
+        } = sharedKey;
 
-        private string ApiVersion 
-        { 
+        private string ApiVersion
+        {
             get;
-        }
+        } = apiVersion;
 
-        private string LogType 
-        { 
+        private string LogType
+        {
             get;
-        }
+        } = logType;
 
         private string TargetUri => $"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}";
-
-        public LogAnalyticsTelemetry(
-                string workspaceId,
-                string sharedKey,
-                string logType,
-                string apiVersion = "2016-04-01")
-        {
-            WorkspaceId = workspaceId;
-            Key = sharedKey;
-            LogType = logType;
-            ApiVersion = apiVersion;
-            logger = new Logger("TelemetryLogger");
-        }
 
         public async Task ReportHealthAsync(
                             EntityType entityType,

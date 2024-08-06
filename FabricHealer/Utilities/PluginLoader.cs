@@ -107,21 +107,14 @@ namespace FabricHealer.Utilities
         }
     }
 
-    internal class RepairPredicateTypePluginLoader : BasePluginLoader
+    internal class RepairPredicateTypePluginLoader(
+        Logger logger,
+        ServiceContext serviceContext,
+        FunctorTable FunctorTable,
+        string serializedRepairData) : BasePluginLoader(logger, serviceContext)
     {
-        private FunctorTable FunctorTable { get; }
-        private string serializedRepairData { get; }
-
-        public RepairPredicateTypePluginLoader(
-            Logger logger,
-            ServiceContext serviceContext,
-            FunctorTable FunctorTable,
-            string serializedRepairData)
-            : base(logger, serviceContext)
-        {
-            this.FunctorTable = FunctorTable;
-            this.serializedRepairData = serializedRepairData;
-        }
+        private FunctorTable FunctorTable { get; } = FunctorTable;
+        private string SerializedRepairData { get; } = serializedRepairData;
 
         protected override Object GetPluginClassInstance(Assembly assembly)
         {
@@ -133,7 +126,7 @@ namespace FabricHealer.Utilities
         {
             if (instance is IRepairPredicateType customPredicateType)
             {
-                customPredicateType.RegisterToPredicateTypesCollection(this.FunctorTable, this.serializedRepairData);
+                customPredicateType.RegisterToPredicateTypesCollection(this.FunctorTable, this.SerializedRepairData);
                 return Task.CompletedTask;
             }
 
@@ -142,13 +135,8 @@ namespace FabricHealer.Utilities
         }
     }
 
-    internal class ServiceInitializerPluginLoader : BasePluginLoader
+    internal class ServiceInitializerPluginLoader(Logger logger, ServiceContext serviceContext) : BasePluginLoader(logger, serviceContext)
     {
-        public ServiceInitializerPluginLoader(Logger logger, ServiceContext serviceContext)
-            : base(logger, serviceContext)
-        {
-        }
-
         protected override Object GetPluginClassInstance(Assembly assembly)
         {
             CustomServiceInitializerAttribute attribute = assembly.GetCustomAttribute<CustomServiceInitializerAttribute>();
