@@ -17,7 +17,7 @@ FabricObserver and FabricHealer work great together. *Note: This version support
 ```
 
 FabricHealer is implemented as a stateless singleton service that runs on one or all nodes in a Linux or Windows Service Fabric cluster. For Disk and Fabric system service repairs, you must run FabricHealer on all nodes.
-FabricHealer is built as a .NET 6.0 application and has been tested on multiple versions of Windows Server and Ubuntu.  
+FabricHealer is built as a .NET 8.0 application and has been tested on multiple versions of Windows Server and Ubuntu.  
 
 To learn more about FabricHealer's configuration-as-logic model, [click here.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/LogicWorkflows.md)  
 
@@ -34,7 +34,7 @@ For machine repairs, Service Fabric InfrastructureService (IS) must be deployed 
 ## Build and run  
 
 1. Clone the repo.
-2. Install [.NET 6](https://dotnet.microsoft.com/download/dotnet-core/6.0)
+2. Install [.NET 8](https://dotnet.microsoft.com/download/dotnet-core/8.0)
 3. Build. 
 
 ## Deploy FabricHealer 
