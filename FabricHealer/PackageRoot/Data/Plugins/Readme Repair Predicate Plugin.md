@@ -1,9 +1,9 @@
 ﻿The plugin model for FabricHealer (FH) allows for a customer to attach a plugin to FH and perform custom repairs.
 
-1. Create a .NET 6 Library project.
+1. Create a .NET 8 Library project.
 
 2. Install the Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained NuGet package from https://www.nuget.org/profiles/ServiceFabricApps as the version of FabricHealer you are deploying.
-  E.g., 1.2.14 if you are going to deploy FH 1.2.14.
+  E.g., 1.3.0 if you are going to deploy FH 1.3.0.
 
 3. Write a custom repair class!
 
@@ -107,7 +107,7 @@ cd C:\Users\me\source\repos\service-fabric-healer
 ./Build-FabricHealer
 ./Build-NugetPackages
 
-The output from the above commands contains FabricHealer platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.1.2.14.nupkg. Nupkg files from above command would be located in 
+The output from the above commands contains FabricHealer platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.1.3.0.nupkg. Nupkg files from above command would be located in 
 C:\Users\me\source\repos\service-fabric-healer\bin\release\FabricHealer\Nugets.
 
 	
