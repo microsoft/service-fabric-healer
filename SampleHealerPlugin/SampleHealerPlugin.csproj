@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
@@ -16,7 +15,6 @@
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 
 		<!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FH-related reference choices. -->
-		<PackageReference Include="Polly" Version="8.2.1" />
+		<PackageReference Include="Polly" Version="8.4.1" />
 	</ItemGroup>
-
 </Project>

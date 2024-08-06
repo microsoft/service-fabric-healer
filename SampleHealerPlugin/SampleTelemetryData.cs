@@ -12,7 +12,7 @@ namespace FabricHealer.SamplePlugins
     [EventData]
     public class SampleTelemetryData : TelemetryData
     {
-        public string CustomProperty { get; set; }
+        public string? CustomProperty { get; set; }
 
         [JsonConstructor]
         public SampleTelemetryData()

@@ -17,8 +17,8 @@ namespace FabricHealer.SamplePlugins
     /// </summary>
     public class SampleRepairPredicateType : PredicateType
     {
-        private static SampleRepairPredicateType Instance;
-        private static SampleTelemetryData RepairData;
+        private static SampleRepairPredicateType? Instance;
+        private static SampleTelemetryData? RepairData;
 
         private class Resolver : BooleanPredicateResolver
         {
@@ -62,7 +62,7 @@ namespace FabricHealer.SamplePlugins
                     output = format;
                 }
 
-                if (JsonSerializationUtility.TrySerializeObject<SampleTelemetryData>(RepairData, out string customTelemetry))
+                if (RepairData != null && JsonSerializationUtility.TrySerializeObject<SampleTelemetryData>(RepairData, out string customTelemetry))
                 {
                     output += " | additional telemetry info - " + customTelemetry;
                 }
