@@ -9,16 +9,15 @@ using FabricHealer.Utilities;
 using Polly.Retry;
 using Polly;
 using System.Fabric;
-using FabricHealer.Interfaces;
-using FabricHealer.Utilities.Telemetry;
 
 namespace FabricHealer.SamplePlugins
 {
     /// <summary>
     ///  sample external predicate. copy of LogWarningPredicateType.
     /// </summary>
-    public class SampleRepairPredicateType : PredicateType, IPredicateType
+    public class SampleRepairPredicateType : PredicateType
     {
+        private static SampleRepairPredicateType Instance;
         private static SampleTelemetryData RepairData;
 
         private class Resolver : BooleanPredicateResolver
@@ -89,7 +88,13 @@ namespace FabricHealer.SamplePlugins
             }
         }
 
-        public SampleRepairPredicateType(string name)
+        public static SampleRepairPredicateType Singleton(string name, SampleTelemetryData repairData)
+        {
+            RepairData = repairData;
+            return Instance ??= new SampleRepairPredicateType(name);
+        }
+
+        private SampleRepairPredicateType(string name)
                  : base(name, true, 1)
         {
 
@@ -98,18 +103,6 @@ namespace FabricHealer.SamplePlugins
         public override PredicateResolver CreateResolver(CompoundTerm input, Constraint constraint, QueryContext context)
         {
             return new Resolver(input, constraint, context);
-        }
-
-        public void SetRepairData<T>(T repairData) where T : TelemetryData
-        {
-            SampleRepairPredicateType.RepairData = repairData as SampleTelemetryData;
-        }
-
-        // SampleRepairPredicateType override DeserializeRepairData method to deserialize the repair data to SampleTelemetryData.
-        public T DeserializeRepairData<T>(string json) where T : TelemetryData
-        {
-            JsonSerializationUtility.TryDeserializeObject(json, out SampleTelemetryData repairData);
-            return repairData as T;
         }
     }
 }
