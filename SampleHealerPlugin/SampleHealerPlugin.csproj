@@ -4,7 +4,14 @@
 		<TargetFramework>net6.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<RepoRoot>$([System.IO.Path]::GetDirectoryName($([MSBuild]::GetPathOfFileAbove('.gitignore', '$(MSBuildThisFileDirectory)'))))</RepoRoot>
 	</PropertyGroup>
+	<Target Name="PreBuild" AfterTargets="PreBuildEvent">
+		<Exec Command="powershell -NonInteractive -NoProfile -ExecutionPolicy Bypass -File &quot;$(RepoRoot)\Copy-FabricHealerNugetPackages.ps1&quot;" ConsoleToMSBuild="true" YieldDuringToolExecution="true">
+			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+		</Exec>
+	</Target>
+
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<!-- Polly.dll from packages (this file is only required only by this sample plugin, not FabricHealer itself..). -->
 		<Exec Command="copy &quot;$(SolutionDir)packages\polly\8.2.1\lib\netstandard2.0\Polly.dll&quot; &quot;$(OutDir)&quot;&#xD;&#xA;" />
