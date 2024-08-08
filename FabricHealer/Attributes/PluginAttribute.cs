@@ -3,7 +3,8 @@
 namespace FabricHealer;
 
 /// <summary>
-/// Has to be used by the plugin assembly to mark the plugin type.
+/// FH plugin classes should use this attribute to be discovered by FH.
+/// This attribute should be used instead of the CustomServiceInitializerAttribute and RepairPredicateTypeAttribute attributes.
 /// </summary>
 [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
 public class PluginAttribute : Attribute
