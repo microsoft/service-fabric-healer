@@ -259,16 +259,18 @@ namespace FabricHealer.Utilities
 
                     var attribute = pluginAssembly.GetCustomAttribute<PluginAttribute>();
 
-                    if (attribute != null)
+                    foreach (var attribute in attributes)
                     {
-                        if (Activator.CreateInstance(attribute.PluginType) is IRepairPredicateType repairPredicateType)
+                        if (attribute != null)
                         {
-                            FabricHealerPluginLoader.PluginToPredicateTypesMap.Add(repairPredicateType, new List<PredicateType>());
-                        }
-
-                        if (Activator.CreateInstance(attribute.PluginType) is ICustomServiceInitializer customServiceInitializer)
-                        {
-                            FabricHealerPluginLoader.CustomServiceInitializers.Add(customServiceInitializer);
+                            if (Activator.CreateInstance(attribute.PluginType) is IRepairPredicateType repairPredicateType)
+                            {
+                                FabricHealerPluginLoader.PluginToPredicateTypesMap.Add(repairPredicateType, new List<PredicateType>());
+                            }
+                            else if (Activator.CreateInstance(attribute.PluginType) is ICustomServiceInitializer customServiceInitializer)
+                            {
+                                FabricHealerPluginLoader.CustomServiceInitializers.Add(customServiceInitializer);
+                            }
                         }
                     }
                 }
