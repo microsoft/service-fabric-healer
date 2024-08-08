@@ -272,7 +272,7 @@ namespace FabricHealer.Utilities
                         }
                     }
                 }
-                catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException or NullReferenceException)
+                catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException)
                 {
                     string error = $"Plugin dll {dll} could not be loaded. Exception - {e.Message}.";
 
