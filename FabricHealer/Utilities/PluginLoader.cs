@@ -257,7 +257,7 @@ namespace FabricHealer.Utilities
                     // This is by design. The Managed FH plugin assembly will successfully load, of course.
                     var pluginAssembly = pluginLoader.LoadDefaultAssembly();
 
-                    var attribute = pluginAssembly.GetCustomAttribute<PluginAttribute>();
+                    var attributes = pluginAssembly.GetCustomAttributes<PluginAttribute>();
 
                     foreach (var attribute in attributes)
                     {
