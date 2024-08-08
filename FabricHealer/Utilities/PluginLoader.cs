@@ -215,8 +215,7 @@ namespace FabricHealer.Utilities
                     {
                         throw new Exception($"{predicateType.GetType().FullName} must implement IPredicateType.");
                     }
-                    var repairData = predicate.DeserializeRepairData<TelemetryData>(serializedRepairData);
-                    predicate.SetRepairData(repairData);
+                    predicate.SetRepairData(serializedRepairData);
                     functorTable.Add(predicateType);
                 }
             }
