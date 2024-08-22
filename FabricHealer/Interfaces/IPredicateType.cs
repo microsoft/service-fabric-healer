@@ -1,7 +1,7 @@
 ﻿namespace FabricHealer.Interfaces;
 
 /// <summary>
-/// Has to be implemented by the predicate types in the plugins, if EnableCustomRepairPredicateType and UsePluginModelV2 application parameters are set.
+/// Has to be implemented by the predicate types in the plugins, if EnableCustomRepairPredicateType application parameter is set.
 /// FH creates singleton instances of the implemented predicate classes.
 /// </summary>
 public interface IPredicateType

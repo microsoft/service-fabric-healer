@@ -33,15 +33,8 @@ namespace FabricHealer
         {
             using FabricHealerManager healerManager = new(Context, cancellationToken);
 
-            if (FabricHealerManager.ConfigSettings.UsePluginModelV2)
-            {
-                await this.LoadPluginsAsync(cancellationToken);
-            }
-            else if (FabricHealerManager.ConfigSettings.EnableCustomServiceInitializers)
-            {
-                await this.LoadCustomServiceInitializers();
-            }
-            
+            await this.LoadPluginsAsync(cancellationToken);
+
             // Blocks until StartAsync exits.
             await healerManager.StartAsync();
         }
@@ -66,12 +59,6 @@ namespace FabricHealer
             {
                 pluginLoader.LoadPluginPredicateTypes();
             }
-        }
-
-        private async Task LoadCustomServiceInitializers()
-        {
-            var pluginLoader = new ServiceInitializerPluginLoader(this.logger, this.Context);
-            await pluginLoader.LoadPluginsAndCallCustomAction(typeof(CustomServiceInitializerAttribute), typeof(ICustomServiceInitializer));
         }
 
         // Graceful close.

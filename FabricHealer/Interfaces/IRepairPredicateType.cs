@@ -7,18 +7,7 @@ namespace FabricHealer.Interfaces
     public interface IRepairPredicateType
     {
         /// <summary>
-        /// Has to be implemented if UsePluginModelV2 application parameter is NOT set.
-        /// </summary>
-        /// <param name="functorTable"></param>
-        /// <param name="serializedRepairData"></param>
-        [Obsolete("This will be removed in a future release. Please use the LoadPredicateTypes() method instead.")]
-        void RegisterToPredicateTypesCollection(FunctorTable functorTable, string serializedRepairData)
-        {
-
-        }
-
-        /// <summary>
-        /// Has to be implemented if EnableCustomRepairPredicateType and UsePluginModelV2 application parameters are set.
+        /// Has to be implemented if EnableCustomRepairPredicateType application parameter is set.
         /// Will be executed once at the beginning of the service.
         /// </summary>
         /// <param name="services">

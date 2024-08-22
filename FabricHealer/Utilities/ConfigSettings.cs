@@ -157,12 +157,6 @@ namespace FabricHealer.Utilities
             set;
         }
 
-        public bool UsePluginModelV2
-        {
-            get;
-            set;
-        }
-
         public ConfigSettings(StatelessServiceContext context)
         {
             this.context = context ?? throw new ArgumentException("ServiceContext can't be null.");
@@ -192,11 +186,6 @@ namespace FabricHealer.Utilities
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableCustomRepairPredicateType), out bool enableCustomRepairPredicateType))
             {
                 EnableCustomRepairPredicateType = enableCustomRepairPredicateType;
-            }
-
-            if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.UsePluginModelV2), out bool usePluginModelV2))
-            {
-                UsePluginModelV2 = usePluginModelV2;
             }
 
             // Logger

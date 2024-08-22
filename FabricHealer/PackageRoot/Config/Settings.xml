@@ -40,7 +40,6 @@
 
 		<Parameter Name="EnableCustomServiceInitializers" Value="" MustOverride="true" />
 		<Parameter Name="EnableCustomRepairPredicateType" Value="" MustOverride="true" />
-		<Parameter Name="UsePluginModelV2" Value="" MustOverride="true" />	
 	</Section>
 
 	<!-- Repair Policies -->
