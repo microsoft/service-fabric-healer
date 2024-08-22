@@ -131,7 +131,7 @@ namespace FabricHealer.Repair
             // register custom predicates.
             if (FabricHealerManager.ConfigSettings.EnableCustomRepairPredicateType)
             {
-                RepairTaskManager.LoadCustomPredicateTypesV2(functorTable, serializedRepairData);
+                RepairTaskManager.LoadCustomPredicateTypes(functorTable, serializedRepairData);
             }
 
             // Parse rules.
@@ -180,7 +180,7 @@ namespace FabricHealer.Repair
             await queryDispatcher.RunQueryAsync(compoundTerms, cancellationToken);
         }
 
-        private static void LoadCustomPredicateTypesV2(FunctorTable functorTable, string serializedRepairData)
+        private static void LoadCustomPredicateTypes(FunctorTable functorTable, string serializedRepairData)
         {
             var pluginLoader = new FabricHealerPluginLoader(FabricHealerManager.ServiceContext);
             pluginLoader.RegisterPredicateTypes(functorTable, serializedRepairData);
