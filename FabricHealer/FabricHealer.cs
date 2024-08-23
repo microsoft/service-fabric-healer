@@ -6,7 +6,6 @@
 using System.Fabric;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricHealer.Interfaces;
 using FabricHealer.Utilities;
 using Microsoft.ServiceFabric.Services.Runtime;
 
@@ -19,8 +18,7 @@ namespace FabricHealer
     {
         private readonly Logger logger;
 
-        public FabricHealer(StatelessServiceContext context)
-                : base(context)
+        public FabricHealer(StatelessServiceContext context) : base(context)
         {
             logger = new Logger(nameof(FabricHealer));
         }
@@ -32,8 +30,7 @@ namespace FabricHealer
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
             using FabricHealerManager healerManager = new(Context, cancellationToken);
-
-            await this.LoadPluginsAsync(cancellationToken);
+            await LoadPluginsAsync(cancellationToken);
 
             // Blocks until StartAsync exits.
             await healerManager.StartAsync();
@@ -47,17 +44,16 @@ namespace FabricHealer
                 return;
             }
 
-            var pluginLoader = new FabricHealerPluginLoader(this.Context);
-            pluginLoader.LoadPlugins();
+            FabricHealerPluginLoader.LoadPlugins(Context);
 
             if (FabricHealerManager.ConfigSettings.EnableCustomServiceInitializers)
             {
-                await pluginLoader.InitializePluginsAsync(cancellationToken);
+                await FabricHealerPluginLoader.InitializePluginsAsync(cancellationToken);
             }
 
             if (FabricHealerManager.ConfigSettings.EnableCustomRepairPredicateType)
             {
-                pluginLoader.LoadPluginPredicateTypes();
+                FabricHealerPluginLoader.LoadPluginPredicateTypes();
             }
         }
 

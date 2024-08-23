@@ -1,9 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
 		<TargetFramework>net6.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
+		<Platforms>x64</Platforms>
 	</PropertyGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<!-- Polly.dll from packages (this file is only required only by this sample plugin, not FabricHealer itself..). -->
@@ -18,5 +17,4 @@
 		<!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FH-related reference choices. -->
 		<PackageReference Include="Polly" Version="8.2.1" />
 	</ItemGroup>
-
 </Project>

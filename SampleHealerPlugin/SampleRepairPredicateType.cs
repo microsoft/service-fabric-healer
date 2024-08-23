@@ -62,7 +62,7 @@ namespace FabricHealer.SamplePlugins
                     output = format;
                 }
 
-                if (JsonSerializationUtility.TrySerializeObject<SampleTelemetryData>(RepairData, out string customTelemetry))
+                if (JsonSerializationUtility.TrySerializeObject(RepairData, out string customTelemetry))
                 {
                     output += " | additional telemetry info - " + customTelemetry;
                 }

@@ -15,16 +15,10 @@ namespace FabricHealer.Utilities
 {
     public class FabricHealerPluginLoader
     {
-        private readonly ServiceContext _serviceContext;
         private static readonly IDictionary<IRepairPredicateType, IList<PredicateType>> PluginToPredicateTypesMap = new Dictionary<IRepairPredicateType, IList<PredicateType>>();
         private static readonly HashSet<ICustomServiceInitializer> CustomServiceInitializers = new();
 
-        public FabricHealerPluginLoader(ServiceContext context)
-        {
-            this._serviceContext = context;
-        }
-
-        public async Task InitializePluginsAsync(CancellationToken cancellationToken)
+        public static async Task InitializePluginsAsync(CancellationToken cancellationToken)
         {
             foreach (var customServiceInitializer in FabricHealerPluginLoader.CustomServiceInitializers)
             {
@@ -33,7 +27,7 @@ namespace FabricHealer.Utilities
             }
         }
 
-        public void LoadPluginPredicateTypes()
+        public static void LoadPluginPredicateTypes()
         {
             foreach (var repairPredicateType in FabricHealerPluginLoader.PluginToPredicateTypesMap.Keys)
             {
@@ -48,7 +42,7 @@ namespace FabricHealer.Utilities
         }
 
 
-        public void RegisterPredicateTypes(FunctorTable functorTable, string serializedRepairData)
+        public static void RegisterPredicateTypes(FunctorTable functorTable, string serializedRepairData)
         {
             foreach (var plugin in FabricHealerPluginLoader.PluginToPredicateTypesMap.Keys)
             {
@@ -64,9 +58,9 @@ namespace FabricHealer.Utilities
             }
         }
 
-        public void LoadPlugins()
+        public static void LoadPlugins(ServiceContext serviceContext)
         {
-            string pluginsDir = Path.Combine(this._serviceContext.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
+            string pluginsDir = Path.Combine(serviceContext.CodePackageActivationContext.GetDataPackageObject("Data").Path, "Plugins");
 
             if (!Directory.Exists(pluginsDir))
             {
@@ -122,25 +116,25 @@ namespace FabricHealer.Utilities
 
                     HealthReport healthReport = new()
                     {
-                        AppName = new Uri($"{this._serviceContext.CodePackageActivationContext.ApplicationName}"),
+                        AppName = new Uri($"{serviceContext.CodePackageActivationContext.ApplicationName}"),
                         EmitLogEvent = true,
                         HealthMessage = error,
                         EntityType = EntityType.Application,
                         HealthReportTimeToLive = TimeSpan.FromMinutes(10),
                         State = System.Fabric.Health.HealthState.Warning,
                         Property = "FabricHealerInitializerLoadError",
-                        SourceId = $"FabricHealerService-{this._serviceContext.NodeContext.NodeName}",
-                        NodeName = this._serviceContext.NodeContext.NodeName,
+                        SourceId = $"FabricHealerService-{serviceContext.NodeContext.NodeName}",
+                        NodeName = serviceContext.NodeContext.NodeName,
                     };
 
                     FabricHealthReporter healerHealth = new(FabricHealerManager.RepairLogger);
                     healerHealth.ReportHealthToServiceFabric(healthReport);
 
-                    FabricHealerManager.RepairLogger.LogWarning($"handled exception in FabricHealerService Instance: {e.Message}. {error}");
+                    FabricHealerManager.RepairLogger.LogWarning($"Handled exception in FabricHealerPluginLoader.LoadPlugins: {e.Message}. {error}");
                 }
                 catch (Exception e) when (e is not OutOfMemoryException)
                 {
-                    FabricHealerManager.RepairLogger.LogError($"Unhandled exception in FabricHealerService Instance: {e.Message}");
+                    FabricHealerManager.RepairLogger.LogError($"Unhandled exception in FabricHealerPluginLoader.LoadPlugins: {e.Message}");
                     throw;
                 }
             }

@@ -13,6 +13,6 @@ public class PluginAttribute : Attribute
 
     public PluginAttribute(Type pluginType)
     {
-        this.PluginType = pluginType;
+        PluginType = pluginType;
     }
 }
