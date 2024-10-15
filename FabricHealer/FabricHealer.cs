@@ -6,7 +6,6 @@
 using System.Fabric;
 using System.Threading;
 using System.Threading.Tasks;
-using FabricHealer.Interfaces;
 using FabricHealer.Utilities;
 using Microsoft.ServiceFabric.Services.Runtime;
 
@@ -19,8 +18,7 @@ namespace FabricHealer
     {
         private readonly Logger logger;
 
-        public FabricHealer(StatelessServiceContext context)
-                : base(context)
+        public FabricHealer(StatelessServiceContext context) : base(context)
         {
             logger = new Logger(nameof(FabricHealer));
         }
@@ -32,20 +30,31 @@ namespace FabricHealer
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
             using FabricHealerManager healerManager = new(Context, cancellationToken);
+            await LoadPluginsAsync(cancellationToken);
 
-            if (FabricHealerManager.ConfigSettings.EnableCustomServiceInitializers)
-            {
-                await this.LoadCustomServiceInitializers();
-            }
-            
             // Blocks until StartAsync exits.
             await healerManager.StartAsync();
         }
 
-        private async Task LoadCustomServiceInitializers()
+        private async Task LoadPluginsAsync(CancellationToken cancellationToken)
         {
-            var pluginLoader = new ServiceInitializerPluginLoader(this.logger, this.Context);
-            await pluginLoader.LoadPluginsAndCallCustomAction(typeof(CustomServiceInitializerAttribute), typeof(ICustomServiceInitializer));
+            if (!FabricHealerManager.ConfigSettings.EnableCustomRepairPredicateType &&
+                !FabricHealerManager.ConfigSettings.EnableCustomServiceInitializers)
+            {
+                return;
+            }
+
+            FabricHealerPluginLoader.LoadPlugins(Context);
+
+            if (FabricHealerManager.ConfigSettings.EnableCustomServiceInitializers)
+            {
+                await FabricHealerPluginLoader.InitializePluginsAsync(cancellationToken);
+            }
+
+            if (FabricHealerManager.ConfigSettings.EnableCustomRepairPredicateType)
+            {
+                FabricHealerPluginLoader.LoadPluginPredicateTypes();
+            }
         }
 
         // Graceful close.

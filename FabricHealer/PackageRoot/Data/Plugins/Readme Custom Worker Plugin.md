@@ -1,6 +1,6 @@
-The plugin model for FabricHealer (FH) allows for a customer to hook a plugin to FH and do custom work during FH startup. All custom work plugins must implement ICustomServiceInitializer and must include the CustomServiceInitializer attribute.
+The plugin model for FabricHealer (FH) allows for a customer to hook a plugin to FH and do custom work during FH startup. All custom work plugins must implement ICustomServiceInitializer and must include the Plugin attribute.
 
-1. Create a .NET 6 Library project.
+1. Create a .NET 8 Library project.
 
 2. Install the Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained NuGet package from https://www.nuget.org/profiles/ServiceFabricApps as the version of FabricHealer you are deploying.
   E.g., 1.2.14 if you are going to deploy FH 1.2.14.
@@ -16,7 +16,7 @@ The plugin model for FabricHealer (FH) allows for a customer to hook a plugin to
 
 	namespace FabricHealer.CustomWorker;
 
-	[assembly: CustomServiceInitializer(typeof(MyCustomWorker))]
+	[assembly: Plugin(typeof(MyCustomWorker))]
 	public class MyCustomWorker : ICustomServiceInitializer
 	{
 		public Task InitializeAsync()

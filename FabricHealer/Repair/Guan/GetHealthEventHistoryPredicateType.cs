@@ -45,7 +45,7 @@ namespace FabricHealer.Repair.Guan
                             FabricHealerManager.Token);
                 }
 
-                var result = new CompoundTerm(this.Input.Functor);
+                var result = new CompoundTerm(Input.Functor);
                 result.AddArgument(new Constant(eventCount), "0");
                 return result;
             }
