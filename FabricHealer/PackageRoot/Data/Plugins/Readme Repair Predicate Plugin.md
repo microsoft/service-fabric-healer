@@ -1,6 +1,6 @@
 ﻿The plugin model for FabricHealer (FH) allows for a customer to attach a plugin to FH and perform custom repairs.
 
-1. Create a .NET 6 Library project.
+1. Create a .NET 8 Library project.
 
 2. Install the Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained NuGet package from https://www.nuget.org/profiles/ServiceFabricApps as the version of FabricHealer you are deploying.
   E.g., 1.2.14 if you are going to deploy FH 1.2.14.
@@ -17,10 +17,12 @@ using FabricHealer.Utilities;
 namespace FabricHealer.SamplePlugins
 {
 
-    public class MyRepairPredicateType : PredicateType
+    public class MyRepairPredicateType : PredicateType, IPredicateType
     {
         private static MyRepairPredicateType Instance;
         private static SampleTelemetryData RepairData;
+        private string repairData;
+
 
         private class Resolver : BooleanPredicateResolver
         {
@@ -43,6 +45,22 @@ namespace FabricHealer.SamplePlugins
             return Instance ??= new MyRepairPredicateType(name);
         }
 
+        public void SetRepairData(string serializedRepairData)
+        {
+            // Implement logic to set repair data
+            // For this example, we'll simply store the serialized data in a field.
+            // In a real-world scenario, you might parse the serialized data into a more useful format.
+            repairData = serializedRepairData;
+        }
+        
+        public override bool Evaluate(object[] args, out object result)
+        {
+            // Implement custom evaluation logic using the repairData
+            // For this example, we'll just return true if repairData is not null or empty.
+            result = !string.IsNullOrEmpty(repairData);
+            return true;
+        }
+
         private MyRepairPredicateType(string name)
                  : base(name, true, 1)
         {
@@ -59,7 +77,7 @@ namespace FabricHealer.SamplePlugins
 
 ```
 
-4. Create a [RepairTypeName]Startup.cs file with this format (e.g., MyRepairPredicateType is the name of your plugin class.). All Startup classes must implement the IRepairPredicateType interface and must include the RepairPredicateType attribute.
+4. Create a [RepairTypeName]Startup.cs file with this format (e.g., MyRepairPredicateType is the name of your plugin class.). All Startup classes must implement the IRepairPredicateType interface and must include the Plugin attribute to register the custom predicate type.
 
 ```C#
 using FabricHealer;
@@ -73,10 +91,8 @@ namespace FabricHealer.SamplePlugins
 {
     public class MyRepairPredicateTypeStartup : IRepairPredicateType
     {
-        public void RegisterToPredicateTypesCollection(FunctorTable functorTable, string serializedRepairData)
-        {
-            JsonSerializationUtility.TryDeserializeObject(serializedRepairData, out SampleTelemetryData repairData);
-            functorTable.Add(MyRepairPredicateType.Singleton("SampleRepair", repairData));
+        public void LoadPredicateTypes(IServiceCollection services) {
+            services.AddSingleton<PredicateType, MyRepairPredicateType>();
         }
     }
 }
