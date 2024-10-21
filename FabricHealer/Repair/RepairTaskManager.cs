@@ -131,7 +131,7 @@ namespace FabricHealer.Repair
             // register custom predicates.
             if (FabricHealerManager.ConfigSettings.EnableCustomRepairPredicateType)
             {
-                RepairTaskManager.LoadCustomPredicateTypes(functorTable, serializedRepairData);
+                LoadCustomPredicateTypes(functorTable, serializedRepairData);
             }
 
             // Parse rules.
@@ -182,8 +182,7 @@ namespace FabricHealer.Repair
 
         private static void LoadCustomPredicateTypes(FunctorTable functorTable, string serializedRepairData)
         {
-            var pluginLoader = new RepairPredicateTypePluginLoader(FabricHealerManager.RepairLogger, FabricHealerManager.ServiceContext, functorTable, serializedRepairData);
-            Task.Run(async () => await pluginLoader.LoadPluginsAndCallCustomAction(typeof(RepairPredicateTypeAttribute), typeof(IRepairPredicateType))).Wait();
+            FabricHealerPluginLoader.RegisterPredicateTypes(functorTable, serializedRepairData);
         }
 
         // The repair will be executed by SF Infrastructure service, not FH. This is the case for all
