@@ -7,12 +7,7 @@ namespace FabricHealer;
 /// This attribute should be used instead of the CustomServiceInitializerAttribute and RepairPredicateTypeAttribute attributes.
 /// </summary>
 [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
-public class PluginAttribute : Attribute
+public class PluginAttribute(Type pluginType) : Attribute
 {
-    public Type PluginType { get; }
-
-    public PluginAttribute(Type pluginType)
-    {
-        PluginType = pluginType;
-    }
+    public Type PluginType { get; } = pluginType;
 }

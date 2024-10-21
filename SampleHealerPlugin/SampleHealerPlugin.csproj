@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Platforms>x64</Platforms>
 	</PropertyGroup>
@@ -10,11 +10,11 @@
 		<Exec Command="copy &quot;$(OutDir)*.dll&quot; &quot;$(OutDir)FabricHealerPkg\Data\Plugins&quot;&#xD;&#xA;copy &quot;$(OutDir)*.pdb&quot; &quot;$(OutDir)FabricHealerPkg\Data\Plugins&quot;" />
 	</Target>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Logic.Guan" Version="1.0.5" />
-		<PackageReference Include="Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" Version="1.2.14" />
+		<PackageReference Include="Microsoft.Logic.Guan" Version="1.1.0" />
+		<PackageReference Include="Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" Version="1.3.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 
 		<!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FH-related reference choices. -->
-		<PackageReference Include="Polly" Version="8.2.1" />
+		<PackageReference Include="Polly" Version="8.4.1" />
 	</ItemGroup>
 </Project>

@@ -22,10 +22,10 @@ namespace FabricHealer.Repair
         /// <summary>
         /// Supported repair action name substrings.
         /// </summary>
-        public static readonly string[] NodeRepairActionSubstrings = new string[]
-        {
+        public static readonly string[] NodeRepairActionSubstrings =
+        [
             "azure.heal", "azure.host", "azure.job", "platform", "reboot", "reimage", "repave", "tenant", "triage"
-        };
+        ];
 
         /// <summary>
         /// Creates a repair task where FabricHealer is the executor.
