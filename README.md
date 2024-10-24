@@ -1,4 +1,4 @@
-## FabricHealer 1.2.14
+## FabricHealer 1.2.15
 ### Service Fabric Auto-Repair Service with Declarative Logic for Repair Policy Specification. 
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-healer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-healer.json)
@@ -80,7 +80,7 @@ Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH127
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.2.14   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.2.15   
 
 #Create the Service instance:  
 
@@ -89,7 +89,7 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.2.14 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.2.15 -Monitored -FailureAction rollback
 ```  
 
 ## Using FabricHealer  

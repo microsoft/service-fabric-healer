@@ -33,7 +33,7 @@ namespace FabricHealer
         private DateTime LastTelemetrySendDate { get; set; }
         
         // Folks often use their own version numbers. This is for public diagnostic telemetry.
-        private const string InternalVersionNumber = "1.2.14";
+        private const string InternalVersionNumber = "1.2.15";
         private static FabricClient fabricClient;
         private bool disposedValue;
         private bool detectedStopJob;
@@ -1919,7 +1919,7 @@ namespace FabricHealer
             DetectedHealthEvents.Add(eventData);
 
             // Start the repair workflow.
-            await StartRepairWorkflowAsync(repairData, repairRules, Token);
+            await StartRepairWorkflowAsync(repairData, repairRules, Token, serializedRepairData: evt.HealthInformation.Description);
         }
 
         private static async Task ProcessFabricNodeHealthAsync(HealthEvent healthEvent, TelemetryData repairData)
@@ -2017,7 +2017,7 @@ namespace FabricHealer
             DetectedHealthEvents.Add(eventData);
 
             // Start the repair workflow.
-            await StartRepairWorkflowAsync(repairData, repairRules, Token);
+            await StartRepairWorkflowAsync(repairData, repairRules, Token, serializedRepairData: healthEvent.HealthInformation.Description);
         }
 
         private static async Task ProcessReplicaHealthAsync(ServiceHealth serviceHealth)
@@ -2187,7 +2187,7 @@ namespace FabricHealer
                                 DetectedHealthEvents.Add(eventData);
 
                                 // Start the repair workflow.
-                                await StartRepairWorkflowAsync(repairData, repairRules, Token);
+                                await StartRepairWorkflowAsync(repairData, repairRules, Token, serializedRepairData: healthEvent.HealthInformation.Description);
                             }
                         }
                     }
