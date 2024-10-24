@@ -142,11 +142,11 @@ namespace FabricHealer.Utilities
         /// </summary>
         public FabricClientRetryErrors()
         {
-            RetryableExceptions = new List<Type>();
-            RetryableFabricErrorCodes = new List<FabricErrorCode>();
-            RetrySuccessExceptions = new List<Type>();
-            RetrySuccessFabricErrorCodes = new List<FabricErrorCode>();
-            PublicRetrySuccessFabricErrorCodes = new List<uint>();
+            RetryableExceptions = [];
+            RetryableFabricErrorCodes = [];
+            RetrySuccessExceptions = [];
+            RetrySuccessFabricErrorCodes = [];
+            PublicRetrySuccessFabricErrorCodes = [];
             PopulateDefaultValues();
         }
 

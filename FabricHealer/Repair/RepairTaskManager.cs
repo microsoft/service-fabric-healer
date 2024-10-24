@@ -26,7 +26,7 @@ namespace FabricHealer.Repair
     {
         private static readonly TimeSpan MaxLifeTimeHealthEventsData = TimeSpan.FromHours(8);
         private static DateTime LastHealthEventsListClearDateTime = DateTime.UtcNow;
-        internal static readonly List<HealthEventData> DetectedHealthEvents = new();
+        internal static readonly List<HealthEventData> DetectedHealthEvents = [];
 
         // this API can be used by the plugins to access the inmemory health events
         public static IEnumerable<HealthEventData> GetDetectedHealthEvents()
@@ -142,7 +142,7 @@ namespace FabricHealer.Repair
 
             /* Bind default arguments to goal (Mitigate). */
 
-            List<CompoundTerm> compoundTerms = new();
+            List<CompoundTerm> compoundTerms = [];
 
             // Mitigate is the head of the rules used in FH. It's the goal that Guan will try to accomplish based on the logical expressions (or subgoals) that form a given rule.
             CompoundTerm ruleHead = new("Mitigate");

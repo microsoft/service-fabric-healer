@@ -12,18 +12,13 @@ namespace FabricHealer.Utilities
     /// <summary>
     /// Reports health data to Service Fabric Health Manager and logs locally (optional).
     /// </summary>
-    public class FabricHealthReporter
+    /// <remarks>
+    /// Initializes a new instance of the <see cref="FabricHealthReporter"/> class.
+    /// </remarks>
+    /// <param name="logger">Instance of Logger to use for local file logging.</param>
+    public class FabricHealthReporter(Logger logger)
     {
-        private readonly Logger _logger;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FabricHealthReporter"/> class.
-        /// </summary>
-        /// <param name="logger">Instance of Logger to use for local file logging.</param>
-        public FabricHealthReporter(Logger logger)
-        {
-            _logger = logger;
-        }
+        private readonly Logger _logger = logger;
 
         public void ReportHealthToServiceFabric(HealthReport healthReport)
         {

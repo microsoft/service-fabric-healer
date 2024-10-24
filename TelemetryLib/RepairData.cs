@@ -12,7 +12,7 @@ namespace FabricHealer.TelemetryLib
         public Dictionary<string, (string Source, double Count)> Repairs
         {
             get; set;
-        } = new Dictionary<string, (string Source, double Count)>();
+        } = [];
 
         public double RepairCount
         {
