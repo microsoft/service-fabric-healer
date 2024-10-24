@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.2.14</version>
+    <version>1.2.15</version>
     <releaseNotes>
         - FH now loads all plugins only once at startup and caches them to reduce memory usage.
         - *Breaking Change*: Attributes - CustomServiceInitializer and RepairPredicateType have been deprecated and are now unified to a single attribute - Plugin. All predicate types must implement a new interface IPredicateType. RegisterToPredicateTypesCollection API of IRepairPredicateType interface has been deprecated. Customers must start using LoadPredicateTypes method. Please refer to the updated documentation for plugins for more details.
