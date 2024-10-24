@@ -1919,7 +1919,7 @@ namespace FabricHealer
             DetectedHealthEvents.Add(eventData);
 
             // Start the repair workflow.
-            await StartRepairWorkflowAsync(repairData, repairRules, Token);
+            await StartRepairWorkflowAsync(repairData, repairRules, Token, serializedRepairData: evt.HealthInformation.Description);
         }
 
         private static async Task ProcessFabricNodeHealthAsync(HealthEvent healthEvent, TelemetryData repairData)
@@ -2017,7 +2017,7 @@ namespace FabricHealer
             DetectedHealthEvents.Add(eventData);
 
             // Start the repair workflow.
-            await StartRepairWorkflowAsync(repairData, repairRules, Token);
+            await StartRepairWorkflowAsync(repairData, repairRules, Token, serializedRepairData: healthEvent.HealthInformation.Description);
         }
 
         private static async Task ProcessReplicaHealthAsync(ServiceHealth serviceHealth)
@@ -2187,7 +2187,7 @@ namespace FabricHealer
                                 DetectedHealthEvents.Add(eventData);
 
                                 // Start the repair workflow.
-                                await StartRepairWorkflowAsync(repairData, repairRules, Token);
+                                await StartRepairWorkflowAsync(repairData, repairRules, Token, serializedRepairData: healthEvent.HealthInformation.Description);
                             }
                         }
                     }
