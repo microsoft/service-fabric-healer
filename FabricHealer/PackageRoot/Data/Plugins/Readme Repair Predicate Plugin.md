@@ -86,7 +86,7 @@ using FabricHealer.SamplePlugins;
 using Guan.Logic;
 using FabricHealer.Utilities;
 
-[assembly: RepairPredicateType(typeof(MyRepairPredicateTypeStartup))]
+[assembly: Plugin(typeof(MyRepairPredicateTypeStartup))]
 namespace FabricHealer.SamplePlugins
 {
     public class MyRepairPredicateTypeStartup : IRepairPredicateType
