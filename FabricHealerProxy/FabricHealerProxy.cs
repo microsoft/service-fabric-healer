@@ -171,13 +171,12 @@ namespace FabricHealer
                                 .Or<FabricException>()
                                 .Or<TimeoutException>()
                                 .WaitAndRetryAsync(
-                                    new[]
-                                    {
+                                    [
                                         TimeSpan.FromSeconds(1),
                                         TimeSpan.FromSeconds(5),
                                         TimeSpan.FromSeconds(10),
                                         TimeSpan.FromSeconds(15)
-                                    })
+                                    ])
                                 .ExecuteAsync(
                                     () => RepairEntityAsyncInternal(
                                             repairFacts,
@@ -336,13 +335,13 @@ namespace FabricHealer
                         {
                             DeployedServiceReplicaList depReplicas = await fabricClient.QueryManager.GetDeployedReplicaListAsync(repairData.NodeName, appName);
 
-                            if (!depReplicas.Any(r => r.ServiceName.OriginalString.ToLower() == repairData.ServiceName.ToLower() && r.ReplicaStatus == ServiceReplicaStatus.Ready))
+                            if (!depReplicas.Any(r => r.ServiceName.OriginalString.Equals(repairData.ServiceName, StringComparison.CurrentCultureIgnoreCase) && r.ReplicaStatus == ServiceReplicaStatus.Ready))
                             {
                                 throw new FabricServiceNotFoundException();
                             }
 
                             DeployedServiceReplica depReplica =
-                                depReplicas.First(r => r.ServiceName.OriginalString.ToLower() == repairData.ServiceName.ToLower() && r.ReplicaStatus == ServiceReplicaStatus.Ready);
+                                depReplicas.First(r => r.ServiceName.OriginalString.Equals(repairData.ServiceName, StringComparison.CurrentCultureIgnoreCase) && r.ReplicaStatus == ServiceReplicaStatus.Ready);
                             Guid partitionId = depReplica.Partitionid;
                             long replicaId;
 
@@ -673,13 +672,12 @@ namespace FabricHealer
                       .Or<TimeoutException>()
                       .Or<HealthReportNotFoundException>()
                       .WaitAndRetry(
-                        new[]
-                        {
+                        [
                             TimeSpan.FromSeconds(1),
                             TimeSpan.FromSeconds(3),
                             TimeSpan.FromSeconds(5),
                             TimeSpan.FromSeconds(10)
-                        })
+                        ])
                       .Execute(() => ClearHealthReportsInternal());
         }
 

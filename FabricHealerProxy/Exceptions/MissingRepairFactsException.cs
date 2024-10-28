@@ -38,13 +38,5 @@ namespace FabricHealer
         {
         }
 
-        /// <summary>
-        /// Creates an instance of MissingRequiredFactsException.
-        /// </summary>
-        /// <param name="info">SerializationInfo</param>
-        /// <param name="context">StreamingContext</param>
-        protected MissingRepairFactsException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }
