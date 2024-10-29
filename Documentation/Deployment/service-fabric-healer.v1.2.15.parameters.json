@@ -6,7 +6,7 @@
       "value": "<YOUR-CLUSTER-RESOURCE-NAME>"
     },
     "applicationTypeVersionFabricHealer": {
-      "value": "1.2.14"
+      "value": "1.2.15"
     },
     "packageUrlFabricHealer": {
       "value": "<PUBLIC-ACCESSIBLE-URL-FOR-FABRICHEALER-SFPKG>"
