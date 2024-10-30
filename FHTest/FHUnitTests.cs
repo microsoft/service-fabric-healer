@@ -551,7 +551,9 @@ namespace FHTest
         {
             // Create temp files.
             // You can use whatever path you want, but you need to make sure that is also specified in the related test logic rule (service-fabric-healer\FHTest\PackageRoot\Config\LogicRules\DiskRules.guan).
-            byte[] bytes = Encoding.ASCII.GetBytes("foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz foo bar baz");
+            long targetSize = 2L * 1024 * 1024 * 1024; // 2GB in bytes
+            byte[] buffer = Encoding.UTF8.GetBytes("This is a line of text to be repeated in the file.\n");
+            long currentSize = 0;
             string path = @"C:\FHTest\cluster_observer_logs";
 
             if (!Directory.Exists(path))
@@ -562,11 +564,13 @@ namespace FHTest
             // Create two 2GB files in target directory (path).
             for (int i = 0; i < 2; i++)
             {
-                using var f = File.Create(Path.Combine(path, $"foo{i}.txt"), 500000, FileOptions.WriteThrough);
-
-                for (int j = 0; j < 25000000; ++j)
+                using (FileStream fs = new(Path.Combine(path, $"foo{i}.txt"), FileMode.Create, FileAccess.Write, FileShare.None))
                 {
-                    f.Write(bytes);
+                    while (currentSize < targetSize)
+                    {
+                        fs.Write(buffer, 0, buffer.Length);
+                        currentSize += buffer.Length;
+                    }
                 }
             }
 
