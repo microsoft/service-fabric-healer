@@ -273,12 +273,16 @@ namespace FabricHealer
                             }
                         }
 
-                        // Check for new version once a day.
-                        if (DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
+                        if (ConfigSettings.CheckGithubVersion)
                         {
-                            await CheckGithubForNewVersionAsync();
-                            LastVersionCheckDateTime = DateTime.UtcNow;
+                            // Check for new version once a day.
+                            if (DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
+                            {
+                                await CheckGithubForNewVersionAsync();
+                                LastVersionCheckDateTime = DateTime.UtcNow;
+                            }
                         }
+
 
                         await Task.Delay(
                             TimeSpan.FromSeconds(

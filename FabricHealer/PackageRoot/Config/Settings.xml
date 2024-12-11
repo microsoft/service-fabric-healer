@@ -7,6 +7,7 @@
 		<Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
 		<Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
 		<Parameter Name="EnableETW" Value="" MustOverride="true" />
+        <Parameter Name="CheckGithubVersion" Value="" MustOverride="true"/>
 		<!-- Big Red Button: You can turn FabricHealer on and off with a versionless parameter-only application upgrade. -->
 		<Parameter Name="EnableAutoMitigation" Value="" MustOverride="true" />
 		<Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
