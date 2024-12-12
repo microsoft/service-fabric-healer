@@ -61,6 +61,7 @@
             <Parameter Name="EnableLogicRuleTracing" Value="[EnableLogicRuleTracing]" />
             <Parameter Name="EnableCustomServiceInitializers" Value="[EnableCustomServiceInitializers]" />
             <Parameter Name="EnableCustomRepairPredicateType" Value="[EnableCustomRepairPredicateType]" />
+            <Parameter Name="CheckGithubVersion" Value="[CheckGithubVersion]" />
           </Section>
           <!-- Repair policies -->
           <Section Name="AppRepairPolicy">
