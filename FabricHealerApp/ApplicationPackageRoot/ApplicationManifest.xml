@@ -5,6 +5,7 @@
     <Parameter Name="AutoMitigationEnabled" DefaultValue="true" />
     <Parameter Name="EnableETW" DefaultValue="false" />
     <Parameter Name="HealthCheckIntervalInSeconds" DefaultValue="30" />
+    <Parameter Name="CheckGithubVersion" DefaultValue="true"/>
     <!-- If set to true, then FH will emit log events containing the full text of the logic rule with the currently executing external repair predicate.
          This is extremely useful for both debugging and auditing repair rules. -->
     <Parameter Name="EnableLogicRuleTracing" DefaultValue="true" />
@@ -60,6 +61,7 @@
             <Parameter Name="EnableLogicRuleTracing" Value="[EnableLogicRuleTracing]" />
             <Parameter Name="EnableCustomServiceInitializers" Value="[EnableCustomServiceInitializers]" />
             <Parameter Name="EnableCustomRepairPredicateType" Value="[EnableCustomRepairPredicateType]" />
+            <Parameter Name="CheckGithubVersion" Value="[CheckGithubVersion]" />
           </Section>
           <!-- Repair policies -->
           <Section Name="AppRepairPolicy">

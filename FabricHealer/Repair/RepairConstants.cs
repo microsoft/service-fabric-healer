@@ -154,5 +154,8 @@ namespace FabricHealer.Repair
         public const string MaxOutstandingRepairs = "MaxOutstandingRepairs";
         public const string NodeProbationPeriod = "NodeProbationPeriod";
         public const string MinHealthStateDuration = "MinHealthStateDuration";
+
+        // Octokit Github Version Check
+        public const string CheckGithubVersion = "CheckGithubVersion";
     }
 }
