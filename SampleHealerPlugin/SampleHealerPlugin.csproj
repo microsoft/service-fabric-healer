@@ -11,10 +11,11 @@
 	</Target>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Logic.Guan" Version="1.0.5" />
-		<PackageReference Include="Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" Version="1.2.14" />
+		<PackageReference Include="Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" Version="1.2.15" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
 
-		<!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FH-related reference choices. -->
+        <!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FH-related reference choices. -->
 		<PackageReference Include="Polly" Version="8.2.1" />
 	</ItemGroup>
 </Project>

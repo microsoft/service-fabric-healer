@@ -14,14 +14,9 @@ namespace FabricHealer
     /// <summary>
     /// An instance of this class is created for each service instance by the Service Fabric runtime.
     /// </summary>
-    public sealed class FabricHealer : StatelessService
+    public sealed class FabricHealer(StatelessServiceContext context) : StatelessService(context)
     {
-        private readonly Logger logger;
-
-        public FabricHealer(StatelessServiceContext context) : base(context)
-        {
-            logger = new Logger(nameof(FabricHealer));
-        }
+        private readonly Logger logger = new(nameof(FabricHealer));
 
         /// <summary>
         /// This is the main entry point for your service instance.

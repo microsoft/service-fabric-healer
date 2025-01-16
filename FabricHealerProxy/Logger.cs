@@ -65,16 +65,16 @@ namespace FabricHealer
                 if (OperatingSystem.IsWindows())
                 {
                     // Add current drive letter if not supplied for Windows path target.
-                    if (!LogFolderBasePath.Substring(0, 3).Contains(":\\"))
+                    if (!LogFolderBasePath[..3].Contains(":\\"))
                     {
-                        string windrive = Environment.SystemDirectory.Substring(0, 3);
+                        string windrive = Environment.SystemDirectory[..3];
                         logFolderBase = windrive + LogFolderBasePath;
                     }
                 }
                 else
                 {
                     // Remove supplied drive letter if Linux is the runtime target.
-                    if (LogFolderBasePath.Substring(0, 3).Contains(":\\"))
+                    if (LogFolderBasePath[..3].Contains(":\\"))
                     {
                         logFolderBase = LogFolderBasePath.Remove(0, 3).Replace("\\", "/");
                     }
@@ -84,7 +84,7 @@ namespace FabricHealer
             {
                 if (OperatingSystem.IsWindows())
                 {
-                    string windrive = Environment.SystemDirectory.Substring(0, 3);
+                    string windrive = Environment.SystemDirectory[..3];
                     logFolderBase = windrive + "fabric_healer_proxy_logs";
                 }
                 else

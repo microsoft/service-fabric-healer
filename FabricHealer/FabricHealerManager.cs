@@ -33,7 +33,7 @@ namespace FabricHealer
         private DateTime LastTelemetrySendDate { get; set; }
         
         // Folks often use their own version numbers. This is for public diagnostic telemetry.
-        private const string InternalVersionNumber = "1.2.15";
+        private const string InternalVersionNumber = "1.3.0";
         private static FabricClient fabricClient;
         private bool disposedValue;
         private bool detectedStopJob;
@@ -1478,7 +1478,7 @@ namespace FabricHealer
                     continue;
                 }
 
-                if (repairData.ServiceName.ToLower() != serviceName.OriginalString.ToLower())
+                if (!repairData.ServiceName.Equals(serviceName.OriginalString, StringComparison.CurrentCultureIgnoreCase))
                 {
                     continue;
                 }
@@ -2044,7 +2044,7 @@ namespace FabricHealer
                 [Description] = The api IStatefulServiceReplica.ChangeRole(N) on node [NodeName] is stuck.
             */
 
-            List<HealthEvent> healthEvents = new();
+            List<HealthEvent> healthEvents = [];
             var partitionHealthStates = serviceHealth.PartitionHealthStates.Where(
                 p => p.AggregatedHealthState is HealthState.Warning or HealthState.Error);
 
