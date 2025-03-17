@@ -22,15 +22,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		fhnuget.md = fhnuget.md
 		icon.png = icon.png
 		Documentation\LogicWorkflows.md = Documentation\LogicWorkflows.md
-		packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.7\build\Microsoft.VisualStudio.Azure.Fabric.Application.props = packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.7\build\Microsoft.VisualStudio.Azure.Fabric.Application.props
-		packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.7\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets = packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.7\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets
-		packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.7\build\Microsoft.VisualStudio.Azure.Fabric.BuildTasks.dll = packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.7\build\Microsoft.VisualStudio.Azure.Fabric.BuildTasks.dll
-		packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.7\build\Microsoft.VisualStudio.Azure.Fabric.FileSystem.dll = packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.7.7\build\Microsoft.VisualStudio.Azure.Fabric.FileSystem.dll
 		Documentation\OperationalTelemetry.md = Documentation\OperationalTelemetry.md
 		README.md = README.md
 		Documentation\Deployment\service-fabric-healer.json = Documentation\Deployment\service-fabric-healer.json
-		Documentation\Using.md = Documentation\Using.md
 		Documentation\Deployment\service-fabric-healer.v1.3.0.parameters.json = Documentation\Deployment\service-fabric-healer.v1.3.0.parameters.json
+		Documentation\Using.md = Documentation\Using.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FHTest", "FHTest\FHTest.csproj", "{8D9712BF-C026-4A36-B6D1-6345137D3B6F}"

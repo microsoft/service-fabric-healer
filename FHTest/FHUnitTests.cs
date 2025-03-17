@@ -761,16 +761,16 @@ namespace FHTest
                     return;
                 }
 
-                throw new InternalTestFailureException("FabricNode repair task did not get created with max test time of 30s.");
+                throw new Exception("FabricNode repair task did not get created with max test time of 30s.");
 
             }
-            catch (GuanException ge)
+            catch (GuanException)
             {
-                throw new InternalTestFailureException(ge.Message, ge);
+                throw;
             }
-            catch (FabricException fe)
+            catch (FabricException)
             {
-                throw new InternalTestFailureException(fe.Message, fe);
+                throw;
             }
         }
 
@@ -1391,7 +1391,7 @@ namespace FHTest
         {
             if (!IsLocalSFRuntimePresent())
             {
-                throw new InternalTestFailureException("You must run this test with an active local (dev) SF cluster.");
+                throw new Exception("You must run this test with an active local (dev) SF cluster.");
             }
 
             // This will put the entity into Warning with a specially-crafted Health Event description (serialized instance of ITelemetryData type).
