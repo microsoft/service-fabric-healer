@@ -25,8 +25,6 @@ namespace FabricHealer.Repair
 {
     public sealed class RepairExecutor
     {
-        private const double MaxWaitTimeMinutesForNodeOperation = 60.0;
-
         public static async Task<RestartDeployedCodePackageResult> RestartDeployedCodePackageAsync(TelemetryData repairData, CancellationToken cancellationToken)
         {
             try
@@ -170,13 +168,13 @@ namespace FabricHealer.Repair
         {
             string repairName = Enum.GetName(typeof(RepairActionType), repairData.RepairPolicy.RepairAction);
 
-            if (!FabricHealerManager.RepairHistory.Repairs.ContainsKey(repairName))
+            if (!FabricHealerManager.RepairHistory.Repairs.TryGetValue(repairName, out (string Source, double Count) value))
             {
                 FabricHealerManager.RepairHistory.Repairs.Add(repairName, (repairData.Source, 1));
             }
             else
             {
-                double count = FabricHealerManager.RepairHistory.Repairs[repairName].Count + 1;
+                double count = value.Count + 1;
                 FabricHealerManager.RepairHistory.Repairs[repairName] = (repairData.Source, count);
             }
 
@@ -397,7 +395,7 @@ namespace FabricHealer.Repair
                 return null;
             }
 
-            List<Process> result = new();
+            List<Process> result = [];
             Process[] processes = Process.GetProcessesByName("dotnet");
 
             foreach (Process proc in processes)

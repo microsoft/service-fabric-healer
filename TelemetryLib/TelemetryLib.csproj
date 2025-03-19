@@ -5,17 +5,17 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>FabricHealer.TelemetryLib</RootNamespace>
     <AssemblyName>TelemetryLib</AssemblyName>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
 	<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
     <PlatformTarget>x64</PlatformTarget>
-    <AssemblyVersion>2.1.0.0</AssemblyVersion>
-    <FileVersion>2.1.0.0</FileVersion>
+    <AssemblyVersion>2.2.0.0</AssemblyVersion>
+    <FileVersion>2.2.0.0</FileVersion>
     <Copyright>Copyright ©  2020</Copyright>
     <Product>TelemetryLib</Product>
     <Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.21.0" />
-	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.23.0" />
+	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="7.0.1816" />
   </ItemGroup>
 </Project>

@@ -2,11 +2,10 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.2.15</version>
+    <version>1.3.0</version>
     <releaseNotes>
-        - FH now loads all plugins only once at startup and caches them to reduce memory usage.
-        - *Breaking Change*: Attributes - CustomServiceInitializer and RepairPredicateType have been deprecated and are now unified to a single attribute - Plugin. All predicate types must implement a new interface IPredicateType. RegisterToPredicateTypesCollection API of IRepairPredicateType interface has been deprecated. Customers must start using LoadPredicateTypes method. Please refer to the updated documentation for plugins for more details.
-        - Bug Fix - serializedRepairData is now being passed to all entity repair types for custom predicate support
+        - Github Version Check is now optional and can be disabled in config. This is mostly for airgapped clusters. The default value is true.
+        - .NET 8 implementation of FabricHealer. This version is built for .NET 8 and SF Runtime >= 9.1 (Self-Contained FH builds only). If you have deployed SF Runtime version >= 10.1 Cumulative Update 3.0 (CU3), then you can deploy the framework-dependent release build for the target platform (Windows or Linux). If you are not running SF Runtime version >= 10.1 CU3, then you must deploy the Self-Contained release build for the target platform (Windows or Linux). **If you can't upgrade to .NET 8 yet, then do not upgrade to this version.**
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
@@ -15,16 +14,16 @@
     <icon>icon.png</icon>
 	<readme>fhnuget.md</readme>
     <language>en-US</language>
-    <description>FabricHealer is a Service Fabric service (built for .NET 6, requires SF runtime version 9.0 and above) that schedules and safely executes automatic repairs in Linux and Windows Service Fabric clusters after inspecting unhealthy events created by FabricObserver instances or other services employing FabricHealerProxy running in the same cluster. It employs a novel Configuration-as-Logic model to express repair workflows using Prolog-like semantics/syntax in text-based configuration files.</description>
+    <description>FabricHealer is a Service Fabric service (built for .NET 8, requires SF runtime version 9.0 and above) that schedules and safely executes automatic repairs in Linux and Windows Service Fabric clusters after inspecting unhealthy events created by FabricObserver instances or other services employing FabricHealerProxy running in the same cluster. It employs a novel Configuration-as-Logic model to express repair workflows using Prolog-like semantics/syntax in text-based configuration files.</description>
     <contentFiles>
       <files include="**" buildAction="None" copyToOutput="true" />
     </contentFiles>
 	  <dependencies>
 		  <group targetFramework="netstandard2.0">
-			  <dependency id="Microsoft.Logic.Guan" version="1.0.5" />
+			  <dependency id="Microsoft.Logic.Guan" version="1.0.7" />
 		  </group>
-		  <group targetFramework="net6.0">
-			  <dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
+		  <group targetFramework="net8.0">
+			  <dependency id="Microsoft.ServiceFabric.Services" version="7.0.1086" />
 		  </group>
 	  </dependencies>
     <projectUrl>https://github.com/microsoft/service-fabric-healer</projectUrl>
@@ -34,8 +33,8 @@
   <files>
     <file src="**" target="contentFiles\any\any" />
 	<file src="FabricHealerPkg\Code\Guan.dll" target="lib\netstandard2.0" />
-	<file src="FabricHealerPkg\Code\TelemetryLib.dll" target="lib\net6.0" />
-    <file src="FabricHealerPkg\Code\FabricHealer.dll" target="lib\net6.0" />
+	<file src="FabricHealerPkg\Code\TelemetryLib.dll" target="lib\net8.0" />
+    <file src="FabricHealerPkg\Code\FabricHealer.dll" target="lib\net8.0" />
     <file src="%ROOT_PATH%\icon.png" target="" />
 	<file src="%ROOT_PATH%\fhnuget.md" target="" />
   </files>
