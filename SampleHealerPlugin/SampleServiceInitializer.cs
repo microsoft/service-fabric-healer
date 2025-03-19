@@ -2,7 +2,7 @@
 using FabricHealer.Interfaces;
 using FabricHealer;
 
-[assembly: CustomServiceInitializer(typeof(SampleServiceInitializer))]
+[assembly: Plugin(typeof(SampleServiceInitializer))]
 namespace FabricHealer.SamplePlugins
 {
     public class SampleServiceInitializer : ICustomServiceInitializer

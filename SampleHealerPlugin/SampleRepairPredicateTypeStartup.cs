@@ -7,17 +7,17 @@ using FabricHealer;
 using FabricHealer.Interfaces;
 using FabricHealer.SamplePlugins;
 using Guan.Logic;
-using FabricHealer.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 
-[assembly: RepairPredicateType(typeof(SampleRepairPredicateTypeStartup))]
+
+[assembly: Plugin(typeof(SampleRepairPredicateTypeStartup))]
 namespace FabricHealer.SamplePlugins
 {
     public class SampleRepairPredicateTypeStartup : IRepairPredicateType
     {
-        public void RegisterToPredicateTypesCollection(FunctorTable functorTable, string serializedRepairData)
+        public void LoadPredicateTypes(IServiceCollection services)
         {
-            JsonSerializationUtility.TryDeserializeObject(serializedRepairData, out SampleTelemetryData repairData);
-            functorTable.Add(SampleRepairPredicateType.Singleton("SampleRepair", repairData));
+            services.AddSingleton<PredicateType>(new SampleRepairPredicateType("SampleRepair"));
         }
     }
 }

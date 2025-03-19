@@ -37,14 +37,5 @@ namespace FabricHealer
         public NodeNotFoundException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        /// <summary>
-        /// Creates an instance of FabricNodeNotFoundException.
-        /// </summary>
-        /// <param name="info">SerializationInfo</param>
-        /// <param name="context">StreamingContext</param>
-        protected NodeNotFoundException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

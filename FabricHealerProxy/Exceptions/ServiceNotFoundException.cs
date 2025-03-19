@@ -37,14 +37,5 @@ namespace FabricHealer
         public ServiceNotFoundException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        /// <summary>
-        /// Creates an instance of ServiceNotFoundException.
-        /// </summary>
-        /// <param name="info">SerializationInfo</param>
-        /// <param name="context">StreamingContext</param>
-        protected ServiceNotFoundException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

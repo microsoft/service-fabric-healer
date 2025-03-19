@@ -63,6 +63,12 @@ namespace FabricHealer.Utilities
             private set;
         }
 
+        public bool CheckGithubVersion
+        {
+            get;
+            private set;
+        }
+
         // For Azure LogAnalytics Telemetry
         public string LogAnalyticsWorkspaceId
         {
@@ -186,6 +192,11 @@ namespace FabricHealer.Utilities
             if (bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.EnableCustomRepairPredicateType), out bool enableCustomRepairPredicateType))
             {
                 EnableCustomRepairPredicateType = enableCustomRepairPredicateType;
+            }
+
+            if(bool.TryParse(GetConfigSettingValue(RepairConstants.RepairManagerConfigurationSectionName, RepairConstants.CheckGithubVersion), out bool checkGithubVersion))
+            {
+                CheckGithubVersion = checkGithubVersion;
             }
 
             // Logger

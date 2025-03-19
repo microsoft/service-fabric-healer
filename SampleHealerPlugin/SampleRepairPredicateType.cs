@@ -9,16 +9,19 @@ using FabricHealer.Utilities;
 using Polly.Retry;
 using Polly;
 using System.Fabric;
+using FabricHealer.Interfaces;
+using FabricHealer.Utilities.Telemetry;
 
 namespace FabricHealer.SamplePlugins
 {
     /// <summary>
     ///  sample external predicate. copy of LogWarningPredicateType.
     /// </summary>
-    public class SampleRepairPredicateType : PredicateType
+    public class SampleRepairPredicateType : PredicateType, IPredicateType
     {
-        private static SampleRepairPredicateType Instance;
         private static SampleTelemetryData RepairData;
+        private static SampleRepairPredicateType Instance;
+        private string repairData;
 
         private class Resolver : BooleanPredicateResolver
         {
@@ -94,7 +97,15 @@ namespace FabricHealer.SamplePlugins
             return Instance ??= new SampleRepairPredicateType(name);
         }
 
-        private SampleRepairPredicateType(string name)
+        public void SetRepairData(string serializedRepairData)
+        {
+            // Implement logic to set repair data
+            // For this example, we'll simply store the serialized data in a field.
+            // In a real-world scenario, you might parse the serialized data into a more useful format.
+            repairData = serializedRepairData;
+        }
+
+        public SampleRepairPredicateType(string name)
                  : base(name, true, 1)
         {
 
@@ -103,6 +114,18 @@ namespace FabricHealer.SamplePlugins
         public override PredicateResolver CreateResolver(CompoundTerm input, Constraint constraint, QueryContext context)
         {
             return new Resolver(input, constraint, context);
+        }
+
+        public void SetRepairData<T>(T repairData) where T : TelemetryData
+        {
+            SampleRepairPredicateType.RepairData = repairData as SampleTelemetryData;
+        }
+
+        // SampleRepairPredicateType override DeserializeRepairData method to deserialize the repair data to SampleTelemetryData.
+        public T DeserializeRepairData<T>(string json) where T : TelemetryData
+        {
+            JsonSerializationUtility.TryDeserializeObject(json, out SampleTelemetryData repairData);
+            return repairData as T;
         }
     }
 }

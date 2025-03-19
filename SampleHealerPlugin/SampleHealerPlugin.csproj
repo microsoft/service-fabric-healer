@@ -1,20 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Platforms>x64</Platforms>
 	</PropertyGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<!-- Polly.dll from packages (this file is only required only by this sample plugin, not FabricHealer itself..). -->
-		<Exec Command="copy &quot;$(SolutionDir)packages\polly\8.2.1\lib\netstandard2.0\Polly.dll&quot; &quot;$(OutDir)&quot;&#xD;&#xA;" />
-		<Exec Command="copy &quot;$(OutDir)*.dll&quot; &quot;$(OutDir)FabricHealerPkg\Data\Plugins&quot;&#xD;&#xA;copy &quot;$(OutDir)*.pdb&quot; &quot;$(OutDir)FabricHealerPkg\Data\Plugins&quot;" />
+		<Exec Command="copy &quot;$(SolutionDir)packages\polly\8.5.2\lib\netstandard2.0\Polly.dll&quot; &quot;$(OutDir)&quot;&#xD;&#xA;" />
+		<!--<Exec Command="copy &quot;$(OutDir)*.dll&quot; &quot;$(OutDir)FabricHealerPkg\Data\Plugins&quot;&#xD;&#xA;copy &quot;$(OutDir)*.pdb&quot; &quot;$(OutDir)FabricHealerPkg\Data\Plugins&quot;" />-->
 	</Target>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Logic.Guan" Version="1.0.5" />
-		<PackageReference Include="Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" Version="1.2.14" />
+		<PackageReference Include="Microsoft.Logic.Guan" Version="1.0.7" />
+		<!--<PackageReference Include="Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" Version="1.2.15" />-->
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        <!--<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />-->
 
-		<!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FH-related reference choices. -->
-		<PackageReference Include="Polly" Version="8.2.1" />
+        <!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FH-related reference choices. -->
+		<PackageReference Include="Polly" Version="8.5.2" />
+	</ItemGroup>
+	<!-- this is for building the plugin and testing it locally -->
+	<ItemGroup>
+	  <ProjectReference Include="..\FabricHealer\FabricHealer.csproj" />
 	</ItemGroup>
 </Project>
