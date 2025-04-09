@@ -1,3 +1,5 @@
+[string] $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
+
 function Install-Nuget {
     # Path to Latest nuget.exe on nuget.org
     $source = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
@@ -9,6 +11,12 @@ function Install-Nuget {
     if (-Not [System.IO.File]::Exists($destination)) {
         Invoke-WebRequest -Uri $source -OutFile $destination
     }
+}
+
+function Remove-Nuget {
+    # Remove nuget.exe if it exists
+    $nugetPath = "$scriptPath\nuget.exe"
+    Remove-Item $nugetPath -Force
 }
 
 function Build-Nuget {
@@ -38,6 +46,8 @@ try {
     Install-Nuget
 
     Build-Nuget "Microsoft.ServiceFabricApps.FabricHealerProxy" "$scriptPath\FabricHealerProxy\bin\release\net8.0"
+
+    Remove-Nuget
 }
 finally {
 
