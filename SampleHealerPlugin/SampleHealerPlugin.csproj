@@ -2,11 +2,11 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<Platforms>x64</Platforms>
+		<Platforms>AnyCPU</Platforms>
 	</PropertyGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<!-- Polly.dll from packages (this file is only required only by this sample plugin, not FabricHealer itself..). -->
-		<Exec Command="copy &quot;$(SolutionDir)packages\polly\8.5.2\lib\netstandard2.0\Polly.dll&quot; &quot;$(OutDir)&quot;&#xD;&#xA;" />
+		<Exec Command="copy &quot;$(NuGetPackageRoot)polly\8.6.1\lib\netstandard2.0\Polly.dll&quot; &quot;$(OutDir)&quot;&#xD;&#xA;" />
 		<!--<Exec Command="copy &quot;$(OutDir)*.dll&quot; &quot;$(OutDir)FabricHealerPkg\Data\Plugins&quot;&#xD;&#xA;copy &quot;$(OutDir)*.pdb&quot; &quot;$(OutDir)FabricHealerPkg\Data\Plugins&quot;" />-->
 	</Target>
 	<ItemGroup>
@@ -16,7 +16,7 @@
         <!--<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />-->
 
         <!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FH-related reference choices. -->
-		<PackageReference Include="Polly" Version="8.5.2" />
+		<PackageReference Include="Polly" Version="8.6.1" />
 	</ItemGroup>
 	<!-- this is for building the plugin and testing it locally -->
 	<ItemGroup>
