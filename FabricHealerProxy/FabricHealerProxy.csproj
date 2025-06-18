@@ -3,13 +3,20 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
-		<Platforms>x64</Platforms>
-		<FileVersion>1.1.0</FileVersion> 
+		<Platforms>AnyCPU</Platforms>
+		<FileVersion>1.1.0</FileVersion>
+		<IsArmTarget>false</IsArmTarget>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(IsArmTarget)'=='false'">
+		<Version_SFServices>7.0.1816</Version_SFServices>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(IsArmTarget)'=='true'">
+		<Version_SFServices>8.0.2707</Version_SFServices>
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="NLog" Version="5.4.0" />
 		<PackageReference Include="Polly" Version="8.5.2" />
-		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="7.0.1816" />
+		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="$(Version_SFServices)" />
 	</ItemGroup>
 </Project>
