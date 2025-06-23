@@ -12,7 +12,7 @@
     <FileVersion>2.2.0.0</FileVersion>
     <Copyright>Copyright ©  2020</Copyright>
     <Product>TelemetryLib</Product>
-    <Platforms>AnyCPU</Platforms>
+    <PlatformTarget>AnyCPU</PlatformTarget>
 	<IsArmTarget>false</IsArmTarget>
   </PropertyGroup>
     <PropertyGroup Condition="'$(IsArmTarget)'=='false'">

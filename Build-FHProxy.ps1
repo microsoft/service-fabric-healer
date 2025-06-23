@@ -18,7 +18,7 @@ if ($RuntimeId -eq "win-arm64")
 try {
     Push-Location $scriptPath
 
-    Remove-Item $scriptPath\FabricHealerProxy\bin\release\net8.0\ -Recurse -Force -EA SilentlyContinue
+    Remove-Item $scriptPath\FabricHealerProxy\bin\release\net8.0\$RuntimeId -Recurse -Force -EA SilentlyContinue
     dotnet publish $scriptPath\FabricHealerProxy\FabricHealerProxy.csproj $winArmSFPackageRefOverride -o bin\release\net8.0 -c $Configuration
 }
 finally 

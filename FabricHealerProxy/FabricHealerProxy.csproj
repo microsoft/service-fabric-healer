@@ -3,7 +3,7 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
-		<Platforms>AnyCPU</Platforms>
+		<PlatformTarget>AnyCPU</PlatformTarget>
 		<FileVersion>1.1.0</FileVersion>
 		<IsArmTarget>false</IsArmTarget>
 	</PropertyGroup>

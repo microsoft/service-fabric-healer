@@ -19,7 +19,7 @@ try
 {
     Push-Location $scriptPath
 
-    Remove-Item $scriptPath\bin\release\FabricHealer\ -Recurse -Force -EA SilentlyContinue
+    Remove-Item $scriptPath\bin\release\FabricHealer\$RuntimeId\ -Recurse -Force -EA SilentlyContinue
 
     dotnet publish FabricHealer\FabricHealer.csproj $winArmSFPackageRefOverride -o bin\release\FabricHealer\$RuntimeId\self-contained\FabricHealerType\FabricHealerPkg\Code -c $Configuration -r $RuntimeId --self-contained true
     dotnet publish FabricHealer\FabricHealer.csproj $winArmSFPackageRefOverride -o bin\release\FabricHealer\$RuntimeId\framework-dependent\FabricHealerType\FabricHealerPkg\Code -c $Configuration -r $RuntimeId --self-contained false
