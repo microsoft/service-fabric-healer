@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<Platforms>AnyCPU</Platforms>
+		<PlatformTarget>AnyCPU</PlatformTarget>
 	</PropertyGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<!-- Polly.dll from packages (this file is only required only by this sample plugin, not FabricHealer itself..). -->
