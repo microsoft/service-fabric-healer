@@ -23,7 +23,7 @@
 			  <dependency id="Microsoft.Logic.Guan" version="1.0.7" />
 		  </group>
 		  <group targetFramework="net8.0">
-			  <dependency id="Microsoft.ServiceFabric.Services" version="7.0.1086" />
+			  <dependency id="Microsoft.ServiceFabric.Services" version="7.0.1816" />
 		  </group>
 	  </dependencies>
     <projectUrl>https://github.com/microsoft/service-fabric-healer</projectUrl>
