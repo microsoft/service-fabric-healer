@@ -4,7 +4,9 @@
     <id>%PACKAGE_ID%</id>
     <version>1.1.1</version>
 	<releaseNotes>
-        - .Net8 implementation of FabricHealerProxy. **If you can't upgrade to .NET 8 yet, then do not upgrade to this version.**
+        - Added support for Win-ARM64 builds
+        - Several nuget package updates.
+        - Added support for AzLinux/Mariner OS.
     </releaseNotes>
     <authors>Microsoft</authors>
     <license type="expression">MIT</license>
