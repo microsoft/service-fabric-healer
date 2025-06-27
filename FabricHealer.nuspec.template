@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata minClientVersion="3.3.0">
     <id>%PACKAGE_ID%</id>
-    <version>1.3.0</version>
+    <version>1.3.1</version>
     <releaseNotes>
         - Github Version Check is now optional and can be disabled in config. This is mostly for airgapped clusters. The default value is true.
         - .NET 8 implementation of FabricHealer. This version is built for .NET 8 and SF Runtime >= 9.1 (Self-Contained FH builds only). If you have deployed SF Runtime version >= 10.1 Cumulative Update 3.0 (CU3), then you can deploy the framework-dependent release build for the target platform (Windows or Linux). If you are not running SF Runtime version >= 10.1 CU3, then you must deploy the Self-Contained release build for the target platform (Windows or Linux). **If you can't upgrade to .NET 8 yet, then do not upgrade to this version.**

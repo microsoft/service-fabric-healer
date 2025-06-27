@@ -4,7 +4,7 @@
 		<PlatformTarget>AnyCPU</PlatformTarget>
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
-		<FileVersion>1.1.0</FileVersion>
+		<FileVersion>1.1.1</FileVersion>
 		<IsArmTarget>false</IsArmTarget>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(IsArmTarget)'=='false'">
