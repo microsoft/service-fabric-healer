@@ -1,21 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <ProjectGuid>{7BC6991F-C840-413E-B1CD-4025947CF5FA}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
+	<TargetFramework>net8.0</TargetFramework>
+	<Platforms>AnyCPU</Platforms>
     <RootNamespace>FabricHealer.TelemetryLib</RootNamespace>
     <AssemblyName>TelemetryLib</AssemblyName>
-    <TargetFramework>net8.0</TargetFramework>
 	<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <AssemblyVersion>2.2.0.0</AssemblyVersion>
     <FileVersion>2.2.0.0</FileVersion>
-    <Copyright>Copyright ©  2020</Copyright>
     <Product>TelemetryLib</Product>
-    <Platforms>x64</Platforms>
+	<IsArmTarget>false</IsArmTarget>
   </PropertyGroup>
+    <PropertyGroup Condition="'$(IsArmTarget)'=='false'">
+	    <Version_SFServices>7.0.1816</Version_SFServices>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(IsArmTarget)'=='true'">
+	    <Version_SFServices>8.0.2707</Version_SFServices>
+    </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.23.0" />
-	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="7.0.1816" />
+	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="$(Version_SFServices)" />
   </ItemGroup>
 </Project>

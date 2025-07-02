@@ -18,7 +18,7 @@ As with most of FabricHealer's application settings, you can also do this with a
 Connect-ServiceFabricCluster ...
 
 $appName = "fabric:/FabricHealer"
-$appVersion = "1.3.0"
+$appVersion = "1.3.1"
 $application = Get-ServiceFabricApplication -ApplicationName $appName
 $appParamCollection = $application.ApplicationParameters
 $applicationParameterMap = @{}
@@ -56,7 +56,7 @@ Here is a full example of exactly what is sent in one of these telemetry events,
   "ClusterId": "00000000-1111-1111-0000-00f00d000d",
   "ClusterType": "SFRP",
   "NodeNameHash": "3e83569d4c6aad78083cd081215dafc81e5218556b6a46cb8dd2b183ed0095ad",
-  "FHVersion": "1.3.0",
+  "FHVersion": "1.3.1",
   "UpTime": "00:00:00.2164523",
   "Timestamp": "2023-09-14T21:45:25.2443014Z",
   "OS": "Windows",

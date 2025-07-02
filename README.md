@@ -1,4 +1,4 @@
-## FabricHealer 1.3.0 - NET8, SF Runtime 10.0 and above.
+## FabricHealer 1.3.1 - NET8, SF Runtime 10.0 and above.
 ### Service Fabric Auto-Repair Service with Declarative Logic for Repair Policy Specification. 
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-healer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-healer.json)
@@ -54,8 +54,17 @@ For ARM deployment, please see the [ARM documentation](/Documentation/Deployment
 cd C:\Users\me\source\repos\service-fabric-healer
 
 #Build FH (Release)
+#By default if no RuntimeId is specified, it will build for win-x64. If you want to build for a specific OS, then specify -RuntimeId win-arm64 or linux-x64. For RuntimeId linux-x64, if you are deploying for Mariner/Azure Linux OS, please add the flag -Azlinux.
+#Also by default if no Configuration is specified, it will build for Release. If you want to build for Debug, then specify -Configuration Debug.
 
+##Default build command (win-x64):
 ./Build-FabricHealer
+
+#Build for win-arm64:
+#./Build-FabricObserver -RuntimeId win-arm64
+
+#For building linux
+# ./Build-FabricObserver -RuntimeId linux-x64
 
 #create a $path variable that points to the build output:
 #E.g., for Windows deployments:
@@ -80,7 +89,7 @@ Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH127
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.3.0   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.3.1   
 
 #Create the Service instance:  
 
@@ -89,7 +98,7 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.3.0 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.3.1 -Monitored -FailureAction rollback
 ```  
 
 ## Using FabricHealer  
