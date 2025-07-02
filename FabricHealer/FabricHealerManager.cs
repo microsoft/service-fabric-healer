@@ -33,7 +33,7 @@ namespace FabricHealer
         private DateTime LastTelemetrySendDate { get; set; }
         
         // Folks often use their own version numbers. This is for public diagnostic telemetry.
-        private const string InternalVersionNumber = "1.3.0";
+        private const string InternalVersionNumber = "1.3.1";
         private static FabricClient fabricClient;
         private bool disposedValue;
         private bool detectedStopJob;

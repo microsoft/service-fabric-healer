@@ -1,4 +1,4 @@
-﻿# FabricHealerProxy 1.1.0
+﻿# FabricHealerProxy 1.1.1
 
 FabricHealerProxy is a .NET 8 library that provides a very simple and reliable way for any .NET Service Fabric service to initiate Service Fabric entity repair by the FabricHealer service running in the same cluster. You can install FabricHealerProxy into your .NET Service Fabric service from the [nuget.org package gallery](https://www.nuget.org/packages/Microsoft.ServiceFabricApps.FabricHealerProxy). 
 
