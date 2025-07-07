@@ -29,8 +29,8 @@ try {
     Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.1.3.1" "$scriptPath\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
     Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent.1.3.1" "$scriptPath\bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType"
     
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.1.3.1" "$scriptPath\bin\release\FabricHealer\win-arm64\self-contained\FabricHealerType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent.1.3.1" "$scriptPath\bin\release\FabricHealer\win-arm64\framework-dependent\FabricHealerType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.WindowsArm64.SelfContained.1.3.1" "$scriptPath\bin\release\FabricHealer\win-arm64\self-contained\FabricHealerType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.WindowsArm64.FrameworkDependent.1.3.1" "$scriptPath\bin\release\FabricHealer\win-arm64\framework-dependent\FabricHealerType"
 }
 finally {
     Pop-Location

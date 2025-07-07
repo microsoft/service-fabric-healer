@@ -43,8 +43,8 @@ try {
     Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" "$scriptPath\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
     Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent" "$scriptPath\bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType"
 
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" "$scriptPath\bin\release\FabricHealer\win-arm64\self-contained\FabricHealerType"
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent" "$scriptPath\bin\release\FabricHealer\win-arm64\framework-dependent\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.WindowsArm64.SelfContained" "$scriptPath\bin\release\FabricHealer\win-arm64\self-contained\FabricHealerType"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.WindowsArm64.FrameworkDependent" "$scriptPath\bin\release\FabricHealer\win-arm64\framework-dependent\FabricHealerType"
 }
 finally {
     Pop-Location
