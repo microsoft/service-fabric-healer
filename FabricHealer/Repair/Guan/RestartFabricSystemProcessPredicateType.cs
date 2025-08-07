@@ -18,14 +18,8 @@ namespace FabricHealer.Repair.Guan
         private static TelemetryData RepairData;
         private static RestartFabricSystemProcessPredicateType Instance;
 
-        private class Resolver : BooleanPredicateResolver
+        private class Resolver(CompoundTerm input, Constraint constraint, QueryContext context) : BooleanPredicateResolver(input, constraint, context)
         {
-            public Resolver(CompoundTerm input, Constraint constraint, QueryContext context)
-                    : base(input, constraint, context)
-            {
-
-            }
-
             protected override async Task<bool> CheckAsync()
             {
                 // Can only kill processes on the same node where the FH instance that took the job is running.
@@ -40,48 +34,22 @@ namespace FabricHealer.Repair.Guan
                 }
 
                 // Ensure the process is still running.
-                if (!string.IsNullOrWhiteSpace(RepairData.ProcessName) && RepairData.ProcessId > 0)
+                if (!FabricHealerManager.EnsureProcess(RepairData.ProcessName, (int)RepairData.ProcessId))
                 {
-                    // FH Proxy doesn't supply process start time fact or datetime string is malformed.
-                    if (!DateTime.TryParse(RepairData.ProcessStartTime, out DateTime startTime))
-                    {
-                        if (OperatingSystem.IsLinux() && RepairData.ProcessName.EndsWith(".dll"))
-                        {
-                            var ps = RepairExecutor.GetLinuxDotnetProcessesByFirstArgument(RepairData.ProcessName);
-
-                            if (ps != null && ps.Length > 0)
-                            {
-                                using (Process p = ps[0])
-                                {
-                                    startTime = p.StartTime;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            using (Process p = Process.GetProcessById((int)RepairData.ProcessId))
-                            {
-                                startTime = p.StartTime;
-                            }
-                        }
-                    }
-
-                    if (!FabricHealerManager.EnsureProcess(RepairData.ProcessName, (int)RepairData.ProcessId, startTime))
-                    {
-                        string message =
-                            $"Process {RepairData.ProcessName} with PID {RepairData.ProcessId} with StartTime {startTime} is no longer running. Will not attempt repair at this time.";
+                    string message =
+                        $"Process {RepairData.ProcessName} with PID {RepairData.ProcessId} is no longer running. Will not attempt repair at this time.";
                         
-                        await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
-                            LogLevel.Info,
-                                    $"ProcessApplicationHealth::System::ProcNotRunning({RepairData.ProcessId})",
-                                    message,
-                                    FabricHealerManager.Token,
-                                    null,
-                                    true);
-                        return false;
-                    }
-                }
+                    await FabricHealerManager.TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
+                        LogLevel.Info,
+                                $"RestartFabricSystemProcess::ProcessNotRunning({RepairData.ProcessId})",
+                                message,
+                                FabricHealerManager.Token,
+                                null,
+                                true);
 
+                    return false;
+                }
+                
                 RepairData.RepairPolicy.RepairAction = RepairActionType.RestartProcess;
                 
                 // Set repair ownership to this instance of FH.
