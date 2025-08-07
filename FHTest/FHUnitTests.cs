@@ -856,6 +856,10 @@ namespace FHTest
         [TestMethod]
         public async Task XSystemServiceRules_MemoryMb_Repair_Successful_Validate_RuleTracing()
         {
+            Process dcaProcCurrent = Process.GetProcessesByName("FabricDCA")[0];
+            int processIdCurrent = dcaProcCurrent.Id;
+            DateTime processStartTime = dcaProcCurrent.StartTime;
+
             var repairData = new TelemetryData
             {
                 ApplicationName = "fabric:/System",
@@ -864,7 +868,8 @@ namespace FHTest
                 NodeName = NodeName,
                 HealthState = HealthState.Warning,
                 ProcessName = "FabricDCA",
-                ProcessId = Process.GetProcessesByName("FabricDCA")[0].Id,
+                ProcessId = processIdCurrent,
+                ProcessStartTime = processStartTime.ToString(),
                 Source = "FabricHealer_Test_SystemServiceRules",
                 Property = "MemoryInMb_FabricDCA",
                 Value = 1024
@@ -915,6 +920,11 @@ namespace FHTest
             {
                 throw;
             }
+
+            // Validate the process was restarted.
+            Process dcaProcAfter = Process.GetProcessesByName("FabricDCA")[0];
+            Assert.AreNotEqual(dcaProcCurrent.StartTime, dcaProcAfter.StartTime);
+            Assert.AreNotEqual(processIdCurrent, dcaProcAfter.Id);
         }
 
         // This test ensures your test rules housed in testrules_wellformed file or in fact correct.

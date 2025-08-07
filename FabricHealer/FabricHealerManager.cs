@@ -33,7 +33,7 @@ namespace FabricHealer
         private DateTime LastTelemetrySendDate { get; set; }
         
         // Folks often use their own version numbers. This is for public diagnostic telemetry.
-        private const string InternalVersionNumber = "1.3.1";
+        private const string InternalVersionNumber = "1.3.2";
         private static FabricClient fabricClient;
         private bool disposedValue;
         private bool detectedStopJob;
@@ -2468,7 +2468,7 @@ namespace FabricHealer
             return null;
         }
 
-        internal static bool EnsureProcess(string procName, int procId, DateTime processStartTime)
+        internal static bool EnsureProcess(string procName, int procId)
         {
             if (string.IsNullOrWhiteSpace(procName) || procId < 1)
             {
@@ -2491,7 +2491,7 @@ namespace FabricHealer
                     else
                     {
                         // no-op. Process not found.
-                        RepairLogger.LogWarning(procName + " with id " + procId.ToString() + " not found.");
+                        RepairLogger.LogWarning($"{procName} with id {procId} not found.");
                         return false;
                     }
                 }
@@ -2500,16 +2500,15 @@ namespace FabricHealer
                     proc = Process.GetProcessById(procId);
                 }
 
-                // ToString() on processStartTime as FO supplies this value as a string. Compare the values directly.
-                return proc != null && proc.ProcessName == procName && proc.StartTime.ToString() == processStartTime.ToString();
+                return proc != null && proc.ProcessName.Equals(procName, StringComparison.CurrentCultureIgnoreCase);
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or SystemException or Win32Exception)
             {
-                RepairLogger.LogWarning(procName + " with id " + procId.ToString() + " not found with Exception: " + e.Message);
+                RepairLogger.LogWarning($"{procName} with id {procId} not found with Exception: {e.Message}");
                 _ = TelemetryUtilities.EmitTelemetryEtwHealthEventAsync(
                                 LogLevel.Info,
                                 $"ProcessApplicationHealth::System{procName}::Exception",
-                                procName + " with id " + procId.ToString() + " not found with Exception: " + e.Message,
+                                $"{procName} with id {procId} not found with Exception: {e.Message}",
                                 Token,
                                 null,
                                 ConfigSettings.EnableVerboseLogging);
