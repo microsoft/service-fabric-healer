@@ -63,8 +63,9 @@ from the Guan repository with a temporary local feed and an MSBuild override,
 then restore again without the override before packaging or committing.
 No machine-specific feed or unpublished dependency is required for normal restore.
 
-FHTest rebuilds its .NET 10 TestApp42 workload from `TestWorkloads` during build;
-it does not require .NET 6. Run its cluster-dependent tests only on a disposable
+FHTest rebuilds its self-contained .NET 10 TestApp42 workload from `TestWorkloads`
+during build, preserving the original fixture's deployment mode without requiring
+.NET 6 or a separately installed helper runtime. Run its cluster-dependent tests only on a disposable
 Azure test host, never on a workstation or shared cluster. The tests restart
 services, manipulate repair tasks, and delete files on the test host.
 Set `FH_DISPOSABLE_CLUSTER=1` only on that disposable host to opt in; without
