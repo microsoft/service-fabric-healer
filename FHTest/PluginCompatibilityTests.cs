@@ -15,6 +15,8 @@ namespace FHTest
     [TestClass]
     public class PluginCompatibilityTests
     {
+        public TestContext TestContext { get; set; }
+
         [TestMethod]
         [DataRow("FH_LEGACY_PLUGIN_PATH")]
         [DataRow("FH_CURRENT_PLUGIN_PATH")]
@@ -23,6 +25,13 @@ namespace FHTest
             string path = Environment.GetEnvironmentVariable(pathVariable);
             Assert.IsFalse(string.IsNullOrWhiteSpace(path), $"{pathVariable} must identify the plugin under test.");
             Assert.IsTrue(File.Exists(path), $"Plugin does not exist: {path}");
+            TestContext.WriteLine(System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription);
+            foreach (var contract in new[] { typeof(PluginAttribute), typeof(PredicateType),
+                typeof(RepairFacts), typeof(System.Fabric.ServiceContext) })
+            {
+                Assembly loaded = contract.Assembly;
+                TestContext.WriteLine($"{loaded.FullName}; file={loaded.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version}");
+            }
 
             using var loader = FabricHealerPluginLoader.CreatePluginLoader(Path.GetFullPath(path));
             Assembly assembly = loader.LoadDefaultAssembly();
