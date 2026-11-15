@@ -1,51 +1,19 @@
-function Install-Nuget {
-    # Path to Latest nuget.exe on nuget.org
-    $source = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
+param(
+    [string] $Configuration = "Release",
+    [ValidateSet("linux-x64", "win-x64", "win-arm64")]
+    [string[]] $RuntimeIds = @("linux-x64", "win-x64", "win-arm64")
+)
 
-    # Save file to top level directory in repo
-    $destination = "$scriptPath\nuget.exe"
+$ErrorActionPreference = "Stop"
+$platforms = [ordered]@{ "linux-x64" = "Linux"; "win-x64" = "Windows"; "win-arm64" = "WindowsArm64" }
+foreach ($rid in $RuntimeIds) {
+    foreach ($mode in @("self-contained", "framework-dependent")) {
+        $basePath = "$PSScriptRoot\bin\release\FabricHealer\$rid\$mode\FabricHealerType"
+        if (!(Test-Path "$basePath\ApplicationManifest.xml")) { throw "Build $rid before packaging: $basePath" }
+        $suffix = if ($mode -eq "self-contained") { "SelfContained" } else { "FrameworkDependent" }
+        $id = "Microsoft.ServiceFabricApps.FabricHealer.$($platforms[$rid]).$suffix"
 
-    #Download the file
-    if (-Not [System.IO.File]::Exists($destination)) {
-        Invoke-WebRequest -Uri $source -OutFile $destination
+        dotnet pack "$PSScriptRoot\FabricHealer\FabricHealer.csproj" -c $Configuration "-p:DeploymentPackageId=$id" "-p:DeploymentPackagePath=$basePath" -o "$PSScriptRoot\bin\release\FabricHealer\Nugets"
+        if ($LASTEXITCODE -ne 0) { throw "$id pack failed: $LASTEXITCODE" }
     }
-}
-
-function Build-Nuget {
-    param (
-        [string]
-        $packageId,
-
-        [string]
-        $basePath
-    )
-
-    [string] $nugetSpecTemplate = [System.IO.File]::ReadAllText([System.IO.Path]::Combine($scriptPath, "FabricHealer.nuspec.template"))
-
-    [string] $nugetSpecPath = "$scriptPath\bin\release\FabricHealer\$($packageId).nuspec"
-
-    [System.IO.File]::WriteAllText($nugetSpecPath,  $nugetSpecTemplate.Replace("%PACKAGE_ID%", $packageId).Replace("%ROOT_PATH%", $scriptPath))
-
-    .\nuget.exe pack $nugetSpecPath -basepath $basePath -OutputDirectory bin\release\FabricHealer\Nugets -properties NoWarn=NU5100,NU5128
-}
-
-[string] $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
-
-try {
-
-    Push-Location $scriptPath
-
-    Install-Nuget
-
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.SelfContained" "$scriptPath\bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType"
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Linux.FrameworkDependent" "$scriptPath\bin\release\FabricHealer\linux-x64\framework-dependent\FabricHealerType"
-
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained" "$scriptPath\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent" "$scriptPath\bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType"
-
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.WindowsArm64.SelfContained" "$scriptPath\bin\release\FabricHealer\win-arm64\self-contained\FabricHealerType"
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricHealer.WindowsArm64.FrameworkDependent" "$scriptPath\bin\release\FabricHealer\win-arm64\framework-dependent\FabricHealerType"
-}
-finally {
-    Pop-Location
 }

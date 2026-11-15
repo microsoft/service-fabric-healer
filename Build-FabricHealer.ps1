@@ -1,36 +1,26 @@
 param(
-	[string] $RuntimeId = "win-x64",
+    [ValidateSet("win-x64", "win-arm64", "linux-x64")]
+    [string] $RuntimeId = "win-x64",
     [string] $Configuration = "Release"
 )
 
 $ErrorActionPreference = "Stop"
+$root = "$PSScriptRoot\bin\release\FabricHealer\$RuntimeId"
 
-[string] $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
-[string] $winArmSFPackageRefOverride = ""
+foreach ($mode in @("self-contained", "framework-dependent")) {
+    $package = "$root\$mode\FabricHealerType"
+    $code = "$package\FabricHealerPkg\Code"
+    if (Test-Path -LiteralPath $package) {
+        Remove-Item -LiteralPath $package -Recurse -Force
+    }
 
-# For SF 11/12 arm64 builds, today we need to override the SF package reference version to match the current version of the SDK 
-# to ensure ARM64 x64 emulation works correctly.
-if ($RuntimeId -eq "win-arm64") 
-{
-    $winArmSFPackageRefOverride = "/p:IsArmTarget=true"
-}
+    dotnet publish "$PSScriptRoot\FabricHealer\FabricHealer.csproj" -f net10.0 -c $Configuration -r $RuntimeId --self-contained ($mode -eq "self-contained").ToString().ToLowerInvariant() -o $code
+    if ($LASTEXITCODE -ne 0) { throw "FabricHealer $RuntimeId $mode publish failed: $LASTEXITCODE" }
 
-try 
-{
-    Push-Location $scriptPath
-
-    Remove-Item $scriptPath\bin\release\FabricHealer\$RuntimeId\ -Recurse -Force -EA SilentlyContinue
-
-    dotnet publish FabricHealer\FabricHealer.csproj $winArmSFPackageRefOverride -o bin\release\FabricHealer\$RuntimeId\self-contained\FabricHealerType\FabricHealerPkg\Code -c $Configuration -r $RuntimeId --self-contained true
-    dotnet publish FabricHealer\FabricHealer.csproj $winArmSFPackageRefOverride -o bin\release\FabricHealer\$RuntimeId\framework-dependent\FabricHealerType\FabricHealerPkg\Code -c $Configuration -r $RuntimeId --self-contained false
-    
-    Copy-Item FabricHealer\PackageRoot\* bin\release\FabricHealer\$RuntimeId\self-contained\FabricHealerType\FabricHealerPkg\ -Recurse
-    Copy-Item FabricHealer\PackageRoot\* bin\release\FabricHealer\$RuntimeId\framework-dependent\FabricHealerType\FabricHealerPkg\ -Recurse
-
-    Copy-Item FabricHealerApp\ApplicationPackageRoot\ApplicationManifest.xml bin\release\FabricHealer\$RuntimeId\self-contained\FabricHealerType\ApplicationManifest.xml
-    Copy-Item FabricHealerApp\ApplicationPackageRoot\ApplicationManifest.xml bin\release\FabricHealer\$RuntimeId\framework-dependent\FabricHealerType\ApplicationManifest.xml    
-}
-finally 
-{
-    Pop-Location
+    Copy-Item "$PSScriptRoot\FabricHealer\PackageRoot\*" "$package\FabricHealerPkg" -Recurse -Force
+    Copy-Item "$PSScriptRoot\FabricHealerApp\ApplicationPackageRoot\ApplicationManifest.xml" "$package\ApplicationManifest.xml"
+    $manifestPath = "$package\FabricHealerPkg\ServiceManifest.xml"
+    [xml] $manifest = Get-Content -LiteralPath $manifestPath -Raw
+    $manifest.ServiceManifest.CodePackage.EntryPoint.ExeHost.Program = if ($RuntimeId -like "win-*") { "FabricHealer.exe" } else { "FabricHealer" }
+    $manifest.Save($manifestPath)
 }

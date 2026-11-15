@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ServiceManifest Name="ChildProcessCreatorPkg" Version="1.0.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+  <ServiceTypes>
+    <StatelessServiceType ServiceTypeName="ChildProcessCreatorType" />
+  </ServiceTypes>
+  <CodePackage Name="Code" Version="1.0.0">
+    <EntryPoint>
+      <ExeHost><Program>ChildProcessCreator.exe</Program></ExeHost>
+    </EntryPoint>
+  </CodePackage>
+  <ConfigPackage Name="Config" Version="1.0.0" />
+  <Resources><Endpoints><Endpoint Name="ServiceEndpoint" /></Endpoints></Resources>
+</ServiceManifest>

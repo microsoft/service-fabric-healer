@@ -31,7 +31,7 @@ using TimeoutException = System.TimeoutException;
 
 namespace FHTest
 {
-    // NOTE: Run these tests on your machine with a local 1 or 5 node SF dev cluster running.
+    // Run only on a task-created disposable Azure host with a local SF cluster.
     // RepairManagerService must be running on your local dev cluster. See below for instructions on how to deploy RM to your local dev cluster.
     // These tests are hybrid unit/end-to-end tests. They are not pure unit tests.
 
@@ -39,7 +39,7 @@ namespace FHTest
     public class FHUnitTests
     {
         private static readonly Uri TestServiceName = new("fabric:/app/service");
-        private static readonly FabricClient fabricClient = FabricHealerManager.FabricClientSingleton;
+        private static FabricClient fabricClient;
         private static ICodePackageActivationContext CodePackageContext = null;
         private static StatelessServiceContext TestServiceContext = null;
         private static readonly CancellationToken token = new();
@@ -53,11 +53,17 @@ namespace FHTest
         public static async Task TestClassStartUp(TestContext testContext)
 #pragma warning restore IDE0060 // Remove unused parameter
         {
+            if (Environment.GetEnvironmentVariable("FH_DISPOSABLE_CLUSTER") != "1")
+            {
+                throw new InvalidOperationException("Set FH_DISPOSABLE_CLUSTER=1 only on a task-created disposable Azure test host. This suite performs destructive repairs and cleanup.");
+            }
+
             if (!IsLocalSFRuntimePresent())
             {
                 throw new Exception("Local dev cluster must be running to execute these tests correctly.");
             }
 
+            fabricClient = FabricHealerManager.FabricClientSingleton;
             // RM must be deployed to local dev cluster to run these tests successfully. These are hybrid unit/end-to-end tests.
 
             // Steps to deploy RM to local dev cluster:
@@ -340,6 +346,11 @@ namespace FHTest
         [ClassCleanup]
         public static async Task TestClassCleanupAsync()
         {
+            if (fabricClient == null)
+            {
+                return;
+            }
+
             // Ensure FHProxy cleans up its health reports.
             FabricHealerProxy.Instance.Close();
             await RemoveTestApplicationsAsync();
@@ -1021,7 +1032,7 @@ namespace FHTest
                 RepairPolicy = repairData.RepairPolicy
             };
 
-            await Assert.ThrowsExceptionAsync<GuanException>(async () => { await TestInitializeGuanAndRunQuery(repairData, repairAction, executorData); });
+            await Assert.ThrowsExactlyAsync<GuanException>(async () => { await TestInitializeGuanAndRunQuery(repairData, repairAction, executorData); });
         }
 
         // Ensure that all machine repair escalations (repair actions) are scheduled.
@@ -1358,7 +1369,7 @@ namespace FHTest
                 Source = "fabric:/Test"
             };
 
-            await Assert.ThrowsExceptionAsync<MissingRepairFactsException>(async () =>
+            await Assert.ThrowsExactlyAsync<MissingRepairFactsException>(async () =>
             {
                 try
                 {
@@ -1375,7 +1386,7 @@ namespace FHTest
         [TestMethod]
         public async Task FHProxy_NonExistent_ServiceTarget_Generates_ServiceNotFoundException()
         {
-            await Assert.ThrowsExceptionAsync<ServiceNotFoundException>(async () =>
+            await Assert.ThrowsExactlyAsync<ServiceNotFoundException>(async () =>
             {
                 await FabricHealerProxy.Instance.RepairEntityAsync(RepairFactsNonExistingServiceTarget, token);
             });
@@ -1390,7 +1401,7 @@ namespace FHTest
                 // No need for Source here as an invalid node will be detected before the Source value matters.
             };
 
-            await Assert.ThrowsExceptionAsync<NodeNotFoundException>(async () =>
+            await Assert.ThrowsExactlyAsync<NodeNotFoundException>(async () =>
             {
                 await FabricHealerProxy.Instance.RepairEntityAsync(repairFacts, token);
             });

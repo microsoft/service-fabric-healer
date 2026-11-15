@@ -1,9 +1,9 @@
 The plugin model for FabricHealer (FH) allows for a customer to hook a plugin to FH and do custom work during FH startup. All custom work plugins must implement ICustomServiceInitializer and must include the Plugin attribute.
 
-1. Create a .NET 8 Library project.
+1. Create a .NET 10 library project. Existing .NET 8 plugin binaries remain compatible.
 
 2. Install the Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained NuGet package from https://www.nuget.org/profiles/ServiceFabricApps as the version of FabricHealer you are deploying.
-  E.g., 1.3.2 if you are going to deploy FH 1.3.2.
+  E.g., 1.4.0 if you are going to deploy FH 1.4.0. Packages contain genuine .NET 8 and .NET 10 host and telemetry assets with stable assembly identities.
 
 
 3. Write a custom worker!
@@ -41,7 +41,7 @@ Open a PowerShell console, navigate to the top level directory of the FH repo (i
 
 cd C:\Users\me\source\repos\service-fabric-healer
 ./Build-FabricHealer
-./Build-NugetPackages
+./Build-NugetPackages -RuntimeIds win-x64
 
-The output from the above commands contains FabricHealer platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.1.3.2.nupkg. Nupkg files from above command would be located in 
+The output contains Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.1.4.0.nupkg for plugin authoring. Dependency metadata is generated from the projects; no optional WCF dependency is required by plugin loading. Nupkg files are located in
 C:\Users\me\source\repos\service-fabric-healer\bin\release\FabricHealer\Nugets.

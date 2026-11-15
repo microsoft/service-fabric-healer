@@ -1,0 +1,60 @@
+name: Build and compatibility
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+permissions:
+  contents: read
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: windows-latest
+            rid: win-arm64
+          - os: ubuntu-latest
+            rid: linux-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - name: Build unchanged .NET 8 sample
+        uses: actions/checkout@v4
+        with:
+          ref: c12075eb5ed5f2e6a86872657a73ebfcfcfd5fa5
+          path: baseline
+      - shell: pwsh
+        run: |
+          dotnet build baseline/SampleHealerPlugin/SampleHealerPlugin.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw "Baseline plugin build failed." }
+          dotnet build FabricHealer.Managed.slnf -c Release
+          if ($LASTEXITCODE -ne 0) { throw "Managed build failed." }
+      - name: Execute old and new plugin compatibility cases
+        shell: pwsh
+        run: |
+          $env:FH_LEGACY_PLUGIN_PATH = Join-Path $PWD 'baseline/SampleHealerPlugin/bin/Release/net8.0/SampleHealerPlugin.dll'
+          $env:FH_CURRENT_PLUGIN_PATH = Join-Path $PWD 'SampleHealerPlugin/bin/Release/net10.0/SampleHealerPlugin.dll'
+          dotnet test FHTest/FHTest.csproj -c Release --no-build --filter FullyQualifiedName~PluginCompatibilityTests --logger trx --results-directory TestResults
+          if ($LASTEXITCODE -ne 0) { throw "Plugin compatibility tests failed." }
+      - name: Publish both deployment modes and build packages
+        shell: pwsh
+        run: |
+          ./Build-FabricHealer.ps1 -RuntimeId '${{ matrix.rid }}'
+          ./Build-SFPKGs.ps1 -RuntimeIds '${{ matrix.rid }}'
+          ./Build-NugetPackages.ps1 -RuntimeIds '${{ matrix.rid }}'
+          ./Build-FHProxyNupkg.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fabrichealer-${{ matrix.rid }}
+          path: |
+            TestResults/**
+            bin/release/FabricHealer/SFPkgs/*.sfpkg
+            bin/release/FabricHealer/Nugets/*.nupkg
+            bin/release/FabricHealerProxy/Nugets/*.nupkg

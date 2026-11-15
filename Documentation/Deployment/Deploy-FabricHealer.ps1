@@ -1,17 +1,9 @@
-﻿
-$subscriptionId = "<YOUR-AZURE-SUBSCRIPTION-ID>" 
-Try {
-  Select-AzSubscription -SubscriptionId $subscriptionId -ErrorAction Stop
-} Catch {
-    Login-AzAccount
-    Set-AzContext -SubscriptionId $subscriptionId
-}
+param(
+    [Parameter(Mandatory)] [string] $SubscriptionId,
+    [Parameter(Mandatory)] [string] $ResourceGroup,
+    [string] $TemplateParameterFile = "$PSScriptRoot\service-fabric-healer.v1.4.0.parameters.json"
+)
 
-$resourceGroup = "<YOUR-CLUSTER-RESOURCE-NAME>"
-$armTemplate = "service-fabric-healer.json"
-$armTemplateParameters = "service-fabric-healer.v1.1.1.parameters.json"
-
-cd "<LOCAL-FH-REPO-PATH>\Documentation\Deployment"
-
-New-AzResourceGroupDeployment -Name "deploy-service-fabric-healer" -ResourceGroupName $resourceGroup -TemplateFile $armTemplate -TemplateParameterFile $armTemplateParameters -Verbose -Mode Incremental
-
+$ErrorActionPreference = "Stop"
+Set-AzContext -SubscriptionId $SubscriptionId -ErrorAction Stop | Out-Null
+New-AzResourceGroupDeployment -Name "deploy-service-fabric-healer" -ResourceGroupName $ResourceGroup -TemplateFile "$PSScriptRoot\service-fabric-healer.json" -TemplateParameterFile $TemplateParameterFile -Mode Incremental -ErrorAction Stop

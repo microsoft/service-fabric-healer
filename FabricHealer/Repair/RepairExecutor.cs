@@ -479,6 +479,7 @@ namespace FabricHealer.Repair
                         repairData.NodeName,
                         partitionId,
                         repairData.ReplicaId,
+                        RemoveReplicaOptions.Safe,
                         FabricHealerManager.ConfigSettings.AsyncTimeout,
                         cancellationToken);
 

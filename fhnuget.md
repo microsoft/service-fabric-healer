@@ -1,7 +1,7 @@
-## FabricHealer 1.3.2 - NET8, SF Runtime 10.0 and above.
+## FabricHealer 1.4.0 - .NET 10, SF Runtime 11.8.121.1
 ### Configuration as Logic and auto-mitigation in Service Fabric clusters
 
-FabricHealer (FH) is a .NET 8 Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
+FabricHealer (FH) is a .NET 10 Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
 applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls,
 but can also be fully customizable (like Disk repair). All repairs are safely orchestrated through the Service Fabric RepairManager system service.
 Repair workflow configuration is written as [Prolog](http://www.let.rug.nl/bos/lpn/lpnpage.php?pageid=online)-like [logic](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/PackageRoot/Config/LogicRules) with [supporting external predicates](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/Repair/Guan) written in C#. 
@@ -15,13 +15,16 @@ FabricObserver and FabricHealer work great together.
 ```
 
 FabricHealer is implemented as a stateless singleton service that runs on one or all nodes in a Linux or Windows Service Fabric cluster. For Disk and Fabric system service repairs, you must run FabricHealer on all nodes.
-FabricHealer is built as a .NET 8.0 application and has been tested on multiple versions of Windows Server and Ubuntu.  
+FabricHealer deploys as a .NET 10 application using SF runtime 11.8.121.1 and
+SDK 8.8.121. Genuine .NET 8 and .NET 10 host and telemetry assets are included
+for plugin consumers. Linux x64 and Windows ARM64 packages must be distinguished
+from Windows x64 runtime-tested packages; .NET 10 SF support is currently Windows-only.
 
 To learn more about FabricHealer's configuration-as-logic model, [click here.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/LogicWorkflows.md)  
 
 
 ```
-FabricHealer requires SF Runtime versions 9 and higher.
+FabricHealer 1.4.0 selects SF runtime 11.8.121.1 and SDK 8.8.121.
 ```
 ```
 FabricHealer requires that RepairManager (RM) service is deployed. 
@@ -33,7 +36,7 @@ For VM level repair, InfrastructureService (IS) service must be deployed.
 ## Build and run  
 
 1. Clone the repo.
-2. Install [.NET 8](https://dotnet.microsoft.com/download/dotnet-core/6.0)
+2. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) pinned in global.json and PowerShell 7.
 3. Build. 
 
 ## Using FabricHealer  

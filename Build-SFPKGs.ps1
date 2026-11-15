@@ -1,37 +1,24 @@
-[string] $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
+param(
+    [ValidateSet("win-x64", "win-arm64", "linux-x64")]
+    [string[]] $RuntimeIds = @("linux-x64", "win-x64", "win-arm64")
+)
 
-function Build-SFPkg {
-    param (
-        [string]
-        $packageId,
+$ErrorActionPreference = "Stop"
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$platforms = @{ "linux-x64" = "Linux"; "win-x64" = "Windows"; "win-arm64" = "WindowsArm64" }
+$output = "$PSScriptRoot\bin\release\FabricHealer\SFPkgs"
+New-Item -ItemType Directory -Force -Path $output | Out-Null
 
-        [string]
-        $basePath
-    )
-
-    $ProgressPreference = "SilentlyContinue"
-
-    [string] $outputDir = "$scriptPath\bin\release\FabricHealer\SFPkgs"
-    [string] $zipPath = "$outputDir\$($packageId).zip"
-    [System.IO.Directory]::CreateDirectory($outputDir) | Out-Null
-
-    Compress-Archive "$basePath\*"  $zipPath -Force
-
-    Move-Item -Path $zipPath -Destination ($zipPath.Replace(".zip", ".sfpkg"))
-}
-
-try {
-    Push-Location $scriptPath
-
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Linux.SelfContained.1.3.2" "$scriptPath\bin\release\FabricHealer\linux-x64\self-contained\FabricHealerType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Linux.FrameworkDependent.1.3.2" "$scriptPath\bin\release\FabricHealer\linux-x64\framework-dependent\FabricHealerType"
-
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.1.3.2" "$scriptPath\bin\release\FabricHealer\win-x64\self-contained\FabricHealerType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.Windows.FrameworkDependent.1.3.2" "$scriptPath\bin\release\FabricHealer\win-x64\framework-dependent\FabricHealerType"
-    
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.WindowsArm64.SelfContained.1.3.2" "$scriptPath\bin\release\FabricHealer\win-arm64\self-contained\FabricHealerType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricHealer.WindowsArm64.FrameworkDependent.1.3.2" "$scriptPath\bin\release\FabricHealer\win-arm64\framework-dependent\FabricHealerType"
-}
-finally {
-    Pop-Location
+foreach ($rid in $RuntimeIds) {
+    foreach ($mode in @("self-contained", "framework-dependent")) {
+        $basePath = "$PSScriptRoot\bin\release\FabricHealer\$rid\$mode\FabricHealerType"
+        $manifestPath = "$basePath\ApplicationManifest.xml"
+        if (!(Test-Path -LiteralPath $manifestPath)) { throw "Build $rid before packaging: $basePath" }
+        [xml] $manifest = Get-Content -LiteralPath $manifestPath -Raw
+        $version = $manifest.ApplicationManifest.ApplicationTypeVersion
+        $suffix = if ($mode -eq "self-contained") { "SelfContained" } else { "FrameworkDependent" }
+        $target = "$output\Microsoft.ServiceFabricApps.FabricHealer.$($platforms[$rid]).$suffix.$version.sfpkg"
+        if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Force }
+        [IO.Compression.ZipFile]::CreateFromDirectory($basePath, $target)
+    }
 }
