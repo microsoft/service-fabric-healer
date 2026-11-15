@@ -46,7 +46,7 @@
         <None Update="PackageRoot\Config\LogicRules\MachineRules.guan">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Include="$(MSBuildProjectDirectory)\obj\TestApp42.zip" Link="TestApp42.zip">
+        <None Include="$(MSBuildProjectDirectory)\obj\TestApp42.zip" Link="TestApp42.zip" Condition="'$(DesignTimeBuild)' != 'true'">
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
         <None Update="testrules_wellformed.guan">
@@ -59,7 +59,7 @@
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>
-    <Target Name="BuildTestWorkload" BeforeTargets="PrepareForBuild">
+    <Target Name="BuildTestWorkload" BeforeTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'">
         <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\Build-TestWorkloads.ps1&quot; -Configuration &quot;$(Configuration)&quot;" />
     </Target>
 </Project>

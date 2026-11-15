@@ -39,7 +39,7 @@
     <None Include="..\fhnuget.md" Pack="true" PackagePath="\" />
   </ItemGroup>
   <ItemGroup Condition="'$(DeploymentPackagePath)' != ''">
-    <None Include="$(DeploymentPackagePath)\**\*" Pack="true" PackagePath="contentFiles\any\any\%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="$(DeploymentPackagePath)\**\*" Pack="true" PackagePath="contentFiles\any\any\" PackageCopyToOutput="true" PackageFlatten="false" />
   </ItemGroup>
   <Target Name="IncludeTelemetryAssembly" DependsOnTargets="BuildOnlySettings;ResolveReferences">
     <ItemGroup>

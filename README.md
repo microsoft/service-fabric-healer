@@ -58,6 +58,9 @@ NuGet metadata is generated from the projects by `dotnet pack`; separately
 maintained nuspec templates are no longer used. `Build-FHProxyNupkg.ps1` packs
 both proxy targets. After publishing all three RIDs, `Build-NugetPackages.ps1`
 and `Build-SFPKGs.ps1` build the deployment packages.
+Run `./Test-DeploymentNuget.ps1` after packaging to restore and build consumers
+of all six deployment variants and verify every deployment file and executable
+entry point in their output trees.
 
 `GuanPackageVersion` defaults to the published 1.0.7 package. Validate changes
 from the Guan repository with a temporary local feed and an MSBuild override,
@@ -66,8 +69,10 @@ No machine-specific feed or unpublished dependency is required for normal restor
 
 FHTest rebuilds its self-contained .NET 10 TestApp42 workload from `TestWorkloads`
 during build, preserving the original fixture's deployment mode without requiring
-.NET 6 or a separately installed helper runtime. Run its cluster-dependent tests only on a disposable
-Azure test host, never on a workstation or shared cluster. The tests restart
+.NET 6 or a separately installed helper runtime.
+Fixture publishing is skipped during IDE design-time builds.
+Run its cluster-dependent tests only on a disposable Azure test host, never on a
+workstation or shared cluster. The tests restart
 services, manipulate repair tasks, and delete files on the test host.
 Set `FH_DISPOSABLE_CLUSTER=1` only on that disposable host to opt in; without
 it, the destructive class fails explicitly before creating its FabricClient.

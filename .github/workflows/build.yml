@@ -42,6 +42,23 @@ jobs:
           $env:FH_CURRENT_PLUGIN_PATH = Join-Path $PWD 'SampleHealerPlugin/bin/Release/net10.0/SampleHealerPlugin.dll'
           dotnet test FHTest/FHTest.csproj -c Release --no-build --filter FullyQualifiedName~PluginCompatibilityTests --logger trx --results-directory TestResults
           if ($LASTEXITCODE -ne 0) { throw "Plugin compatibility tests failed." }
+      - name: Verify design-time builds do not publish fixtures
+        shell: pwsh
+        run: |
+          $fixture = Join-Path $PWD 'FHTest/obj/TestApp42.zip'
+          $before = (Get-Item -LiteralPath $fixture).LastWriteTimeUtc
+          dotnet msbuild FHTest/FHTest.csproj -target:PrepareForBuild -property:DesignTimeBuild=true -property:Configuration=Release
+          if ($LASTEXITCODE -ne 0) { throw "Design-time build failed." }
+          if ((Get-Item -LiteralPath $fixture).LastWriteTimeUtc -ne $before) { throw "Design-time build recreated the fixture." }
+          $backup = "$fixture.design-time-backup"
+          Move-Item -LiteralPath $fixture -Destination $backup
+          try {
+            dotnet msbuild FHTest/FHTest.csproj -target:PrepareForBuild -property:DesignTimeBuild=true -property:Configuration=Release
+            if ($LASTEXITCODE -ne 0) { throw "Design-time build without a fixture failed." }
+            if (Test-Path -LiteralPath $fixture) { throw "Design-time build generated a missing fixture." }
+          } finally {
+            Move-Item -LiteralPath $backup -Destination $fixture -Force
+          }
       - name: Publish both deployment modes and build packages
         shell: pwsh
         run: |
@@ -49,6 +66,9 @@ jobs:
           ./Build-SFPKGs.ps1 -RuntimeIds '${{ matrix.rid }}'
           ./Build-NugetPackages.ps1 -RuntimeIds '${{ matrix.rid }}'
           ./Build-FHProxyNupkg.ps1
+      - name: Validate restored NuGet deployment trees
+        shell: pwsh
+        run: ./Test-DeploymentNuget.ps1 -RuntimeIds '${{ matrix.rid }}'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
