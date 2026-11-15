@@ -44,8 +44,9 @@ For machine repairs, Service Fabric InfrastructureService (IS) must be deployed 
 
 The host, TelemetryLib, and proxy provide real `net8.0` and `net10.0` assets.
 The host's `net8.0` output is a plugin compatibility asset, not the deployment
-target. The current sample and FHTest use .NET 10. Existing .NET 8 plugin binaries
-continue to bind to the original host and telemetry assembly identities.
+target. The current sample and FHTest use .NET 10.
+The Visual Studio Service Fabric project explicitly selects the .NET 10 host target.
+Existing .NET 8 plugin binaries continue to bind to the original host and telemetry assembly identities.
 These remain `FabricHealer, Version=1.3.2.0`, `TelemetryLib, Version=2.2.0.0`,
 and `FabricHealerProxy, Version=1.0.0.0`; product/file/package versions advance
 independently. The plugin loader shares the contract assemblies explicitly and
