@@ -20,12 +20,12 @@ jobs:
             rid: linux-x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           global-json-file: global.json
       - name: Build unchanged .NET 8 sample
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: c12075eb5ed5f2e6a86872657a73ebfcfcfd5fa5
           path: baseline
