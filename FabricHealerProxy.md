@@ -1,6 +1,9 @@
 # FabricHealerProxy 1.2.0
 
-FabricHealerProxy provides genuine .NET 8 and .NET 10 library assets for Service Fabric entity repair reporting. Existing consumers retain the `FabricHealerProxy, Version=1.0.0.0` assembly identity. Service Fabric dependencies use SDK 8.8.121, aligned with runtime 11.8.121.1. It is assumed that you have experience with FabricHealer and understand how to use it.
+FabricHealerProxy lets .NET 8 and .NET 10 Service Fabric services request repairs
+through FabricHealer health reports. See the [deployment requirements](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/Deployment/Deployment.md#requirements)
+for the FabricHealer host; the library does not require existing .NET 8 consumers
+to retarget to .NET 10.
 
 ### How to use FabricHealerProxy
 

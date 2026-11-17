@@ -3,7 +3,7 @@
 1. Create a .NET 10 library project. Existing .NET 8 plugin binaries remain compatible.
 
 2. Install the Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained NuGet package from https://www.nuget.org/profiles/ServiceFabricApps as the version of FabricHealer you are deploying.
-  E.g., 1.4.0 if you are going to deploy FH 1.4.0. Packages contain genuine .NET 8 and .NET 10 host and telemetry assets with stable assembly identities.
+  Use the version matching the deployed host. See the [compatibility guidance](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/Development.md#compatibility).
 
 3. Write a custom repair class!
 
@@ -123,7 +123,7 @@ cd C:\Users\me\source\repos\service-fabric-healer
 ./Build-FabricHealer
 ./Build-NugetPackages -RuntimeIds win-x64
 
-The output contains Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.1.4.0.nupkg for plugin authoring. Dependency metadata is generated from the projects; no optional WCF dependency is required by plugin loading. Nupkg files are located in
+The output contains `Microsoft.ServiceFabricApps.FabricHealer.Windows.SelfContained.<version>.nupkg` for plugin authoring. Nupkg files are located in
 C:\Users\me\source\repos\service-fabric-healer\bin\release\FabricHealer\Nugets.
 
 	

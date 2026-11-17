@@ -1,6 +1,8 @@
-# FabricHealerProxy 1.2.0
+# FabricHealerProxy
 
-FabricHealerProxy targets .NET 8 and .NET 10, preserving the original assembly identity for existing consumers. It provides Service Fabric entity repair reporting to FabricHealer instances in the same cluster. The selected SDK is 8.8.121, aligned with runtime 11.8.121.1. Packages are available from the [nuget.org package gallery](https://www.nuget.org/packages/Microsoft.ServiceFabricApps.FabricHealerProxy).
+See the [package usage guide](../FabricHealerProxy.md) for installation,
+supported frameworks, and the API quickstart. The extended example below
+demonstrates reporting facts for several repair targets.
 
 ### How to use FabricHealerProxy
 

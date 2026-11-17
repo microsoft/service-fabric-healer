@@ -1,4 +1,4 @@
-## FabricHealer 1.4.0 - .NET 10, Service Fabric 11.8.121.1
+## FabricHealer 1.4.0 - .NET 10
 ### Service Fabric Auto-Repair Service with Declarative Logic for Repair Policy Specification. 
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-healer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-healer.json)
@@ -16,18 +16,13 @@ Note that you can use FabricHealer if you don't also employ FabricObserver or Fa
 FabricObserver and FabricHealer work great together. *Note: This version supports FabricObserver 3.2.3 and higher.*
 ```
 
-FabricHealer is implemented as a stateless singleton service that runs on one or all nodes in a Linux or Windows Service Fabric cluster. For Disk and Fabric system service repairs, you must run FabricHealer on all nodes.
-FabricHealer deploys as a .NET 10 application. The selected pairing is Service Fabric
-runtime 11.8.121.1 and SDK/Services/Actors 8.8.121. Windows x64 runtime validation
-must be recorded separately from Windows ARM64 and Linux x64 build validation.
-Microsoft's .NET 10 Service Fabric support is currently Windows-only; Linux
-packages are build-only until a supported Linux runtime is available.
+FabricHealer is a stateless singleton service that runs on one or all cluster nodes.
+Disk and Fabric system service repairs require an instance on every target node.
+See the [deployment requirements](Documentation/Deployment/Deployment.md#requirements)
+for supported platforms and runtime prerequisites.
 
 To learn more about FabricHealer's configuration-as-logic model, [click here.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/LogicWorkflows.md)  
 
-```
-FabricHealer 1.4.0 selects SF runtime 11.8.121.1 with SDK 8.8.121.
-```
 ```
 FabricHealer requires the Service Fabric RepairManager (RM) service. 
 ```
@@ -38,45 +33,18 @@ For machine repairs, Service Fabric InfrastructureService (IS) must be deployed 
 ## Build and run  
 
 1. Clone the repo.
-2. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) pinned in `global.json` and PowerShell 7.
+2. Install a [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) compatible with [global.json](global.json) and PowerShell 7.
 3. Run `dotnet build FabricHealer.Managed.slnf -c Release`. The filter builds every managed project without requiring Visual Studio's legacy `.sfproj` toolchain.
 4. Run `./Build-FabricHealer.ps1` to publish both self-contained and framework-dependent .NET 10 packages.
 
-The host, TelemetryLib, and proxy provide real `net8.0` and `net10.0` assets.
-The host's `net8.0` output is a plugin compatibility asset, not the deployment
-target. The current sample and FHTest use .NET 10.
-The Visual Studio Service Fabric project explicitly selects the .NET 10 host target.
-Existing .NET 8 plugin binaries continue to bind to the original host and telemetry assembly identities.
-These remain `FabricHealer, Version=1.3.2.0`, `TelemetryLib, Version=2.2.0.0`,
-and `FabricHealerProxy, Version=1.0.0.0`; product/file/package versions advance
-independently. The plugin loader shares the contract assemblies explicitly and
-resolves transitive references lazily, so unused optional SDK references do not
-introduce a WCF package dependency.
-Do not replace compatibility assets with .NET 10 binaries under `lib/net8.0`.
+Existing .NET 8 plugins and proxy consumers remain supported; the deployed host
+uses .NET 10. See [development guidance](Documentation/Development.md) for
+compatibility contracts, packaging, local Guan integration, and tests.
 
-NuGet metadata is generated from the projects by `dotnet pack`; separately
-maintained nuspec templates are no longer used. `Build-FHProxyNupkg.ps1` packs
-both proxy targets. After publishing all three RIDs, `Build-NugetPackages.ps1`
-and `Build-SFPKGs.ps1` build the deployment packages.
-Run `./Test-DeploymentNuget.ps1` after packaging to restore and build consumers
-of all six deployment variants and verify every deployment file and executable
-entry point in their output trees.
-
-`GuanPackageVersion` defaults to the published 1.0.7 package. Validate changes
-from the Guan repository with a temporary local feed and an MSBuild override,
-then restore again without the override before packaging or committing.
-No machine-specific feed or unpublished dependency is required for normal restore.
-
-FHTest rebuilds its self-contained .NET 10 TestApp42 workload from `TestWorkloads`
-during build, preserving the original fixture's deployment mode without requiring
-.NET 6 or a separately installed helper runtime.
-Fixture publishing is skipped during IDE design-time builds.
-Run its cluster-dependent tests only on a disposable Azure test host, never on a
-workstation or shared cluster. The tests restart
-services, manipulate repair tasks, and delete files on the test host.
-Set `FH_DISPOSABLE_CLUSTER=1` only on that disposable host to opt in; without
-it, the destructive class fails explicitly before creating its FabricClient.
-Use a supported multi-node cluster, not a one-machine dev cluster, for upgrades.
+The [plugin compatibility tests](Documentation/Development.md#plugin-compatibility-tests)
+run without a cluster. Cluster-dependent FHTest cases are destructive and require
+a disposable Azure test host and explicit opt-in; never run them on a workstation
+or shared cluster.
 
 ## Deploy FabricHealer 
 You can deploy FabricHealer using Visual Studio (if you build the sources yourself), PowerShell or ARM. ***Please note*** that this version of FabricHealer no longer supports the DefaultServices node in ApplicationManifest.xml. This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
