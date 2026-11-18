@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <ServiceFabricServicesVersion>8.8.121</ServiceFabricServicesVersion>
+    <GuanPackageVersion Condition="'$(GuanPackageVersion)' == ''">1.0.7</GuanPackageVersion>
+    <JsonVersion>13.0.4</JsonVersion>
+    <NLogVersion>5.5.0</NLogVersion>
+    <PollyVersion>8.6.1</PollyVersion>
+  </PropertyGroup>
+</Project>

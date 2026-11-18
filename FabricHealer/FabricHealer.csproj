@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-	<TargetFramework>net8.0</TargetFramework>
+	<TargetFrameworks>net8.0;net10.0</TargetFrameworks>
 	<PlatformTarget>AnyCPU</PlatformTarget>
 	<RootNamespace>FabricHealer</RootNamespace>
 	<AssemblyName>FabricHealer</AssemblyName>
@@ -9,22 +9,43 @@
 	<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
     <OutputType>Exe</OutputType>
 	<Product>FabricHealer</Product>
-	<Version>1.3.2</Version>
-    <FileVersion>1.3.2</FileVersion>
-    <!-- In .NET 8, if you want to build self-contained in VS, you must uncomment and set this to true.
-	<SelfContained>True</SelfContained>-->
+	<Version>1.4.0</Version>
+    <AssemblyVersion>1.3.2.0</AssemblyVersion>
+    <FileVersion>1.4.0.0</FileVersion>
+    <PackageId>Microsoft.ServiceFabricApps.FabricHealer</PackageId>
+    <PackageId Condition="'$(DeploymentPackageId)' != ''">$(DeploymentPackageId)</PackageId>
+    <Authors>Microsoft</Authors>
+    <Description>FabricHealer .NET 10 service with .NET 8 and .NET 10 plugin compatibility assets.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/microsoft/service-fabric-healer</PackageProjectUrl>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>fhnuget.md</PackageReadmeFile>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);IncludeTelemetryAssembly</TargetsForTfmSpecificBuildOutput>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="McMaster.NETCore.Plugins" Version="2.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
-    <PackageReference Include="Microsoft.Logic.Guan" Version="1.0.7" />
-	<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NLog" Version="5.5.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.15" />
+    <PackageReference Include="Microsoft.Logic.Guan" Version="$(GuanPackageVersion)" />
+    <PackageReference Include="System.Text.Json" Version="10.0.15" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="$(ServiceFabricServicesVersion)" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.23.0" />
+	<PackageReference Include="Newtonsoft.Json" Version="$(JsonVersion)" />
+    <PackageReference Include="NLog" Version="$(NLogVersion)" />
     <PackageReference Include="Octokit" Version="14.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
+    <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" PrivateAssets="all" />
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\fhnuget.md" Pack="true" PackagePath="\" />
   </ItemGroup>
+  <ItemGroup Condition="'$(DeploymentPackagePath)' != ''">
+    <None Include="$(DeploymentPackagePath)\**\*" Pack="true" PackagePath="contentFiles/any/any/" PackageCopyToOutput="true" PackageFlatten="false" />
+  </ItemGroup>
+  <Target Name="IncludeTelemetryAssembly" DependsOnTargets="BuildOnlySettings;ResolveReferences">
+    <ItemGroup>
+      <BuildOutputInPackage Include="$(TargetDir)TelemetryLib.dll" />
+    </ItemGroup>
+  </Target>
   <ItemGroup>
 	<Folder Include="PackageRoot\Data\Plugins\" />
   </ItemGroup>

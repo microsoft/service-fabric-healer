@@ -252,7 +252,7 @@ For example:
 ``` PowerShell
 
 $appName = "fabric:/FabricHealer"
-$appVersion = "1.3.2"
+$appVersion = "1.4.0"
 
 $myApplication = Get-ServiceFabricApplication -ApplicationName $appName
 $appParamCollection = $myApplication.ApplicationParameters
@@ -301,6 +301,5 @@ To restart FabricHealer processing, Stop the repair task, specifying the TaskId 
 # the specified TaskId below is just an example of what the default TaskId pattern will look like (FabricClient/[guid])
 Stop-ServiceFabricRepairTask -TaskId FabricClient/b58c07ae-82fb-4c45-9486-0a1400f34a46
 ``` 
-
 
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationManifest ApplicationTypeName="TestApp42Type" ApplicationTypeVersion="1.0.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+  <Parameters>
+    <Parameter Name="ChildProcessCreator_InstanceCount" DefaultValue="-1" />
+  </Parameters>
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="ChildProcessCreatorPkg" ServiceManifestVersion="1.0.0" />
+  </ServiceManifestImport>
+  <DefaultServices>
+    <Service Name="ChildProcessCreator" ServicePackageActivationMode="ExclusiveProcess">
+      <StatelessService ServiceTypeName="ChildProcessCreatorType" InstanceCount="[ChildProcessCreator_InstanceCount]">
+        <SingletonPartition />
+      </StatelessService>
+    </Service>
+  </DefaultServices>
+</ApplicationManifest>

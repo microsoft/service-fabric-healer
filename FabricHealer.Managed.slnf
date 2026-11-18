@@ -1,0 +1,12 @@
+{
+  "solution": {
+    "path": "FabricHealer.sln",
+    "projects": [
+      "FabricHealer\\FabricHealer.csproj",
+      "FabricHealerProxy\\FabricHealerProxy.csproj",
+      "TelemetryLib\\TelemetryLib.csproj",
+      "SampleHealerPlugin\\SampleHealerPlugin.csproj",
+      "FHTest\\FHTest.csproj"
+    ]
+  }
+}

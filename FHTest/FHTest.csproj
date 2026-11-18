@@ -1,20 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
         <IsPackable>false</IsPackable>
         <PlatformTarget>AnyCPU</PlatformTarget>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-        <PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
-        <PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+        <PackageReference Include="MSTest.TestAdapter" Version="4.5.3" />
+        <PackageReference Include="MSTest.TestFramework" Version="4.5.3" />
         <PackageReference Include="coverlet.collector" Version="6.0.4">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-		<PackageReference Include="ServiceFabric.Mocks" Version="7.2.14" />
-		<PackageReference Include="System.ServiceProcess.ServiceController" Version="9.0.6" />
+		<PackageReference Include="ServiceFabric.Mocks" Version="8.1.3" />
+		<PackageReference Include="Microsoft.ServiceFabric.Actors" Version="$(ServiceFabricServicesVersion)" />
+		<PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.15" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\FabricHealerProxy\FabricHealerProxy.csproj" />
@@ -45,7 +46,7 @@
         <None Update="PackageRoot\Config\LogicRules\MachineRules.guan">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="TestApp42.zip">
+        <None Include="$(MSBuildProjectDirectory)\obj\TestApp42.zip" Link="TestApp42.zip" Condition="'$(DesignTimeBuild)' != 'true'">
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
         <None Update="testrules_wellformed.guan">
@@ -58,4 +59,7 @@
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>
+    <Target Name="BuildTestWorkload" BeforeTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+        <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\Build-TestWorkloads.ps1&quot; -Configuration &quot;$(Configuration)&quot;" />
+    </Target>
 </Project>

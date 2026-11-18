@@ -1,9 +1,9 @@
-## FabricHealer 1.3.2 - NET8, SF Runtime 10.x and above.
+## FabricHealer 1.4.0 - .NET 10
 ### Service Fabric Auto-Repair Service with Declarative Logic for Repair Policy Specification. 
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-healer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-healer.json)
 
-FabricHealer (FH) is a NET8 Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
+FabricHealer (FH) is a .NET 10 Service Fabric application that attempts to automatically fix a set of reliably solvable problems that can take place in Service Fabric
 applications (including containers), host virtual machines, and logical disks (scoped to space usage problems only). These repairs mostly employ a set of Service Fabric API calls, but can also be fully customizable (like Disk repair). All repairs are safely orchestrated through the Service Fabric RepairManager system service.
 Repair workflow configuration is written as [Prolog](http://www.let.rug.nl/bos/lpn/lpnpage.php?pageid=online)-like [logic](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/PackageRoot/Config/LogicRules) with [supporting external predicates](https://github.com/microsoft/service-fabric-healer/blob/main/FabricHealer/Repair/Guan) written in C#. 
 
@@ -16,14 +16,13 @@ Note that you can use FabricHealer if you don't also employ FabricObserver or Fa
 FabricObserver and FabricHealer work great together. *Note: This version supports FabricObserver 3.2.3 and higher.*
 ```
 
-FabricHealer is implemented as a stateless singleton service that runs on one or all nodes in a Linux or Windows Service Fabric cluster. For Disk and Fabric system service repairs, you must run FabricHealer on all nodes.
-FabricHealer is built as a NET8 application and has been tested on multiple versions of Windows Server and Ubuntu.  
+FabricHealer is a stateless singleton service that runs on one or all cluster nodes.
+Disk and Fabric system service repairs require an instance on every target node.
+See the [deployment requirements](Documentation/Deployment/Deployment.md#requirements)
+for supported platforms and runtime prerequisites.
 
 To learn more about FabricHealer's configuration-as-logic model, [click here.](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/LogicWorkflows.md)  
 
-```
-FabricHealer requires SF Runtime versions 10 and higher.
-```
 ```
 FabricHealer requires the Service Fabric RepairManager (RM) service. 
 ```
@@ -34,8 +33,18 @@ For machine repairs, Service Fabric InfrastructureService (IS) must be deployed 
 ## Build and run  
 
 1. Clone the repo.
-2. Install [NET8](https://dotnet.microsoft.com/download/dotnet-core/8.0)
-3. Build. 
+2. Install a [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) compatible with [global.json](global.json) and PowerShell 7.
+3. Run `dotnet build FabricHealer.Managed.slnf -c Release`. The filter builds every managed project without requiring Visual Studio's legacy `.sfproj` toolchain.
+4. Run `./Build-FabricHealer.ps1` to publish both self-contained and framework-dependent .NET 10 packages.
+
+Existing .NET 8 plugins and proxy consumers remain supported; the deployed host
+uses .NET 10. See [development guidance](Documentation/Development.md) for
+compatibility contracts, packaging, local Guan integration, and tests.
+
+The [plugin compatibility tests](Documentation/Development.md#plugin-compatibility-tests)
+run without a cluster. Cluster-dependent FHTest cases are destructive and require
+a disposable Azure test host and explicit opt-in; never run them on a workstation
+or shared cluster.
 
 ## Deploy FabricHealer 
 You can deploy FabricHealer using Visual Studio (if you build the sources yourself), PowerShell or ARM. ***Please note*** that this version of FabricHealer no longer supports the DefaultServices node in ApplicationManifest.xml. This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
@@ -54,17 +63,17 @@ For ARM deployment, please see the [ARM documentation](/Documentation/Deployment
 cd C:\Users\me\source\repos\service-fabric-healer
 
 #Build FH (Release)
-#By default if no RuntimeId is specified, it will build for win-x64. If you want to build for a specific OS, then specify -RuntimeId win-arm64 or linux-x64. For RuntimeId linux-x64, if you are deploying for Mariner/Azure Linux OS, please add the flag -Azlinux.
+#By default, builds win-x64. Use -RuntimeId win-arm64 or linux-x64 for cross-build validation.
 #Also by default if no Configuration is specified, it will build for Release. If you want to build for Debug, then specify -Configuration Debug.
 
 ##Default build command (win-x64):
 ./Build-FabricHealer
 
 #Build for win-arm64:
-#./Build-FabricObserver -RuntimeId win-arm64
+#./Build-FabricHealer -RuntimeId win-arm64
 
 #For building linux
-# ./Build-FabricObserver -RuntimeId linux-x64
+# ./Build-FabricHealer -RuntimeId linux-x64
 
 #create a $path variable that points to the build output:
 #E.g., for Windows deployments:
@@ -89,7 +98,7 @@ Register-ServiceFabricApplicationType -ApplicationPathInImageStore FH127
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.3.2   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricHealer -ApplicationTypeName FabricHealerType -ApplicationTypeVersion 1.4.0
 
 #Create the Service instance:  
 
@@ -98,7 +107,7 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.3.2 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricHealer -ApplicationTypeVersion 1.4.0 -Monitored -FailureAction rollback
 ```  
 
 ## Using FabricHealer  

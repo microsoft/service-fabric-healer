@@ -18,6 +18,24 @@ namespace FabricHealer.Utilities
         private static readonly IDictionary<IRepairPredicateType, IList<PredicateType>> PluginToPredicateTypesMap = new Dictionary<IRepairPredicateType, IList<PredicateType>>();
         private static readonly HashSet<ICustomServiceInitializer> CustomServiceInitializers = new();
 
+        internal static PluginLoader CreatePluginLoader(string path)
+        {
+            Type[] sharedTypes =
+            {
+                typeof(IRepairPredicateType), typeof(PluginAttribute), typeof(IPredicateType),
+                typeof(ICustomServiceInitializer), typeof(PredicateType), typeof(IServiceCollection),
+                typeof(ServiceContext), typeof(Microsoft.ServiceFabric.Services.Runtime.StatelessService),
+                typeof(global::FabricHealer.TelemetryLib.ITelemetryEventSource)
+            };
+
+            return PluginLoader.CreateFromAssemblyFile(path, sharedTypes, config =>
+            {
+                config.IsUnloadable = false;
+                // Share the contract assemblies without traversing unused optional SDK references.
+                config.IsLazyLoaded = true;
+            });
+        }
+
         public static async Task InitializePluginsAsync(CancellationToken cancellationToken)
         {
             foreach (var customServiceInitializer in FabricHealerPluginLoader.CustomServiceInitializers)
@@ -75,13 +93,12 @@ namespace FabricHealer.Utilities
                 return;
             }
 
-            Type[] sharedTypes = { typeof(IRepairPredicateType), typeof(PluginAttribute), typeof(IPredicateType), typeof(ICustomServiceInitializer) };
             string dll = "";
 
             for (int i = 0; i < pluginDlls.Length; ++i)
             {
                 dll = pluginDlls[i];
-                var loader = PluginLoader.CreateFromAssemblyFile(dll, sharedTypes, a => a.IsUnloadable = false);
+                var loader = CreatePluginLoader(dll);
                 pluginLoaders[i] = loader;
             }
 
@@ -108,6 +125,7 @@ namespace FabricHealer.Utilities
                                 FabricHealerPluginLoader.CustomServiceInitializers.Add(customServiceInitializer);
                             }
                         }
+
                     }
                 }
                 catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException)

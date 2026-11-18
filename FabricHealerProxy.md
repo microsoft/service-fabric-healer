@@ -1,6 +1,12 @@
-# FabricHealerProxy 1.1.1
+# FabricHealerProxy 1.2.0
 
-FabricHealerProxy is a .NET 8 library that provides a very simple and reliable way for any .NET Service Fabric service to initiate Service Fabric entity repair by the FabricHealer service running in the same cluster. It is assumed that you have experience with FabricHealer and understand how to use it.
+FabricHealerProxy lets .NET 8 and .NET 10 Service Fabric services request repairs
+through FabricHealer health reports. See the [deployment requirements](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/Deployment/Deployment.md#requirements)
+for the FabricHealer host; the library does not require existing .NET 8 consumers
+to retarget to .NET 10. Proxy 1.2.0 requires Microsoft.ServiceFabric.Services
+8.8.121 or later. Update or remove lower direct Services package references to
+avoid NU1605 package-downgrade errors, and use a Service Fabric runtime compatible
+with the upgraded SDK.
 
 ### How to use FabricHealerProxy
 

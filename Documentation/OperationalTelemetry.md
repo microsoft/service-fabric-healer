@@ -18,7 +18,7 @@ As with most of FabricHealer's application settings, you can also do this with a
 Connect-ServiceFabricCluster ...
 
 $appName = "fabric:/FabricHealer"
-$appVersion = "1.3.2"
+$appVersion = "1.4.0"
 $application = Get-ServiceFabricApplication -ApplicationName $appName
 $appParamCollection = $application.ApplicationParameters
 $applicationParameterMap = @{}
@@ -56,7 +56,7 @@ Here is a full example of exactly what is sent in one of these telemetry events,
   "ClusterId": "00000000-1111-1111-0000-00f00d000d",
   "ClusterType": "SFRP",
   "NodeNameHash": "3e83569d4c6aad78083cd081215dafc81e5218556b6a46cb8dd2b183ed0095ad",
-  "FHVersion": "1.3.2",
+  "FHVersion": "1.4.0",
   "UpTime": "00:00:00.2164523",
   "Timestamp": "2023-09-14T21:45:25.2443014Z",
   "OS": "Windows",
@@ -88,5 +88,4 @@ Let's take a look at the data and why we think it is useful to share with us. We
 If the ClusterType is not SFRP then a TenantId (Guid) is sent for use in the same way we use ClusterId. 
 
 This information will **really** help us understand how FabricHealer is doing out there and we would greatly appreciate you sharing it with us!
-
 
