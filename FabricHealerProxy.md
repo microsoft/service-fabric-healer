@@ -3,7 +3,10 @@
 FabricHealerProxy lets .NET 8 and .NET 10 Service Fabric services request repairs
 through FabricHealer health reports. See the [deployment requirements](https://github.com/microsoft/service-fabric-healer/blob/main/Documentation/Deployment/Deployment.md#requirements)
 for the FabricHealer host; the library does not require existing .NET 8 consumers
-to retarget to .NET 10.
+to retarget to .NET 10. Proxy 1.2.0 requires Microsoft.ServiceFabric.Services
+8.8.121 or later. Update or remove lower direct Services package references to
+avoid NU1605 package-downgrade errors, and use a Service Fabric runtime compatible
+with the upgraded SDK.
 
 ### How to use FabricHealerProxy
 
